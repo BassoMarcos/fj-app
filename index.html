@@ -1494,12 +1494,14 @@ function showPage(p){
 function initAdminFilters(){
   const data=loadData();
   const etapas=[...new Set(data.map(c=>getEtapa(c.mz)))].sort();
+  const opts='<option value="">Etapa</option>'+etapas.map(e=>`<option value="${e}">${e}</option>`).join('');
+  // Llenar ambos selects (mobile y desktop)
   const esel=document.getElementById('a-etapa');
-  if(esel) esel.innerHTML='<option value="">Etapa</option>'+etapas.map(e=>`<option value="${e}">${e}</option>`).join('');
-  const msel=document.getElementById(adminFieldId('a-mz'));
-  const lsel=document.getElementById(adminFieldId('a-lote'));
-  if(msel){msel.innerHTML='<option value="">Manzana</option>';msel.disabled=true;}
-  if(lsel){lsel.innerHTML='<option value="">Lote</option>';lsel.disabled=true;}
+  if(esel) esel.innerHTML=opts;
+  const eselDesk=document.getElementById('a-etapa-desk');
+  if(eselDesk) eselDesk.innerHTML=opts;
+  ['a-mz','a-mz-desk'].forEach(id=>{const el=document.getElementById(id);if(el){el.innerHTML='<option value="">Manzana</option>';el.disabled=true;}});
+  ['a-lote','a-lote-desk'].forEach(id=>{const el=document.getElementById(id);if(el){el.innerHTML='<option value="">Lote</option>';el.disabled=true;}});
   renderAdminTable();
 }
 
