@@ -1495,17 +1495,12 @@ function initAdminFilters(){
   const data=loadData();
   const etapas=[...new Set(data.map(c=>getEtapa(c.mz)))].sort();
   const esel=document.getElementById('a-etapa');
-  if(esel){
-    const saved=localStorage.getItem('fj_admin_etapa')||'';
-    esel.innerHTML='<option value="">Etapa</option>'+etapas.map(e=>`<option value="${e}"${e===saved?' selected':''}>${e}</option>`).join('');
-  }
-  // Reset and disable mz and lote
+  if(esel) esel.innerHTML='<option value="">Etapa</option>'+etapas.map(e=>`<option value="${e}">${e}</option>`).join('');
   const msel=document.getElementById(adminFieldId('a-mz'));
   const lsel=document.getElementById(adminFieldId('a-lote'));
   if(msel){msel.innerHTML='<option value="">Manzana</option>';msel.disabled=true;}
   if(lsel){lsel.innerHTML='<option value="">Lote</option>';lsel.disabled=true;}
-  // Si hay etapa guardada, cargar manzanas y renderizar
-  if(localStorage.getItem('fj_admin_etapa')){initAdminMzFilter();renderAdminTable();}
+  renderAdminTable();
 }
 
 function initAdminMzFilter(){
@@ -7189,16 +7184,12 @@ function initCobFilters(){
   const data=loadData();
   const etapas=[...new Set(data.map(c=>getEtapa(c.mz)))].sort();
   const esel=document.getElementById('c-etapa');
-  if(esel){
-    const saved=localStorage.getItem('fj_cob_etapa')||'';
-    esel.innerHTML='<option value="">Etapa</option>'+etapas.map(e=>`<option value="${e}"${e===saved?' selected':''}>${e}</option>`).join('');
-  }
+  if(esel) esel.innerHTML='<option value="">Etapa</option>'+etapas.map(e=>`<option value="${e}">${e}</option>`).join('');
   const msel=document.getElementById('c-mz');
   const lsel=document.getElementById('c-lote');
   if(msel){msel.innerHTML='<option value="">Manzana</option>';msel.disabled=true;}
   if(lsel){lsel.innerHTML='<option value="">Lote</option>';lsel.disabled=true;}
-  // Si hay etapa guardada, cargar manzanas y renderizar
-  if(localStorage.getItem('fj_cob_etapa')){initCobMzFilter();renderColab();}
+  renderColab();
 }
 
 function initCobMzFilter(){
