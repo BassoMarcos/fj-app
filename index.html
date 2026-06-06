@@ -370,7 +370,7 @@ tr:hover td{background:var(--bg)}
             <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Nuevo</button>
             <button class="btn btn-sm" onclick="abrirGestionPagos()" style="padding:5px 8px;font-size:11px;font-weight:600;background:#f0fdf4;border:1px solid #86efac;color:#16a34a;border-radius:var(--r);cursor:pointer">✓ Pagos</button>
             <div class="search-wrap" style="flex:1;min-width:200px"><span class="search-icon">&#128269;</span><input type="text" id="a-search" placeholder="Buscar nombre, manzana, lote..." oninput="renderAdminTable()"></div>
-            <select class="fsel" id="a-etapa" onchange="localStorage.setItem('fj_admin_etapa',this.value);initAdminMzFilter();renderAdminTable()"><option value="">Etapa</option></select>
+            <select class="fsel" id="a-etapa" onchange="initAdminMzFilter();renderAdminTable()"><option value="">Etapa</option></select>
             <select class="fsel" id="a-mz" onchange="initAdminLoteFilter();renderAdminTable()"><option value="">Manzana</option></select>
             <select class="fsel" id="a-lote" onchange="renderAdminTable()"><option value="">Lote</option></select>
             <select class="fsel" id="a-pago" onchange="renderAdminTable()">
@@ -570,7 +570,7 @@ tr:hover td{background:var(--bg)}
       <div class="cob-wrap">
         <div class="toolbar" style="flex-wrap:wrap;gap:8px;margin-bottom:0">
           <div class="search-wrap" style="flex:1;min-width:200px"><span class="search-icon">&#128269;</span><input type="text" id="c-search" placeholder="Buscar nombre, manzana, lote..." oninput="renderColab()"></div>
-          <select class="fsel" id="c-etapa" onchange="localStorage.setItem('fj_cob_etapa',this.value);initCobMzFilter();renderColab()"><option value="">Etapas</option></select>
+          <select class="fsel" id="c-etapa" onchange="initCobMzFilter();renderColab()"><option value="">Etapas</option></select>
           <select class="fsel" id="c-mz" onchange="initCobLoteFilter();renderColab()"><option value="">Manzana</option></select>
           <select class="fsel" id="c-lote" onchange="renderColab()"><option value="">Lote</option></select>
         </div>
@@ -7211,7 +7211,7 @@ function initCobMzFilter(){
     msel.disabled=false;
   } else {
     msel.innerHTML='<option value="">Manzana</option>';msel.disabled=true;
-    const lotes=[...new Set(data.filter(c=>getEtapa(c.mz)===etapa).map(c=>c.lote))].sort((a,b)=>{const n=(s)=>{const m=s.match(/^(\d+)(.*)/);return m?[+m[1],m[2]]:[999,s];};const[an,al]=n(a);const[bn,bl]=n(b);return an!==bn?an-bn:al.localeCompare(bl);});
+    const lotes=[...new Set(data.filter(c=>getEtapa(c.mz)===etapa).map(c=>c.lote))].sort((a,b)=>{const n=(s)=>{const ss=String(s||'');const m=ss.match(/^(\d+)(.*)/);return m?[+m[1],m[2]]:[999,ss];};const[an,al]=n(a);const[bn,bl]=n(b);return an!==bn?an-bn:al.localeCompare(bl);});
     lsel.innerHTML='<option value="">Lote</option>'+lotes.map(l=>`<option value="${l}">${l}</option>`).join('');
     lsel.disabled=false;
   }
@@ -7224,7 +7224,7 @@ function initCobLoteFilter(){
   const lsel=document.getElementById('c-lote');
   if(!lsel)return;
   if(!mz){lsel.innerHTML='<option value="">Lote</option>';lsel.disabled=true;return;}
-  const lotes=[...new Set(data.filter(c=>(!etapa||getEtapa(c.mz)===etapa)&&c.mz===mz).map(c=>c.lote))].sort((a,b)=>{const n=(s)=>{const m=s.match(/^(\d+)(.*)/);return m?[+m[1],m[2]]:[999,s];};const[an,al]=n(a);const[bn,bl]=n(b);return an!==bn?an-bn:al.localeCompare(bl);});
+  const lotes=[...new Set(data.filter(c=>(!etapa||getEtapa(c.mz)===etapa)&&c.mz===mz).map(c=>c.lote))].sort((a,b)=>{const n=(s)=>{const ss=String(s||'');const m=ss.match(/^(\d+)(.*)/);return m?[+m[1],m[2]]:[999,ss];};const[an,al]=n(a);const[bn,bl]=n(b);return an!==bn?an-bn:al.localeCompare(bl);});
   lsel.innerHTML='<option value="">Lote</option>'+lotes.map(l=>`<option value="${l}">${l}</option>`).join('');
   lsel.disabled=false;
 }
