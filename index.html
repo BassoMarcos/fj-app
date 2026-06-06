@@ -6390,6 +6390,24 @@ function adminFieldVal(base){
   return document.getElementById(adminFieldId(base))?.value||'';
 }
 
+// Map: month when INDEC publishes → planilla that gets the increase
+// INDEC publishes in month X → planilla of month X+1 (the one that increases next month)
+const ICC_MAP = {
+  0:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Febrero',  tri:[-2,-1,0]}, // pub Ene → aumenta Feb
+  1:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Marzo',    tri:[-2,-1,0]}, // pub Feb → aumenta Mar
+  2:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Abril',    tri:[-2,-1,0]}, // pub Mar → aumenta Abr
+  3:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Mayo',     tri:[-2,-1,0]}, // pub Abr → aumenta May
+  4:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Junio',    tri:[-2,-1,0]}, // pub May → aumenta Jun
+  5:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Julio',    tri:[-2,-1,0]}, // pub Jun → aumenta Jul
+  6:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Agosto',   tri:[-2,-1,0]}, // pub Jul → aumenta Ago
+  7:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Septiembre',tri:[-2,-1,0]},// pub Ago → aumenta Sep
+  8:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Octubre',  tri:[-2,-1,0]}, // pub Sep → aumenta Oct
+  9:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Noviembre',tri:[-2,-1,0]}, // pub Oct → aumenta Nov
+ 10:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Diciembre',tri:[-2,-1,0]}, // pub Nov → aumenta Dic
+ 11:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Enero',   tri:[-2,-1,0]}, // pub Dic → aumenta Ene
+};
+// MESES defined globally above
+
 function renderAdminTable(){
   let data=loadData();
   const el=document.getElementById('admin-table-wrap');
@@ -6753,23 +6771,7 @@ function iccYaAplicadoEsteMes(){
   const mesKey=getMesKey(hoy);
   return icc.some(x=>x.mesKey===mesKey);
 }
-// Map: month when INDEC publishes → planilla that gets the increase
-// INDEC publishes in month X → planilla of month X+1 (the one that increases next month)
-const ICC_MAP = {
-  0:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Febrero',  tri:[-2,-1,0]}, // pub Ene → aumenta Feb
-  1:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Marzo',    tri:[-2,-1,0]}, // pub Feb → aumenta Mar
-  2:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Abril',    tri:[-2,-1,0]}, // pub Mar → aumenta Abr
-  3:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Mayo',     tri:[-2,-1,0]}, // pub Abr → aumenta May
-  4:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Junio',    tri:[-2,-1,0]}, // pub May → aumenta Jun
-  5:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Julio',    tri:[-2,-1,0]}, // pub Jun → aumenta Jul
-  6:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Agosto',   tri:[-2,-1,0]}, // pub Jul → aumenta Ago
-  7:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Septiembre',tri:[-2,-1,0]},// pub Ago → aumenta Sep
-  8:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Octubre',  tri:[-2,-1,0]}, // pub Sep → aumenta Oct
-  9:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Noviembre',tri:[-2,-1,0]}, // pub Oct → aumenta Nov
- 10:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Diciembre',tri:[-2,-1,0]}, // pub Nov → aumenta Dic
- 11:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Enero',   tri:[-2,-1,0]}, // pub Dic → aumenta Ene
-};
-// MESES defined globally above
+// ICC_MAP movido arriba
 
 function getTrimestreMeses(mesPublicacion){
   // The trimester is: mesPublicacion-2, mesPublicacion-1, mesPublicacion
@@ -8058,6 +8060,18 @@ async function init(){
     console.warn('syncFromSheets failed, using localStorage:', e);
   }
   initPublic();
+  // Refrescar vista activa si el usuario ya estaba logueado
+  try{
+    const pageAdmin=document.getElementById('page-admin');
+    const pageColab=document.getElementById('page-colab');
+    if(pageAdmin&&pageAdmin.classList.contains('active')){
+      initAdminFilters();
+      adminTab('inicio');
+    }
+    if(pageColab&&pageColab.classList.contains('active')){
+      initCobFilters();
+    }
+  }catch(e){}
 }
 init();
 
