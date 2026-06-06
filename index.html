@@ -4410,7 +4410,7 @@ function mostrarAdminDet(id){
     det.style.borderRadius='0 0 var(--rlg) 0';
 
     listPanel.style.flex='none';
-    listPanel.style.width=(100-47)+'%';
+    listPanel.style.width=(listWidth)+'px';
   } else {
     // Mobile: mismo mecanismo que colab
     lista.style.display='none';
@@ -7303,7 +7303,7 @@ function mostrarDetColab(id){
   const det=document.getElementById('colab-detalle');
   if(window.innerWidth>=768){
     lista.style.display='flex';
-    lista.style.width='55%';
+    lista.style.width='50%';
     lista.style.position='fixed';
     lista.style.top='54px';
     lista.style.left='0';
@@ -7316,9 +7316,10 @@ function mostrarDetColab(id){
     const wrap=lista.querySelector('.cob-wrap');
     if(wrap){wrap.style.maxWidth='none';wrap.style.margin='0';}
     det.style.display='block';
-    det.style.width='45%';
+    det.style.width='50%';
     det.style.position='fixed';
     det.style.top='54px';
+    det.style.left='50%';
     det.style.right='0';
     det.style.bottom='0';
     det.style.overflowY='auto';
