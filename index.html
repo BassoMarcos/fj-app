@@ -370,7 +370,7 @@ tr:hover td{background:var(--bg)}
             <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Nuevo</button>
             <button class="btn btn-sm" onclick="abrirGestionPagos()" style="padding:5px 8px;font-size:11px;font-weight:600;background:#f0fdf4;border:1px solid #86efac;color:#16a34a;border-radius:var(--r);cursor:pointer">✓ Pagos</button>
             <div class="search-wrap" style="flex:1;min-width:200px"><span class="search-icon">&#128269;</span><input type="text" id="a-search" placeholder="Buscar nombre, manzana, lote..." oninput="renderAdminTable()"></div>
-            <select class="fsel" id="a-etapa" onchange="localStorage.setItem('fj_admin_etapa',this.value);initAdminMzFilter();renderAdminTable()"><option value="">Etapa</option></select>
+            <select class="fsel" id="a-etapa" onchange="initAdminMzFilter();renderAdminTable()"><option value="">Etapa</option></select>
             <select class="fsel" id="a-mz" onchange="initAdminLoteFilter();renderAdminTable()"><option value="">Manzana</option></select>
             <select class="fsel" id="a-lote" onchange="renderAdminTable()"><option value="">Lote</option></select>
             <select class="fsel" id="a-pago" onchange="renderAdminTable()">
@@ -570,7 +570,7 @@ tr:hover td{background:var(--bg)}
       <div class="cob-wrap">
         <div class="toolbar" style="flex-wrap:wrap;gap:8px;margin-bottom:0">
           <div class="search-wrap" style="flex:1;min-width:200px"><span class="search-icon">&#128269;</span><input type="text" id="c-search" placeholder="Buscar nombre, manzana, lote..." oninput="renderColab()"></div>
-          <select class="fsel" id="c-etapa" onchange="localStorage.setItem('fj_cob_etapa',this.value);initCobMzFilter();renderColab()"><option value="">Etapas</option></select>
+          <select class="fsel" id="c-etapa" onchange="initCobMzFilter();renderColab()"><option value="">Etapas</option></select>
           <select class="fsel" id="c-mz" onchange="initCobLoteFilter();renderColab()"><option value="">Manzana</option></select>
           <select class="fsel" id="c-lote" onchange="renderColab()"><option value="">Lote</option></select>
         </div>
@@ -1495,14 +1495,12 @@ function initAdminFilters(){
   const data=loadData();
   const etapas=[...new Set(data.map(c=>getEtapa(c.mz)))].sort();
   const opts='<option value="">Etapa</option>'+etapas.map(e=>`<option value="${e}">${e}</option>`).join('');
-  // Llenar ambos selects (mobile y desktop)
   const esel=document.getElementById('a-etapa');
   if(esel) esel.innerHTML=opts;
   const eselDesk=document.getElementById('a-etapa-desk');
   if(eselDesk) eselDesk.innerHTML=opts;
   ['a-mz','a-mz-desk'].forEach(id=>{const el=document.getElementById(id);if(el){el.innerHTML='<option value="">Manzana</option>';el.disabled=true;}});
   ['a-lote','a-lote-desk'].forEach(id=>{const el=document.getElementById(id);if(el){el.innerHTML='<option value="">Lote</option>';el.disabled=true;}});
-  renderAdminTable();
 }
 
 function initAdminMzFilter(){
@@ -6390,24 +6388,6 @@ function adminFieldVal(base){
   return document.getElementById(adminFieldId(base))?.value||'';
 }
 
-// Map: month when INDEC publishes → planilla that gets the increase
-// INDEC publishes in month X → planilla of month X+1 (the one that increases next month)
-const ICC_MAP = {
-  0:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Febrero',  tri:[-2,-1,0]}, // pub Ene → aumenta Feb
-  1:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Marzo',    tri:[-2,-1,0]}, // pub Feb → aumenta Mar
-  2:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Abril',    tri:[-2,-1,0]}, // pub Mar → aumenta Abr
-  3:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Mayo',     tri:[-2,-1,0]}, // pub Abr → aumenta May
-  4:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Junio',    tri:[-2,-1,0]}, // pub May → aumenta Jun
-  5:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Julio',    tri:[-2,-1,0]}, // pub Jun → aumenta Jul
-  6:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Agosto',   tri:[-2,-1,0]}, // pub Jul → aumenta Ago
-  7:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Septiembre',tri:[-2,-1,0]},// pub Ago → aumenta Sep
-  8:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Octubre',  tri:[-2,-1,0]}, // pub Sep → aumenta Oct
-  9:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Noviembre',tri:[-2,-1,0]}, // pub Oct → aumenta Nov
- 10:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Diciembre',tri:[-2,-1,0]}, // pub Nov → aumenta Dic
- 11:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Enero',   tri:[-2,-1,0]}, // pub Dic → aumenta Ene
-};
-// MESES defined globally above
-
 function renderAdminTable(){
   let data=loadData();
   const el=document.getElementById('admin-table-wrap');
@@ -6771,7 +6751,23 @@ function iccYaAplicadoEsteMes(){
   const mesKey=getMesKey(hoy);
   return icc.some(x=>x.mesKey===mesKey);
 }
-// ICC_MAP movido arriba
+// Map: month when INDEC publishes → planilla that gets the increase
+// INDEC publishes in month X → planilla of month X+1 (the one that increases next month)
+const ICC_MAP = {
+  0:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Febrero',  tri:[-2,-1,0]}, // pub Ene → aumenta Feb
+  1:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Marzo',    tri:[-2,-1,0]}, // pub Feb → aumenta Mar
+  2:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Abril',    tri:[-2,-1,0]}, // pub Mar → aumenta Abr
+  3:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Mayo',     tri:[-2,-1,0]}, // pub Abr → aumenta May
+  4:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Junio',    tri:[-2,-1,0]}, // pub May → aumenta Jun
+  5:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Julio',    tri:[-2,-1,0]}, // pub Jun → aumenta Jul
+  6:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Agosto',   tri:[-2,-1,0]}, // pub Jul → aumenta Ago
+  7:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Septiembre',tri:[-2,-1,0]},// pub Ago → aumenta Sep
+  8:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Octubre',  tri:[-2,-1,0]}, // pub Sep → aumenta Oct
+  9:{planillaVal:'Feb-May-Ago-Nov',planillaNombre:'Verde', aumentaEn:'Noviembre',tri:[-2,-1,0]}, // pub Oct → aumenta Nov
+ 10:{planillaVal:'Mar-Jun-Sep-Dic',planillaNombre:'Rosa',  aumentaEn:'Diciembre',tri:[-2,-1,0]}, // pub Nov → aumenta Dic
+ 11:{planillaVal:'Ene-Abr-Jul-Oct',planillaNombre:'Azul',  aumentaEn:'Enero',   tri:[-2,-1,0]}, // pub Dic → aumenta Ene
+};
+// MESES defined globally above
 
 function getTrimestreMeses(mesPublicacion){
   // The trimester is: mesPublicacion-2, mesPublicacion-1, mesPublicacion
@@ -7193,7 +7189,6 @@ function initCobFilters(){
   const lsel=document.getElementById('c-lote');
   if(msel){msel.innerHTML='<option value="">Manzana</option>';msel.disabled=true;}
   if(lsel){lsel.innerHTML='<option value="">Lote</option>';lsel.disabled=true;}
-  renderColab();
 }
 
 function initCobMzFilter(){
@@ -8060,18 +8055,6 @@ async function init(){
     console.warn('syncFromSheets failed, using localStorage:', e);
   }
   initPublic();
-  // Refrescar vista activa si el usuario ya estaba logueado
-  try{
-    const pageAdmin=document.getElementById('page-admin');
-    const pageColab=document.getElementById('page-colab');
-    if(pageAdmin&&pageAdmin.classList.contains('active')){
-      initAdminFilters();
-      adminTab('inicio');
-    }
-    if(pageColab&&pageColab.classList.contains('active')){
-      initCobFilters();
-    }
-  }catch(e){}
 }
 init();
 
