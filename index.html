@@ -1508,8 +1508,11 @@ function initAdminFilters(){
 function initAdminMzFilter(){
   const data=loadData();
   const etapa=adminFieldVal('a-etapa')||'';
-  const msel=document.getElementById('a-mz');
-  const lsel=document.getElementById('a-lote');
+  // Manejar tanto mobile como desktop
+  const mselId=adminFieldId('a-mz');
+  const lselId=adminFieldId('a-lote');
+  const msel=document.getElementById(mselId);
+  const lsel=document.getElementById(lselId);
   if(!msel||!lsel)return;
 
   // Reset lote always
@@ -1523,23 +1526,28 @@ function initAdminMzFilter(){
     return;
   }
 
-  // Etapas with multiple manzanas: Etapa 1 and Etapa 4
   const etapasConMz=['Etapa 1','Etapa 4'];
   const tieneMz=etapasConMz.includes(etapa);
 
   if(tieneMz){
     const mzs=[...new Set(data.filter(c=>getEtapa(c.mz)===etapa).map(c=>c.mz))].sort();
-    msel.innerHTML='<option value="">Manzana</option>'+mzs.map(m=>`<option value="${m}">${m}</option>`).join('');
+    const mzOpts='<option value="">Manzana</option>'+mzs.map(m=>`<option value="${m}">${m}</option>`).join('');
+    msel.innerHTML=mzOpts;
     msel.disabled=false;
-    // Don't enable lote yet - wait for mz selection
+    // Sincronizar el otro select (mobile o desktop)
+    const otroMsel=document.getElementById(mselId==='a-mz'?'a-mz-desk':'a-mz');
+    if(otroMsel){otroMsel.innerHTML=mzOpts;otroMsel.disabled=false;}
   } else {
-    // E2, E3: no manzana, go straight to lote
     msel.innerHTML='<option value="">Manzana</option>';
     msel.disabled=true;
-    // Enable lote with all lotes from this etapa
+    const otroMsel=document.getElementById(mselId==='a-mz'?'a-mz-desk':'a-mz');
+    if(otroMsel){otroMsel.innerHTML='<option value="">Manzana</option>';otroMsel.disabled=true;}
     const lotes=[...new Set(data.filter(c=>getEtapa(c.mz)===etapa).map(c=>c.lote))].sort((a,b)=>{const n=(s)=>{const ss=String(s||'');const m=ss.match(/^(\d+)(.*)$/);return m?[+m[1],m[2]]:[999,ss];};const[an,al]=n(a);const[bn,bl]=n(b);return an!==bn?an-bn:al.localeCompare(bl);});
-    lsel.innerHTML='<option value="">Lote</option>'+lotes.map(l=>`<option value="${l}">${l}</option>`).join('');
+    const lOpts='<option value="">Lote</option>'+lotes.map(l=>`<option value="${l}">${l}</option>`).join('');
+    lsel.innerHTML=lOpts;
     lsel.disabled=false;
+    const otroLsel=document.getElementById(lselId==='a-lote'?'a-lote-desk':'a-lote');
+    if(otroLsel){otroLsel.innerHTML=lOpts;otroLsel.disabled=false;}
   }
   renderAdminTable();
 }
