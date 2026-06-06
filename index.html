@@ -2272,7 +2272,7 @@ function adminTab(t){
     if(listPanel){listPanel.style.flex='1';listPanel.style.width='';}
     adminDetId=null;
   }
-  ['inicio','resumen','balances','lista','historial','icc','stats','morapanel','vistaclient'].forEach(x=>{
+  ['inicio','resumen','balances','lista','historial','icc','stats','morapanel','vistaclient','datos'].forEach(x=>{
     const el=document.getElementById('atab-'+x);
     if(el)el.style.display=x===t?(x==='lista'?'flex':'block'):'none';
   });
