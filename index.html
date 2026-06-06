@@ -712,7 +712,7 @@ function _lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}_memStore[k]=v;}
 
 function loadMora(){try{return JSON.parse(localStorage.getItem('fj_mora')||'[]');}catch(e){return [];}}
 function loadPendientesAprobacion(){try{return JSON.parse(localStorage.getItem('fj_pendientes_aprobacion')||'[]');}catch(e){return [];}}
-function savePendientesAprobacion(v){localStorage.setItem('fj_pendientes_aprobacion',JSON.stringify(v));}
+function savePendientesAprobacion(v){localStorage.setItem('fj_pendientes_aprobacion',JSON.stringify(v));sheetsSet('Pendientes',v);}
 function loadUltimaVistaMora(){return localStorage.getItem('fj_mora_vista')||'0';}
 function saveUltimaVistaMora(){localStorage.setItem('fj_mora_vista',new Date().toISOString());}
 function getMoraNoVistos(){
@@ -720,7 +720,7 @@ function getMoraNoVistos(){
   const ultima=loadUltimaVistaMora();
   return mora.filter(p=>p.ts&&p.ts>ultima).length;
 }
-function saveMora(v){localStorage.setItem('fj_mora',JSON.stringify(v));}
+function saveMora(v){localStorage.setItem('fj_mora',JSON.stringify(v));sheetsSet('Mora',v);}
 function loadCierreFinal(){try{return JSON.parse(localStorage.getItem('fj_cierre_final')||'null');}catch(e){return null;}}
 function saveCierreFinal(v){localStorage.setItem('fj_cierre_final',JSON.stringify(v));sheetsSet('CierreFinal',[v]);}
 function hayCierreFinal(){return !!loadCierreFinal();}
@@ -729,7 +729,7 @@ function loadCuotasMora(){try{return JSON.parse(localStorage.getItem('fj_cuotas_
 function saveCuotasMora(v){localStorage.setItem('fj_cuotas_mora',JSON.stringify(v));sheetsSet('CuotasMora',v);}
 // Mes actual del sistema (para saber qué cuota es la del mes en curso)
 function loadMesActual(){try{return JSON.parse(localStorage.getItem('fj_mes_actual')||'null');}catch(e){return null;}}
-function saveMesActual(v){localStorage.setItem('fj_mes_actual',JSON.stringify(v));}
+function saveMesActual(v){localStorage.setItem('fj_mes_actual',JSON.stringify(v));sheetsSet('MesActual',[v]);}
 
 function calcInteresAuto(monto, desdeTs){
   const hoy=new Date();
@@ -770,10 +770,10 @@ const MESES_NOMBRE=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Ag
 
 function getModo(){return localStorage.getItem('fj_modo')||'prueba';}
 function loadExtras(){try{return JSON.parse(localStorage.getItem('fj_extras')||'[]');}catch(e){return [];}}
-function saveExtras(v){localStorage.setItem('fj_extras',JSON.stringify(v));}
+function saveExtras(v){localStorage.setItem('fj_extras',JSON.stringify(v));sheetsSet('Extras',v);}
 
 function loadBalances(){try{return JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');}catch(e){return {cierres:[],abierto:[],agrimensores:[]};}}
-function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));}
+function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[d]);}
 function loadAdelantos(){try{return JSON.parse(_lsGet(dKey('adelantos'))||'[]');}catch(e){return[];}}
 function saveAdelantos(d){_lsSet(dKey('adelantos'),JSON.stringify(d));}
 
@@ -885,35 +885,31 @@ function mostrarToastCobro(msg){
 
 
 function exportarDatos(){
-  const keys=[
-    'fj_data','fj_mora','fj_cuotas_mora','fj_balances','fj_hist',
-    'fj_extras','fj_icc','fj_cierre_final','fj_mes_actual',
-    'fj_pago_store','fj_pendientes_aprobacion','fj_snapshot_cierre',
-    'desarrollo_activo'
-  ];
   const datos={};
-  // Incluir también keys con prefijo del desarrollo activo
-  const devActivo=localStorage.getItem('desarrollo_activo');
-  const prefijos=['fj_'];
-  if(devActivo) prefijos.push(devActivo+'_');
-
+  // Exportar TODO lo que hay en localStorage sin filtrar
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
-    if(prefijos.some(p=>k.startsWith(p))||k==='desarrollo_activo'){
-      datos[k]=localStorage.getItem(k);
-    }
+    datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0288';
+  datos['_version']='v1.0290';
+  datos['_total_keys']=localStorage.length;
+
+  if(Object.keys(datos).length<=3){
+    alert('No hay datos para exportar. Asegurate de estar logueado como Admin.');
+    return;
+  }
 
   const blob=new Blob([JSON.stringify(datos,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
   a.download='FJ_datos_'+new Date().toLocaleDateString('es-AR').replace(/\//g,'-')+'.json';
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  setTimeout(()=>mostrarToastCobro('Datos exportados correctamente'),100);
+  setTimeout(()=>mostrarToastCobro('Datos exportados: '+localStorage.length+' registros'),100);
 }
 
 function importarDatos(input){
@@ -1136,6 +1132,21 @@ async function syncFromSheets(){
     if(historial&&historial.length){
       _lsSet(HK, JSON.stringify(historial));
     }
+
+
+    // Sincronizar datos adicionales
+    const [mora, extras, balancesD, mesActual, pendientes] = await Promise.all([
+      sheetsGet('Mora'),
+      sheetsGet('Extras'),
+      sheetsGet('Balances'),
+      sheetsGet('MesActual'),
+      sheetsGet('Pendientes')
+    ]);
+    if(mora&&mora.length) localStorage.setItem('fj_mora', JSON.stringify(mora));
+    if(extras&&extras.length) localStorage.setItem('fj_extras', JSON.stringify(extras));
+    if(balancesD&&balancesD.length&&typeof balancesD[0]==='object') _lsSet(dKey('balances'), JSON.stringify(balancesD[0]));
+    if(mesActual&&mesActual.length) localStorage.setItem('fj_mes_actual', JSON.stringify(mesActual[0]));
+    if(pendientes&&pendientes.length) localStorage.setItem('fj_pendientes_aprobacion', JSON.stringify(pendientes));
 
     console.log('Sync from Sheets OK');
   }catch(err){
@@ -8002,12 +8013,9 @@ function guardarRegistroEnArchivo(){
 
 // ===================== INIT =====================
 async function init(){
-  // Solo sincronizar desde Sheets si no hay datos locales
+  // Siempre intentar sincronizar desde Sheets al abrir
   try{
-    const hasLocal = _lsGet(dKey('data'));
-    if(!hasLocal){
-      await syncFromSheets();
-    }
+    await syncFromSheets();
   }catch(e){
     console.warn('syncFromSheets failed, using localStorage:', e);
   }
