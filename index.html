@@ -451,6 +451,14 @@ tr:hover td{background:var(--bg)}
           <button onclick="document.getElementById('importar-input').click()" style="background:var(--surface);color:var(--text);border:1.5px solid var(--border);border-radius:var(--r);padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%">⬆ Seleccionar archivo de datos</button>
           <div id="importar-msg" style="margin-top:8px;font-size:13px"></div>
         </div>
+
+        <div style="background:var(--surface);border:1px solid #86efac;border-radius:var(--r);padding:1.5rem;margin-top:1rem">
+          <div style="font-size:16px;font-weight:700;margin-bottom:6px">☁️ Sincronizar con servidor</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Subí todos los datos actuales al servidor para que otros dispositivos los vean automáticamente.</div>
+          <button onclick="sincronizarTodo()" id="btn-sync-todo" style="background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%">☁️ Sincronizar todo ahora</button>
+          <div id="sync-msg" style="margin-top:8px;font-size:13px"></div>
+          <div id="importar-msg" style="margin-top:8px;font-size:13px"></div>
+        </div>
       </div>
     </div>
     <div id="atab-historial" style="display:none"><div style="max-width:1000px;margin:0 auto;padding:2rem 1.5rem">
@@ -1154,6 +1162,22 @@ async function syncFromSheets(){
   }
 }
 
+
+async function sincronizarTodo(){
+  const btn=document.getElementById('btn-sync-todo');
+  const msg=document.getElementById('sync-msg');
+  if(btn) btn.disabled=true;
+  if(msg) msg.innerHTML='<span style="color:var(--text2)">Sincronizando...</span>';
+  try{
+    await syncToSheets();
+    if(msg) msg.innerHTML='<span style="color:#16a34a">✅ Todo sincronizado correctamente. Los demás dispositivos verán los datos al abrir la app.</span>';
+  }catch(e){
+    if(msg) msg.innerHTML='<span style="color:#dc2626">❌ Error al sincronizar: '+e.message+'</span>';
+  }finally{
+    if(btn) btn.disabled=false;
+  }
+}
+
 async function syncToSheets(){
   // Push all local data to Sheets
   const data = loadData();
@@ -1173,14 +1197,25 @@ async function syncToSheets(){
   const pagoRows = Object.entries(pagoStore).map(([id,ts])=>({id,ts}));
   const cierreRows = cierreFinal ? [cierreFinal] : [];
 
+  const mora = loadMora();
+  const extras = loadExtras();
+  const balances = loadBalances();
+  const mesActual = loadMesActual?loadMesActual():null;
+  const pendientes = loadPendientesAprobacion();
+
   await Promise.all([
     sheetsSet('Clientes', clientesRows),
     sheetsSet('CuotasMora', cuotasMora),
     sheetsSet('CierreFinal', cierreRows),
     sheetsSet('PagoStore', pagoRows),
-    sheetsSet('ICC', icc)
+    sheetsSet('ICC', icc),
+    sheetsSet('Mora', mora),
+    sheetsSet('Extras', extras),
+    sheetsSet('Balances', balances?[balances]:[]),
+    sheetsSet('MesActual', mesActual?[mesActual]:[]),
+    sheetsSet('Pendientes', pendientes)
   ]);
-  console.log('Sync to Sheets OK');
+  console.log('Sync to Sheets OK - todo sincronizado');
 }
 
 // ===================== UTILS =====================
