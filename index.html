@@ -1504,8 +1504,8 @@ function initAdminFilters(){
   const lsel=document.getElementById(adminFieldId('a-lote'));
   if(msel){msel.innerHTML='<option value="">Manzana</option>';msel.disabled=true;}
   if(lsel){lsel.innerHTML='<option value="">Lote</option>';lsel.disabled=true;}
-  // Si hay etapa guardada, cargar manzanas también
-  if(localStorage.getItem('fj_admin_etapa')) initAdminMzFilter();
+  // Si hay etapa guardada, cargar manzanas y renderizar
+  if(localStorage.getItem('fj_admin_etapa')){initAdminMzFilter();renderAdminTable();}
 }
 
 function initAdminMzFilter(){
@@ -7197,8 +7197,8 @@ function initCobFilters(){
   const lsel=document.getElementById('c-lote');
   if(msel){msel.innerHTML='<option value="">Manzana</option>';msel.disabled=true;}
   if(lsel){lsel.innerHTML='<option value="">Lote</option>';lsel.disabled=true;}
-  // Si hay etapa guardada, cargar manzanas también
-  if(localStorage.getItem('fj_cob_etapa')) initCobMzFilter();
+  // Si hay etapa guardada, cargar manzanas y renderizar
+  if(localStorage.getItem('fj_cob_etapa')){initCobMzFilter();renderColab();}
 }
 
 function initCobMzFilter(){
