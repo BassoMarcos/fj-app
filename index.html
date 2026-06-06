@@ -1537,7 +1537,7 @@ function initAdminMzFilter(){
     msel.innerHTML='<option value="">Manzana</option>';
     msel.disabled=true;
     // Enable lote with all lotes from this etapa
-    const lotes=[...new Set(data.filter(c=>getEtapa(c.mz)===etapa).map(c=>c.lote))].sort((a,b)=>{const n=(s)=>{const m=s.match(/^(\d+)(.*)$/);return m?[+m[1],m[2]]:[999,s];};const[an,al]=n(a);const[bn,bl]=n(b);return an!==bn?an-bn:al.localeCompare(bl);});
+    const lotes=[...new Set(data.filter(c=>getEtapa(c.mz)===etapa).map(c=>c.lote))].sort((a,b)=>{const n=(s)=>{const ss=String(s||'');const m=ss.match(/^(\d+)(.*)$/);return m?[+m[1],m[2]]:[999,ss];};const[an,al]=n(a);const[bn,bl]=n(b);return an!==bn?an-bn:al.localeCompare(bl);});
     lsel.innerHTML='<option value="">Lote</option>'+lotes.map(l=>`<option value="${l}">${l}</option>`).join('');
     lsel.disabled=false;
   }
@@ -1558,7 +1558,7 @@ function initAdminLoteFilter(){
     return;
   }
 
-  const lotes=[...new Set(data.filter(c=>(!etapa||getEtapa(c.mz)===etapa)&&c.mz===mz).map(c=>c.lote))].sort((a,b)=>{const n=(s)=>{const m=s.match(/^(\d+)(.*)$/);return m?[+m[1],m[2]]:[999,s];};const[an,al]=n(a);const[bn,bl]=n(b);return an!==bn?an-bn:al.localeCompare(bl);});
+  const lotes=[...new Set(data.filter(c=>(!etapa||getEtapa(c.mz)===etapa)&&c.mz===mz).map(c=>c.lote))].sort((a,b)=>{const n=(s)=>{const ss=String(s||'');const m=ss.match(/^(\d+)(.*)$/);return m?[+m[1],m[2]]:[999,ss];};const[an,al]=n(a);const[bn,bl]=n(b);return an!==bn?an-bn:al.localeCompare(bl);});
   lsel.innerHTML='<option value="">Lote</option>'+lotes.map(l=>`<option value="${l}">${l}</option>`).join('');
   lsel.disabled=false;
   renderAdminTable();
@@ -7244,7 +7244,7 @@ function renderColab(){
   list.sort((a,b)=>{
     const ea=etapaOrder[a.mz]||99,eb=etapaOrder[b.mz]||99;
     if(ea!==eb)return ea-eb;
-    const n=(s)=>{const m=(s||'').match(/^(\d+)(.*)/);return m?[+m[1],m[2]]:[999,s];};
+    const n=(s)=>{const ss=String(s||'');const m=ss.match(/^(\d+)(.*)/);return m?[+m[1],m[2]]:[999,ss];};
     const[an,al]=n(a.lote);const[bn,bl]=n(b.lote);
     return an!==bn?an-bn:al.localeCompare(bl);
   });
@@ -7605,7 +7605,7 @@ function renderAgrLista(){
   agr.sort((a,b)=>{
     const ea=etapaOrder[a.mz]||99, eb=etapaOrder[b.mz]||99;
     if(ea!==eb)return ea-eb;
-    const n=(s)=>{const m=(s||'').match(/^(\d+)(.*)/);return m?[+m[1],m[2]]:[999,s];};
+    const n=(s)=>{const ss=String(s||'');const m=ss.match(/^(\d+)(.*)/);return m?[+m[1],m[2]]:[999,ss];};
     const[an,al]=n(a.lote);const[bn,bl]=n(b.lote);
     return an!==bn?an-bn:al.localeCompare(bl);
   });
