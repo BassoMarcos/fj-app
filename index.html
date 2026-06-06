@@ -370,7 +370,7 @@ tr:hover td{background:var(--bg)}
             <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Nuevo</button>
             <button class="btn btn-sm" onclick="abrirGestionPagos()" style="padding:5px 8px;font-size:11px;font-weight:600;background:#f0fdf4;border:1px solid #86efac;color:#16a34a;border-radius:var(--r);cursor:pointer">✓ Pagos</button>
             <div class="search-wrap" style="flex:1;min-width:200px"><span class="search-icon">&#128269;</span><input type="text" id="a-search" placeholder="Buscar nombre, manzana, lote..." oninput="renderAdminTable()"></div>
-            <select class="fsel" id="a-etapa" onchange="initAdminMzFilter();renderAdminTable()"><option value="">Etapa</option></select>
+            <select class="fsel" id="a-etapa" onchange="localStorage.setItem('fj_admin_etapa',this.value);initAdminMzFilter();renderAdminTable()"><option value="">Etapa</option></select>
             <select class="fsel" id="a-mz" onchange="initAdminLoteFilter();renderAdminTable()"><option value="">Manzana</option></select>
             <select class="fsel" id="a-lote" onchange="renderAdminTable()"><option value="">Lote</option></select>
             <select class="fsel" id="a-pago" onchange="renderAdminTable()">
@@ -570,7 +570,7 @@ tr:hover td{background:var(--bg)}
       <div class="cob-wrap">
         <div class="toolbar" style="flex-wrap:wrap;gap:8px;margin-bottom:0">
           <div class="search-wrap" style="flex:1;min-width:200px"><span class="search-icon">&#128269;</span><input type="text" id="c-search" placeholder="Buscar nombre, manzana, lote..." oninput="renderColab()"></div>
-          <select class="fsel" id="c-etapa" onchange="initCobMzFilter();renderColab()"><option value="">Etapas</option></select>
+          <select class="fsel" id="c-etapa" onchange="localStorage.setItem('fj_cob_etapa',this.value);initCobMzFilter();renderColab()"><option value="">Etapas</option></select>
           <select class="fsel" id="c-mz" onchange="initCobLoteFilter();renderColab()"><option value="">Manzana</option></select>
           <select class="fsel" id="c-lote" onchange="renderColab()"><option value="">Lote</option></select>
         </div>
@@ -1495,12 +1495,17 @@ function initAdminFilters(){
   const data=loadData();
   const etapas=[...new Set(data.map(c=>getEtapa(c.mz)))].sort();
   const esel=document.getElementById('a-etapa');
-  if(esel) esel.innerHTML='<option value="">Etapa</option>'+etapas.map(e=>`<option value="${e}">${e}</option>`).join('');
+  if(esel){
+    const saved=localStorage.getItem('fj_admin_etapa')||'';
+    esel.innerHTML='<option value="">Etapa</option>'+etapas.map(e=>`<option value="${e}"${e===saved?' selected':''}>${e}</option>`).join('');
+  }
   // Reset and disable mz and lote
   const msel=document.getElementById(adminFieldId('a-mz'));
   const lsel=document.getElementById(adminFieldId('a-lote'));
   if(msel){msel.innerHTML='<option value="">Manzana</option>';msel.disabled=true;}
   if(lsel){lsel.innerHTML='<option value="">Lote</option>';lsel.disabled=true;}
+  // Si hay etapa guardada, cargar manzanas también
+  if(localStorage.getItem('fj_admin_etapa')) initAdminMzFilter();
 }
 
 function initAdminMzFilter(){
@@ -7184,11 +7189,16 @@ function initCobFilters(){
   const data=loadData();
   const etapas=[...new Set(data.map(c=>getEtapa(c.mz)))].sort();
   const esel=document.getElementById('c-etapa');
-  if(esel) esel.innerHTML='<option value="">Etapa</option>'+etapas.map(e=>`<option value="${e}">${e}</option>`).join('');
+  if(esel){
+    const saved=localStorage.getItem('fj_cob_etapa')||'';
+    esel.innerHTML='<option value="">Etapa</option>'+etapas.map(e=>`<option value="${e}"${e===saved?' selected':''}>${e}</option>`).join('');
+  }
   const msel=document.getElementById('c-mz');
   const lsel=document.getElementById('c-lote');
   if(msel){msel.innerHTML='<option value="">Manzana</option>';msel.disabled=true;}
   if(lsel){lsel.innerHTML='<option value="">Lote</option>';lsel.disabled=true;}
+  // Si hay etapa guardada, cargar manzanas también
+  if(localStorage.getItem('fj_cob_etapa')) initCobMzFilter();
 }
 
 function initCobMzFilter(){
