@@ -781,7 +781,7 @@ function loadExtras(){try{return JSON.parse(localStorage.getItem('fj_extras')||'
 function saveExtras(v){localStorage.setItem('fj_extras',JSON.stringify(v));sheetsSet('Extras',v);}
 
 function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[]};}}
-function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[d]);}
+function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[{json:'STR:'+JSON.stringify(d)}]);}
 function loadAdelantos(){try{return JSON.parse(_lsGet(dKey('adelantos'))||'[]');}catch(e){return[];}}
 function saveAdelantos(d){_lsSet(dKey('adelantos'),JSON.stringify(d));sheetsSet('Adelantos',d);}
 
@@ -900,7 +900,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0292';
+  datos['_version']='v1.0293';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1180,7 +1180,7 @@ async function syncFromSheets(){
     ]);
     if(mora&&mora.length) localStorage.setItem('fj_mora', JSON.stringify(mora));
     if(extras&&extras.length) localStorage.setItem('fj_extras', JSON.stringify(extras));
-    if(balancesD&&balancesD.length&&typeof balancesD[0]==='object') _lsSet(dKey('balances'), JSON.stringify(balancesD[0]));
+    if(balancesD&&balancesD.length){const braw=balancesD[0];const bjson=braw&&braw.json?braw.json.replace(/^STR:/,''):null;if(bjson){try{_lsSet(dKey('balances'),bjson);}catch(e){}}}
     if(mesActual&&mesActual.length) localStorage.setItem('fj_mes_actual', JSON.stringify(mesActual[0]));
     if(pendientes&&pendientes.length) localStorage.setItem('fj_pendientes_aprobacion', JSON.stringify(pendientes));
     if(adelantosD&&adelantosD.length) _lsSet(dKey('adelantos'), JSON.stringify(adelantosD));
@@ -1252,7 +1252,7 @@ async function syncToSheets(){
     sheetsSet('ICC', icc.map(e=>({mes:'STR:'+(e.mes||''),pct:e.pct||0,totalTri:e.totalTri||0,planilla:e.planilla||'',planillaNombre:e.planillaNombre||'',aumentaEn:e.aumentaEn||'',cnt:e.cnt||0,mesKey:'STR:'+(e.mesKey||''),ts:e.ts||''}))),
     sheetsSet('Mora', mora),
     sheetsSet('Extras', extras),
-    sheetsSet('Balances', balances?[balances]:[]),
+    sheetsSet('Balances', balances?[{json:'STR:'+JSON.stringify(balances)}]:[]),
     sheetsSet('MesActual', mesActual?[mesActual]:[]),
     sheetsSet('Pendientes', pendientes),
     sheetsSet('Adelantos', adelantos)
@@ -2310,7 +2310,7 @@ function openAddModal(){
 
 // ============== BALANCES ==============
 function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[]};}}
-function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[d]);}
+function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[{json:'STR:'+JSON.stringify(d)}]);}
 let _claveAccion=null;
 let _claveEsColab=false;
 let _claveEsEdit=false;
