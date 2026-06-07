@@ -4385,33 +4385,44 @@ function mostrarAdminDet(id){
   });
 
   if(wide){
-    // Desktop: lista ocupa 50% izquierdo, detalle 50% derecho (igual que colab)
+    // Desktop: achicamos el panel central (1000px) para hacer lugar al detalle
+    // El sidebar queda intacto, solo el panel de lista se comprime
+    const panelEl=lista.querySelector('[style*="1000px"]');
     const tabTop=lista.getBoundingClientRect().top;
 
-    lista.style.display='flex';
-    lista.style.position='fixed';
-    lista.style.top=tabTop+'px';
-    lista.style.left='0';
-    lista.style.width='50%';
-    lista.style.bottom='0';
-    lista.style.overflowY='auto';
-    lista.style.zIndex='50';
-    lista.style.background='var(--bg)';
-    lista.style.borderRight='1px solid var(--border)';
-
-    det.style.display='block';
-    det.style.position='fixed';
-    det.style.top=tabTop+'px';
-    det.style.left='50%';
-    det.style.width='50%';
-    det.style.bottom='0';
-    det.style.overflowY='auto';
-    det.style.zIndex='50';
-    det.style.background='var(--surface)';
-    det.style.borderLeft='1px solid var(--border)';
-
-    listPanel.style.flex='1';
-    listPanel.style.width='';
+    if(panelEl){
+      const panelRect=panelEl.getBoundingClientRect();
+      // Detalle ocupa desde el centro del panel hasta el borde derecho
+      const detLeft=panelRect.left+Math.round(panelRect.width*0.5);
+      const detWidth=window.innerWidth-detLeft;
+      det.style.display='block';
+      det.style.position='fixed';
+      det.style.top=tabTop+'px';
+      det.style.left=detLeft+'px';
+      det.style.width=detWidth+'px';
+      det.style.bottom='0';
+      det.style.overflowY='auto';
+      det.style.zIndex='50';
+      det.style.background='var(--surface)';
+      det.style.borderLeft='1px solid var(--border)';
+      // Achicar el listPanel para que no quede tapado
+      listPanel.style.flex='none';
+      listPanel.style.width=Math.round(panelRect.width*0.5)+'px';
+    } else {
+      // Fallback: 50/50
+      det.style.display='block';
+      det.style.position='fixed';
+      det.style.top=tabTop+'px';
+      det.style.left='50%';
+      det.style.width='50%';
+      det.style.bottom='0';
+      det.style.overflowY='auto';
+      det.style.zIndex='50';
+      det.style.background='var(--surface)';
+      det.style.borderLeft='1px solid var(--border)';
+      listPanel.style.flex='1';
+      listPanel.style.width='';
+    }
   } else {
     // Mobile: mismo mecanismo que colab
     lista.style.display='none';
