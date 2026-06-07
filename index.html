@@ -4385,31 +4385,40 @@ function mostrarAdminDet(id){
   });
 
   if(wide){
-    // Desktop: achicamos el panel central (1000px) para hacer lugar al detalle
-    // El sidebar queda intacto, solo el panel de lista se comprime
-    const panelEl=lista.querySelector('[style*="1000px"]');
     const tabTop=lista.getBoundingClientRect().top;
+    const sidebar=document.getElementById('admin-sidebar');
+    const panelEl=lista.querySelector('[style*="1000px"]');
 
+    // Fijar el sidebar para que siempre sea visible
+    if(sidebar){
+      const sr=sidebar.getBoundingClientRect();
+      sidebar.style.position='fixed';
+      sidebar.style.top=tabTop+'px';
+      sidebar.style.left=sr.left+'px';
+      sidebar.style.width=sr.width+'px';
+      sidebar.style.bottom='0';
+      sidebar.style.overflowY='auto';
+      sidebar.style.zIndex='60';
+      sidebar.style.background='var(--bg)';
+    }
+
+    // Panel central: achicar a la mitad para hacer lugar al detalle
     if(panelEl){
-      const panelRect=panelEl.getBoundingClientRect();
-      // Detalle ocupa desde el centro del panel hasta el borde derecho
-      const detLeft=panelRect.left+Math.round(panelRect.width*0.5);
-      const detWidth=window.innerWidth-detLeft;
+      const pr=panelEl.getBoundingClientRect();
+      listPanel.style.flex='none';
+      listPanel.style.width=Math.round(pr.width*0.5)+'px';
+      const detLeft=pr.left+Math.round(pr.width*0.5);
       det.style.display='block';
       det.style.position='fixed';
       det.style.top=tabTop+'px';
       det.style.left=detLeft+'px';
-      det.style.width=detWidth+'px';
+      det.style.width=(window.innerWidth-detLeft)+'px';
       det.style.bottom='0';
       det.style.overflowY='auto';
       det.style.zIndex='50';
       det.style.background='var(--surface)';
       det.style.borderLeft='1px solid var(--border)';
-      // Achicar el listPanel para que no quede tapado
-      listPanel.style.flex='none';
-      listPanel.style.width=Math.round(panelRect.width*0.5)+'px';
     } else {
-      // Fallback: 50/50
       det.style.display='block';
       det.style.position='fixed';
       det.style.top=tabTop+'px';
@@ -4448,6 +4457,8 @@ function cerrarAdminDet(){
   // Reset lista
   const listaEl2=document.getElementById('atab-lista');
   if(listaEl2){listaEl2.style.position='';listaEl2.style.top='';listaEl2.style.left='';listaEl2.style.width='';listaEl2.style.bottom='';listaEl2.style.overflowY='';listaEl2.style.zIndex='';listaEl2.style.background='';listaEl2.style.borderRight='';}
+  const sidebarEl=document.getElementById('admin-sidebar');
+  if(sidebarEl){sidebarEl.style.position='';sidebarEl.style.top='';sidebarEl.style.left='';sidebarEl.style.width='';sidebarEl.style.bottom='';sidebarEl.style.overflowY='';sidebarEl.style.zIndex='';sidebarEl.style.background='';}
   det.style.borderLeft='';det.style.borderTop='';det.style.borderRadius='';
 
   // Reset list panel
