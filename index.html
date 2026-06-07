@@ -4385,32 +4385,33 @@ function mostrarAdminDet(id){
   });
 
   if(wide){
-    // Desktop: lista fixed left, detalle fixed right — igual que colab
-    const listaRect=lista.getBoundingClientRect();
-    const splitEl=lista.querySelector('[style*="1000px"]');
-    let splitLeft=0,splitWidth=0;
-    if(splitEl){const r=splitEl.getBoundingClientRect();splitLeft=r.left;splitWidth=r.width;}
-    const detWidth=Math.round(splitWidth*0.47);
-    const listWidth=splitWidth-detWidth;
+    // Desktop: lista ocupa 50% izquierdo, detalle 50% derecho (igual que colab)
+    const tabTop=lista.getBoundingClientRect().top;
 
     lista.style.display='flex';
+    lista.style.position='fixed';
+    lista.style.top=tabTop+'px';
+    lista.style.left='0';
+    lista.style.width='50%';
+    lista.style.bottom='0';
+    lista.style.overflowY='auto';
+    lista.style.zIndex='50';
+    lista.style.background='var(--bg)';
+    lista.style.borderRight='1px solid var(--border)';
 
-    // Position detalle fixed over the right portion of the split
     det.style.display='block';
     det.style.position='fixed';
-    det.style.top=lista.getBoundingClientRect().top+'px';
-    det.style.left=(splitLeft+listWidth)+'px';
-    det.style.width=detWidth+'px';
+    det.style.top=tabTop+'px';
+    det.style.left='50%';
+    det.style.width='50%';
     det.style.bottom='0';
     det.style.overflowY='auto';
     det.style.zIndex='50';
     det.style.background='var(--surface)';
     det.style.borderLeft='1px solid var(--border)';
-    det.style.borderTop='1px solid var(--border)';
-    det.style.borderRadius='0 0 var(--rlg) 0';
 
-    listPanel.style.flex='none';
-    listPanel.style.width=(listWidth)+'px';
+    listPanel.style.flex='1';
+    listPanel.style.width='';
   } else {
     // Mobile: mismo mecanismo que colab
     lista.style.display='none';
@@ -4433,6 +4434,9 @@ function cerrarAdminDet(){
   det.style.position='';det.style.top='';det.style.left='';det.style.right='';
   det.style.bottom='';det.style.zIndex='';det.style.width='';
   det.style.flexDirection='';det.style.background='';
+  // Reset lista
+  const listaEl2=document.getElementById('atab-lista');
+  if(listaEl2){listaEl2.style.position='';listaEl2.style.top='';listaEl2.style.left='';listaEl2.style.width='';listaEl2.style.bottom='';listaEl2.style.overflowY='';listaEl2.style.zIndex='';listaEl2.style.background='';listaEl2.style.borderRight='';}
   det.style.borderLeft='';det.style.borderTop='';det.style.borderRadius='';
 
   // Reset list panel
