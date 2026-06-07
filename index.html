@@ -2321,13 +2321,16 @@ function _claveCancelar(){
 // ============== ADMIN TABS ==============
 function adminTab(t){
   // Ocultar detalle si cambiamos de pestaña
-  if(t!=='lista'){
-    const det=document.getElementById('admin-detalle');
-    if(det){det.style.display='none';det.style.position='';det.style.width='';det.style.top='';det.style.left='';det.style.right='';det.style.bottom='';det.style.zIndex='';}
-    const listPanel=document.getElementById('admin-list-panel');
-    if(listPanel){listPanel.style.flex='1';listPanel.style.width='';}
-    adminDetId=null;
-  }
+  // Al cambiar de pestaña, restaurar panel y sidebar a estado normal
+  const det=document.getElementById('admin-detalle');
+  if(det){det.style.display='none';det.style.position='';det.style.width='';det.style.top='';det.style.left='';det.style.right='';det.style.bottom='';det.style.zIndex='';det.style.flex='';det.style.minWidth='';det.style.borderLeft='';}
+  const listPanel=document.getElementById('admin-list-panel');
+  if(listPanel){listPanel.style.flex='1';listPanel.style.width='';}
+  const panelEl=document.querySelector('#admin-desktop-layout>div:nth-child(2)');
+  if(panelEl&&(panelEl.style.width==='480px'||panelEl.style.width==='500px')){panelEl.style.width='1000px';panelEl.style.maxWidth='1000px';panelEl.style.margin='0 auto';}
+  const sidebarEl=document.getElementById('admin-sidebar');
+  if(sidebarEl){sidebarEl.style.position='absolute';sidebarEl.style.width='';sidebarEl.style.flexShrink='';sidebarEl.style.alignSelf='';sidebarEl.style.right='calc(50% + 500px)';}
+  adminDetId=null;
   ['inicio','resumen','balances','lista','historial','icc','stats','morapanel','vistaclient','datos'].forEach(x=>{
     const el=document.getElementById('atab-'+x);
     if(el)el.style.display=x===t?(x==='lista'?'flex':'block'):'none';
