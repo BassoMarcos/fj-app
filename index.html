@@ -1134,7 +1134,8 @@ async function syncFromSheets(){
       const parsed = icc.map(e=>({
         ...e, pct: Number(e.pct)||0, totalTri: Number(e.totalTri)||0, cnt: Number(e.cnt)||0
       }));
-      _lsSet(IK, JSON.stringify(parsed));
+      // Guardar con la misma clave que usa loadICC()
+      _lsSet(dKey('icc'), JSON.stringify(parsed));
     }
 
     if(historial&&historial.length){
