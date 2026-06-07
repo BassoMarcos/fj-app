@@ -900,7 +900,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0291';
+  datos['_version']='v1.0292';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1186,6 +1186,17 @@ async function syncFromSheets(){
     if(adelantosD&&adelantosD.length) _lsSet(dKey('adelantos'), JSON.stringify(adelantosD));
 
     console.log('Sync from Sheets OK');
+    // Forzar re-render si el usuario ya está logueado
+    try{
+      const pageAdmin=document.getElementById('page-admin');
+      const pageColab=document.getElementById('page-colab');
+      if(pageAdmin&&pageAdmin.classList.contains('active')){
+        initAdminFilters();
+        adminTab(window._adminTabActiva||'inicio');
+      } else if(pageColab&&pageColab.classList.contains('active')){
+        renderColab();
+      }
+    }catch(re){}
   }catch(err){
     console.warn('syncFromSheets error:', err);
   }
