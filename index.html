@@ -4385,26 +4385,29 @@ function mostrarAdminDet(id){
   });
 
   if(wide){
-    // Mover admin-detalle DENTRO de admin-desktop-layout para que quede al lado del panel
-    const desktopLayout=document.getElementById('admin-desktop-layout');
+    // Achicar el panel central y poner detalle fixed a su derecha
     const panelEl=lista.querySelector('[style*="1000px"]');
-    if(desktopLayout && panelEl){
-      // Achicar panel central
+    if(panelEl){
+      // Achicar panel a 480px
       panelEl.style.width='480px';
       panelEl.style.maxWidth='480px';
-      // Mover det dentro del layout si no está ya
-      if(det.parentElement!==desktopLayout){
-        desktopLayout.appendChild(det);
-      }
-      det.style.display='flex';
-      det.style.flexDirection='column';
-      det.style.flex='1';
-      det.style.minWidth='0';
-      det.style.position='';
-      det.style.top='';det.style.left='';det.style.width='';det.style.bottom='';det.style.zIndex='';
-      det.style.overflowY='auto';
-      det.style.background='var(--surface)';
-      det.style.borderLeft='1px solid var(--border)';
+      // Esperar un tick para que el layout se actualice
+      requestAnimationFrame(()=>{
+        const pr=panelEl.getBoundingClientRect();
+        const tabTop=document.querySelector('.tabs-nav')?.getBoundingClientRect().bottom||54;
+        det.style.display='block';
+        det.style.position='fixed';
+        det.style.top=tabTop+'px';
+        det.style.left=pr.right+'px';
+        det.style.width=(window.innerWidth-pr.right)+'px';
+        det.style.bottom='0';
+        det.style.overflowY='auto';
+        det.style.zIndex='50';
+        det.style.background='var(--surface)';
+        det.style.borderLeft='1px solid var(--border)';
+        det.style.flex='';
+        det.style.minWidth='';
+      });
     }
     listPanel.style.flex='1';
     listPanel.style.width='';
@@ -4434,14 +4437,10 @@ function cerrarAdminDet(){
   // Restaurar panel central
   const panelElR=document.querySelector('#admin-desktop-layout [style*="480px"]')||document.querySelector('#admin-desktop-layout>div:nth-child(2)');
   if(panelElR){panelElR.style.width='1000px';panelElR.style.maxWidth='1000px';}
-  // Devolver det a tab-content-area si fue movido
-  const tabContentArea=document.querySelector('.tab-content-area');
-  if(tabContentArea && det.parentElement!==tabContentArea){
-    tabContentArea.appendChild(det);
-  }
   det.style.display='none';
-  det.style.flex='';det.style.minWidth='';det.style.borderLeft='';
-  det.style.flexDirection='';
+  det.style.position='';det.style.top='';det.style.left='';det.style.width='';
+  det.style.bottom='';det.style.zIndex='';det.style.flex='';det.style.minWidth='';
+  det.style.borderLeft='';det.style.flexDirection='';
   det.style.borderLeft='';det.style.borderTop='';det.style.borderRadius='';
 
   // Reset list panel
