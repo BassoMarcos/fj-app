@@ -2326,10 +2326,11 @@ function adminTab(t){
   if(det){det.style.display='none';det.style.position='';det.style.width='';det.style.top='';det.style.left='';det.style.right='';det.style.bottom='';det.style.zIndex='';det.style.flex='';det.style.minWidth='';det.style.borderLeft='';}
   const listPanel=document.getElementById('admin-list-panel');
   if(listPanel){listPanel.style.flex='1';listPanel.style.width='';}
+  // Restaurar panel siempre (independiente de su width actual)
   const panelEl=document.querySelector('#admin-desktop-layout>div:nth-child(2)');
-  if(panelEl&&(panelEl.style.width==='480px'||panelEl.style.width==='500px')){panelEl.style.width='1000px';panelEl.style.maxWidth='1000px';panelEl.style.margin='0 auto';}
+  if(panelEl){panelEl.style.width='1000px';panelEl.style.maxWidth='1000px';panelEl.style.margin='0 auto';}
   const sidebarEl=document.getElementById('admin-sidebar');
-  if(sidebarEl){sidebarEl.style.position='absolute';sidebarEl.style.width='';sidebarEl.style.flexShrink='';sidebarEl.style.alignSelf='';sidebarEl.style.right='calc(50% + 500px)';}
+  if(sidebarEl){sidebarEl.style.position='absolute';sidebarEl.style.top='0.5rem';sidebarEl.style.right='calc(50% + 500px)';sidebarEl.style.width='';sidebarEl.style.flexShrink='';sidebarEl.style.alignSelf='';}
   adminDetId=null;
   ['inicio','resumen','balances','lista','historial','icc','stats','morapanel','vistaclient','datos'].forEach(x=>{
     const el=document.getElementById('atab-'+x);
@@ -4450,7 +4451,7 @@ function cerrarAdminDet(){
   det.style.flexDirection='';det.style.background='';
   // Reset lista
   // Restaurar panel central
-  const panelElR=document.querySelector('#admin-desktop-layout [style*="480px"]')||document.querySelector('#admin-desktop-layout>div:nth-child(2)');
+  const panelElR=document.querySelector('#admin-desktop-layout>div:nth-child(2)');
   if(panelElR){panelElR.style.width='1000px';panelElR.style.maxWidth='1000px';panelElR.style.margin='0 auto';}
   const sidebarR=document.getElementById('admin-sidebar');
   if(sidebarR){sidebarR.style.position='absolute';sidebarR.style.top='0.5rem';sidebarR.style.right='calc(50% + 500px)';sidebarR.style.width='';sidebarR.style.flexShrink='';sidebarR.style.alignSelf='';}
