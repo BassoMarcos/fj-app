@@ -900,7 +900,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0290';
+  datos['_version']='v1.0291';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1238,7 +1238,7 @@ async function syncToSheets(){
     sheetsSet('CuotasMora', cuotasMora),
     sheetsSet('CierreFinal', cierreRows),
     sheetsSet('PagoStore', pagoRows),
-    sheetsSet('ICC', icc),
+    sheetsSet('ICC', icc.map(e=>({mes:'STR:'+(e.mes||''),pct:e.pct||0,totalTri:e.totalTri||0,planilla:e.planilla||'',planillaNombre:e.planillaNombre||'',aumentaEn:e.aumentaEn||'',cnt:e.cnt||0,mesKey:'STR:'+(e.mesKey||''),ts:e.ts||''}))),
     sheetsSet('Mora', mora),
     sheetsSet('Extras', extras),
     sheetsSet('Balances', balances?[balances]:[]),
