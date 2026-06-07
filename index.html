@@ -4385,53 +4385,30 @@ function mostrarAdminDet(id){
   });
 
   if(wide){
-    const tabTop=lista.getBoundingClientRect().top;
-    const sidebar=document.getElementById('admin-sidebar');
+    // Mostrar detalle inline: el panel central se achica, detalle aparece a su derecha
+    // El sidebar queda absolutamente intacto
     const panelEl=lista.querySelector('[style*="1000px"]');
-
-    // Fijar el sidebar para que siempre sea visible
-    if(sidebar){
-      const sr=sidebar.getBoundingClientRect();
-      sidebar.style.position='fixed';
-      sidebar.style.top=tabTop+'px';
-      sidebar.style.left=sr.left+'px';
-      sidebar.style.width=sr.width+'px';
-      sidebar.style.bottom='0';
-      sidebar.style.overflowY='auto';
-      sidebar.style.zIndex='60';
-      sidebar.style.background='var(--bg)';
-    }
-
-    // Panel central: achicar a la mitad para hacer lugar al detalle
     if(panelEl){
-      const pr=panelEl.getBoundingClientRect();
-      listPanel.style.flex='none';
-      listPanel.style.width=Math.round(pr.width*0.5)+'px';
-      const detLeft=pr.left+Math.round(pr.width*0.5);
-      det.style.display='block';
-      det.style.position='fixed';
-      det.style.top=tabTop+'px';
-      det.style.left=detLeft+'px';
-      det.style.width=(window.innerWidth-detLeft)+'px';
-      det.style.bottom='0';
-      det.style.overflowY='auto';
-      det.style.zIndex='50';
-      det.style.background='var(--surface)';
-      det.style.borderLeft='1px solid var(--border)';
-    } else {
-      det.style.display='block';
-      det.style.position='fixed';
-      det.style.top=tabTop+'px';
-      det.style.left='50%';
-      det.style.width='50%';
-      det.style.bottom='0';
-      det.style.overflowY='auto';
-      det.style.zIndex='50';
-      det.style.background='var(--surface)';
-      det.style.borderLeft='1px solid var(--border)';
-      listPanel.style.flex='1';
-      listPanel.style.width='';
+      panelEl.style.width='500px';
+      panelEl.style.maxWidth='500px';
     }
+    det.style.display='block';
+    det.style.position='';
+    det.style.top='';
+    det.style.left='';
+    det.style.width='';
+    det.style.bottom='';
+    det.style.overflowY='auto';
+    det.style.zIndex='';
+    det.style.background='var(--surface)';
+    det.style.borderLeft='1px solid var(--border)';
+    det.style.flex='1';
+    det.style.minWidth='0';
+    // Poner lista y detalle en fila
+    const desktopLayout=document.getElementById('admin-desktop-layout');
+    if(desktopLayout) desktopLayout.style.alignItems='flex-start';
+    listPanel.style.flex='1';
+    listPanel.style.width='';
   } else {
     // Mobile: mismo mecanismo que colab
     lista.style.display='none';
@@ -4459,6 +4436,10 @@ function cerrarAdminDet(){
   if(listaEl2){listaEl2.style.position='';listaEl2.style.top='';listaEl2.style.left='';listaEl2.style.width='';listaEl2.style.bottom='';listaEl2.style.overflowY='';listaEl2.style.zIndex='';listaEl2.style.background='';listaEl2.style.borderRight='';}
   const sidebarEl=document.getElementById('admin-sidebar');
   if(sidebarEl){sidebarEl.style.position='';sidebarEl.style.top='';sidebarEl.style.left='';sidebarEl.style.width='';sidebarEl.style.bottom='';sidebarEl.style.overflowY='';sidebarEl.style.zIndex='';sidebarEl.style.background='';}
+  // Restaurar panel central
+  const panelElR=document.querySelector('#atab-lista [style*="500px"]')||document.querySelector('#admin-desktop-layout>div:nth-child(2)');
+  if(panelElR){panelElR.style.width='1000px';panelElR.style.maxWidth='1000px';}
+  det.style.flex='';det.style.minWidth='';det.style.borderLeft='';
   det.style.borderLeft='';det.style.borderTop='';det.style.borderRadius='';
 
   // Reset list panel
