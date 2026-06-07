@@ -4388,9 +4388,12 @@ function mostrarAdminDet(id){
     // Achicar el panel central y poner detalle fixed a su derecha
     const panelEl=lista.querySelector('[style*="1000px"]');
     if(panelEl){
-      // Achicar panel a 480px
+      const sidebar=document.getElementById('admin-sidebar');
+      const sidebarW=sidebar?sidebar.getBoundingClientRect().width:260;
+      // Achicar panel y empujarlo a la derecha del sidebar
       panelEl.style.width='480px';
       panelEl.style.maxWidth='480px';
+      panelEl.style.margin='0 0 0 '+Math.ceil(sidebarW)+'px';
       // Esperar un tick para que el layout se actualice
       requestAnimationFrame(()=>{
         const pr=panelEl.getBoundingClientRect();
@@ -4436,7 +4439,7 @@ function cerrarAdminDet(){
   // Reset lista
   // Restaurar panel central
   const panelElR=document.querySelector('#admin-desktop-layout [style*="480px"]')||document.querySelector('#admin-desktop-layout>div:nth-child(2)');
-  if(panelElR){panelElR.style.width='1000px';panelElR.style.maxWidth='1000px';}
+  if(panelElR){panelElR.style.width='1000px';panelElR.style.maxWidth='1000px';panelElR.style.margin='0 auto';}
   det.style.display='none';
   det.style.position='';det.style.top='';det.style.left='';det.style.width='';
   det.style.bottom='';det.style.zIndex='';det.style.flex='';det.style.minWidth='';
