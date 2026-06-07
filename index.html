@@ -1131,9 +1131,32 @@ async function syncFromSheets(){
     }
 
     if(icc&&icc.length){
-      const parsed = icc.map(e=>({
-        ...e, pct: Number(e.pct)||0, totalTri: Number(e.totalTri)||0, cnt: Number(e.cnt)||0
-      }));
+      const parsed = icc.map(e=>{
+        // Sheets corrompe mes/mesKey a fechas ISO y cnt a fechas — restaurar
+        let mes=e.mes||'';
+        let mesKey=e.mesKey||'';
+        let cnt=e.cnt;
+        // Si mes parece fecha ISO, convertir a "Mes YYYY"
+        if(mes&&mes.includes('T')){
+          const d=new Date(mes);
+          const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+          mes=meses[d.getUTCMonth()]+' '+d.getUTCFullYear();
+        }
+        // Si mesKey parece fecha ISO, convertir a "YYYY-MM"
+        if(mesKey&&mesKey.includes('T')){
+          const d=new Date(mesKey);
+          const m=String(d.getUTCMonth()+1).padStart(2,'0');
+          mesKey=d.getUTCFullYear()+'-'+m;
+        }
+        // Si cnt parece fecha ISO, es el número original en días desde 1900
+        if(typeof cnt==='string'&&cnt.includes('T')){
+          // Recuperar cnt del número de cuotas (no crítico, usar 0)
+          cnt=0;
+        } else {
+          cnt=Number(cnt)||0;
+        }
+        return {...e, mes, mesKey, cnt, pct:Number(e.pct)||0, totalTri:Number(e.totalTri)||0};
+      });
       // Guardar con la misma clave que usa loadICC()
       _lsSet(dKey('icc'), JSON.stringify(parsed));
     }
