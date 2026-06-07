@@ -4385,28 +4385,27 @@ function mostrarAdminDet(id){
   });
 
   if(wide){
-    // Mostrar detalle inline: el panel central se achica, detalle aparece a su derecha
-    // El sidebar queda absolutamente intacto
-    const panelEl=lista.querySelector('[style*="1000px"]');
-    if(panelEl){
-      panelEl.style.width='500px';
-      panelEl.style.maxWidth='500px';
-    }
-    det.style.display='block';
-    det.style.position='';
-    det.style.top='';
-    det.style.left='';
-    det.style.width='';
-    det.style.bottom='';
-    det.style.overflowY='auto';
-    det.style.zIndex='';
-    det.style.background='var(--surface)';
-    det.style.borderLeft='1px solid var(--border)';
-    det.style.flex='1';
-    det.style.minWidth='0';
-    // Poner lista y detalle en fila
+    // Mover admin-detalle DENTRO de admin-desktop-layout para que quede al lado del panel
     const desktopLayout=document.getElementById('admin-desktop-layout');
-    if(desktopLayout) desktopLayout.style.alignItems='flex-start';
+    const panelEl=lista.querySelector('[style*="1000px"]');
+    if(desktopLayout && panelEl){
+      // Achicar panel central
+      panelEl.style.width='480px';
+      panelEl.style.maxWidth='480px';
+      // Mover det dentro del layout si no está ya
+      if(det.parentElement!==desktopLayout){
+        desktopLayout.appendChild(det);
+      }
+      det.style.display='flex';
+      det.style.flexDirection='column';
+      det.style.flex='1';
+      det.style.minWidth='0';
+      det.style.position='';
+      det.style.top='';det.style.left='';det.style.width='';det.style.bottom='';det.style.zIndex='';
+      det.style.overflowY='auto';
+      det.style.background='var(--surface)';
+      det.style.borderLeft='1px solid var(--border)';
+    }
     listPanel.style.flex='1';
     listPanel.style.width='';
   } else {
@@ -4432,14 +4431,17 @@ function cerrarAdminDet(){
   det.style.bottom='';det.style.zIndex='';det.style.width='';
   det.style.flexDirection='';det.style.background='';
   // Reset lista
-  const listaEl2=document.getElementById('atab-lista');
-  if(listaEl2){listaEl2.style.position='';listaEl2.style.top='';listaEl2.style.left='';listaEl2.style.width='';listaEl2.style.bottom='';listaEl2.style.overflowY='';listaEl2.style.zIndex='';listaEl2.style.background='';listaEl2.style.borderRight='';}
-  const sidebarEl=document.getElementById('admin-sidebar');
-  if(sidebarEl){sidebarEl.style.position='';sidebarEl.style.top='';sidebarEl.style.left='';sidebarEl.style.width='';sidebarEl.style.bottom='';sidebarEl.style.overflowY='';sidebarEl.style.zIndex='';sidebarEl.style.background='';}
   // Restaurar panel central
-  const panelElR=document.querySelector('#atab-lista [style*="500px"]')||document.querySelector('#admin-desktop-layout>div:nth-child(2)');
+  const panelElR=document.querySelector('#admin-desktop-layout [style*="480px"]')||document.querySelector('#admin-desktop-layout>div:nth-child(2)');
   if(panelElR){panelElR.style.width='1000px';panelElR.style.maxWidth='1000px';}
+  // Devolver det a tab-content-area si fue movido
+  const tabContentArea=document.querySelector('.tab-content-area');
+  if(tabContentArea && det.parentElement!==tabContentArea){
+    tabContentArea.appendChild(det);
+  }
+  det.style.display='none';
   det.style.flex='';det.style.minWidth='';det.style.borderLeft='';
+  det.style.flexDirection='';
   det.style.borderLeft='';det.style.borderTop='';det.style.borderRadius='';
 
   // Reset list panel
