@@ -391,7 +391,7 @@ tr:hover td{background:var(--bg)}
       <div id="admin-desktop-layout" style="display:flex;flex:1;min-height:calc(100vh - 100px);padding:0.5rem 0;width:100%;box-sizing:border-box;position:relative">
 
         <!-- Sidebar: espacio gris izquierdo -->
-        <div id="admin-sidebar" style="position:sticky;top:0.5rem;flex-shrink:0;width:230px;display:flex;flex-direction:column;gap:4px;padding:0 16px 0 0;align-items:stretch;align-self:flex-start">
+        <div id="admin-sidebar" style="position:absolute;top:0.5rem;left:0;right:calc(50% + 500px);display:flex;flex-direction:column;gap:4px;padding:0 34px;align-items:stretch">
           <button class="btn btn-primary btn-sm" onclick="openAddModal()" style="width:100%;padding:5px;font-size:11px;font-weight:700">+ Nuevo</button>
           <button class="btn btn-sm" onclick="abrirGestionPagos()" style="width:100%;padding:5px;font-size:11px;font-weight:600;background:#f0fdf4;border-color:#86efac;color:#16a34a">✓ Pagos</button>
           <div style="width:100%;position:relative;box-sizing:border-box"><span style="position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:12px">&#128269;</span><input type="text" id="a-search-desk" placeholder="Buscar..." oninput="renderAdminTable()" style="padding:4px 6px 4px 22px;font-size:11px;width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--r)"></div>
@@ -4388,7 +4388,18 @@ function mostrarAdminDet(id){
     // Achicar el panel central y poner detalle fixed a su derecha
     const panelEl=lista.querySelector('[style*="1000px"]');
     if(panelEl){
-      // Achicar panel — sidebar ya es flex normal, no hace falta margin
+      const sidebar=document.getElementById('admin-sidebar');
+      const sidebarW=sidebar?sidebar.getBoundingClientRect().width:260;
+      // Fijar sidebar con width explícita para que no se corte
+      if(sidebar){
+        sidebar.style.position='sticky';
+        sidebar.style.top='0.5rem';
+        sidebar.style.width=Math.ceil(sidebarW)+'px';
+        sidebar.style.right='';
+        sidebar.style.flexShrink='0';
+        sidebar.style.alignSelf='flex-start';
+      }
+      // Achicar panel
       panelEl.style.width='480px';
       panelEl.style.maxWidth='480px';
       panelEl.style.margin='0';
@@ -4438,6 +4449,8 @@ function cerrarAdminDet(){
   // Restaurar panel central
   const panelElR=document.querySelector('#admin-desktop-layout [style*="480px"]')||document.querySelector('#admin-desktop-layout>div:nth-child(2)');
   if(panelElR){panelElR.style.width='1000px';panelElR.style.maxWidth='1000px';panelElR.style.margin='0 auto';}
+  const sidebarR=document.getElementById('admin-sidebar');
+  if(sidebarR){sidebarR.style.position='absolute';sidebarR.style.top='0.5rem';sidebarR.style.right='calc(50% + 500px)';sidebarR.style.width='';sidebarR.style.flexShrink='';sidebarR.style.alignSelf='';}
   det.style.display='none';
   det.style.position='';det.style.top='';det.style.left='';det.style.width='';
   det.style.bottom='';det.style.zIndex='';det.style.flex='';det.style.minWidth='';
