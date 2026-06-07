@@ -1069,12 +1069,12 @@ async function loadICCFromSheets(){
 }
 function saveICC(d){
   _lsSet(dKey('icc'),JSON.stringify(d));
-  // Sync to Google Sheets
+  // Sync to Google Sheets — prefijo STR: para evitar que Sheets convierta a fecha
   sheetsSet('ICC', d.map(e=>({
-    mes: e.mes||'', pct: e.pct||'', totalTri: e.totalTri||'',
+    mes: 'STR:'+( e.mes||''), pct: e.pct||0, totalTri: e.totalTri||0,
     planilla: e.planilla||'', planillaNombre: e.planillaNombre||'',
-    aumentaEn: e.aumentaEn||'', cnt: e.cnt||'',
-    mesKey: e.mesKey||'', ts: e.ts||''
+    aumentaEn: e.aumentaEn||'', cnt: e.cnt||0,
+    mesKey: 'STR:'+(e.mesKey||''), ts: e.ts||''
   })));
 }
 
@@ -1136,6 +1136,9 @@ async function syncFromSheets(){
         let mes=e.mes||'';
         let mesKey=e.mesKey||'';
         let cnt=e.cnt;
+        // Sacar prefijo STR: si existe
+        if(mes.startsWith('STR:')) mes=mes.slice(4);
+        if(mesKey.startsWith('STR:')) mesKey=mesKey.slice(4);
         // Si mes parece fecha ISO, convertir a "Mes YYYY"
         if(mes&&mes.includes('T')){
           const d=new Date(mes);
