@@ -783,7 +783,7 @@ function saveExtras(v){localStorage.setItem('fj_extras',JSON.stringify(v));sheet
 function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[]};}}
 function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[d]);}
 function loadAdelantos(){try{return JSON.parse(_lsGet(dKey('adelantos'))||'[]');}catch(e){return[];}}
-function saveAdelantos(d){_lsSet(dKey('adelantos'),JSON.stringify(d));}
+function saveAdelantos(d){_lsSet(dKey('adelantos'),JSON.stringify(d));sheetsSet('Adelantos',d);}
 
 const AGRIMENSORES_LOTES = [];
 function esAgrimensor(id){return AGRIMENSOR_LOTES.has(id);}
@@ -1170,18 +1170,20 @@ async function syncFromSheets(){
 
 
     // Sincronizar datos adicionales
-    const [mora, extras, balancesD, mesActual, pendientes] = await Promise.all([
+    const [mora, extras, balancesD, mesActual, pendientes, adelantosD] = await Promise.all([
       sheetsGet('Mora'),
       sheetsGet('Extras'),
       sheetsGet('Balances'),
       sheetsGet('MesActual'),
-      sheetsGet('Pendientes')
+      sheetsGet('Pendientes'),
+      sheetsGet('Adelantos')
     ]);
     if(mora&&mora.length) localStorage.setItem('fj_mora', JSON.stringify(mora));
     if(extras&&extras.length) localStorage.setItem('fj_extras', JSON.stringify(extras));
     if(balancesD&&balancesD.length&&typeof balancesD[0]==='object') _lsSet(dKey('balances'), JSON.stringify(balancesD[0]));
     if(mesActual&&mesActual.length) localStorage.setItem('fj_mes_actual', JSON.stringify(mesActual[0]));
     if(pendientes&&pendientes.length) localStorage.setItem('fj_pendientes_aprobacion', JSON.stringify(pendientes));
+    if(adelantosD&&adelantosD.length) _lsSet(dKey('adelantos'), JSON.stringify(adelantosD));
 
     console.log('Sync from Sheets OK');
   }catch(err){
@@ -1229,6 +1231,7 @@ async function syncToSheets(){
   const balances = loadBalances();
   const mesActual = loadMesActual?loadMesActual():null;
   const pendientes = loadPendientesAprobacion();
+  const adelantos = loadAdelantos();
 
   await Promise.all([
     sheetsSet('Clientes', clientesRows),
@@ -1240,7 +1243,8 @@ async function syncToSheets(){
     sheetsSet('Extras', extras),
     sheetsSet('Balances', balances?[balances]:[]),
     sheetsSet('MesActual', mesActual?[mesActual]:[]),
-    sheetsSet('Pendientes', pendientes)
+    sheetsSet('Pendientes', pendientes),
+    sheetsSet('Adelantos', adelantos)
   ]);
   console.log('Sync to Sheets OK - todo sincronizado');
 }
@@ -2295,7 +2299,7 @@ function openAddModal(){
 
 // ============== BALANCES ==============
 function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[]};}}
-function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));}
+function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[d]);}
 let _claveAccion=null;
 let _claveEsColab=false;
 let _claveEsEdit=false;
