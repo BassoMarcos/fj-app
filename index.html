@@ -2430,6 +2430,7 @@ function _claveCancelar(){
 
 // ============== ADMIN TABS ==============
 function adminTab(t){
+  window._adminTabActiva = t; // Trackear pestaña activa
   // Ocultar detalle si cambiamos de pestaña
   // Al cambiar de pestaña, restaurar panel y sidebar a estado normal
   const det=document.getElementById('admin-detalle');
@@ -8238,9 +8239,12 @@ async function init(){
           const pa = document.getElementById('page-admin');
           if(pa && pa.classList.contains('active')){
             const tabActiva = window._adminTabActiva;
-            if(!tabActiva || tabActiva === 'inicio') return; // No interrumpir si está en inicio
-            if(tab && tabActiva === tab) adminTab(tab);
-            else if(!tab) adminTab(tabActiva);
+            if(!tabActiva) return;
+            // Solo re-renderizar si el cambio es relevante para la pestaña activa
+            if(tab && tabActiva !== tab) return;
+            // No interrumpir inicio ni datos
+            if(tabActiva === 'inicio' || tabActiva === 'datos') return;
+            adminTab(tabActiva);
           }
         }catch(e){}
       }
