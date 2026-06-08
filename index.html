@@ -900,7 +900,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0294';
+  datos['_version']='v1.0295';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1116,7 +1116,7 @@ async function syncFromSheets(){
         totalCuotas: Number(c.totalCuotas)||0,
         pagada: c.pagada==='true'||c.pagada===true
       }));
-      _lsSet(dKey('cuotas_mora'), JSON.stringify(parsed));
+      localStorage.setItem('fj_cuotas_mora', JSON.stringify(parsed));
     }
 
     if(cierreFinal&&cierreFinal.length){
