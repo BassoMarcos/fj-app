@@ -900,7 +900,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0293';
+  datos['_version']='v1.0294';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1099,6 +1099,7 @@ async function syncFromSheets(){
         saldo: Number(c.saldo)||0,
         agrimensor: c.agrimensor==='true'||c.agrimensor===true,
         autopago: c.autopago==='true'||c.autopago===true,
+        pago: c.pago==='true'||c.pago===true,
         dni: typeof c.dni==='string'&&c.dni?JSON.parse(c.dni):c.dni||[],
         obs: typeof c.obs==='string'&&c.obs?JSON.parse(c.obs):c.obs||[],
         hist: typeof c.hist==='string'&&c.hist?JSON.parse(c.hist):c.hist||[]
