@@ -900,7 +900,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0295';
+  datos['_version']='v1.0296';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -8133,11 +8133,14 @@ function guardarRegistroEnArchivo(){
 
 // ===================== INIT =====================
 async function init(){
-  // Siempre intentar sincronizar desde Sheets al abrir
-  try{
-    await syncFromSheets();
-  }catch(e){
-    console.warn('syncFromSheets failed, using localStorage:', e);
+  // Solo sincronizar desde Sheets si NO hay datos locales
+  const tieneDataLocal = !!localStorage.getItem('fj_eucaliptus_data');
+  if(!tieneDataLocal){
+    try{
+      await syncFromSheets();
+    }catch(e){
+      console.warn('syncFromSheets failed, using localStorage:', e);
+    }
   }
   initPublic();
   // Refrescar vista activa si el usuario ya estaba logueado
