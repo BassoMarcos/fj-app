@@ -734,7 +734,7 @@ function saveCierreFinal(v){localStorage.setItem('fj_cierre_final',JSON.stringif
 function hayCierreFinal(){return !!loadCierreFinal();}
 // Cuotas morosas: lista de cuotas impagas registradas al cierre
 function loadCuotasMora(){try{return JSON.parse(localStorage.getItem('fj_cuotas_mora')||'[]');}catch(e){return [];}}
-function saveCuotasMora(v){localStorage.setItem('fj_cuotas_mora',JSON.stringify(v));sheetsSet('CuotasMora',v);}
+function saveCuotasMora(v){localStorage.setItem('fj_cuotas_mora',JSON.stringify(v));sheetsSet('CuotasMora',[{json:'STR:'+JSON.stringify(v)}]);}
 // Mes actual del sistema (para saber qué cuota es la del mes en curso)
 function loadMesActual(){try{return JSON.parse(localStorage.getItem('fj_mes_actual')||'null');}catch(e){return null;}}
 function saveMesActual(v){localStorage.setItem('fj_mes_actual',JSON.stringify(v));sheetsSet('MesActual',[v]);}
@@ -1108,7 +1108,9 @@ async function syncFromSheets(){
     }
 
     if(cuotasMora&&cuotasMora.length){
-      const parsed = cuotasMora.map(c=>({
+      let cuotasMoraArr=cuotasMora;
+      if(cuotasMora[0]&&cuotasMora[0].json){try{cuotasMoraArr=JSON.parse(cuotasMora[0].json.replace(/^STR:/,''));}catch(e){cuotasMoraArr=[];}}
+      const parsed = cuotasMoraArr.map(c=>({
         ...c,
         mes: Number(c.mes), anio: Number(c.anio),
         monto: Number(c.monto)||0,
@@ -1247,7 +1249,7 @@ async function syncToSheets(){
 
   await Promise.all([
     sheetsSet('Clientes', clientesRows),
-    sheetsSet('CuotasMora', cuotasMora),
+    sheetsSet('CuotasMora', [{json:'STR:'+JSON.stringify(cuotasMora)}]),
     sheetsSet('CierreFinal', cierreRows),
     sheetsSet('PagoStore', pagoRows),
     sheetsSet('ICC', icc.map(e=>({mes:'STR:'+(e.mes||''),pct:e.pct||0,totalTri:e.totalTri||0,planilla:e.planilla||'',planillaNombre:e.planillaNombre||'',aumentaEn:e.aumentaEn||'',cnt:e.cnt||0,mesKey:'STR:'+(e.mesKey||''),ts:e.ts||''}))),
