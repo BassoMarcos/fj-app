@@ -259,6 +259,44 @@ tr:hover td{background:var(--bg)}
 
 .select-group select:disabled{opacity:0.4;cursor:not-allowed;background-color:#f1f5f9}
 </style>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCy40bS7e1JI17bY-rgkFV5xktA6_KnUZ8",
+      authDomain: "fj-app-44df3.firebaseapp.com",
+      databaseURL: "https://fj-app-44df3-default-rtdb.firebaseio.com",
+      projectId: "fj-app-44df3",
+      storageBucket: "fj-app-44df3.firebasestorage.app",
+      messagingSenderId: "1096216829185",
+      appId: "1:1096216829185:web:c500eee073a54710c3cf00"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Expose Firebase functions globally
+    window._fbSet = async (key, value) => {
+      await set(ref(db, 'eucaliptus/' + key), value);
+    };
+
+    window._fbGet = async (key) => {
+      const snap = await get(ref(db, 'eucaliptus/' + key));
+      return snap.exists() ? snap.val() : null;
+    };
+
+    window._fbListen = (key, callback) => {
+      onValue(ref(db, 'eucaliptus/' + key), (snap) => {
+        callback(snap.exists() ? snap.val() : null);
+      });
+    };
+
+    window._firebaseReady = true;
+    console.log('Firebase ready');
+  </script>
 </head>
 <body>
 
@@ -734,7 +772,7 @@ function saveCierreFinal(v){localStorage.setItem('fj_cierre_final',JSON.stringif
 function hayCierreFinal(){return !!loadCierreFinal();}
 // Cuotas morosas: lista de cuotas impagas registradas al cierre
 function loadCuotasMora(){try{return JSON.parse(localStorage.getItem('fj_cuotas_mora')||'[]');}catch(e){return [];}}
-function saveCuotasMora(v){localStorage.setItem('fj_cuotas_mora',JSON.stringify(v));sheetsSet('CuotasMora',[{json:'STR:'+JSON.stringify(v)}]);}
+function saveCuotasMora(v){localStorage.setItem('fj_cuotas_mora',JSON.stringify(v));sheetsSet('CuotasMora',[{json:'STR:'+JSON.stringify(v)}]);if(window._firebaseReady)window._fbSet('cuotasMora',v).catch(e=>console.warn('FB mora error:',e));}
 // Mes actual del sistema (para saber qué cuota es la del mes en curso)
 function loadMesActual(){try{return JSON.parse(localStorage.getItem('fj_mes_actual')||'null');}catch(e){return null;}}
 function saveMesActual(v){localStorage.setItem('fj_mes_actual',JSON.stringify(v));sheetsSet('MesActual',[v]);}
@@ -783,7 +821,7 @@ function saveExtras(v){localStorage.setItem('fj_extras',JSON.stringify(v));sheet
 function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[]};}}
 function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[{json:'STR:'+JSON.stringify(d)}]);}
 function loadAdelantos(){try{return JSON.parse(_lsGet(dKey('adelantos'))||'[]');}catch(e){return[];}}
-function saveAdelantos(d){_lsSet(dKey('adelantos'),JSON.stringify(d));sheetsSet('Adelantos',d);}
+function saveAdelantos(d){_lsSet(dKey('adelantos'),JSON.stringify(d));sheetsSet('Adelantos',d);if(window._firebaseReady)window._fbSet('adelantos',d).catch(e=>console.warn('FB adel error:',e));}
 
 const AGRIMENSORES_LOTES = [];
 function esAgrimensor(id){return AGRIMENSOR_LOTES.has(id);}
@@ -1034,9 +1072,13 @@ function saveData(d){
     adicionalMonto:c.adicionalMonto||0,
     adicionalHasta:c.adicionalHasta||0
   }));
+
   _lsSet(dKey('data'),JSON.stringify(full));
   // Sync to Google Sheets (async, non-blocking)
   sheetsSet('Clientes', full);
+  // Sync to Firebase (real-time)
+  if(window._firebaseReady) window._fbSet('data', full).catch(e=>console.warn('FB write error:', e));
+
 }
 function loadHist(){try{return JSON.parse(_lsGet(dKey('hist'))||'[]');}catch(e){return [];}}
 function saveHist(h){
@@ -1069,6 +1111,7 @@ async function loadICCFromSheets(){
 }
 function saveICC(d){
   _lsSet(dKey('icc'),JSON.stringify(d));
+  if(window._firebaseReady)window._fbSet('icc',d).catch(e=>console.warn('FB icc error:',e));
   // Sync to Google Sheets — prefijo STR: para evitar que Sheets convierta a fecha
   sheetsSet('ICC', d.map(e=>({
     mes: 'STR:'+( e.mes||''), pct: e.pct||0, totalTri: e.totalTri||0,
@@ -2315,7 +2358,7 @@ function openAddModal(){
 
 // ============== BALANCES ==============
 function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[]};}}
-function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[{json:'STR:'+JSON.stringify(d)}]);}
+function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[{json:'STR:'+JSON.stringify(d)}]);if(window._firebaseReady)window._fbSet('balances',d).catch(e=>console.warn('FB bal error:',e));}
 let _claveAccion=null;
 let _claveEsColab=false;
 let _claveEsEdit=false;
@@ -8135,13 +8178,42 @@ function guardarRegistroEnArchivo(){
 
 // ===================== INIT =====================
 async function init(){
-  // Sincronizar desde Sheets solo si no hay datos locales
-  const tieneDataLocal = !!localStorage.getItem('fj_eucaliptus_data');
-  if(!tieneDataLocal){
+  // Esperar a que Firebase esté listo y escuchar cambios en tiempo real
+  await new Promise(resolve => {
+    const check = setInterval(() => {
+      if(window._firebaseReady) { clearInterval(check); resolve(); }
+    }, 100);
+    setTimeout(() => { clearInterval(check); resolve(); }, 3000);
+  });
+
+  if(window._firebaseReady){
+    // Cargar datos iniciales desde Firebase
     try{
-      await syncFromSheets();
+      const fbData = await window._fbGet('data');
+      const fbMora = await window._fbGet('cuotasMora');
+      const fbBal = await window._fbGet('balances');
+      const fbIcc = await window._fbGet('icc');
+      const fbAdel = await window._fbGet('adelantos');
+      if(fbData) _lsSet(dKey('data'), JSON.stringify(fbData));
+      if(fbMora) localStorage.setItem('fj_cuotas_mora', JSON.stringify(fbMora));
+      if(fbBal) _lsSet(dKey('balances'), JSON.stringify(fbBal));
+      if(fbIcc) _lsSet(dKey('icc'), JSON.stringify(fbIcc));
+      if(fbAdel) _lsSet(dKey('adelantos'), JSON.stringify(fbAdel));
+      console.log('Firebase data loaded');
+      // Escuchar cambios en tiempo real
+      window._fbListen('data', (d) => { if(d){ _lsSet(dKey('data'), JSON.stringify(d)); try{ const pa=document.getElementById('page-admin'); if(pa&&pa.classList.contains('active')){ initAdminFilters(); adminTab(window._adminTabActiva||'inicio'); } }catch(e){} } });
+      window._fbListen('cuotasMora', (d) => { if(d){ localStorage.setItem('fj_cuotas_mora', JSON.stringify(d)); try{ if(window._adminTabActiva==='mora') adminTab('mora'); }catch(e){} } });
+      window._fbListen('balances', (d) => { if(d){ _lsSet(dKey('balances'), JSON.stringify(d)); try{ if(window._adminTabActiva==='balances') adminTab('balances'); }catch(e){} } });
+      window._fbListen('icc', (d) => { if(d) _lsSet(dKey('icc'), JSON.stringify(d)); });
+      window._fbListen('adelantos', (d) => { if(d) _lsSet(dKey('adelantos'), JSON.stringify(d)); });
     }catch(e){
-      console.warn('syncFromSheets failed, using localStorage:', e);
+      console.warn('Firebase load failed:', e);
+    }
+  } else {
+    // Fallback a Sheets si Firebase no está disponible
+    const tieneDataLocal = !!localStorage.getItem('fj_eucaliptus_data');
+    if(!tieneDataLocal){
+      try{ await syncFromSheets(); }catch(e){ console.warn('syncFromSheets failed:', e); }
     }
   }
   initPublic();
