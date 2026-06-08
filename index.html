@@ -8244,13 +8244,14 @@ async function init(){
             if(tab && tabActiva !== tab) return;
             // No interrumpir inicio ni datos
             if(tabActiva === 'inicio' || tabActiva === 'datos') return;
-            adminTab(tabActiva);
+            // Re-renderizar sin mover al usuario
+            try{ renderAdminTab(tabActiva); }catch(e){ try{ adminTab(tabActiva); }catch(e2){} }
           }
         }catch(e){}
       }
 
-      window._fbListen('data', (d) => { if(d){ _lsSet(dKey('data'), JSON.stringify(d)); _fbRerender(); } });
-      window._fbListen('pagoStore', (d) => { if(d){ _lsSet(dKey('pagos'), JSON.stringify(d)); _fbRerender(); } });
+      window._fbListen('data', (d) => { if(d){ _lsSet(dKey('data'), JSON.stringify(d)); _fbRerender('clientes'); } });
+      window._fbListen('pagoStore', (d) => { if(d){ _lsSet(dKey('pagos'), JSON.stringify(d)); _fbRerender('clientes'); } });
       window._fbListen('cuotasMora', (d) => { if(d){ localStorage.setItem('fj_cuotas_mora', JSON.stringify(d)); _fbRerender('mora'); } });
       window._fbListen('balances', (d) => { if(d){ _lsSet(dKey('balances'), JSON.stringify(d)); _fbRerender('balances'); } });
       window._fbListen('icc', (d) => { if(d) _lsSet(dKey('icc'), JSON.stringify(d)); });
