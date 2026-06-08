@@ -8237,8 +8237,10 @@ async function init(){
         try{
           const pa = document.getElementById('page-admin');
           if(pa && pa.classList.contains('active')){
-            if(tab && window._adminTabActiva === tab) adminTab(tab);
-            else if(!tab) adminTab(window._adminTabActiva||'inicio');
+            const tabActiva = window._adminTabActiva;
+            if(!tabActiva || tabActiva === 'inicio') return; // No interrumpir si está en inicio
+            if(tab && tabActiva === tab) adminTab(tab);
+            else if(!tab) adminTab(tabActiva);
           }
         }catch(e){}
       }
