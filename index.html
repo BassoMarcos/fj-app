@@ -8229,11 +8229,29 @@ async function init(){
       if(fbMesActual) localStorage.setItem('fj_mes_actual', JSON.stringify(fbMesActual));
       console.log('Firebase data loaded');
       // Escuchar cambios en tiempo real
-      window._fbListen('data', (d) => { if(d){ _lsSet(dKey('data'), JSON.stringify(d)); try{ const pa=document.getElementById('page-admin'); if(pa&&pa.classList.contains('active')){ initAdminFilters(); adminTab(window._adminTabActiva||'inicio'); } }catch(e){} } });
-      window._fbListen('cuotasMora', (d) => { if(d){ localStorage.setItem('fj_cuotas_mora', JSON.stringify(d)); try{ if(window._adminTabActiva==='mora') adminTab('mora'); }catch(e){} } });
-      window._fbListen('balances', (d) => { if(d){ _lsSet(dKey('balances'), JSON.stringify(d)); try{ if(window._adminTabActiva==='balances') adminTab('balances'); }catch(e){} } });
+      let _fbInitDone = false;
+      setTimeout(() => { _fbInitDone = true; }, 3000); // No re-render durante carga inicial
+
+      function _fbRerender(tab){
+        if(!_fbInitDone) return;
+        try{
+          const pa = document.getElementById('page-admin');
+          if(pa && pa.classList.contains('active')){
+            if(tab && window._adminTabActiva === tab) adminTab(tab);
+            else if(!tab) adminTab(window._adminTabActiva||'inicio');
+          }
+        }catch(e){}
+      }
+
+      window._fbListen('data', (d) => { if(d){ _lsSet(dKey('data'), JSON.stringify(d)); _fbRerender(); } });
+      window._fbListen('pagoStore', (d) => { if(d){ _lsSet(dKey('pagos'), JSON.stringify(d)); _fbRerender(); } });
+      window._fbListen('cuotasMora', (d) => { if(d){ localStorage.setItem('fj_cuotas_mora', JSON.stringify(d)); _fbRerender('mora'); } });
+      window._fbListen('balances', (d) => { if(d){ _lsSet(dKey('balances'), JSON.stringify(d)); _fbRerender('balances'); } });
       window._fbListen('icc', (d) => { if(d) _lsSet(dKey('icc'), JSON.stringify(d)); });
-      window._fbListen('adelantos', (d) => { if(d) _lsSet(dKey('adelantos'), JSON.stringify(d)); });
+      window._fbListen('adelantos', (d) => { if(d){ _lsSet(dKey('adelantos'), JSON.stringify(d)); _fbRerender('balances'); } });
+      window._fbListen('mora', (d) => { if(d) localStorage.setItem('fj_mora', JSON.stringify(d)); });
+      window._fbListen('extras', (d) => { if(d) localStorage.setItem('fj_extras', JSON.stringify(d)); });
+      window._fbListen('mesActual', (d) => { if(d) localStorage.setItem('fj_mes_actual', JSON.stringify(d)); });
     }catch(e){
       console.warn('Firebase load failed:', e);
     }
