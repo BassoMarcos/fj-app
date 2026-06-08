@@ -900,7 +900,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0296';
+  datos['_version']='v1.0297';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1116,7 +1116,9 @@ async function syncFromSheets(){
         monto: Number(c.monto)||0,
         numeroCuota: Number(c.numeroCuota)||0,
         totalCuotas: Number(c.totalCuotas)||0,
-        pagada: c.pagada==='true'||c.pagada===true
+        pagada: c.pagada==='true'||c.pagada===true,
+        lote: String(c.lote||''),
+        mz: String(c.mz||'')
       }));
       localStorage.setItem('fj_cuotas_mora', JSON.stringify(parsed));
     }
@@ -2706,11 +2708,11 @@ function renderPanelMora(){
       const ea={'Etapa 1':1,'Etapa 2':2,'Etapa 3':3,'Etapa 4':4}[getEtapa(a.mz)]||9;
       const eb={'Etapa 1':1,'Etapa 2':2,'Etapa 3':3,'Etapa 4':4}[getEtapa(b.mz)]||9;
       if(ea!==eb) return ea-eb;
-      const mzA=parseInt((a.mz||'').replace(/[^0-9]/g,''))||0;
-      const mzB=parseInt((b.mz||'').replace(/[^0-9]/g,''))||0;
+      const mzA=parseInt((String(a.mz||\'\')).replace(/[^0-9]/g,''))||0;
+      const mzB=parseInt((String(b.mz||\'\')).replace(/[^0-9]/g,''))||0;
       if(mzA!==mzB) return mzA-mzB;
-      const lA=parseInt((a.lote||'').replace(/[^0-9]/g,''))||0;
-      const lB=parseInt((b.lote||'').replace(/[^0-9]/g,''))||0;
+      const lA=parseInt((String(a.lote||\'\')).replace(/[^0-9]/g,''))||0;
+      const lB=parseInt((String(b.lote||\'\')).replace(/[^0-9]/g,''))||0;
       return lA-lB;
     });
     let totalMes=0;
@@ -3745,9 +3747,9 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       mora.filter(p=>p.moneda==='USD').forEach(p=>{const e=getEtapa(p.mz)||'Otra';if(!usdPorEtapa[e])usdPorEtapa[e]=[];usdPorEtapa[e].push(p);});
       etapasOrden.forEach(etapa=>{
         if(pesosPorEtapa[etapa]) pesosPorEtapa[etapa].sort((a,b)=>{
-          const mzA=parseInt((a.mz||'').replace(/[^0-9]/g,''))||0,mzB=parseInt((b.mz||'').replace(/[^0-9]/g,''))||0;
+          const mzA=parseInt((String(a.mz||\'\')).replace(/[^0-9]/g,''))||0,mzB=parseInt((String(b.mz||\'\')).replace(/[^0-9]/g,''))||0;
           if(mzA!==mzB) return mzA-mzB;
-          return (parseInt((a.lote||'').replace(/[^0-9]/g,''))||0)-(parseInt((b.lote||'').replace(/[^0-9]/g,''))||0);
+          return (parseInt((String(a.lote||\'\')).replace(/[^0-9]/g,''))||0)-(parseInt((String(b.lote||\'\')).replace(/[^0-9]/g,''))||0);
         });
       });
       const etapasConDatos=etapasOrden.filter(e=>(pesosPorEtapa[e]&&pesosPorEtapa[e].length)||(usdPorEtapa[e]&&usdPorEtapa[e].length));
@@ -4669,11 +4671,11 @@ function renderStats(){
       const eb=_etapaOrder[getEtapa(b.mz)]||9;
       if(ea!==eb) return ea-eb;
       // Dentro de la etapa, ordenar por manzana y lote numéricamente
-      const mzA=parseInt((a.mz||'').replace(/[^0-9]/g,''))||0;
-      const mzB=parseInt((b.mz||'').replace(/[^0-9]/g,''))||0;
+      const mzA=parseInt((String(a.mz||\'\')).replace(/[^0-9]/g,''))||0;
+      const mzB=parseInt((String(b.mz||\'\')).replace(/[^0-9]/g,''))||0;
       if(mzA!==mzB) return mzA-mzB;
-      const lA=parseInt((a.lote||'').replace(/[^0-9]/g,''))||0;
-      const lB=parseInt((b.lote||'').replace(/[^0-9]/g,''))||0;
+      const lA=parseInt((String(a.lote||\'\')).replace(/[^0-9]/g,''))||0;
+      const lB=parseInt((String(b.lote||\'\')).replace(/[^0-9]/g,''))||0;
       return lA-lB;
     });
     const grandTotal=clientesMora.reduce((s,c)=>s+c.totalDeuda+c.totalInteres,0);
