@@ -1258,6 +1258,22 @@ async function sincronizarTodo(){
   if(msg) msg.innerHTML='<span style="color:var(--text2)">Sincronizando...</span>';
   try{
     await syncToSheets();
+    // También subir a Firebase
+    if(window._firebaseReady){
+      const d = loadData();
+      const bal = loadBalances();
+      const icc = loadICC();
+      const adel = loadAdelantos();
+      const mora = JSON.parse(localStorage.getItem('fj_cuotas_mora')||'[]');
+      await Promise.all([
+        window._fbSet('data', d),
+        window._fbSet('balances', bal),
+        window._fbSet('icc', icc),
+        window._fbSet('adelantos', adel),
+        window._fbSet('cuotasMora', mora)
+      ]);
+      console.log('Firebase sync OK');
+    }
     if(msg) msg.innerHTML='<span style="color:#16a34a">✅ Todo sincronizado correctamente. Los demás dispositivos verán los datos al abrir la app.</span>';
   }catch(e){
     if(msg) msg.innerHTML='<span style="color:#dc2626">❌ Error al sincronizar: '+e.message+'</span>';
