@@ -8135,14 +8135,11 @@ function guardarRegistroEnArchivo(){
 
 // ===================== INIT =====================
 async function init(){
-  // Solo sincronizar desde Sheets si NO hay datos locales
-  const tieneDataLocal = !!localStorage.getItem('fj_eucaliptus_data');
-  if(!tieneDataLocal){
-    try{
-      await syncFromSheets();
-    }catch(e){
-      console.warn('syncFromSheets failed, using localStorage:', e);
-    }
+  // Siempre sincronizar desde Sheets al abrir
+  try{
+    await syncFromSheets();
+  }catch(e){
+    console.warn('syncFromSheets failed, using localStorage:', e);
   }
   initPublic();
   // Refrescar vista activa si el usuario ya estaba logueado
