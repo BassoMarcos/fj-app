@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>F&amp;J App v1.0298</title>
+<title>F&amp;J App v1.0170</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -2708,11 +2708,11 @@ function renderPanelMora(){
       const ea={'Etapa 1':1,'Etapa 2':2,'Etapa 3':3,'Etapa 4':4}[getEtapa(a.mz)]||9;
       const eb={'Etapa 1':1,'Etapa 2':2,'Etapa 3':3,'Etapa 4':4}[getEtapa(b.mz)]||9;
       if(ea!==eb) return ea-eb;
-      const mzA=parseInt((String(a.mz||\'\')).replace(/[^0-9]/g,''))||0;
-      const mzB=parseInt((String(b.mz||\'\')).replace(/[^0-9]/g,''))||0;
+      const mzA=parseInt((String(a.mz||'')).replace(/[^0-9]/g,''))||0;
+      const mzB=parseInt((String(b.mz||'')).replace(/[^0-9]/g,''))||0;
       if(mzA!==mzB) return mzA-mzB;
-      const lA=parseInt((String(a.lote||\'\')).replace(/[^0-9]/g,''))||0;
-      const lB=parseInt((String(b.lote||\'\')).replace(/[^0-9]/g,''))||0;
+      const lA=parseInt((String(a.lote||'')).replace(/[^0-9]/g,''))||0;
+      const lB=parseInt((String(b.lote||'')).replace(/[^0-9]/g,''))||0;
       return lA-lB;
     });
     let totalMes=0;
@@ -3747,9 +3747,9 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       mora.filter(p=>p.moneda==='USD').forEach(p=>{const e=getEtapa(p.mz)||'Otra';if(!usdPorEtapa[e])usdPorEtapa[e]=[];usdPorEtapa[e].push(p);});
       etapasOrden.forEach(etapa=>{
         if(pesosPorEtapa[etapa]) pesosPorEtapa[etapa].sort((a,b)=>{
-          const mzA=parseInt((String(a.mz||\'\')).replace(/[^0-9]/g,''))||0,mzB=parseInt((String(b.mz||\'\')).replace(/[^0-9]/g,''))||0;
+          const mzA=parseInt((String(a.mz||'')).replace(/[^0-9]/g,''))||0,mzB=parseInt((String(b.mz||'')).replace(/[^0-9]/g,''))||0;
           if(mzA!==mzB) return mzA-mzB;
-          return (parseInt((String(a.lote||\'\')).replace(/[^0-9]/g,''))||0)-(parseInt((String(b.lote||\'\')).replace(/[^0-9]/g,''))||0);
+          return (parseInt((String(a.lote||'')).replace(/[^0-9]/g,''))||0)-(parseInt((String(b.lote||'')).replace(/[^0-9]/g,''))||0);
         });
       });
       const etapasConDatos=etapasOrden.filter(e=>(pesosPorEtapa[e]&&pesosPorEtapa[e].length)||(usdPorEtapa[e]&&usdPorEtapa[e].length));
@@ -4671,11 +4671,11 @@ function renderStats(){
       const eb=_etapaOrder[getEtapa(b.mz)]||9;
       if(ea!==eb) return ea-eb;
       // Dentro de la etapa, ordenar por manzana y lote numéricamente
-      const mzA=parseInt((String(a.mz||\'\')).replace(/[^0-9]/g,''))||0;
-      const mzB=parseInt((String(b.mz||\'\')).replace(/[^0-9]/g,''))||0;
+      const mzA=parseInt((String(a.mz||'')).replace(/[^0-9]/g,''))||0;
+      const mzB=parseInt((String(b.mz||'')).replace(/[^0-9]/g,''))||0;
       if(mzA!==mzB) return mzA-mzB;
-      const lA=parseInt((String(a.lote||\'\')).replace(/[^0-9]/g,''))||0;
-      const lB=parseInt((String(b.lote||\'\')).replace(/[^0-9]/g,''))||0;
+      const lA=parseInt((String(a.lote||'')).replace(/[^0-9]/g,''))||0;
+      const lB=parseInt((String(b.lote||'')).replace(/[^0-9]/g,''))||0;
       return lA-lB;
     });
     const grandTotal=clientesMora.reduce((s,c)=>s+c.totalDeuda+c.totalInteres,0);
