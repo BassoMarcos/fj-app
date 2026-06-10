@@ -7411,6 +7411,7 @@ function renderColab(){
   if(!list.length){el.innerHTML='<div class="empty">No se encontraron lotes</div>';return;}
 
   const cuotasMoraAll=(loadCuotasMora()||[]).filter(cm=>!cm.pagada);
+  try{
   el.innerHTML=list.map(c=>{
     const isUSD=c.moneda==='USD';
     const saldoColor=c.saldo===0?'#94a3b8':c.saldo>0?'#16a34a':'#dc2626';
@@ -7445,6 +7446,7 @@ function renderColab(){
       </div>
     </div>`;
   }).join('');
+  }catch(e){console.error('renderColab error:',e);el.innerHTML='<div class="empty">Error al cargar lista: '+e.message+'</div>';}
 }
 
 function mostrarDetColab(id){
