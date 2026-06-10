@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>F&amp;J App v1.0170</title>
+<title>F&amp;J App</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -7395,8 +7395,8 @@ function renderColab(){
   let list=data.filter(c=>c.est==='activo');
   if(q) list=list.filter(c=>String(c.lote||'').toLowerCase().includes(q)||String(c.mz||'').toLowerCase().includes(q)||String(c.titular||'').toLowerCase().includes(q));
   if(etapa) list=list.filter(c=>getEtapa(c.mz)===etapa);
-  if(mz) list=list.filter(c=>c.mz===mz);
-  if(lote) list=list.filter(c=>c.lote===lote);
+  if(mz) list=list.filter(c=>String(c.mz)===mz);
+  if(lote) list=list.filter(c=>String(c.lote)===lote);
 
   const etapaOrder={'M1':1,'M2':2,'M3':3,'M4':4,'ETAPA 2':5,'ETAPA 3':6,'E4-M5':7,'E4-M4':8,'E4-M3':9,'E4-M1':10};
   list.sort((a,b)=>{
