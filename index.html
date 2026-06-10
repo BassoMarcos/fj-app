@@ -4792,7 +4792,20 @@ function renderStats(){
     html+='</div>';
     if(agrPend>0){
       html+='<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">Sin pagar:</div>';
-      agrimensores.filter(c=>!c.pago).forEach(c=>{
+      const etapaOrder={'M1':1,'M2':2,'M3':3,'M4':4,'ETAPA 2':5,'ETAPA 3':6,'E4-M1':7,'E4-M3':8,'E4-M4':9,'E4-M5':10};
+      const agrPend2=agrimensores.filter(c=>!c.pago).sort((a,b)=>{
+        const ea=etapaOrder[a.mz]||99, eb=etapaOrder[b.mz]||99;
+        if(ea!==eb)return ea-eb;
+        const n=(s)=>{const ss=String(s||'');const m=ss.match(/^(\d+)(.*)/);return m?[+m[1],m[2]]:[999,ss];};
+        const[an,al]=n(a.lote);const[bn,bl]=n(b.lote);
+        return an!==bn?an-bn:al.localeCompare(bl);
+      });
+      let lastMzSt=null;
+      agrPend2.forEach(c=>{
+        if(c.mz!==lastMzSt){
+          html+='<div style="font-size:10px;font-weight:700;color:#c2410c;text-transform:uppercase;padding:6px 0 2px;letter-spacing:.05em">'+c.mz+'</div>';
+          lastMzSt=c.mz;
+        }
         const etapa=getEtapa(c.mz);
         const sinMz=['Etapa 2','Etapa 3'].includes(etapa);
         const mzClean=c.mz.replace(/^E\d+-/,'');
