@@ -7393,7 +7393,7 @@ function renderColab(){
   const mz=document.getElementById('c-mz')?.value||'';
   const lote=document.getElementById('c-lote')?.value||'';
   let list=data.filter(c=>c.est==='activo');
-  if(q) list=list.filter(c=>(c.lote||'').toLowerCase().includes(q)||(c.mz||'').toLowerCase().includes(q)||(c.titular||'').toLowerCase().includes(q));
+  if(q) list=list.filter(c=>String(c.lote||'').toLowerCase().includes(q)||String(c.mz||'').toLowerCase().includes(q)||String(c.titular||'').toLowerCase().includes(q));
   if(etapa) list=list.filter(c=>getEtapa(c.mz)===etapa);
   if(mz) list=list.filter(c=>c.mz===mz);
   if(lote) list=list.filter(c=>c.lote===lote);
