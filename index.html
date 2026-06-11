@@ -3538,6 +3538,52 @@ function resetPagos(){
 function fmtFechaAdel(f){if(!f)return'';try{const d=new Date(f);if(isNaN(d))return f;return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});}catch(e){return f;}}
 function getCierreEstados(){try{return JSON.parse(localStorage.getItem('fj_cierre_estados')||'{}');}catch(e){return{};}}
 function setCierreEstado(idx,tipo,val){const e=getCierreEstados();if(!e[idx])e[idx]={};e[idx][tipo]=val;localStorage.setItem('fj_cierre_estados',JSON.stringify(e));renderBalances('cierres');}
+function fusionarCierre(srcIdx){
+  const bal=loadBalances();
+  const cierres=bal.cierres||[];
+  const src=cierres[srcIdx];
+  if(!src)return;
+  // Build options excluding src
+  const opts=cierres.map((c,i)=>i===srcIdx?null:`<option value="${i}">${c.fecha||new Date(c.ts).toLocaleDateString('es-AR')} — ${(c.pagos||[]).length} pagos — ${c.moneda==='USD'?'USD ':''} $${(c.total||0).toLocaleString('es-AR')}</option>`).filter(Boolean).join('');
+  if(!opts){alert('No hay otros cierres disponibles para fusionar.');return;}
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML=`<div style="background:#fff;border-radius:12px;padding:1.5rem;width:min(420px,90vw);box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px">Fusionar cierre</div>
+    <div style="font-size:13px;color:#6b7280;margin-bottom:1rem">Los pagos de <b>${src.fecha||new Date(src.ts).toLocaleDateString('es-AR')}</b> se agregarán al cierre que elijas.</div>
+    <select id="fus-sel" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;margin-bottom:1rem">${opts}</select>
+    <div style="display:flex;gap:8px">
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;padding:8px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;font-size:13px;cursor:pointer">Cancelar</button>
+      <button onclick="_doFusionar(${srcIdx},+document.getElementById('fus-sel').value);this.closest('div[style*=fixed]').remove()" style="flex:1;padding:8px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Fusionar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+function _doFusionar(srcIdx,dstIdx){
+  if(srcIdx===dstIdx)return;
+  const bal=loadBalances();
+  const cierres=bal.cierres||[];
+  const src=cierres[srcIdx];
+  const dst=cierres[dstIdx];
+  if(!src||!dst)return;
+  // Merge pagos
+  dst.pagos=(dst.pagos||[]).concat(src.pagos||[]);
+  dst.total=(dst.total||0)+(src.total||0);
+  // Remove src
+  cierres.splice(srcIdx,1);
+  // Also clean up estados
+  const est=getCierreEstados();
+  const newEst={};
+  Object.keys(est).forEach(k=>{
+    const ki=parseInt(k);
+    if(ki===srcIdx)return;
+    const newK=ki>srcIdx?ki-1:ki;
+    newEst[newK]=est[k];
+  });
+  localStorage.setItem('fj_cierre_estados',JSON.stringify(newEst));
+  saveBalances(bal);
+  renderBalances('cierres');
+}
 function getDistPct(){const v=parseInt(localStorage.getItem('fj_dist_pct')||'70');return isNaN(v)||v<1||v>99?70:v;}
 function setDistPct(v){const n=parseInt(v);if(!isNaN(n)&&n>=1&&n<=99){localStorage.setItem('fj_dist_pct',n);renderBalances();}}
 function renderBalances(seccion){
@@ -3752,7 +3798,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
             <span style="font-size:10px;font-weight:700;color:#dc2626">${dp2}%</span>
             <span style="font-size:11px;font-weight:600;color:#dc2626">${isUSD?'USD ':''} ${fmtPeso(pB)}</span>
           </div>
-          <div style="margin-left:auto;display:flex;gap:4px">${btnA}${btnB}</div>
+          <div style="margin-left:auto;display:flex;gap:4px">${btnA}${btnB}<button onclick="fusionarCierre(${globalIdx})" style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">⇄ Fusionar</button></div>
         </div>
       </div>`;
     }).join(''):'<div style="font-size:13px;color:var(--text2);padding:8px 0">Sin cierres</div>';
