@@ -3537,13 +3537,15 @@ function renderBalances(seccion){
     const dp=getDistPct();
     el.innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px">
-          <span style="font-size:12px;font-weight:700;color:var(--text2)">DISTRIBUCIÓN</span>
+        <div style="display:inline-flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:7px 12px;position:relative">
+          <div id="dist-toast" style="position:absolute;top:-28px;left:50%;transform:translateX(-50%);background:#dcfce7;color:#16a34a;font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;border:1px solid #86efac;opacity:0;transition:opacity .3s;white-space:nowrap;pointer-events:none">✓ Guardado</div>
+          <span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Distribución</span>
+          <div id="dist-pill-a" style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:4px 12px;font-size:13px;font-weight:500;color:#16a34a">${dp}%</div>
+          <div id="dist-pill-b" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:4px 12px;font-size:13px;font-weight:500;color:#dc2626">${100-dp}%</div>
           <input type="number" id="dist-pct-input" value="${dp}" min="1" max="99" step="1"
-            style="width:52px;padding:4px 6px;border:1.5px solid var(--brand);border-radius:6px;font-size:14px;font-weight:700;text-align:center"
-            oninput="document.getElementById('dist-pct-label').textContent=this.value+'% / '+(100-Math.min(99,Math.max(1,+this.value||70)))+'%'"/>
-          <span id="dist-pct-label" style="font-size:13px;font-weight:700;color:var(--brand)">${dp}% / ${100-dp}%</span>
-          <button onclick="setDistPct(document.getElementById('dist-pct-input').value)" style="background:var(--brand);color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">Aplicar</button>
+            style="width:48px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:500;text-align:center"
+            oninput="(function(){var v=Math.min(99,Math.max(1,+document.getElementById('dist-pct-input').value||70));document.getElementById('dist-pill-a').textContent=v+'%';document.getElementById('dist-pill-b').textContent=(100-v)+'%';var b=document.getElementById('dist-apply-btn');if(v!==${dp}){b.style.background='#fffbeb';b.style.color='#b45309';b.style.borderColor='#fde68a';b.innerHTML='&#128190; Aplicar';}else{b.style.background='#dcfce7';b.style.color='#16a34a';b.style.borderColor='#86efac';b.innerHTML='&#10003; Aplicado';}})()"/>
+          <button id="dist-apply-btn" onclick="(function(){var v=Math.min(99,Math.max(1,+document.getElementById('dist-pct-input').value||70));setDistPct(v);var b=document.getElementById('dist-apply-btn');b.style.background='#dcfce7';b.style.color='#16a34a';b.style.borderColor='#86efac';b.innerHTML='&#10003; Aplicado';var t=document.getElementById('dist-toast');t.style.opacity='1';setTimeout(function(){t.style.opacity='0';},2000);})()" style="padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #86efac;background:#dcfce7;color:#16a34a">✓ Aplicado</button>
         </div>
         <button onclick="resetTodoBalances()" style="background:#f3f4f6;border:1px solid #d1d5db;color:#374151;padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar todo</button>
       </div>
