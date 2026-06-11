@@ -6680,7 +6680,7 @@ function renderAdminTable(){
   const tri=adminFieldVal('a-tri')||'';
   const pagoFiltro=adminFieldVal('a-pago')||'';
   const moneda=adminFieldVal('a-moneda')||'';
-  if(q) data=data.filter(c=>(c.titular||'').toLowerCase().includes(q)||(c.mz||'').toLowerCase().includes(q)||(c.lote||'').toLowerCase().includes(q));
+  if(q) data=data.filter(c=>String(c.titular||'').toLowerCase().includes(q)||String(c.mz||'').toLowerCase().includes(q)||String(c.lote||'').toLowerCase().includes(q));
   if(etapa) data=data.filter(c=>getEtapa(c.mz)===etapa);
   if(mz) data=data.filter(c=>c.mz===mz);
   if(lote) data=data.filter(c=>c.lote===lote);
@@ -7862,7 +7862,7 @@ function renderAgrLista(){
   const data=loadData();
   let agr=data.filter(c=>c.agrimensor);
   const q=(document.getElementById('agr-search')?.value||'').toLowerCase();
-  if(q) agr=agr.filter(c=>(c.titular||'').toLowerCase().includes(q)||(c.lote||'').toLowerCase().includes(q)||(c.mz||'').toLowerCase().includes(q));
+  if(q) agr=agr.filter(c=>String(c.titular||'').toLowerCase().includes(q)||String(c.lote||'').toLowerCase().includes(q)||String(c.mz||'').toLowerCase().includes(q));
 
   // Sort same as main list
   const etapaOrder={'M1':1,'M2':2,'M3':3,'M4':4,'ETAPA 2':5,'ETAPA 3':6,'E4-M1':7,'E4-M3':8,'E4-M4':9,'E4-M5':10};
