@@ -820,7 +820,26 @@ function saveExtras(v){localStorage.setItem('fj_extras',JSON.stringify(v));sheet
 
 function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[]};}}
 function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[{json:'STR:'+JSON.stringify(d)}]);}
-function loadAdelantos(){try{const d=JSON.parse(_lsGet(dKey('adelantos'))||'[]');return d.map(a=>({...a,cuotas:Array.isArray(a.cuotas)?a.cuotas:Object.values(a.cuotas||{})}));}catch(e){return[];}}
+function _parseAdelantoCuotas(c){
+  if(Array.isArray(c)) return c;
+  if(typeof c==='string'){
+    // Format: {monto=547219.0, num=54.0} or [{...},{...}]
+    try{const j=JSON.parse(c);return Array.isArray(j)?j:[j];}catch(e){}
+    // Parse {key=val, key=val} format
+    const items=c.replace(/^\[|\]$/g,'').split(/},\s*{/);
+    return items.map(s=>{
+      const obj={};
+      s.replace(/[{}]/g,'').split(',').forEach(pair=>{
+        const[k,v]=pair.trim().split('=');
+        if(k&&v!==undefined) obj[k.trim()]=isNaN(v)?v.trim():Number(v);
+      });
+      return obj;
+    }).filter(o=>Object.keys(o).length>0);
+  }
+  if(c&&typeof c==='object') return Object.values(c);
+  return [];
+}
+function loadAdelantos(){try{const d=JSON.parse(_lsGet(dKey('adelantos'))||'[]');return d.map(a=>({...a,cuotas:_parseAdelantoCuotas(a.cuotas)}));}catch(e){return[];}}
 function saveAdelantos(d){_lsSet(dKey('adelantos'),JSON.stringify(d));sheetsSet('Adelantos',d);if(window._firebaseReady)window._fbSet('adelantos',d).catch(e=>console.warn('FB adel error:',e));}
 
 const AGRIMENSORES_LOTES = [];
