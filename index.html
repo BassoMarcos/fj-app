@@ -3712,14 +3712,14 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
           </div>
           <div style="font-weight:700">${isUSD?'USD ':''} ${fmtPeso(t)}</div>
         </div>
-        <div style="display:flex;gap:6px">
-          <div style="flex:1;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:4px 10px;display:flex;justify-content:space-between">
+        <div style="display:flex;gap:4px;margin-top:3px">
+          <div style="background:#dcfce7;border:1px solid #86efac;border-radius:4px;padding:2px 8px;display:flex;gap:6px;align-items:center">
             <span style="font-size:10px;font-weight:700;color:#16a34a">${dp}%</span>
-            <span style="font-size:12px;font-weight:700;color:#16a34a">${isUSD?'USD ':''} ${fmtPeso(pA)}</span>
+            <span style="font-size:11px;font-weight:600;color:#16a34a">${isUSD?'USD ':''} ${fmtPeso(pA)}</span>
           </div>
-          <div style="flex:1;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:4px 10px;display:flex;justify-content:space-between">
+          <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:4px;padding:2px 8px;display:flex;gap:6px;align-items:center">
             <span style="font-size:10px;font-weight:700;color:#dc2626">${dp2}%</span>
-            <span style="font-size:12px;font-weight:700;color:#dc2626">${isUSD?'USD ':''} ${fmtPeso(pB)}</span>
+            <span style="font-size:11px;font-weight:600;color:#dc2626">${isUSD?'USD ':''} ${fmtPeso(pB)}</span>
           </div>
         </div>
       </div>`;
@@ -3749,15 +3749,15 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
             <span>Total pesos</span><span>${fmtPeso(sumPesos)}</span>
           </div>`:''}
         </div>
-        ${cierresPesos.length?`<div style="border:1px solid var(--border);border-radius:var(--r);padding:.75rem;display:flex;gap:8px;align-items:center">
-          <span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Total</span>
-          <div style="flex:1;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px 12px;display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:11px;font-weight:700;color:#16a34a">${dp}%</span>
-            <span style="font-size:14px;font-weight:800;color:#16a34a">${pct(sumPesos,dp)}</span>
+        ${cierresPesos.length?`<div style="display:flex;gap:6px;align-items:center;padding:6px 0 2px">
+          <span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Distribución total</span>
+          <div style="background:#dcfce7;border:1px solid #86efac;border-radius:4px;padding:3px 10px;display:flex;gap:6px;align-items:center">
+            <span style="font-size:10px;font-weight:700;color:#16a34a">${dp}%</span>
+            <span style="font-size:12px;font-weight:700;color:#16a34a">${pct(sumPesos,dp)}</span>
           </div>
-          <div style="flex:1;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:6px 12px;display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:11px;font-weight:700;color:#dc2626">${dp2}%</span>
-            <span style="font-size:14px;font-weight:800;color:#dc2626">${pct(sumPesos,dp2)}</span>
+          <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:4px;padding:3px 10px;display:flex;gap:6px;align-items:center">
+            <span style="font-size:10px;font-weight:700;color:#dc2626">${dp2}%</span>
+            <span style="font-size:12px;font-weight:700;color:#dc2626">${pct(sumPesos,dp2)}</span>
           </div>
         </div>`:''}
       </div>
@@ -3771,15 +3771,15 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
             <span>Total USD</span><span>USD ${fmtPeso(sumUSD)}</span>
           </div>`:''}
         </div>
-        ${cierresUSD.length?`<div style="border:1px solid #86efac;border-radius:var(--r);padding:.75rem;display:flex;gap:8px;align-items:center">
-          <span style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Total USD</span>
-          <div style="flex:1;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px 12px;display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:11px;font-weight:700;color:#16a34a">${dp}%</span>
-            <span style="font-size:14px;font-weight:800;color:#16a34a">USD ${pct(sumUSD,dp)}</span>
+        ${cierresUSD.length?`<div style="display:flex;gap:6px;align-items:center;padding:6px 0 2px">
+          <span style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Distribución total USD</span>
+          <div style="background:#dcfce7;border:1px solid #86efac;border-radius:4px;padding:3px 10px;display:flex;gap:6px;align-items:center">
+            <span style="font-size:10px;font-weight:700;color:#16a34a">${dp}%</span>
+            <span style="font-size:12px;font-weight:700;color:#16a34a">USD ${pct(sumUSD,dp)}</span>
           </div>
-          <div style="flex:1;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:6px 12px;display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:11px;font-weight:700;color:#dc2626">${dp2}%</span>
-            <span style="font-size:14px;font-weight:800;color:#dc2626">USD ${pct(sumUSD,dp2)}</span>
+          <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:4px;padding:3px 10px;display:flex;gap:6px;align-items:center">
+            <span style="font-size:10px;font-weight:700;color:#dc2626">${dp2}%</span>
+            <span style="font-size:12px;font-weight:700;color:#dc2626">USD ${pct(sumUSD,dp2)}</span>
           </div>
         </div>`:''}
       </div>`;
