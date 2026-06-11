@@ -407,6 +407,7 @@ tr:hover td{background:var(--bg)}
           <div class="toolbar" style="flex-wrap:wrap;gap:8px;margin-bottom:0">
             <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Nuevo</button>
             <button class="btn btn-sm" onclick="abrirGestionPagos()" style="padding:5px 8px;font-size:11px;font-weight:600;background:#f0fdf4;border:1px solid #86efac;color:#16a34a;border-radius:var(--r);cursor:pointer">✓ Pagos</button>
+            <button id="btn-mora-toggle" onclick="toggleMoraDesactivada()" style="padding:5px 8px;font-size:11px;font-weight:600;border-radius:var(--r);cursor:pointer;border:1px solid #fde68a;background:#fffbeb;color:#b45309">⚡ Mora activa</button>
             <div class="search-wrap" style="flex:1;min-width:200px"><span class="search-icon">&#128269;</span><input type="text" id="a-search" placeholder="Buscar nombre, manzana, lote..." oninput="renderAdminTable()"></div>
             <select class="fsel" id="a-etapa" onchange="initAdminMzFilter();renderAdminTable()"><option value="">Etapa</option></select>
             <select class="fsel" id="a-mz" onchange="initAdminLoteFilter();renderAdminTable()"><option value="">Manzana</option></select>
@@ -797,7 +798,7 @@ function calcInteresAuto(monto, desdeTs){
     }
   }
   const dia=hoy.getDate();
-  if(dia<=10) return {dias:0,pct:0,interes:0};
+  if(dia<=10||getMoraDesactivada()) return {dias:0,pct:0,interes:0};
   const dias=dia-10;
   const pct=dias*2;
   const interes=Math.round(monto*pct/100);
@@ -815,6 +816,8 @@ function calcInteresMoraDesde(monto, anio, mes){
 const MESES_NOMBRE=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 function getModo(){return localStorage.getItem('fj_modo')||'prueba';}
+function getMoraDesactivada(){return localStorage.getItem('fj_mora_desactivada')==='1';}
+function toggleMoraDesactivada(){const v=getMoraDesactivada();localStorage.setItem('fj_mora_desactivada',v?'0':'1');renderAdminLista();}
 function loadExtras(){try{return JSON.parse(localStorage.getItem('fj_extras')||'[]');}catch(e){return [];}}
 function saveExtras(v){localStorage.setItem('fj_extras',JSON.stringify(v));sheetsSet('Extras',v);if(window._firebaseReady)window._fbSet('extras',v).catch(e=>console.warn('FB extras error:',e));}
 
@@ -6670,6 +6673,14 @@ const ICC_MAP = {
 // MESES defined globally above
 
 function renderAdminTable(){
+  const moraOff=getMoraDesactivada();
+  const btn=document.getElementById('btn-mora-toggle');
+  if(btn){
+    btn.textContent=moraOff?'⚡ Mora desactivada':'⚡ Mora activa';
+    btn.style.background=moraOff?'#fee2e2':'#fffbeb';
+    btn.style.borderColor=moraOff?'#fca5a5':'#fde68a';
+    btn.style.color=moraOff?'#dc2626':'#b45309';
+  }
   let data=loadData();
   const el=document.getElementById('admin-table-wrap');
   if(!el)return;
