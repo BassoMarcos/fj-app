@@ -3516,6 +3516,8 @@ function resetPagos(){
 }
 
 // ============== RENDER BALANCES ==============
+function getDistPct(){const v=parseInt(localStorage.getItem('fj_dist_pct')||'70');return isNaN(v)||v<1||v>99?70:v;}
+function setDistPct(v){const n=parseInt(v);if(!isNaN(n)&&n>=1&&n<=99){localStorage.setItem('fj_dist_pct',n);renderBalances();}}
 function renderBalances(seccion){
   const el=document.getElementById('a-balances-content');if(!el)return;
   const bal=loadBalances();
@@ -3532,8 +3534,17 @@ function renderBalances(seccion){
 
   if(!seccion){
     // Main balances screen - buttons only
+    const dp=getDistPct();
     el.innerHTML=`
-      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px">
+          <span style="font-size:12px;font-weight:700;color:var(--text2)">DISTRIBUCIÓN</span>
+          <input type="number" id="dist-pct-input" value="${dp}" min="1" max="99" step="1"
+            style="width:52px;padding:4px 6px;border:1.5px solid var(--brand);border-radius:6px;font-size:14px;font-weight:700;text-align:center"
+            oninput="document.getElementById('dist-pct-label').textContent=this.value+'% / '+(100-Math.min(99,Math.max(1,+this.value||70)))+'%'"/>
+          <span id="dist-pct-label" style="font-size:13px;font-weight:700;color:var(--brand)">${dp}% / ${100-dp}%</span>
+          <button onclick="setDistPct(document.getElementById('dist-pct-input').value)" style="background:var(--brand);color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">Aplicar</button>
+        </div>
         <button onclick="resetTodoBalances()" style="background:#f3f4f6;border:1px solid #d1d5db;color:#374151;padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar todo</button>
       </div>
       <div style="display:grid;gap:12px">
@@ -3698,6 +3709,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       </div>`;
     }).join(''):'<div style="font-size:13px;color:var(--text2);padding:8px 0">Sin cierres</div>';
 
+    const dp=getDistPct();const dp2=100-dp;
     const pct=(total,pct)=>fmtPeso(Math.round(total*pct/100));
 
     el.innerHTML=backBtn+`
@@ -3725,12 +3737,12 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
           <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">DISTRIBUCIÓN</div>
           <div style="display:flex;gap:8px">
             <div style="flex:1;text-align:center;padding:8px;background:#fff;border:1px solid var(--border);border-radius:6px">
-              <div style="font-size:11px;color:var(--text2)">70%</div>
-              <div style="font-weight:800;font-size:15px">${pct(sumPesos,70)}</div>
+              <div style="font-size:11px;color:var(--text2)">${dp}%</div>
+              <div style="font-weight:800;font-size:15px">${pct(sumPesos,dp)}</div>
             </div>
             <div style="flex:1;text-align:center;padding:8px;background:#fff;border:1px solid var(--border);border-radius:6px">
-              <div style="font-size:11px;color:var(--text2)">30%</div>
-              <div style="font-weight:800;font-size:15px">${pct(sumPesos,30)}</div>
+              <div style="font-size:11px;color:var(--text2)">${dp2}%</div>
+              <div style="font-weight:800;font-size:15px">${pct(sumPesos,dp2)}</div>
             </div>
           </div>
         </div>`:''}
@@ -3749,12 +3761,12 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
           <div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:6px">DISTRIBUCIÓN</div>
           <div style="display:flex;gap:8px">
             <div style="flex:1;text-align:center;padding:8px;background:#fff;border:1px solid #86efac;border-radius:6px">
-              <div style="font-size:11px;color:#16a34a">70%</div>
-              <div style="font-weight:800;font-size:15px;color:#16a34a">USD ${pct(sumUSD,70)}</div>
+              <div style="font-size:11px;color:#16a34a">${dp}%</div>
+              <div style="font-weight:800;font-size:15px;color:#16a34a">USD ${pct(sumUSD,dp)}</div>
             </div>
             <div style="flex:1;text-align:center;padding:8px;background:#fff;border:1px solid #86efac;border-radius:6px">
-              <div style="font-size:11px;color:#16a34a">30%</div>
-              <div style="font-weight:800;font-size:15px;color:#16a34a">USD ${pct(sumUSD,30)}</div>
+              <div style="font-size:11px;color:#16a34a">${dp2}%</div>
+              <div style="font-weight:800;font-size:15px;color:#16a34a">USD ${pct(sumUSD,dp2)}</div>
             </div>
           </div>
         </div>`:''}
@@ -3799,7 +3811,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
 
     moraHtml+='<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px">PESOS</div>';
     moraHtml+='<div style="margin-bottom:4px">';
-    moraHtml+='<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:.75rem;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.12),0 1px 3px rgba(0,0,0,0.08)"><div style="font-size:11px;color:var(--text2)">Total CP Mora</div><div style="font-weight:700">'+fmtPeso(totalCuotaP)+'</div><div style="display:flex;gap:6px;margin-top:8px"><div style="flex:1;background:#dcfce7;border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:#16a34a">70%</div><div style="font-size:12px;font-weight:800;color:#16a34a">'+fmtPeso(Math.round(totalCuotaP*0.7))+'</div></div><div style="flex:1;background:#fef2f2;border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:#dc2626">30%</div><div style="font-size:12px;font-weight:800;color:#dc2626">'+fmtPeso(Math.round(totalCuotaP*0.3))+'</div></div></div></div>';
+    moraHtml+='<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:.75rem;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.12),0 1px 3px rgba(0,0,0,0.08)"><div style="font-size:11px;color:var(--text2)">Total CP Mora</div><div style="font-weight:700">'+fmtPeso(totalCuotaP)+'</div><div style="display:flex;gap:6px;margin-top:8px"><div style="flex:1;background:#dcfce7;border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:#16a34a">70%</div><div style="font-size:12px;font-weight:800;color:#16a34a">'+fmtPeso(Math.round(totalCuotaP*dp/100))+'</div></div><div style="flex:1;background:#fef2f2;border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:#dc2626">30%</div><div style="font-size:12px;font-weight:800;color:#dc2626">'+fmtPeso(Math.round(totalCuotaP*dp2/100))+'</div></div></div></div>';
     moraHtml+='<div style="padding:4px 0"><span style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;color:#16a34a">Intereses: '+fmtPeso(totalInteresP)+'</span></div>';
     moraHtml+='</div>';
     if(window._moraCajaEtapas){
@@ -3852,11 +3864,11 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         moraHtml+='</div>';
         moraHtml+='<div style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:12px;text-align:center">';
         moraHtml+='<div style="font-size:10px;font-weight:700;color:#16a34a;margin-bottom:2px">70%</div>';
-        moraHtml+='<div style="font-size:15px;font-weight:800;color:#16a34a">'+fmtPeso(Math.round(totalEtapaP*0.7))+'</div>';
+        moraHtml+='<div style="font-size:15px;font-weight:800;color:#16a34a">'+fmtPeso(Math.round(totalEtapaP*dp/100))+'</div>';
         moraHtml+='</div>';
         moraHtml+='<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px;text-align:center">';
         moraHtml+='<div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:2px">30%</div>';
-        moraHtml+='<div style="font-size:15px;font-weight:800;color:#dc2626">'+fmtPeso(Math.round(totalEtapaP*0.3))+'</div>';
+        moraHtml+='<div style="font-size:15px;font-weight:800;color:#dc2626">'+fmtPeso(Math.round(totalEtapaP*dp2/100))+'</div>';
         moraHtml+='</div>';
       }
       if(totalEtapaU>0){
@@ -3866,11 +3878,11 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         moraHtml+='</div>';
         moraHtml+='<div style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:12px;text-align:center">';
         moraHtml+='<div style="font-size:10px;font-weight:700;color:#16a34a;margin-bottom:2px">70%</div>';
-        moraHtml+='<div style="font-size:15px;font-weight:800;color:#16a34a">USD '+fmtPeso(Math.round(totalEtapaU*0.7))+'</div>';
+        moraHtml+='<div style="font-size:15px;font-weight:800;color:#16a34a">USD '+fmtPeso(Math.round(totalEtapaU*dp/100))+'</div>';
         moraHtml+='</div>';
         moraHtml+='<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px;text-align:center">';
         moraHtml+='<div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:2px">30%</div>';
-        moraHtml+='<div style="font-size:15px;font-weight:800;color:#dc2626">USD '+fmtPeso(Math.round(totalEtapaU*0.3))+'</div>';
+        moraHtml+='<div style="font-size:15px;font-weight:800;color:#dc2626">USD '+fmtPeso(Math.round(totalEtapaU*dp2/100))+'</div>';
         moraHtml+='</div>';
       }
       moraHtml+='</div></div>';
@@ -3882,7 +3894,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
     if(usd.length){
       moraHtml+='<div style="font-size:13px;font-weight:700;color:#16a34a;margin-bottom:6px">USD</div>';
       moraHtml+='<div style="margin-bottom:4px">';
-      moraHtml+='<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:var(--r);padding:.75rem;text-align:center"><div style="font-size:11px;color:#16a34a">Cuotas USD</div><div style="font-weight:700;color:#16a34a">USD '+fmtPeso(totalCuotaU)+'</div><div style="display:flex;gap:6px;margin-top:8px"><div style="flex:1;background:#dcfce7;border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:#16a34a">70%</div><div style="font-size:12px;font-weight:800;color:#16a34a">USD '+fmtPeso(Math.round(totalCuotaU*0.7))+'</div></div><div style="flex:1;background:#fef2f2;border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:#dc2626">30%</div><div style="font-size:12px;font-weight:800;color:#dc2626">USD '+fmtPeso(Math.round(totalCuotaU*0.3))+'</div></div></div></div>';
+      moraHtml+='<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:var(--r);padding:.75rem;text-align:center"><div style="font-size:11px;color:#16a34a">Cuotas USD</div><div style="font-weight:700;color:#16a34a">USD '+fmtPeso(totalCuotaU)+'</div><div style="display:flex;gap:6px;margin-top:8px"><div style="flex:1;background:#dcfce7;border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:#16a34a">70%</div><div style="font-size:12px;font-weight:800;color:#16a34a">USD '+fmtPeso(Math.round(totalCuotaU*dp/100))+'</div></div><div style="flex:1;background:#fef2f2;border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:#dc2626">30%</div><div style="font-size:12px;font-weight:800;color:#dc2626">USD '+fmtPeso(Math.round(totalCuotaU*dp2/100))+'</div></div></div></div>';
       moraHtml+='<div style="background:none;border:none;padding:4px 8px;text-align:right"><span style="font-size:11px;color:var(--text2)">Intereses USD: </span><span style="font-size:11px;font-weight:600;color:#dc2626">USD '+fmtPeso(totalInteresU)+'</span></div>';
       moraHtml+='</div>';
       moraHtml+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem">'+renderMoraList(usd,true)+'</div>';
