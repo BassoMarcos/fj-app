@@ -3516,6 +3516,8 @@ function resetPagos(){
 }
 
 // ============== RENDER BALANCES ==============
+function getCierreEstados(){try{return JSON.parse(localStorage.getItem('fj_cierre_estados')||'{}');}catch(e){return{};}}
+function setCierreEstado(idx,tipo,val){const e=getCierreEstados();if(!e[idx])e[idx]={};e[idx][tipo]=val;localStorage.setItem('fj_cierre_estados',JSON.stringify(e));renderBalances('cierres');}
 function getDistPct(){const v=parseInt(localStorage.getItem('fj_dist_pct')||'70');return isNaN(v)||v<1||v>99?70:v;}
 function setDistPct(v){const n=parseInt(v);if(!isNaN(n)&&n>=1&&n<=99){localStorage.setItem('fj_dist_pct',n);renderBalances();}}
 function renderBalances(seccion){
@@ -3700,10 +3702,19 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
     const sumPesos=cierresPesos.reduce((s,c)=>s+(c.total||0),0);
     const sumUSD=cierresUSD.reduce((s,c)=>s+(c.total||0),0);
 
-    const renderCierreList=(lista)=>lista.length?lista.slice().reverse().map(ci=>{
+    const cierreEstados=getCierreEstados();
+    const renderCierreList=(lista,offset)=>lista.length?lista.slice().reverse().map((ci,i)=>{
+      const globalIdx=offset+(lista.length-1-i);
+      const est=cierreEstados[globalIdx]||{};
       const hora=ci.ts?new Date(ci.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
       const isUSD=ci.moneda==='USD';const t=ci.total||0;
       const pA=Math.round(t*dp/100);const pB=Math.round(t*dp2/100);
+      const btnA=est.guardado
+        ?`<button onclick="setCierreEstado(${globalIdx},'guardado',false)" style="background:#16a34a;color:#fff;border:none;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">${dp}% ✓ Guardado</button>`
+        :`<button onclick="setCierreEstado(${globalIdx},'guardado',true)" style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">${dp}% Guardar</button>`;
+      const btnB=est.rendido
+        ?`<button onclick="setCierreEstado(${globalIdx},'rendido',false)" style="background:#1d4ed8;color:#fff;border:none;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">${dp2}% ✓ Rendido</button>`
+        :`<button onclick="setCierreEstado(${globalIdx},'rendido',true)" style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">${dp2}% Rendir</button>`;
       return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
           <div>
@@ -3712,7 +3723,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
           </div>
           <div style="font-weight:700">${isUSD?'USD ':''} ${fmtPeso(t)}</div>
         </div>
-        <div style="display:flex;gap:4px;margin-top:3px">
+        <div style="display:flex;gap:4px;margin-top:3px;align-items:center;flex-wrap:wrap">
           <div style="background:#dcfce7;border:1px solid #86efac;border-radius:4px;padding:2px 8px;display:flex;gap:6px;align-items:center">
             <span style="font-size:10px;font-weight:700;color:#16a34a">${dp}%</span>
             <span style="font-size:11px;font-weight:600;color:#16a34a">${isUSD?'USD ':''} ${fmtPeso(pA)}</span>
@@ -3721,6 +3732,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
             <span style="font-size:10px;font-weight:700;color:#dc2626">${dp2}%</span>
             <span style="font-size:11px;font-weight:600;color:#dc2626">${isUSD?'USD ':''} ${fmtPeso(pB)}</span>
           </div>
+          <div style="margin-left:auto;display:flex;gap:4px">${btnA}${btnB}</div>
         </div>
       </div>`;
     }).join(''):'<div style="font-size:13px;color:var(--text2);padding:8px 0">Sin cierres</div>';
@@ -3744,7 +3756,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       <div style="margin-bottom:1.25rem">
         <div style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:8px">💵 CIERRES EN PESOS</div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:8px">
-          ${renderCierreList(cierresPesos)}
+          ${renderCierreList(cierresPesos,0)}
           ${cierresPesos.length?`<div style="display:flex;justify-content:space-between;font-weight:800;font-size:15px;padding-top:10px">
             <span>Total pesos</span><span>${fmtPeso(sumPesos)}</span>
           </div>`:''}
@@ -3766,7 +3778,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       <div>
         <div style="font-size:14px;font-weight:700;color:#16a34a;margin-bottom:8px">💵 CIERRES EN USD</div>
         <div style="background:#dcfce7;border:1px solid #86efac;border-radius:var(--r);padding:1rem;margin-bottom:8px">
-          ${renderCierreList(cierresUSD)}
+          ${renderCierreList(cierresUSD,cierresPesos.length)}
           ${cierresUSD.length?`<div style="display:flex;justify-content:space-between;font-weight:800;font-size:15px;padding-top:10px;color:#16a34a">
             <span>Total USD</span><span>USD ${fmtPeso(sumUSD)}</span>
           </div>`:''}
