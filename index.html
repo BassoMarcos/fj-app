@@ -8278,8 +8278,8 @@ async function init(){
         }catch(e){}
       }
 
-      window._fbListen('data', (d) => { if(d){ _lsSet(dKey('data'), JSON.stringify(d)); _fbRerender('lista'); } });
-      window._fbListen('pagoStore', (d) => { if(d){ _lsSet(dKey('pagos'), JSON.stringify(d)); _fbRerender('lista'); } });
+      window._fbListen('data', (d) => { if(d){ _lsSet(dKey('data'), JSON.stringify(d)); _fbRerender('lista'); _fbRerender('colab'); } });
+      window._fbListen('pagoStore', (d) => { if(d){ _lsSet(dKey('pagos'), JSON.stringify(d)); _fbRerender('lista'); _fbRerender('colab'); } });
       window._fbListen('cuotasMora', (d) => { if(d){ localStorage.setItem('fj_cuotas_mora', JSON.stringify(d)); _fbRerender('mora'); } });
       window._fbListen('balances', (d) => { if(d){ _lsSet(dKey('balances'), JSON.stringify(d)); _fbRerender('balances'); } });
       window._fbListen('icc', (d) => { if(d) _lsSet(dKey('icc'), JSON.stringify(d)); });
