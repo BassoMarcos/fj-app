@@ -3772,6 +3772,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         </div>`:''}
       </div>`;
   } else if(seccion==='mora'){
+    const dp=getDistPct();const dp2=100-dp;
     saveUltimaVistaMora();
     actualizarBadgeMora();
     const mora=loadMora();
