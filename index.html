@@ -6682,8 +6682,8 @@ function renderAdminTable(){
   const moneda=adminFieldVal('a-moneda')||'';
   if(q) data=data.filter(c=>String(c.titular||'').toLowerCase().includes(q)||String(c.mz||'').toLowerCase().includes(q)||String(c.lote||'').toLowerCase().includes(q));
   if(etapa) data=data.filter(c=>getEtapa(c.mz)===etapa);
-  if(mz) data=data.filter(c=>c.mz===mz);
-  if(lote) data=data.filter(c=>c.lote===lote);
+  if(mz) data=data.filter(c=>String(c.mz)===mz);
+  if(lote) data=data.filter(c=>String(c.lote)===lote);
   if(moneda) data=data.filter(c=>c.moneda===moneda);
   if(tri) data=data.filter(c=>c.tri===tri);
   if(pagoFiltro==='pagado') data=data.filter(c=>c.pago===true);
