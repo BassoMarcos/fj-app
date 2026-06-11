@@ -818,7 +818,7 @@ const MESES_NOMBRE=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Ag
 
 function getModo(){return localStorage.getItem('fj_modo')||'prueba';}
 function getMoraDesactivada(){return localStorage.getItem('fj_mora_desactivada')==='1';}
-function toggleMoraDesactivada(){const v=getMoraDesactivada();localStorage.setItem('fj_mora_desactivada',v?'0':'1');renderAdminLista();}
+function toggleMoraDesactivada(){const v=getMoraDesactivada();localStorage.setItem('fj_mora_desactivada',v?'0':'1');renderAdminTable();}
 function loadExtras(){try{return JSON.parse(localStorage.getItem('fj_extras')||'[]');}catch(e){return [];}}
 function saveExtras(v){localStorage.setItem('fj_extras',JSON.stringify(v));sheetsSet('Extras',v);if(window._firebaseReady)window._fbSet('extras',v).catch(e=>console.warn('FB extras error:',e));}
 
