@@ -3536,9 +3536,9 @@ function renderBalances(seccion){
     // Main balances screen - buttons only
     const dp=getDistPct();
     el.innerHTML=`
-      <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-        <div style="display:inline-flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:7px 12px;position:relative">
-          <div id="dist-toast" style="position:absolute;bottom:-28px;right:0;background:#dcfce7;color:#16a34a;font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;border:1px solid #86efac;opacity:0;transition:opacity .3s;white-space:nowrap;pointer-events:none">✓ Guardado</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="display:inline-flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:7px 12px">
+          <div id="dist-toast" style="background:#dcfce7;color:#16a34a;font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;border:1px solid #86efac;opacity:0;transition:opacity .3s;white-space:nowrap">✓ Guardado</div>
           <span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Distribución</span>
           <div id="dist-pill-a" style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:4px 12px;font-size:13px;font-weight:500;color:#16a34a">${dp}%</div>
           <div id="dist-pill-b" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:4px 12px;font-size:13px;font-weight:500;color:#dc2626">${100-dp}%</div>
