@@ -3516,6 +3516,7 @@ function resetPagos(){
 }
 
 // ============== RENDER BALANCES ==============
+function fmtFechaAdel(f){if(!f)return'';try{const d=new Date(f);if(isNaN(d))return f;return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});}catch(e){return f;}}
 function getCierreEstados(){try{return JSON.parse(localStorage.getItem('fj_cierre_estados')||'{}');}catch(e){return{};}}
 function setCierreEstado(idx,tipo,val){const e=getCierreEstados();if(!e[idx])e[idx]={};e[idx][tipo]=val;localStorage.setItem('fj_cierre_estados',JSON.stringify(e));renderBalances('cierres');}
 function getDistPct(){const v=parseInt(localStorage.getItem('fj_dist_pct')||'70');return isNaN(v)||v<1||v>99?70:v;}
@@ -4085,7 +4086,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
               <div style="display:flex;justify-content:space-between;margin-bottom:8px">
                 <div>
                   <div style="font-weight:700">${formatLoteTag(a.mz,a.lote)} — ${a.titular}</div>
-                  <div style="font-size:12px;color:var(--text2)">${a.fecha} · Cuotas: ${a.cuotas.map(q=>q.num).sort((x,y)=>y-x).join(', ')}</div>
+                  <div style="font-size:12px;color:var(--text2)">${fmtFechaAdel(a.fecha)} · Cuotas: ${a.cuotas.map(q=>q.num||q.numeroCuota||q.nro||'').filter(Boolean).sort((x,y)=>y-x).join(', ')}</div>
                 </div>
                 <div style="font-weight:800">${fmtPeso(a.total)}</div>
               </div>
@@ -4100,7 +4101,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
             <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
               <div>
                 <div style="font-weight:600">${formatLoteTag(a.mz,a.lote)} — ${a.titular}</div>
-                <div style="font-size:12px;color:var(--text2)">Cuotas: ${a.cuotas.map(q=>q.num).sort((x,y)=>y-x).join(', ')} · ${a.fechaAprobacion||a.fecha}</div>
+                <div style="font-size:12px;color:var(--text2)">Cuotas: ${a.cuotas.map(q=>q.num||q.numeroCuota||q.nro||'').filter(Boolean).sort((x,y)=>y-x).join(', ')} · ${fmtFechaAdel(a.fechaAprobacion||a.fecha)}</div>
               </div>
               <div style="font-weight:700">${fmtPeso(a.total)}</div>
             </div>`).join('')}`
@@ -4171,7 +4172,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
             <div style="display:flex;justify-content:space-between;padding:10px 1rem;border-bottom:1px solid var(--border);font-size:13px">
               <div>
                 <div style="font-weight:600">${formatLoteTag(a.mz,a.lote)} — ${a.titular}</div>
-                <div style="font-size:12px;color:var(--text2)">Cuotas: ${a.cuotas.map(q=>q.num).sort((x,y)=>y-x).join(', ')} · ${a.fechaAprobacion||a.fecha}</div>
+                <div style="font-size:12px;color:var(--text2)">Cuotas: ${a.cuotas.map(q=>q.num||q.numeroCuota||q.nro||'').filter(Boolean).sort((x,y)=>y-x).join(', ')} · ${fmtFechaAdel(a.fechaAprobacion||a.fecha)}</div>
               </div>
               <div style="font-weight:700">${fmtPeso(a.total)}</div>
             </div>`).join('')
