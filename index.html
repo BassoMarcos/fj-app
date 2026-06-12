@@ -4663,21 +4663,31 @@ function cerrarAdminDet(){
   const listaEl=document.getElementById('atab-lista');
 
   // Reset detalle
-  det.style.display='none';
-  det.style.position='';det.style.top='';det.style.left='';det.style.right='';
-  det.style.bottom='';det.style.zIndex='';det.style.width='';
-  det.style.flexDirection='';det.style.background='';
-  // Reset lista
-  // Restaurar panel central
-  const panelElR=document.querySelector('#admin-desktop-layout>div:nth-child(2)');
-  if(panelElR){panelElR.style.width='1000px';panelElR.style.maxWidth='1000px';panelElR.style.margin='0 auto';}
+  ['display','position','top','left','right','bottom','zIndex','width','flex',
+   'minWidth','flexDirection','background','borderLeft','borderTop','borderRadius','overflowY']
+  .forEach(p=>det.style[p]='');
+
+  // Restore sidebar
   const sidebarR=document.getElementById('admin-sidebar');
-  if(sidebarR){sidebarR.style.position='absolute';sidebarR.style.top='0.5rem';sidebarR.style.right='calc(50% + 500px)';sidebarR.style.width='';sidebarR.style.flexShrink='';sidebarR.style.alignSelf='';}
-  det.style.display='none';
-  det.style.position='';det.style.top='';det.style.left='';det.style.width='';
-  det.style.bottom='';det.style.zIndex='';det.style.flex='';det.style.minWidth='';
-  det.style.borderLeft='';det.style.flexDirection='';
-  det.style.borderLeft='';det.style.borderTop='';det.style.borderRadius='';
+  if(sidebarR){
+    sidebarR.style.position='absolute';
+    sidebarR.style.top='0.5rem';
+    sidebarR.style.right='calc(50% + 500px)';
+    sidebarR.style.width='';
+    sidebarR.style.flexShrink='';
+    sidebarR.style.alignSelf='';
+    sidebarR.style.sticky='';
+  }
+
+  // Restore panel central — puede estar en 480px o 1000px
+  const panelElR=listPanel.querySelector('[style*="480px"]')
+    ||listPanel.querySelector('[style*="1000px"]')
+    ||document.querySelector('#admin-desktop-layout>div:nth-child(2)');
+  if(panelElR){
+    panelElR.style.width='1000px';
+    panelElR.style.maxWidth='1000px';
+    panelElR.style.margin='0 auto';
+  }
 
   // Reset list panel
   listPanel.style.flex='1';
