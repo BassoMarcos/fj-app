@@ -430,7 +430,7 @@ tr:hover td{background:var(--bg)}
       <div id="admin-desktop-layout" style="display:flex;flex:1;padding:0.5rem 0;width:100%;box-sizing:border-box;position:relative;overflow:visible;min-height:calc(100vh - 120px);align-items:flex-start">
 
         <!-- Sidebar: espacio gris izquierdo -->
-        <div id="admin-sidebar" style="position:sticky;top:0.5rem;left:0;width:200px;flex-shrink:0;display:flex;flex-direction:column;gap:4px;padding:0 8px;align-items:stretch;align-self:flex-start">
+        <div id="admin-sidebar" style="position:absolute;top:0.5rem;left:0;right:calc(50% + 500px);display:flex;flex-direction:column;gap:4px;padding:0 34px;align-items:stretch">
           <button class="btn btn-primary btn-sm" onclick="openAddModal()" style="width:100%;padding:5px;font-size:11px;font-weight:700">+ Nuevo</button>
           <button class="btn btn-sm" onclick="abrirGestionPagos()" style="width:100%;padding:5px;font-size:11px;font-weight:600;background:#f0fdf4;border-color:#86efac;color:#16a34a">✓ Pagos</button>
           <button id="btn-mora-toggle-desk" onclick="toggleMoraDesactivada()" style="width:100%;padding:5px;font-size:11px;font-weight:600;border-radius:var(--r);cursor:pointer;border:1px solid #fde68a;background:#fffbeb;color:#b45309">⚡ Mora activa</button>
