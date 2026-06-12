@@ -7,14 +7,17 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f5f4f0;--surface:#fff;--border:#e0ddd5;--border2:#bbb;
-  --text:#1a1a1a;--text2:#555;--text3:#999;
-  --blue:#1a56db;--blue-bg:#eff6ff;--blue-border:#bfdbfe;
-  --green:#15803d;--green-bg:#f0fdf4;--green-border:#bbf7d0;
-  --red:#dc2626;--red-bg:#fef2f2;--red-border:#fecaca;
-  --amber:#b45309;--amber-bg:#fffbeb;--amber-border:#fde68a;
-  --brand:#1a3c6e;--brand-light:#e8f0fc;
+  --bg:#0d1a16;--surface:#132019;--border:#1f3529;--border2:#2a4a38;
+  --text:#e8f0ec;--text2:#8aaa99;--text3:#506860;
+  --blue:#7ab5d0;--blue-bg:#1a3a4a;--blue-border:#3a6a8a;
+  --green:#4caf82;--green-bg:#0f2e1a;--green-border:#1a4a2a;
+  --red:#e05050;--red-bg:#2d0f0f;--red-border:#4a1a1a;
+  --amber:#e09040;--amber-bg:#2d1e08;--amber-border:#4a3010;
+  --brand:#4F8F75;--brand-light:#1a2d24;
   --r:8px;--rlg:14px;
+  --card:#1a2d24;--hov:#1f3529;
+  --acc:#4F8F75;--acc2:#5DCAA5;--acc3:#9FC3B2;
+  --blu-bg:#1a3a4a;--blu:#7ab5d0;--blu2:#5a9abf;
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
@@ -46,57 +49,57 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 
 /* ---- NAVBAR ---- */
-.navbar{background:var(--brand);color:#fff;padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.navbar{background:#0a1510;color:var(--text);border-bottom:1px solid var(--border2);padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
 .nav-logo{font-size:17px;font-weight:700;letter-spacing:.01em}
 .nav-logo span{opacity:.7;font-weight:400;font-size:13px;margin-left:8px}
 .nav-login-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:6px 14px;border-radius:var(--r);font-size:13px;cursor:pointer;transition:background .15s}
 .nav-login-btn:hover{background:rgba(255,255,255,.25)}
 
 /* ---- HERO / PUBLIC ---- */
-.hero{background:linear-gradient(135deg,var(--brand) 0%,#2563eb 100%);color:#fff;padding:3rem 2rem 2.5rem;text-align:center}
+.hero{background:var(--card);color:var(--text);border-bottom:1px solid var(--border2);padding:3rem 2rem 2.5rem;text-align:center}
 .hero h1{font-size:26px;font-weight:700;margin-bottom:.5rem}
 .hero p{font-size:15px;opacity:.85;margin-bottom:2rem}
-.hero-card{background:#fff;border-radius:var(--rlg);padding:2rem;max-width:500px;margin:0 auto;color:var(--text);box-shadow:0 4px 24px rgba(0,0,0,.15)}
+.hero-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--rlg);padding:2rem;max-width:500px;margin:0 auto;color:var(--text);box-shadow:0 4px 24px rgba(0,0,0,.15)}
 .hero-card h2{font-size:16px;font-weight:600;margin-bottom:1.25rem;color:var(--text2);text-align:center}
 .select-group{margin-bottom:12px}
 .select-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
-.select-group select{width:100%;padding:10px 12px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:15px;background:var(--surface);color:var(--text);cursor:pointer}
+.select-group select{width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:15px;background:var(--card);color:var(--text);cursor:pointer}
 .select-group select:focus{outline:none;border-color:var(--blue)}
-.btn-consultar{width:100%;padding:12px;background:var(--brand);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;transition:opacity .15s}
+.btn-consultar{width:100%;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;transition:opacity .15s}
 .btn-consultar:hover{opacity:.9}
 
 /* ---- RESULTADO CLIENTE ---- */
 .resultado-wrap{max-width:500px;margin:1.5rem auto;padding:0 1rem}
 .resultado-card{background:var(--surface);border-radius:var(--rlg);padding:1.75rem;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border)}
-.res-lote{font-size:13px;font-weight:700;color:var(--brand);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.res-lote{font-size:13px;font-weight:700;color:var(--acc2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
 .res-titular{font-size:22px;font-weight:700;color:var(--text);margin-bottom:1.25rem;line-height:1.2}
 .res-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
 .res-row:last-of-type{border-bottom:none}
 .res-label{color:var(--text2)}
 .res-val{font-weight:600}
-.res-monto{font-size:30px;font-weight:800;color:var(--brand);text-align:center;padding:1rem 0;border-bottom:1px solid var(--border);margin-bottom:.5rem}
+.res-monto{font-size:30px;font-weight:800;color:var(--acc2);text-align:center;padding:1rem 0;border-bottom:1px solid var(--border);margin-bottom:.5rem}
 .res-monto-label{text-align:center;font-size:12px;color:var(--text2);margin-bottom:1rem}
 .saldo-pos{color:var(--green);font-weight:600}
 .saldo-neg{color:var(--red);font-weight:600}
 .btn-back{background:none;border:none;cursor:pointer;color:var(--blue);font-size:13px;margin-bottom:1rem;padding:0;display:flex;align-items:center;gap:4px;text-decoration:none}
-.badge-tri{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:var(--brand-light);color:var(--brand)}
+.badge-tri{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:var(--blu-bg);color:var(--blu)}
 
 /* ---- LOGIN MODAL ---- */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center;padding:1rem}
 .modal-overlay.open{display:flex}
-.modal{background:var(--surface);border-radius:var(--rlg);padding:2rem;width:100%;max-width:360px}
-.modal h2{font-size:18px;font-weight:700;margin-bottom:.25rem;color:var(--brand)}
+.modal{background:var(--card);border:1px solid var(--border2);border-radius:var(--rlg);padding:2rem;width:100%;max-width:360px}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:.25rem;color:var(--acc2)}
 .modal p{font-size:13px;color:var(--text2);margin-bottom:1.25rem}
 .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1.25rem}
 .role-card{padding:10px 8px;border:2px solid var(--border);border-radius:var(--r);cursor:pointer;text-align:center;font-size:12px;font-weight:600;color:var(--text2);transition:all .15s}
-.role-card.sel{border-color:var(--brand);background:var(--brand-light);color:var(--brand)}
+.role-card.sel{border-color:var(--acc2);background:var(--blu-bg);color:var(--blu)}
 .field label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px}
-.field input{width:100%;padding:9px 12px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:14px;background:var(--surface);color:var(--text);letter-spacing:.1em}
-.field input:focus{outline:none;border-color:var(--brand)}
+.field input{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:14px;background:var(--surface);color:var(--text);letter-spacing:.1em}
+.field input:focus{outline:none;border-color:var(--acc2)}
 .login-err{color:var(--red);font-size:12px;margin-top:8px;text-align:center;min-height:18px}
 .btn{padding:9px 18px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text);transition:all .15s}
 .btn:hover{background:var(--bg)}
-.btn-primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.btn-primary{background:var(--blu-bg);color:var(--blu);border-color:var(--blue-border)}
 .btn-primary:hover{opacity:.9}
 .btn-block{width:100%;margin-top:10px}
 .btn-sm{padding:5px 12px;font-size:12px}
@@ -106,7 +109,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .btn-wa:hover{opacity:.9}
 
 /* ---- TOPBAR (authenticated) ---- */
-.topbar{background:var(--brand);color:#fff;padding:0 1.5rem;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.topbar{background:var(--acc);color:#fff;padding:0 1.5rem;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
 .topbar-title{font-size:15px;font-weight:600}
 .topbar-right{display:flex;align-items:center;gap:10px}
 .role-pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,.2)}
@@ -130,23 +133,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tabs-nav{display:flex;justify-content:center;gap:0;border-bottom:2px solid var(--border);margin-bottom:0;overflow-x:auto;position:sticky;top:54px;z-index:150;background:var(--bg);padding:0 1.5rem;scrollbar-width:none}
 .tabs-nav::-webkit-scrollbar{display:none}
 @media(max-width:767px){.tabs-nav{justify-content:flex-start;padding:0 0.5rem}}
-.tab-btn{padding:10px 18px;font-size:15px;font-weight:500;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;border-radius:6px 6px 0 0;transition:background .15s,color .15s}
+.tab-btn{color:var(--text2);padding:10px 18px;font-size:15px;font-weight:500;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;border-radius:6px 6px 0 0;transition:background .15s,color .15s}
 .tab-btn:hover{background:rgba(0,0,0,0.04);color:var(--text)}
-.tab-btn.active{color:var(--brand);border-bottom-color:var(--brand);font-weight:700;background:rgba(26,82,147,0.06)}
+.tab-btn.active{color:var(--acc2);border-bottom-color:var(--acc2);font-weight:700;background:rgba(26,82,147,0.06)}
 
 /* ---- TABLA LISTA ---- */
 .toolbar{display:flex;gap:8px;margin-bottom:0;flex-wrap:wrap;align-items:center;}
 .search-wrap{flex:1;min-width:200px;position:relative}
-.search-wrap input{width:100%;padding:8px 12px 8px 32px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text)}
+.search-wrap input{width:100%;padding:8px 12px 8px 32px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text)}
 .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px}
-.fsel{padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);cursor:pointer}
+.fsel{padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text);cursor:pointer}
 .table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg)}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);background:var(--bg);white-space:nowrap}
 td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#fafaf8}
-.lote-tag{font-weight:800;font-size:13px;color:var(--brand);letter-spacing:.02em}
+.lote-tag{font-weight:800;font-size:13px;color:var(--acc2);letter-spacing:.02em}
 .titular-name{font-weight:600;font-size:14px}
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
 .bg-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
@@ -161,8 +164,8 @@ tr:hover td{background:#fafaf8}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .field{margin-bottom:11px}
 .field label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px}
-.field input,.field select,.field textarea{width:100%;padding:8px 11px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:14px;background:var(--surface);color:var(--text)}
-.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--brand)}
+.field input,.field select,.field textarea{width:100%;padding:8px 11px;border:1px solid var(--border2);border-radius:var(--r);font-size:14px;background:var(--surface);color:var(--text)}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--acc2)}
 .field textarea{resize:vertical;min-height:60px}
 .form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}
 .section-title{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
@@ -170,22 +173,22 @@ tr:hover td{background:#fafaf8}
 /* ---- COBRADOR ---- */
 .cob-wrap{max-width:600px;margin:0 auto}
 .cob-filters{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1rem}
-.cob-search{padding:12px 14px;font-size:15px;border:1.5px solid var(--border2);border-radius:var(--r);width:100%;background:var(--surface);color:var(--text);margin-bottom:1rem}
-.cob-search:focus{outline:none;border-color:var(--brand)}
+.cob-search{padding:12px 14px;font-size:15px;border:1px solid var(--border2);border-radius:var(--r);width:100%;background:var(--card);color:var(--text);margin-bottom:1rem}
+.cob-search:focus{outline:none;border-color:var(--acc2)}
 .cob-list{display:flex;flex-direction:column;gap:8px}
 .cob-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rlg);padding:1.1rem 1.25rem;cursor:pointer;transition:border-color .15s}
-.cob-card:hover{border-color:var(--brand)}
+.cob-card:hover{border-color:var(--acc2)}
 .cob-card-top{display:flex;justify-content:space-between;align-items:flex-start}
-.cob-lote{font-size:15px;font-weight:800;color:var(--brand)}
+.cob-lote{font-size:15px;font-weight:800;color:var(--acc2)}
 .cob-name{font-size:14px;font-weight:600;margin-top:2px}
 .cob-sub{font-size:12px;color:var(--text2);margin-top:3px}
 
 /* Detalle cobrador */
 .det-wrap{max-width:100%;margin:0;padding:0 1.5rem 1rem 0.5rem;box-sizing:border-box}
 .det-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);padding:0.875rem 1.25rem}
-.det-lote{font-size:13px;font-weight:800;color:var(--brand);letter-spacing:.06em;text-transform:uppercase}
+.det-lote{font-size:13px;font-weight:800;color:var(--acc2);letter-spacing:.06em;text-transform:uppercase}
 .det-name{font-size:20px;font-weight:800;margin:2px 0 0.75rem}
-.det-monto{font-size:26px;font-weight:900;color:var(--brand);text-align:center;padding:.25rem 0;margin-bottom:.4rem}
+.det-monto{font-size:26px;font-weight:900;color:var(--acc2);text-align:center;padding:.25rem 0;margin-bottom:.4rem}
 .det-monto.hidden{filter:blur(8px);user-select:none}
 .det-monto-label{text-align:center;font-size:12px;color:var(--text2);margin-bottom:.5rem}
 .det-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px}
@@ -197,7 +200,7 @@ tr:hover td{background:#fafaf8}
 .hist-chip.pend{background:var(--bg);color:var(--text2);border-color:var(--border)}
 .obs-area{margin-top:0.75rem}
 .obs-area h4{font-size:12px;font-weight:600;margin-bottom:4px}
-.obs-area textarea{width:100%;padding:5px 8px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:12px;resize:vertical;min-height:36px}
+.obs-area textarea{width:100%;padding:5px 8px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;resize:vertical;min-height:36px}
 .obs-item{background:var(--bg);border-radius:var(--r);padding:8px 10px;font-size:12px;margin-bottom:5px}
 .obs-meta{color:var(--text3);font-size:11px;margin-top:2px}
 
@@ -305,7 +308,7 @@ tr:hover td{background:var(--bg)}
 
 <!-- Modal contraseña admin -->
 <div id="modal-clave" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:99998;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:16px;padding:2rem;width:100%;max-width:340px;margin:1rem;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+  <div style="background:var(--card);border-radius:16px;padding:2rem;width:100%;max-width:340px;margin:1rem;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
     <h3 id="modal-clave-titulo" style="margin:0 0 1rem;font-size:17px;color:#1d1c1a">Contraseña de administrador</h3>
     <input type="password" id="clave-input" placeholder="Ingresá la contraseña..."
       style="width:100%;padding:10px 14px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:8px;box-sizing:border-box"
@@ -332,7 +335,7 @@ tr:hover td{background:var(--bg)}
     <button onclick="mostrarLoginForm('colab')" style="display:block;width:100%;max-width:320px;padding:13px;background:transparent;color:#fff;font-size:15px;font-weight:600;border:1.5px solid #6b6866;border-radius:12px;cursor:pointer">Acceso Colaborador</button>
   </div>
   <div id="home-login" style="display:none;min-height:100vh;background:#1d1c1a;flex-direction:column;align-items:center;justify-content:center;padding:2rem;font-family:'Century Gothic',Arial,sans-serif">
-    <div style="background:#fff;border-radius:16px;padding:2rem;width:100%;max-width:340px">
+    <div style="background:var(--card);border-radius:16px;padding:2rem;width:100%;max-width:340px">
       <h3 id="login-lbl" style="margin:0 0 1rem;font-size:17px;color:#1d1c1a">Contraseña</h3>
       <input type="password" id="login-pwd" placeholder="Ingresá la contraseña..."
         style="width:100%;padding:10px 14px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:8px;box-sizing:border-box"
@@ -481,14 +484,14 @@ tr:hover td{background:var(--bg)}
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;margin-bottom:1rem">
           <div style="font-size:16px;font-weight:700;margin-bottom:6px">📤 Exportar datos</div>
           <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Descarga un archivo con todos tus datos: clientes, pagos, mora, historial, balances y configuración.</div>
-          <button onclick="exportarDatos()" style="background:#1e40af;color:#fff;border:none;border-radius:var(--r);padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%">⬇ Descargar mis datos</button>
+          <button onclick="exportarDatos()" style="background:var(--acc);color:#fff;border:none;border-radius:var(--r);padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%">⬇ Descargar mis datos</button>
         </div>
 
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem">
           <div style="font-size:16px;font-weight:700;margin-bottom:6px">📥 Importar datos</div>
           <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Cargá un archivo exportado previamente para restaurar todos tus datos. <strong>Atención: reemplaza los datos actuales.</strong></div>
           <input type="file" id="importar-input" accept=".json" onchange="importarDatos(this)" style="display:none">
-          <button onclick="document.getElementById('importar-input').click()" style="background:var(--surface);color:var(--text);border:1.5px solid var(--border);border-radius:var(--r);padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%">⬆ Seleccionar archivo de datos</button>
+          <button onclick="document.getElementById('importar-input').click()" style="background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:var(--r);padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%">⬆ Seleccionar archivo de datos</button>
           <div id="importar-msg" style="margin-top:8px;font-size:13px"></div>
         </div>
 
@@ -523,7 +526,7 @@ tr:hover td{background:var(--bg)}
           <div class="field" style="margin:0;flex:1;min-width:140px">
             <label>% del mes actual <span style="font-weight:400;color:var(--text3)">(podés editarlo)</span></label>
             <input type="number" step="0.01" id="icc-pct" placeholder="Ej: 2.5"
-              style="font-size:18px;font-weight:700;color:var(--brand);border-color:var(--brand)"
+              style="font-size:18px;font-weight:700;color:var(--acc2);border-color:var(--acc2)"
               oninput="iccPctEditado()">
             <div style="font-size:11px;color:var(--text3);margin-top:3px">Modificá el % antes de confirmar si es necesario</div>
           </div>
@@ -558,7 +561,7 @@ tr:hover td{background:var(--bg)}
           <div style="font-size:13px;color:var(--text2);margin-bottom:1rem">Compartí este link para que los clientes consulten su cuota.</div>
           <div style="display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px">
             <div id="vc-link-txt" style="flex:1;font-size:13px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
-            <button onclick="copiarLinkCliente(this)" style="background:var(--brand);color:#fff;border:none;border-radius:var(--r);padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">📋 Copiar</button>
+            <button onclick="copiarLinkCliente(this)" style="background:var(--acc);color:#fff;border:none;border-radius:var(--r);padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">📋 Copiar</button>
           </div>
         </div>
         <!-- Preview -->
@@ -578,7 +581,7 @@ tr:hover td{background:var(--bg)}
               <label>Lote</label>
               <select id="prev-lote" onchange="onPrevLote()" disabled><option value="">— Seleccioná manzana —</option></select>
             </div>
-            <button onclick="consultarPrev()" style="width:100%;margin-top:1rem;padding:10px;background:var(--brand);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer">Ver cuota</button>
+            <button onclick="consultarPrev()" style="width:100%;margin-top:1rem;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer">Ver cuota</button>
             <div id="prev-resultado" style="margin-top:1rem"></div>
           </div>
         </div>
@@ -658,20 +661,20 @@ tr:hover td{background:var(--bg)}
     <div style="height:2px;background:var(--border);margin-bottom:14px"></div>
 
     <!-- ① TITULAR -->
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px"><div style="width:22px;height:22px;border-radius:50%;background:#1e40af;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div><span style="font-size:13px;font-weight:700;color:var(--text)">Titular / Titulares</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px"><div style="width:22px;height:22px;border-radius:50%;background:var(--acc);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div><span style="font-size:13px;font-weight:700;color:var(--text)">Titular / Titulares</span></div>
     <div class="field">
       <label style="font-size:12px">Fecha de firma <span style="color:#dc2626">*</span></label>
-      <input type="date" id="e-fecha-firma" style="width:100%;padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);box-sizing:border-box">
+      <input type="date" id="e-fecha-firma" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text);box-sizing:border-box">
     </div>
     <div id="titulares-fields"></div>
     <button class="btn btn-sm" onclick="addTitularField()" style="margin-bottom:4px;font-size:12px">+ Agregar titular</button>
     <div class="field" style="margin-top:8px">
       <label style="font-size:12px">Teléfono <span style="color:#dc2626">*</span></label>
-      <input type="text" id="e-tel" placeholder="11 30909889" style="width:100%;padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);box-sizing:border-box">
+      <input type="text" id="e-tel" placeholder="11 30909889" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text);box-sizing:border-box">
     </div>
     <div class="field">
       <label style="font-size:12px">Teléfono alternativo <span style="font-size:10px;color:var(--text2)">(opcional)</span></label>
-      <input type="text" id="e-tel2" placeholder="11 30909889" style="width:100%;padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);box-sizing:border-box">
+      <input type="text" id="e-tel2" placeholder="11 30909889" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text);box-sizing:border-box">
     </div>
 
     <!-- ② LOTES -->
@@ -680,14 +683,14 @@ tr:hover td{background:var(--bg)}
     <!-- Modo edición: campos libres -->
     <div id="e-edit-lote-wrap" style="display:none">
       <div class="form-row">
-        <div class="field"><label style="font-size:12px">Manzana</label><input type="text" id="e-mz" style="width:100%;padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);box-sizing:border-box"></div>
-        <div class="field"><label style="font-size:12px">Lote</label><input type="text" id="e-lote" style="width:100%;padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);box-sizing:border-box"></div>
+        <div class="field"><label style="font-size:12px">Manzana</label><input type="text" id="e-mz" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text);box-sizing:border-box"></div>
+        <div class="field"><label style="font-size:12px">Lote</label><input type="text" id="e-lote" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text);box-sizing:border-box"></div>
       </div>
     </div>
 
     <!-- Modo nuevo: selector visual -->
     <div id="e-lotes-nuevo-wrap">
-      <div style="border:1.5px solid var(--border2);border-radius:8px;padding:10px;background:var(--surface)">
+      <div style="border:1px solid var(--border2);border-radius:8px;padding:10px;background:var(--surface)">
         <div style="margin-bottom:8px">
           <div style="font-size:11px;color:var(--text2);margin-bottom:4px;font-weight:600">Etapa</div>
           <div id="sel-etapa-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:5px"></div>
@@ -719,7 +722,7 @@ tr:hover td{background:var(--bg)}
     <!-- Estado (solo edición) -->
     <div class="field" id="e-est-wrap" style="display:none">
       <label style="font-size:12px">Estado</label>
-      <select id="e-est" style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:12px;background:var(--surface);width:auto">
+      <select id="e-est" style="padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;background:var(--surface);width:auto">
         <option value="activo">Activo</option>
         <option value="finalizado">Finalizado</option>
       </select>
@@ -1548,7 +1551,7 @@ function renderTarjetaCliente(id, containerId){
       </div>`
     :`<div style="background:var(--brand-light);border-radius:var(--r);padding:1rem;text-align:center;margin:.5rem 0">
         <div style="font-size:13px;color:var(--text2);margin-bottom:4px">Cuota ${mes} ${anio}</div>
-        <div style="font-size:28px;font-weight:900;color:var(--brand);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cur}${fmtPeso(c.monto)}</div>
+        <div style="font-size:28px;font-weight:900;color:var(--acc2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cur}${fmtPeso(c.monto)}</div>
       </div>`;
 
   // Build HTML without inner quotes conflicting
@@ -1993,7 +1996,7 @@ function renderResumenLotes(){
     f1.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:8px';
     f1.innerHTML = `
       <span style="font-size:12px;font-weight:700;color:${textColor};flex:1">📍 ${s.id}${agriTag}${usdTag}</span>
-      ${i>0 ? `<label style="font-size:10px;color:#6b7280;white-space:nowrap;display:flex;align-items:center;gap:3px">
+      ${i>0 ? `<label style="font-size:10px;color:var(--text3);white-space:nowrap;display:flex;align-items:center;gap:3px">
         <input type="checkbox" id="igualar-${i}" ${s.igualado?'checked':''} onchange="toggleIgualarLote(${i})">
         Igualar a ${primeraId}
       </label>` : ''}
@@ -2034,16 +2037,16 @@ function renderResumenLotes(){
     const montoDisplay = s.monto ? Number(s.monto).toLocaleString('es-AR') : '';
     f3.innerHTML = `
       <div style="flex:1">
-        <div style="font-size:10px;color:#6b7280;margin-bottom:3px">Cuota base (${sym})</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Cuota base (${sym})</div>
         <div style="position:relative">
-          <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:12px;color:#6b7280;pointer-events:none">${sym}</span>
+          <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);pointer-events:none">${sym}</span>
           <input type="text" inputmode="numeric" id="monto-lote-${i}" value="${montoDisplay}" placeholder="0"
             style="width:100%;padding:6px 8px 6px 30px;border:1.5px solid ${borderC};border-radius:5px;font-size:13px;box-sizing:border-box;background:#fff"
             oninput="formatMontoLote(${i},this)">
         </div>
       </div>
       <div style="flex:0 0 80px">
-        <div style="font-size:10px;color:#6b7280;margin-bottom:3px">Total cuotas</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Total cuotas</div>
         <input type="number" id="cuotas-lote-${i}" value="${s.ct||48}" min="1"
           style="width:100%;padding:6px 8px;border:1.5px solid ${borderC};border-radius:5px;font-size:13px;box-sizing:border-box;background:#fff"
           oninput="updateCampoLote(${i},'ct',this.value)">
@@ -2076,23 +2079,23 @@ function renderResumenLotes(){
     };
     if(s.modoContrato==='normal'){
       f5.innerHTML = `
-        <div style="font-size:10px;color:#6b7280;margin-bottom:3px">Primera cuota en</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Primera cuota en</div>
         <select id="pricuota-${i}" onchange="updateContratoLote(${i},'primeraCuota',this.value)"
-          style="width:100%;padding:6px 8px;border:1.5px solid ${borderC};border-radius:5px;font-size:12px;background:#fff;margin-bottom:6px">
+          style="width:100%;padding:6px 8px;border:1.5px solid ${borderC};border-radius:5px;font-size:12px;background:var(--surface);margin-bottom:6px">
           ${mOpts(s.primeraCuota)}
         </select>
-        <div id="tri-lote-${i}" style="font-size:10px;color:#6b7280;padding:3px 7px;background:#f1f5f9;border-radius:4px;margin-bottom:6px;display:${s.triDisplay&&!isUSD?'block':'none'}">${s.triDisplay?'📅 '+s.triDisplay:''}</div>`;
+        <div id="tri-lote-${i}" style="font-size:10px;color:var(--text3);padding:3px 7px;background:var(--surface);border-radius:4px;margin-bottom:6px;display:${s.triDisplay&&!isUSD?'block':'none'}">${s.triDisplay?'📅 '+s.triDisplay:''}</div>`;
     } else if(s.modoContrato==='pendiente'){
       f5.innerHTML = `
         <div style="display:flex;gap:6px;margin-bottom:6px">
           <div style="flex:1">
-            <div style="font-size:10px;color:#6b7280;margin-bottom:3px">Cuota actual</div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Cuota actual</div>
             <input type="number" id="ca-lote-${i}" min="1" value="${s.caActual||1}"
               onchange="updateContratoLote(${i},'caActual',this.value)"
               style="width:100%;padding:6px 8px;border:1.5px solid #fde68a;border-radius:5px;font-size:12px">
           </div>
           <div style="flex:1">
-            <div style="font-size:10px;color:#6b7280;margin-bottom:3px">La paga en</div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">La paga en</div>
             <select id="mespaga-${i}" onchange="updateContratoLote(${i},'mesPaga',this.value)"
               style="width:100%;padding:6px 8px;border:1.5px solid #fde68a;border-radius:5px;font-size:12px;background:#fff">
               ${mOpts(s.mesPaga)}
@@ -2102,16 +2105,16 @@ function renderResumenLotes(){
         <div id="tri-lote-${i}" style="font-size:10px;color:#92400e;padding:3px 7px;background:#fef9c3;border-radius:4px;margin-bottom:6px;display:${s.triDisplay?'block':'none'}">${s.triDisplay?'📅 '+s.triDisplay:''}</div>`;
     } else {
       f5.innerHTML = `
-        <div style="font-size:10px;color:#6b7280;margin-bottom:3px">Primera cuota en</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Primera cuota en</div>
         <select id="pricuota-${i}" onchange="updateContratoLote(${i},'primeraCuota',this.value)"
-          style="width:100%;padding:6px 8px;border:1.5px solid ${borderC};border-radius:5px;font-size:12px;background:#fff;margin-bottom:6px">
+          style="width:100%;padding:6px 8px;border:1.5px solid ${borderC};border-radius:5px;font-size:12px;background:var(--surface);margin-bottom:6px">
           ${mOpts(s.primeraCuota)}
         </select>
         <div style="display:flex;gap:6px;margin-bottom:6px">
           <div style="flex:1">
-            <div style="font-size:10px;color:#6b7280;margin-bottom:3px">Adicional (${sym})</div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Adicional (${sym})</div>
             <div style="position:relative">
-              <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:12px;color:#6b7280;pointer-events:none">${sym}</span>
+              <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);pointer-events:none">${sym}</span>
               <input type="text" inputmode="numeric" id="adicional-${i}"
                 value="${s.adicionalMonto?Number(s.adicionalMonto).toLocaleString('es-AR'):''}" placeholder="0"
                 oninput="formatAdicionalLote(${i},this)"
@@ -2119,20 +2122,20 @@ function renderResumenLotes(){
             </div>
           </div>
           <div style="flex:0 0 75px">
-            <div style="font-size:10px;color:#6b7280;margin-bottom:3px">Cuotas</div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Cuotas</div>
             <input type="number" id="adicional-hasta-${i}" value="${s.adicionalHasta||3}" min="1"
               oninput="updateContratoLote(${i},'adicionalHasta',this.value)"
               style="width:100%;padding:6px 8px;border:1.5px solid #bfdbfe;border-radius:5px;font-size:12px">
           </div>
         </div>
-        <div id="tri-lote-${i}" style="font-size:10px;color:#6b7280;padding:3px 7px;background:#f1f5f9;border-radius:4px;margin-bottom:6px;display:${s.triDisplay&&!isUSD?'block':'none'}">${s.triDisplay?'📅 '+s.triDisplay:''}</div>`;
+        <div id="tri-lote-${i}" style="font-size:10px;color:var(--text3);padding:3px 7px;background:var(--surface);border-radius:4px;margin-bottom:6px;display:${s.triDisplay&&!isUSD?'block':'none'}">${s.triDisplay?'📅 '+s.triDisplay:''}</div>`;
     }
     // trimestre ya se muestra dentro del bloque de cada modo
     const saldoAbs = Math.abs(s.saldo||0);
     const saldoTipo = (s.saldo||0) >= 0 ? 'favor' : 'contra';
     const saldoDisplay = saldoAbs ? Number(saldoAbs).toLocaleString('es-AR') : '';
     f5.innerHTML += `
-      <div style="font-size:10px;color:#6b7280;margin-bottom:3px;margin-top:2px">Saldo pendiente</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:3px;margin-top:2px">Saldo pendiente</div>
       <div style="display:flex;gap:5px">
         <select id="saldo-tipo-${i}" onchange="updateContratoLote(${i},'saldoTipo',this.value)"
           style="flex:0 0 100px;padding:6px 5px;border:1.5px solid ${borderC};border-radius:5px;font-size:11px;background:#fff">
@@ -2334,14 +2337,14 @@ function onPrimeraCuota(){
 function addTitularField(nombre='', dni=''){
   const wrap=document.getElementById('titulares-fields');
   const div=document.createElement('div');
-  div.style.cssText='background:#f9fafb;border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px';
+  div.style.cssText='background:var(--hov);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px';
   div.innerHTML=`
     <div style="display:flex;justify-content:space-between;margin-bottom:6px">
       <span style="font-size:12px;font-weight:700;color:var(--text2)">Titular ${wrap.children.length+1}</span>
       <button onclick="this.closest('div[style]').remove();renumerarTitulares()" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:14px">✕</button>
     </div>
-    <input type="text" placeholder="Nombre completo *" value="${nombre}" style="width:100%;padding:8px 11px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:14px;margin-bottom:6px;box-sizing:border-box">
-    <input type="text" placeholder="DNI (opcional)" value="${dni}" style="width:100%;padding:8px 11px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:14px;box-sizing:border-box">
+    <input type="text" placeholder="Nombre completo *" value="${nombre}" style="width:100%;padding:8px 11px;border:1px solid var(--border2);border-radius:var(--r);font-size:14px;margin-bottom:6px;box-sizing:border-box">
+    <input type="text" placeholder="DNI (opcional)" value="${dni}" style="width:100%;padding:8px 11px;border:1px solid var(--border2);border-radius:var(--r);font-size:14px;box-sizing:border-box">
   `;
   wrap.appendChild(div);
 }
@@ -2935,7 +2938,7 @@ function abrirModalAgregarMora(){
     '<div style="padding:16px;display:flex;flex-direction:column;gap:10px">'+
     '<div>'+
     '<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">1. ELEGÍ EL CLIENTE</div>'+
-    '<select id="mam-cliente" onchange="mamCargarMeses()" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text)">'+
+    '<select id="mam-cliente" onchange="mamCargarMeses()" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text)">'+
     '<option value="">— Seleccioná un cliente —</option>'+clienteOpts+
     '</select>'+
     '</div>'+
@@ -2943,7 +2946,7 @@ function abrirModalAgregarMora(){
     '<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">2. ELEGÍ EL MES COBRADO A REVERTIR</div>'+
     '<div id="mam-meses-lista"></div>'+
     '</div>'+
-    '<div id="mam-sin-hist" style="display:none;padding:10px;background:#f1f5f9;border-radius:var(--r);font-size:13px;color:var(--text2);text-align:center">Este cliente no tiene cobros registrados en el historial</div>'+
+    '<div id="mam-sin-hist" style="display:none;padding:10px;background:var(--surface);border-radius:var(--r);font-size:13px;color:var(--text2);text-align:center">Este cliente no tiene cobros registrados en el historial</div>'+
     '</div></div>';
   document.body.appendChild(ov);
 }
@@ -2963,7 +2966,7 @@ function mamSeleccionarMesManual(clienteId, mesNombre, monto, cuota){
     '<div style="font-size:13px;font-weight:700;margin-bottom:4px">'+mesNombre+' — Cuota '+cuota+'</div>'+
     '<div style="font-size:13px;color:#dc2626;font-weight:600">Monto: $'+fmtPeso(monto)+'</div>'+
     '</div>'+
-    '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--r);margin-bottom:8px">'+
+    '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);margin-bottom:8px">'+
     '<input type="checkbox" id="mam-revertir" checked style="width:16px;height:16px">'+
     '<span>Revertir cobro del historial y balances</span>'+
     '</label>'+
@@ -3552,13 +3555,13 @@ function fusionarCierre(srcIdx){
   if(!opts){alert('No hay otros cierres disponibles para fusionar.');return;}
   const modal=document.createElement('div');
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
-  modal.innerHTML=`<div style="background:#fff;border-radius:12px;padding:1.5rem;width:min(420px,90vw);box-shadow:0 8px 32px rgba(0,0,0,.2)">
+  modal.innerHTML=`<div style="background:var(--card);border-radius:12px;padding:1.5rem;width:min(420px,90vw);box-shadow:0 8px 32px rgba(0,0,0,.2)">
     <div style="font-size:16px;font-weight:700;margin-bottom:4px">Fusionar cierre</div>
-    <div style="font-size:13px;color:#6b7280;margin-bottom:1rem">Los pagos de <b>${src.fecha||new Date(src.ts).toLocaleDateString('es-AR')}</b> se agregarán al cierre que elijas.</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:1rem">Los pagos de <b>${src.fecha||new Date(src.ts).toLocaleDateString('es-AR')}</b> se agregarán al cierre que elijas.</div>
     <select id="fus-sel" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;margin-bottom:1rem">${opts}</select>
     <div style="display:flex;gap:8px">
-      <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;padding:8px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;font-size:13px;cursor:pointer">Cancelar</button>
-      <button onclick="_doFusionar(${srcIdx},+document.getElementById('fus-sel').value);this.closest('div[style*=fixed]').remove()" style="flex:1;padding:8px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Fusionar</button>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;padding:8px;background:var(--hov);border:1px solid #d1d5db;border-radius:8px;font-size:13px;cursor:pointer">Cancelar</button>
+      <button onclick="_doFusionar(${srcIdx},+document.getElementById('fus-sel').value);this.closest('div[style*=fixed]').remove()" style="flex:1;padding:8px;background:var(--acc);color:#0a1a12;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Fusionar</button>
     </div>
   </div>`;
   document.body.appendChild(modal);
@@ -3619,7 +3622,7 @@ function renderBalances(seccion){
             oninput="(function(){var v=Math.min(99,Math.max(1,+document.getElementById('dist-pct-input').value||70));document.getElementById('dist-pill-a').textContent=v+'%';document.getElementById('dist-pill-b').textContent=(100-v)+'%';var b=document.getElementById('dist-apply-btn');if(v!==${dp}){b.style.background='#fffbeb';b.style.color='#b45309';b.style.borderColor='#fde68a';b.innerHTML='&#128190; Aplicar';}else{b.style.background='#dcfce7';b.style.color='#16a34a';b.style.borderColor='#86efac';b.innerHTML='&#10003; Aplicado';}})()"/>
           <button id="dist-apply-btn" onclick="(function(){var v=Math.min(99,Math.max(1,+document.getElementById('dist-pct-input').value||70));setDistPct(v);var b=document.getElementById('dist-apply-btn');b.style.background='#dcfce7';b.style.color='#16a34a';b.style.borderColor='#86efac';b.innerHTML='&#10003; Aplicado';var t=document.getElementById('dist-toast');t.style.opacity='1';setTimeout(function(){t.style.opacity='0';},2000);})()" style="padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #86efac;background:#dcfce7;color:#16a34a">✓ Aplicado</button>
         </div>
-        <button onclick="resetTodoBalances()" style="background:#f3f4f6;border:1px solid #d1d5db;color:#374151;padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar todo</button>
+        <button onclick="resetTodoBalances()" style="background:var(--hov);border:1px solid #d1d5db;color:var(--text);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar todo</button>
       </div>
       <div style="display:grid;gap:12px">
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('caja')">
@@ -3678,9 +3681,9 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
               <div style="font-size:13px;color:var(--text2)">${(bal.agrimensores||[]).length} pago${(bal.agrimensores||[]).length!==1?'s':''} sin cerrar</div>
             </div>
             <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-              <div style="font-size:20px;font-weight:800;color:#c2410c">${fmtPeso((bal.agrimensores||[]).reduce((s,p)=>s+(p.monto||0),0))}</div>
+              <div style="font-size:20px;font-weight:800;color:var(--acc2)">${fmtPeso((bal.agrimensores||[]).reduce((s,p)=>s+(p.monto||0),0))}</div>
               <div style="display:flex;align-items:center;gap:8px">
-                ${(bal.agrimensores||[]).length?`<button onclick="event.stopPropagation();resetAgrimensores()" style="background:#fff7ed;border:1px solid #fed7aa;color:#c2410c;padding:3px 8px;border-radius:var(--r);font-size:11px;cursor:pointer">🗑 Limpiar</button>`:''}
+                ${(bal.agrimensores||[]).length?`<button onclick="event.stopPropagation();resetAgrimensores()" style="background:var(--card);border:1px solid #fed7aa;color:var(--acc2);padding:3px 8px;border-radius:var(--r);font-size:11px;cursor:pointer">🗑 Limpiar</button>`:''}
                 <span style="font-size:12px;color:var(--text2)">›</span>
               </div>
             </div>
@@ -3717,7 +3720,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
   }
 
   // Back button shared
-  const backBtn=`<button onclick="renderBalances()" style="background:none;border:none;color:var(--brand);font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:1rem">‹ Volver</button>`;
+  const backBtn=`<button onclick="renderBalances()" style="background:none;border:none;color:var(--acc2);font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:1rem">‹ Volver</button>`;
 
   if(seccion==='caja'){
     const abPesos=abierto.filter(p=>p.moneda!=='USD');
@@ -3781,10 +3784,10 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       const pA=Math.round(t*dp/100);const pB=Math.round(t*dp2/100);
       const btnA=est.guardado
         ?`<button onclick="setCierreEstado(${globalIdx},'guardado',false)" style="background:#16a34a;color:#fff;border:none;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">${dp}% ✓ Guardado</button>`
-        :`<button onclick="setCierreEstado(${globalIdx},'guardado',true)" style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">${dp}% Guardar</button>`;
+        :`<button onclick="setCierreEstado(${globalIdx},'guardado',true)" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">${dp}% Guardar</button>`;
       const btnB=est.rendido
-        ?`<button onclick="setCierreEstado(${globalIdx},'rendido',false)" style="background:#1d4ed8;color:#fff;border:none;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">${dp2}% ✓ Rendido</button>`
-        :`<button onclick="setCierreEstado(${globalIdx},'rendido',true)" style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">${dp2}% Rendir</button>`;
+        ?`<button onclick="setCierreEstado(${globalIdx},'rendido',false)" style="background:var(--acc);color:#0a1a12;border:none;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">${dp2}% ✓ Rendido</button>`
+        :`<button onclick="setCierreEstado(${globalIdx},'rendido',true)" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">${dp2}% Rendir</button>`;
       return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
           <div>
@@ -3802,7 +3805,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
             <span style="font-size:10px;font-weight:700;color:#dc2626">${dp2}%</span>
             <span style="font-size:11px;font-weight:600;color:#dc2626">${isUSD?'USD ':''} ${fmtPeso(pB)}</span>
           </div>
-          <div style="margin-left:auto;display:flex;gap:4px">${btnA}${btnB}<button onclick="fusionarCierre(${globalIdx})" style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">⇄ Fusionar</button></div>
+          <div style="margin-left:auto;display:flex;gap:4px">${btnA}${btnB}<button onclick="fusionarCierre(${globalIdx})" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">⇄ Fusionar</button></div>
         </div>
       </div>`;
     }).join(''):'<div style="font-size:13px;color:var(--text2);padding:8px 0">Sin cierres</div>';
@@ -3816,7 +3819,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         <div style="display:flex;gap:8px;align-items:center">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             ${hayCierreFinal()?`<span style="background:#dcfce7;color:#16a34a;border:1px solid #86efac;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700">✓ Cierre realizado — ${loadCierreFinal().mesNombre}</span><button onclick="revertirCierre()" style="background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px">↩ Revertir</button>`:''}
-            <button onclick="mostrarResumenCierre()" style="background:#1e40af;color:#fff;border:none;padding:6px 14px;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">🔒 Cierre final</button>
+            <button onclick="mostrarResumenCierre()" style="background:var(--acc);color:#fff;border:none;padding:6px 14px;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">🔒 Cierre final</button>
           </div>
           ${cierres.length?`<button onclick="resetCierres()" style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar</button>`:''}
         </div>
@@ -4112,13 +4115,13 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
         <div style="font-size:17px;font-weight:700">⚖️ Agrimensores</div>
         <div style="display:flex;gap:8px">
-          <button onclick="resetAgrimensores()" style="background:#fff7ed;border:1px solid #fed7aa;color:#c2410c;padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar</button>
-          <button onclick="renderBalances('agr-lista')" style="background:#fff7ed;border:1px solid #fed7aa;color:#c2410c;padding:6px 14px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer">📋 Ver lista</button>
+          <button onclick="resetAgrimensores()" style="background:var(--card);border:1px solid #fed7aa;color:var(--acc2);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar</button>
+          <button onclick="renderBalances('agr-lista')" style="background:var(--card);border:1px solid #fed7aa;color:var(--acc2);padding:6px 14px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer">📋 Ver lista</button>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem">
-        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem">
-          <div style="font-size:11px;font-weight:700;color:#c2410c">PESOS</div>
+        <div style="background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem">
+          <div style="font-size:11px;font-weight:700;color:var(--acc2)">PESOS</div>
           <div style="font-size:18px;font-weight:800">${fmtPeso(totalAgrP)}</div>
           <div style="font-size:11px;color:var(--text2)">${agrPesos.length} pago${agrPesos.length!==1?'s':''}</div>
         </div>
@@ -4181,7 +4184,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
 
   if(seccion==='agr-lista'){
     const agrData=data.filter(c=>c.agrimensor);
-    const backToAgr=`<button onclick="renderBalances('agrimensores')" style="background:none;border:none;color:var(--brand);font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:1rem">‹ Volver</button>`;
+    const backToAgr=`<button onclick="renderBalances('agrimensores')" style="background:none;border:none;color:var(--acc2);font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:1rem">‹ Volver</button>`;
 
     el.innerHTML=backToAgr+`
       <div style="font-size:17px;font-weight:700;margin-bottom:1rem">📋 Lista de agrimensores</div>
@@ -4221,7 +4224,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
           return `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:var(--r);padding:12px;margin-bottom:8px">
             <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
               <div>
-                <div style="font-weight:700;font-size:14px">${formatLoteTag(a.mz,a.lote)} — ${a.titular}${(()=>{const dc=data.find(x=>x.id===a.id);return dc&&dc.agrimensor?'<span style="font-size:11px;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px">⚖️ Agrimensor</span>':'';})()} </div>
+                <div style="font-weight:700;font-size:14px">${formatLoteTag(a.mz,a.lote)} — ${a.titular}${(()=>{const dc=data.find(x=>x.id===a.id);return dc&&dc.agrimensor?'<span style="font-size:11px;background:var(--card);color:var(--acc2);border:1px solid #fed7aa;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px">⚖️ Agrimensor</span>':'';})()} </div>
                 <div style="font-size:12px;color:var(--text2)">${a.fecha} · ${a.cuotas.length} cuota${a.cuotas.length>1?'s':''}</div>
                 <div style="font-size:12px;color:#0369a1;margin-top:2px">Cuotas: ${a.cuotas.map(q=>q.num).sort((x,y)=>y-x).join(', ')}</div>
               </div>
@@ -4765,7 +4768,7 @@ function renderStats(){
   html+='<div style="font-size:13px;font-weight:700;color:var(--text2)">📊 EVOLUCIÓN MENSUAL</div>';
   html+='<div style="display:flex;gap:6px">';
   html+='<button id="stats-toggle-montos" onclick="statsToggleView(&quot;montos&quot;)" style="padding:3px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;background:#4f46e5;color:#fff;border:none">$ Montos</button>';
-  html+='<button id="stats-toggle-clientes" onclick="statsToggleView(&quot;clientes&quot;)" style="padding:3px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;background:#e5e7eb;color:#374151;border:none">👥 Clientes</button>';
+  html+='<button id="stats-toggle-clientes" onclick="statsToggleView(&quot;clientes&quot;)" style="padding:3px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;background:#e5e7eb;color:var(--text);border:none">👥 Clientes</button>';
   html+='</div></div>';
 
   // Construir datos de mora por mes desde cuotasMora
@@ -4865,7 +4868,7 @@ function renderStats(){
       html+='<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px;margin-bottom:8px">';
       html+='<div style="display:flex;justify-content:space-between;align-items:center">';
       html+='<div style="flex:1;min-width:0">';
-      html+='<div style="font-size:13px;font-weight:700"><span style="color:var(--brand)">'+formatLoteTag(cl.mz,cl.lote)+'</span> <span style="color:var(--text)">'+cl.titular+'</span></div>';
+      html+='<div style="font-size:13px;font-weight:700"><span style="color:var(--acc2)">'+formatLoteTag(cl.mz,cl.lote)+'</span> <span style="color:var(--text)">'+cl.titular+'</span></div>';
       html+='<div style="display:flex;gap:8px;margin-top:3px;font-size:11px;color:#dc2626">';
       html+='<span>'+meses+' mes'+(meses>1?'es':'')+' en mora</span>';
       html+='<span>·</span><span>Deuda: '+fmtPeso(cl.totalDeuda)+'</span>';
@@ -4912,7 +4915,7 @@ function renderStats(){
       let lastMzSt=null;
       agrPend2.forEach(c=>{
         if(c.mz!==lastMzSt){
-          html+='<div style="font-size:10px;font-weight:700;color:#c2410c;text-transform:uppercase;padding:6px 0 2px;letter-spacing:.05em">'+c.mz+'</div>';
+          html+='<div style="font-size:10px;font-weight:700;color:var(--acc2);text-transform:uppercase;padding:6px 0 2px;letter-spacing:.05em">'+c.mz+'</div>';
           lastMzSt=c.mz;
         }
         const etapa=getEtapa(c.mz);
@@ -4983,7 +4986,7 @@ function renderAdminDet(id){
   const renderObsHtml=(showAll)=>{
     const visible=showAll?obsAll:obsAll.slice(0,OBS_LIMIT);
     const items=visible.length?visible.map(o=>`<div class="obs-item">${o.txt}<div class="obs-meta">${fmtDate(o.ts)}</div></div>`).join(''):'<div style="color:var(--text3);font-size:12px">Sin observaciones</div>';
-    const btn=obsAll.length>OBS_LIMIT?`<button onclick="_toggleObsAdmin('${id}')" style="background:none;border:none;color:var(--brand);font-size:13px;cursor:pointer;padding:4px 0;width:100%;text-align:center">${showAll?'Ver menos ▲':'Ver más ('+(obsAll.length-OBS_LIMIT)+' más) ▼'}</button>`:'';
+    const btn=obsAll.length>OBS_LIMIT?`<button onclick="_toggleObsAdmin('${id}')" style="background:none;border:none;color:var(--acc2);font-size:13px;cursor:pointer;padding:4px 0;width:100%;text-align:center">${showAll?'Ver menos ▲':'Ver más ('+(obsAll.length-OBS_LIMIT)+' más) ▼'}</button>`:'';
     return items+btn;
   };
   window['_obsAdminState_'+id]=false;
@@ -5054,7 +5057,7 @@ function renderAdminDet(id){
   if(c.pago){
     pagoBtn=`<button class="btn btn-sm" data-mid="${id}" onclick="desmarcarPagoAdmin(this.dataset.mid)" style="color:#dc2626;border-color:#fca5a5;width:100%;margin-top:.75rem">↩ Desmarcar pago</button>`;
   } else if(tieneMora){
-    pagoBtn=`<div style="margin-top:.75rem;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:var(--r);padding:14px;text-align:center;color:#94a3b8">
+    pagoBtn=`<div style="margin-top:.75rem;background:var(--surface);border:2px dashed #cbd5e1;border-radius:var(--r);padding:14px;text-align:center;color:#94a3b8">
       <div style="font-size:13px;font-weight:700">Cuota ${mesEnCurso} — ${cur}${fmtPeso(c.monto)}</div>
       <div style="font-size:12px;margin-top:4px">⛔ Pagá las cuotas anteriores primero</div>
     </div>
@@ -5068,20 +5071,20 @@ function renderAdminDet(id){
       +'<button id="'+cid+'-btn" data-mid="'+id+'" data-cuota="'+c.monto+'" data-interes="'+_mora.interes+'" data-cid="'+cid+'" data-cur="'+cur+'" onclick="admCobrarAutoById(this)" style="width:100%;background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">✓ Cobrar</button>'
       +'<button onclick="admToggleAdelanto(\''+id+'\')" style="width:100%;margin-top:4px;margin-bottom:4px;padding:5px;font-size:12px;background:none;border:1.5px solid #7dd3fc;color:#0369a1;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantar cuotas</button>'
       +'<div id="adelanto-selector-'+id+'" style="display:none"></div>'
-      +'<button data-cid="'+cid+'" onclick="admToggleInteresDif(this.dataset.cid)" style="width:100%;background:none;border:2px solid #f97316;color:#ea580c;border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente</button>'
-      +'<div id="'+cid+'-manual" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
-      +'<div style="font-size:12px;font-weight:700;color:#ea580c;margin-bottom:8px">Interés diferente</div>'
+      +'<button data-cid="'+cid+'" onclick="admToggleInteresDif(this.dataset.cid)" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente</button>'
+      +'<div id="'+cid+'-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'
       +'<div style="display:flex;gap:6px;margin-bottom:8px">'
       +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="auto" data-cid="'+cid+'" data-cuota="'+c.monto+'" data-autopct="'+_mora.pct+'" data-autoint="'+_mora.interes+'" onchange="updateAdmMora(this)"> ⚡ Auto ('+_mora.pct+'%)</label>'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateAdmMora(this)"> % Porcentaje</label>'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateAdmMora(this)"> $ Monto</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateAdmMora(this)"> % Porcentaje</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateAdmMora(this)"> $ Monto</label>'
       +'</div>'
       +'<input id="'+cid+'-val" type="number" placeholder="Ingresá el valor..." data-cid="'+cid+'" data-cuota="'+c.monto+'" oninput="updateAdmMora(this)" style="width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
       +'<button data-mid="'+id+'" data-cuota="'+c.monto+'" data-cid="'+cid+'" onclick="confirmarAdmMora(this)" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'
       +'</div>'
       +'</div>';
   } else if(esPrimeraCuotaFutura(c)){
-    pagoBtn=`<div style="background:#f1f5f9;border:1.5px solid #e2e8f0;border-radius:var(--r);padding:10px 14px;margin-top:.5rem;text-align:center">
+    pagoBtn=`<div style="background:var(--surface);border:1.5px solid #e2e8f0;border-radius:var(--r);padding:10px 14px;margin-top:.5rem;text-align:center">
       <div style="font-size:13px;font-weight:700;color:#64748b">🗓 Primera cuota en ${nombreMesPrimeraCuota(c)}</div>
       <div style="font-size:11px;color:#94a3b8;margin-top:3px">Disponible para cobrar desde ${nombreMesPrimeraCuota(c)}</div>
     </div>`;
@@ -5253,11 +5256,11 @@ function mostrarConfirmAdmin(titulo, msg, onOk){
     modal=document.createElement('div');
     modal.id='admin-confirm-modal';
     modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99998;display:flex;align-items:center;justify-content:center';
-    modal.innerHTML='<div style="background:#fff;border-radius:12px;padding:1.5rem;max-width:320px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2)">'
+    modal.innerHTML='<div style="background:var(--card);border-radius:12px;padding:1.5rem;max-width:320px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2)">'
       +'<div id="acm-title" style="font-size:16px;font-weight:700;margin-bottom:8px"></div>'
       +'<div id="acm-msg" style="font-size:14px;color:#555;margin-bottom:1.25rem"></div>'
       +'<div style="display:flex;gap:8px;justify-content:flex-end">'
-      +'<button onclick="cerrarConfirmAdmin()" style="padding:8px 16px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:14px">Cancelar</button>'
+      +'<button onclick="cerrarConfirmAdmin()" style="padding:8px 16px;border:1px solid #ddd;border-radius:8px;background:var(--surface);cursor:pointer;font-size:14px">Cancelar</button>'
       +'<button id="acm-ok" style="padding:8px 20px;border:none;border-radius:8px;background:#16a34a;color:#fff;font-weight:700;cursor:pointer;font-size:14px">Confirmar</button>'
       +'</div></div>';
     document.body.appendChild(modal);
@@ -5519,13 +5522,13 @@ function cobrarTodoColab(clienteId){
     +'<span style="color:#fff;font-weight:700;font-size:14px">TOTAL</span>'
     +'<span id="cobrar-todo-total" style="color:#fff;font-weight:900;font-size:18px">'+fmtCur(grandTotal,cur)+'</span>'
     +'</div>'
-    +'<button onclick="admToggleMoraPanel()" style="width:100%;background:none;border:2px solid #f97316;color:#ea580c;border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente (requiere admin)</button>'
-    +'<div id="mora-adm-panel-manual" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
-    +'<div style="font-size:12px;font-weight:700;color:#ea580c;margin-bottom:8px">Interés diferente (mora)</div>'
+    +'<button onclick="admToggleMoraPanel()" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente (requiere admin)</button>'
+    +'<div id="mora-adm-panel-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente (mora)</div>'
     +'<div style="display:flex;gap:6px;margin-bottom:8px">'
     +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanelTodo()"> ⚡ Auto</label>'
-    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanelTodo()"> % Porc.</label>'
-    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanelTodo()"> $ Monto</label>'
+    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanelTodo()"> % Porc.</label>'
+    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanelTodo()"> $ Monto</label>'
     +'</div>'
     +'<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanelTodo()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
     +'<button onclick="admConfirmarTodoColab()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'
@@ -5626,13 +5629,13 @@ function cobrarTodoAdmin(clienteId){
     +'<span id="cobrar-todo-total" style="color:#fff;font-weight:900;font-size:18px">'+fmtCur(grandTotal,cur)+'</span>'
     +'</div>'
     // Interés diferente
-    +'<button onclick="admToggleMoraPanel()" style="width:100%;background:none;border:2px solid #f97316;color:#ea580c;border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente (mora)</button>'
-    +'<div id="mora-adm-panel-manual" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
-    +'<div style="font-size:12px;font-weight:700;color:#ea580c;margin-bottom:8px">Interés diferente (mora)</div>'
+    +'<button onclick="admToggleMoraPanel()" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente (mora)</button>'
+    +'<div id="mora-adm-panel-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente (mora)</div>'
     +'<div style="display:flex;gap:6px;margin-bottom:8px">'
     +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanelTodo()" > ⚡ Auto</label>'
-    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanelTodo()"> % Porc.</label>'
-    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanelTodo()"> $ Monto</label>'
+    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanelTodo()"> % Porc.</label>'
+    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanelTodo()"> $ Monto</label>'
     +'</div>'
     +'<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanelTodo()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
     +'<button onclick="admConfirmarTodo()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'
@@ -5713,22 +5716,22 @@ function cobrarAdmMora(clienteId){
     '<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
     '</div>'+
     '<div style="padding:16px">'+
-    '<div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:var(--r);padding:12px;margin-bottom:10px">'+
-    '<div style="font-size:12px;font-weight:700;color:#ea580c;margin-bottom:6px">Detalle de cuotas</div>'+
+    '<div style="background:var(--card);border:2px solid #fed7aa;border-radius:var(--r);padding:12px;margin-bottom:10px">'+
+    '<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:6px">Detalle de cuotas</div>'+
     filasHtml+
     '<div style="border-top:1px solid #fed7aa;margin-top:8px;padding-top:8px">'+
     '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span>Capital</span><span style="font-weight:700">'+fmtCur(totalMonto,cur)+'</span></div>'+
     '<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#dc2626">Interés mora</span><span id="mora-adm-panel-interes" style="color:#dc2626;font-weight:700">'+'+ '+fmtCur(totalInteresAuto,cur)+'</span></div>'+
-    '<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;border-top:1px solid #fed7aa;padding-top:6px;margin-top:4px"><span>Total</span><span id="mora-adm-panel-total" style="color:#ea580c">'+fmtCur(totalMonto+totalInteresAuto,cur)+'</span></div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;border-top:1px solid #fed7aa;padding-top:6px;margin-top:4px"><span>Total</span><span id="mora-adm-panel-total" style="color:var(--acc3)">'+fmtCur(totalMonto+totalInteresAuto,cur)+'</span></div>'+
     '</div></div>'+
     '<button onclick="admConfirmarMoraPanel()" style="width:100%;background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">✓ Cobrar</button>'+
-    '<button onclick="document.getElementById(\'mora-adm-panel-manual\').style.display=document.getElementById(\'mora-adm-panel-manual\').style.display===\'none\'?\'block\':\'none\'" style="width:100%;background:none;border:2px solid #f97316;color:#ea580c;border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente</button>'+
-    '<div id="mora-adm-panel-manual" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'+
-    '<div style="font-size:12px;font-weight:700;color:#ea580c;margin-bottom:8px">Interés diferente</div>'+
+    '<button onclick="document.getElementById(\'mora-adm-panel-manual\').style.display=document.getElementById(\'mora-adm-panel-manual\').style.display===\'none\'?\'block\':\'none\'" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente</button>'+
+    '<div id="mora-adm-panel-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'+
+    '<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'+
     '<div style="display:flex;gap:6px;margin-bottom:8px">'+
     '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanel()"> ⚡ Auto ('+pct+'%)</label>'+
-    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanel()"> % Porc.</label>'+
-    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanel()"> $ Monto</label>'+
+    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanel()"> % Porc.</label>'+
+    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanel()"> $ Monto</label>'+
     '</div>'+
     '<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanel()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'+
     '<button onclick="admConfirmarMoraPanel()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'+
@@ -5954,7 +5957,7 @@ function mostrarResumenCierre(){
   // Rebuild con fmtPeso aplicado correctamente
   const listaMoraHtml=vanAMora.map(c=>`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-bottom:1px solid #fecaca;font-size:13px">
-      <span><b style="color:var(--brand)">${formatLoteTag(c.mz,c.lote)}</b> <span style="color:var(--text)">${c.titular||''}</span></span>
+      <span><b style="color:var(--acc2)">${formatLoteTag(c.mz,c.lote)}</b> <span style="color:var(--text)">${c.titular||''}</span></span>
       <span style="font-weight:700;color:#dc2626">${c.moneda==='USD'?'USD ':'\$'}${fmtPeso(c.monto)}</span>
     </div>`).join('');
 
@@ -5965,7 +5968,7 @@ function mostrarResumenCierre(){
   modal.innerHTML=`
     <div style="background:var(--surface);border-radius:12px;width:100%;max-width:480px;margin:auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
       <!-- Header -->
-      <div style="background:#1e40af;padding:16px 20px;display:flex;justify-content:space-between;align-items:center">
+      <div style="background:var(--acc);padding:16px 20px;display:flex;justify-content:space-between;align-items:center">
         <div>
           <div style="color:#fff;font-size:17px;font-weight:800">🔒 Resumen del Cierre</div>
           <div style="color:#bfdbfe;font-size:13px;margin-top:2px">${mesNombre}</div>
@@ -5999,7 +6002,7 @@ function mostrarResumenCierre(){
       </div>
 
       <!-- Pausados -->
-      ${pausados.length?`<div style="margin:0 16px 10px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px">
+      ${pausados.length?`<div style="margin:0 16px 10px;background:var(--surface);border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px">
         <div style="font-size:12px;font-weight:700;color:#64748b">🗓 ${pausados.length} cliente${pausados.length>1?'s':''} en pausa (primera cuota futura)</div>
         <div style="font-size:11px;color:#94a3b8;margin-top:3px">No entran al cierre ni generan mora</div>
       </div>`:''}
@@ -6018,7 +6021,7 @@ function mostrarResumenCierre(){
       <!-- Botones -->
       <div style="padding:0 16px 16px;display:flex;flex-direction:column;gap:8px">
         <button onclick="document.getElementById('modal-resumen-cierre').remove();ejecutarCierreFinal()" 
-          style="width:100%;padding:12px;background:#1e40af;color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer">
+          style="width:100%;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer">
           🔒 Confirmar Cierre de ${mesNombre}
         </button>
         <button onclick="document.getElementById('modal-resumen-cierre').remove()"
@@ -6302,19 +6305,19 @@ function cobrarConMoraColab(btn){
     '<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
     '</div>'+
     '<div style="padding:16px">'+
-    '<div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:var(--r);padding:12px;margin-bottom:10px">'+
+    '<div style="background:var(--card);border:2px solid #fed7aa;border-radius:var(--r);padding:12px;margin-bottom:10px">'+
     '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span>Cuota</span><span style="font-weight:700">'+fmtCur(cuota,cur)+'</span></div>'+
     '<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#dc2626">Interés mora</span><span id="mora-adm-panel-interes" style="color:#dc2626;font-weight:700">+ '+fmtCur(interes,cur)+'</span></div>'+
-    '<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;border-top:1px solid #fed7aa;padding-top:6px;margin-top:4px"><span>Total</span><span id="mora-adm-panel-total" style="color:#ea580c">'+fmtCur(total,cur)+'</span></div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;border-top:1px solid #fed7aa;padding-top:6px;margin-top:4px"><span>Total</span><span id="mora-adm-panel-total" style="color:var(--acc3)">'+fmtCur(total,cur)+'</span></div>'+
     '</div>'+
     '<button onclick="admConfirmarMoraPanelColab()" style="width:100%;background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">✓ Cobrar</button>'+
-    '<button onclick="admToggleMoraPanel()" style="width:100%;background:none;border:2px solid #f97316;color:#ea580c;border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente</button>'+
-    '<div id="mora-adm-panel-manual" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'+
-    '<div style="font-size:12px;font-weight:700;color:#ea580c;margin-bottom:8px">Interés diferente</div>'+
+    '<button onclick="admToggleMoraPanel()" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente</button>'+
+    '<div id="mora-adm-panel-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'+
+    '<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'+
     '<div style="display:flex;gap:6px;margin-bottom:8px">'+
     '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanel()"> ⚡ Auto ('+pct+'%)</label>'+
-    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanel()"> % Porc.</label>'+
-    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanel()"> $ Monto</label>'+
+    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanel()"> % Porc.</label>'+
+    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanel()"> $ Monto</label>'+
     '</div>'+
     '<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanel()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'+
     '<button onclick="admConfirmarMoraPanelColab()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'+
@@ -6495,7 +6498,7 @@ function revertirCobroMesAnterior(clienteId){
   const opcionesHtml=opciones.map(o=>
     '<button data-mes="'+o.mes+'" data-anio="'+o.anio+'" data-label="'+o.label+'" data-cid="'+clienteId+'" '+
     'onclick="confirmarRevertirMes(this.dataset.cid,parseInt(this.dataset.mes),parseInt(this.dataset.anio),this.dataset.label)" '+
-    'style="width:100%;padding:10px;margin-bottom:6px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;text-align:left">'+
+    'style="width:100%;padding:10px;margin-bottom:6px;background:var(--surface);border:1.5px solid #e2e8f0;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;text-align:left">'+
     '📅 '+o.label+'</button>'
   ).join('');
 
@@ -6731,7 +6734,7 @@ function renderAdminTable(){
   el.innerHTML=data.map(c=>{
     const isUSD=c.moneda==='USD';
     const isAgr=c.agrimensor===true;
-    const rowBg=c.est==='finalizado'?'background:#f9fafb;':isAgr?'background:#fff7ed;':isUSD?'background:#dcfce7;':'';
+    const rowBg=c.est==='finalizado'?'background:var(--hov);':isAgr?'background:var(--card);':isUSD?'background:#dcfce7;':'';
     const saldoColor=c.saldo===0?'#94a3b8':c.saldo>0?'#16a34a':'#dc2626';
     const saldoLabel=c.saldo===0?'—':c.saldo>0?'+'+fmtPeso(c.saldo):'-'+fmtPeso(Math.abs(c.saldo));
     const hist3=(c.hist||[]).slice(-3).reverse();
@@ -6749,7 +6752,7 @@ function renderAdminTable(){
     return `<div data-usd="${isUSD}" style="border-bottom:1px solid var(--border);${rowBg};display:flex;align-items:stretch;border-radius:var(--r);margin:4px 8px;border:1px solid var(--border)" onmouseover="this.style.filter='brightness(0.97)'" onmouseout="this.style.filter=''">
       <div onclick="mostrarAdminDet('${c.id}')" style="flex:1;min-width:0;cursor:pointer;padding:10px 12px">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:3px">
-        <span style="font-size:15px;font-weight:800;color:var(--brand);flex-shrink:0;min-width:90px">${loteStr}</span>
+        <span style="font-size:15px;font-weight:800;color:var(--acc2);flex-shrink:0;min-width:90px">${loteStr}</span>
         ${isUSD?'<span style="font-size:11px;background:#dcfce7;color:#16a34a;border:1px solid #86efac;padding:2px 6px;border-radius:4px;font-weight:700;flex-shrink:0">💵</span>':''}
         <span style="font-weight:600;font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.titular||'Sin titular'}</span>
         <span style="font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0">${c.ca||1}/${c.ct}</span>
@@ -6778,8 +6781,8 @@ function renderAdminTable(){
       <div style="display:flex;flex-direction:column;border-left:1px solid var(--border);flex-shrink:0;width:56px;overflow:hidden;border-radius:0 var(--r) var(--r) 0">
         ${waLink
           ?`<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#25d366;border-bottom:1px solid #1ebe5d;cursor:pointer;transition:filter .15s" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">${waLink}</div>`
-          :'<div style="flex:1;border-bottom:1px solid var(--border);background:#f9fafb"></div>'}
-        <div onclick="event.stopPropagation();openEditModal('${c.id}')" style="flex:1;display:flex;align-items:center;justify-content:center;background:#f3f4f6;cursor:pointer;transition:filter .15s" onmouseover="this.style.filter='brightness(0.95)'" onmouseout="this.style.filter=''">
+          :'<div style="flex:1;border-bottom:1px solid var(--border);background:var(--hov)"></div>'}
+        <div onclick="event.stopPropagation();openEditModal('${c.id}')" style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--hov);cursor:pointer;transition:filter .15s" onmouseover="this.style.filter='brightness(0.95)'" onmouseout="this.style.filter=''">
           <span style="font-size:17px">✏️</span>
         </div>
       </div>
@@ -6960,7 +6963,7 @@ function showConfirmModal(titulo, msg, onConfirm){
       <div style="font-size:13px;color:var(--text2);margin-bottom:20px;white-space:pre-line">${msg}</div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button onclick="document.getElementById('confirm-modal-dyn').remove()"
-          style="padding:8px 16px;border:1.5px solid var(--border2);border-radius:6px;background:var(--surface);font-size:13px;cursor:pointer">
+          style="padding:8px 16px;border:1px solid var(--border2);border-radius:6px;background:var(--surface);font-size:13px;cursor:pointer">
           Cancelar
         </button>
         <button id="confirm-modal-ok"
@@ -7003,7 +7006,7 @@ function renderHistorial(showAllPagos, showAllObs){
     const newObs=tipo!=='pago'?!showAll:showAllObs;
     const verMas=items.length>LIMIT
       ?`<button onclick="renderHistorial(${newPagos},${newObs})" 
-          style="background:none;border:none;color:var(--brand);font-size:13px;cursor:pointer;padding:4px 0;width:100%;text-align:center">
+          style="background:none;border:none;color:var(--acc2);font-size:13px;cursor:pointer;padding:4px 0;width:100%;text-align:center">
           ${showAll?'Ver menos ▲':'Ver más ('+(items.length-LIMIT)+' más) ▼'}
         </button>`:'';
     return items_html+verMas;
@@ -7132,7 +7135,7 @@ function renderTrimestreMeses(mesPublicacion, pctActualFromFetch){
     const faltantes = 3 - pcts.length;
     totalHtml = `<div class="tri-total">
       <div>
-        <div style="font-size:12px;font-weight:700;color:var(--brand);margin-bottom:2px">Total trimestral · Aplica en ${info.aumentaEn} · Planilla ${info.planillaNombre}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--acc2);margin-bottom:2px">Total trimestral · Aplica en ${info.aumentaEn} · Planilla ${info.planillaNombre}</div>
         <div style="font-size:12px;color:var(--text2)">Faltan ${faltantes} ${faltantes===1?'mes':'meses'} para completar el trimestre</div>
       </div>
       <div style="font-size:22px;font-weight:800;color:var(--text3)">${pcts.length > 0 ? pcts.reduce((a,b)=>a+b,0).toFixed(2)+'%' : '—'}</div>
@@ -7547,7 +7550,7 @@ function renderColab(){
     const loteStr = formatLoteTag(c.mz,c.lote);
     return `<div onclick="mostrarDetColab('${c.id}')" style="cursor:pointer;border-radius:var(--r);margin:4px 8px;border:1px solid var(--border);padding:10px 12px;background:${isUSD?'#dcfce7':''}" data-usd="${isUSD}" onmouseover="this.style.background=this.dataset.usd==='true'?'#bbf7d0':'#f8fafc'" onmouseout="this.style.background=this.dataset.usd==='true'?'#dcfce7':''">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:3px">
-        <span class="lote-tag" style="font-size:15px;padding:4px 12px 4px 0;font-weight:800;flex-shrink:0;min-width:90px;background:transparent;border:none;color:var(--brand)">${loteStr}</span>
+        <span class="lote-tag" style="font-size:15px;padding:4px 12px 4px 0;font-weight:800;flex-shrink:0;min-width:90px;background:transparent;border:none;color:var(--acc2)">${loteStr}</span>
         ${isUSD?'<span style="font-size:11px;background:#dcfce7;color:#16a34a;border:1px solid #86efac;padding:2px 6px;border-radius:4px;font-weight:700;flex-shrink:0">💵</span>':''}
         <span style="font-weight:600;font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.titular}</span>
         ${cantMora>0?`<span style="background:#dc2626;color:#fff;border-radius:99px;font-size:10px;font-weight:800;padding:1px 6px;flex-shrink:0">${cantMora}</span>`:''}
@@ -7680,7 +7683,7 @@ function confirmarTel(id){
   const modalContent=modal.querySelector('div');
   modalContent.innerHTML=`
     <h3 style="margin:0 0 1rem;font-size:17px">¿Confirmar número?</h3>
-    <div style="font-size:22px;font-weight:800;text-align:center;padding:1rem;background:#f3f4f6;border-radius:8px;margin-bottom:1rem;letter-spacing:2px">${tel}</div>
+    <div style="font-size:22px;font-weight:800;text-align:center;padding:1rem;background:var(--hov);border-radius:8px;margin-bottom:1rem;letter-spacing:2px">${tel}</div>
     <p style="font-size:13px;color:#666;margin-bottom:1rem;text-align:center">Una vez guardado no podrá modificarse desde esta vista</p>
     <button onclick="guardarTelConfirmado('${id}','${tel}')" style="width:100%;padding:12px;background:#da9e22;color:#1d1c1a;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer;margin-bottom:8px">✓ Sí, guardar</button>
     <button onclick="cancelarTel()" style="width:100%;padding:10px;background:transparent;color:#888;font-size:14px;border:1px solid #ddd;border-radius:8px;cursor:pointer">Cancelar</button>
@@ -7907,7 +7910,7 @@ function renderAgrLista(){
   });
 
   el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px">
-    <thead><tr style="background:var(--surface);text-transform:uppercase;font-size:11px;color:var(--text2)">
+    <thead><tr style="background:#0a1510;text-transform:uppercase;font-size:11px;color:var(--text2)">
       <th style="padding:8px 6px;text-align:left">Lote</th>
       <th style="padding:8px 6px;text-align:left">Titular</th>
       <th style="padding:8px 6px;text-align:right">Cuota</th>
@@ -7917,13 +7920,13 @@ function renderAgrLista(){
     </tr></thead>
     <tbody>
     ${rows.map(row=>{
-      if(row.type==='header') return `<tr><td colspan="6" style="padding:10px 6px 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:#c2410c;letter-spacing:.05em;border-bottom:1px solid #fed7aa">${row.mz}</td></tr>`;
+      if(row.type==='header') return `<tr><td colspan="6" style="padding:10px 6px 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--acc2);letter-spacing:.05em;border-bottom:1px solid #fed7aa">${row.mz}</td></tr>`;
       const c=row.c;
       const isUSD=c.moneda==='USD';
       const pagoLabel=c.pago?'<span style="background:#dcfce7;color:#16a34a;border:1px solid #86efac;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700">Pagado</span>':'<span style="background:#fff3cd;color:#856404;border:1px solid #ffc107;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700">Pendiente</span>';
       const waLink=c.tel?`<a href="https://wa.me/54${c.tel.replace(/\D/g,'')}" target="_blank" onclick="event.stopPropagation();window.open(this.href,'_blank');return false;" style="display:inline-flex;align-items:center;gap:5px;background:#25d366;color:#fff;padding:4px 10px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;margin-left:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.554 4.118 1.524 5.855L0 24l6.29-1.508A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.366l-.359-.214-3.733.894.944-3.632-.235-.374A9.818 9.818 0 1112 21.818z"/></svg></a>`:'';
-      return `<tr onclick="mostrarAdminDet('${c.id}')" style="cursor:pointer;border-bottom:1px solid var(--border);background:#fff7ed">
-        <td style="padding:10px 6px"><span class="lote-tag" style="background:#fed7aa;color:#c2410c">${formatLoteTag(c.mz,c.lote)}</span>${isUSD?'<span style="font-size:10px;color:#16a34a;margin-left:4px">💵</span>':''}</td>
+      return `<tr onclick="mostrarAdminDet('${c.id}')" style="cursor:pointer;border-bottom:1px solid var(--border);background:var(--card)">
+        <td style="padding:10px 6px"><span class="lote-tag" style="background:var(--acc);color:#0a1a12">${formatLoteTag(c.mz,c.lote)}</span>${isUSD?'<span style="font-size:10px;color:#16a34a;margin-left:4px">💵</span>':''}</td>
         <td style="padding:10px 6px;font-weight:600">${c.titular}${waLink}</td>
         <td style="padding:10px 6px;text-align:right">${c.ca}/${c.ct}</td>
         <td style="padding:10px 6px;text-align:right;font-weight:600">${isUSD?'USD ':''} ${fmtPeso(c.monto)}</td>
@@ -8088,7 +8091,7 @@ function renderDetColab(id){
   const renderObsHtml=(showAll)=>{
     const visible=showAll?obsAll:obsAll.slice(0,OBS_LIMIT);
     const items=visible.length?visible.map(o=>`<div class="obs-item">${o.txt}<div class="obs-meta">${fmtDate(o.ts)}</div></div>`).join(''):'<div style="color:var(--text3);font-size:12px">Sin observaciones</div>';
-    const btn=obsAll.length>OBS_LIMIT?`<button onclick="_toggleObsColab('${id}')" style="background:none;border:none;color:var(--brand);font-size:13px;cursor:pointer;padding:4px 0;width:100%;text-align:center">${showAll?'Ver menos ▲':'Ver más ('+(obsAll.length-OBS_LIMIT)+' más) ▼'}</button>`:'';
+    const btn=obsAll.length>OBS_LIMIT?`<button onclick="_toggleObsColab('${id}')" style="background:none;border:none;color:var(--acc2);font-size:13px;cursor:pointer;padding:4px 0;width:100%;text-align:center">${showAll?'Ver menos ▲':'Ver más ('+(obsAll.length-OBS_LIMIT)+' más) ▼'}</button>`:'';
     return items+btn;
   };
   window['_obsState_'+id]=false;
@@ -8164,7 +8167,7 @@ function renderDetColab(id){
     pagoBtn=`<button class="btn btn-sm" onclick="desmarcarPago('${id}')" style="color:var(--text2);width:100%;margin-top:.75rem">Desmarcar pago</button>`;
   } else if(tieneMora){
     // Cuota del mes en curso DESHABILITADA mientras haya mora pendiente
-    pagoBtn=`<div style="margin-top:.75rem;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:var(--r);padding:14px;text-align:center;color:#94a3b8">
+    pagoBtn=`<div style="margin-top:.75rem;background:var(--surface);border:2px dashed #cbd5e1;border-radius:var(--r);padding:14px;text-align:center;color:#94a3b8">
       <div style="font-size:13px;font-weight:700">Cuota ${mesEnCurso} — ${cur}${fmtPeso(c.monto)}</div>
       <div style="font-size:12px;margin-top:4px">⛔ Pagá las cuotas anteriores primero</div>
     </div>`;
@@ -8172,17 +8175,17 @@ function renderDetColab(id){
     // Sin mora histórica pero sí interés del mes en curso
     const cid='mora-colab-'+id;
     pagoBtn='<div style="margin-top:.75rem">'
-      +'<button id="'+cid+'-btn" data-mid="'+id+'" data-cuota="'+c.monto+'" data-interes="'+_mora.interes+'" data-cid="'+cid+'" data-cur="'+cur+'" onclick="toggleVerPrecioColab(this)" style="width:100%;background:#1e40af;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">👁 Ver precio</button>'
+      +'<button id="'+cid+'-btn" data-mid="'+id+'" data-cuota="'+c.monto+'" data-interes="'+_mora.interes+'" data-cid="'+cid+'" data-cur="'+cur+'" onclick="toggleVerPrecioColab(this)" style="width:100%;background:var(--acc);color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">👁 Ver precio</button>'
       +'<div id="'+cid+'-extra" style="display:none">'
       +'<button onclick="colabToggleAdelanto(\''+id+'\')" style="width:100%;margin-bottom:6px;padding:5px;font-size:12px;background:none;border:1.5px solid #7dd3fc;color:#0369a1;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantar cuotas</button>'
       +'<div id="adelanto-selector-'+id+'" style="display:none"></div>'
-      +'<button data-cid="'+cid+'" onclick="toggleMoraManualColab(this.dataset.cid)" style="width:100%;background:none;border:2px solid #f97316;color:#ea580c;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">⚠️ Cobrar con interés diferente (requiere admin)</button>'
-      +'<div id="'+cid+'-manual" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
-      +'<div style="font-size:12px;font-weight:700;color:#ea580c;margin-bottom:8px">Interés diferente</div>'
+      +'<button data-cid="'+cid+'" onclick="toggleMoraManualColab(this.dataset.cid)" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">⚠️ Cobrar con interés diferente (requiere admin)</button>'
+      +'<div id="'+cid+'-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'
       +'<div style="display:flex;gap:6px;margin-bottom:8px">'
       +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="auto" data-cid="'+cid+'" data-cuota="'+c.monto+'" data-autopct="'+_mora.pct+'" data-autoint="'+_mora.interes+'" onchange="updateMoraColab(this)"> ⚡ Auto ('+_mora.pct+'%)</label>'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateMoraColab(this)"> % Porcentaje</label>'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateMoraColab(this)"> $ Monto</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateMoraColab(this)"> % Porcentaje</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateMoraColab(this)"> $ Monto</label>'
       +'</div>'
       +'<input id="'+cid+'-val" type="number" placeholder="Ingresá el valor..." data-cid="'+cid+'" data-cuota="'+c.monto+'" oninput="updateMoraColab(this)" style="width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
       +'<button data-mid="'+id+'" data-cuota="'+c.monto+'" data-cid="'+cid+'" onclick="confirmarMoraManualColab(this)" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'
@@ -8190,13 +8193,13 @@ function renderDetColab(id){
       +'</div>'
       +'</div>';
   } else if(esPrimeraCuotaFutura(c)){
-    pagoBtn=`<div style="background:#f1f5f9;border:1.5px solid #e2e8f0;border-radius:var(--r);padding:10px 14px;margin-top:.5rem;text-align:center">
+    pagoBtn=`<div style="background:var(--surface);border:1.5px solid #e2e8f0;border-radius:var(--r);padding:10px 14px;margin-top:.5rem;text-align:center">
       <div style="font-size:13px;font-weight:700;color:#64748b">🗓 Primera cuota en ${nombreMesPrimeraCuota(c)}</div>
       <div style="font-size:11px;color:#94a3b8;margin-top:3px">Disponible para cobrar desde ${nombreMesPrimeraCuota(c)}</div>
     </div>`;
   } else {
     pagoBtn=`<div id="colab-accion-${id}">
-      <button onclick="colabVerCuota('${id}')" style="width:100%;margin-top:.5rem;padding:10px;font-size:14px;font-weight:700;background:#1e40af;color:#fff;border:none;border-radius:var(--r);cursor:pointer">👁 Ver cuota</button>
+      <button onclick="colabVerCuota('${id}')" style="width:100%;margin-top:.5rem;padding:10px;font-size:14px;font-weight:700;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer">👁 Ver cuota</button>
     </div>`;
   }
 
@@ -8249,7 +8252,7 @@ function renderDetColab(id){
           ?`<div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">✅</span><span style="font-size:14px;color:var(--text2)">Número registrado</span></div>`
           :`<div id="tel-form-${id}">
               <div style="display:flex;gap:8px">
-                <input type="tel" id="tel-input-${id}" placeholder="Ej: 1123456789" style="flex:1;padding:8px 12px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:14px" onkeydown="if(event.key==='Enter')confirmarTel('${id}')">
+                <input type="tel" id="tel-input-${id}" placeholder="Ej: 1123456789" style="flex:1;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:14px" onkeydown="if(event.key==='Enter')confirmarTel('${id}')">
                 <button class="btn btn-primary btn-sm" onclick="confirmarTel('${id}')">Guardar</button>
               </div>
               <div id="tel-error-${id}" style="color:#dc2626;font-size:12px;margin-top:4px;display:none"></div>
@@ -8574,7 +8577,7 @@ function gestionGuardar(){
 </div>
 <!-- Gestión de Pagos Modal -->
 <div id="gestion-pagos-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.5);padding:1rem;overflow-y:auto">
-  <div style="background:#fff;border-radius:16px;width:100%;max-width:560px;padding:1.5rem;margin:2rem auto;position:relative">
+  <div style="background:var(--card);border-radius:16px;width:100%;max-width:560px;padding:1.5rem;margin:2rem auto;position:relative">
     <button onclick="cerrarGestionPagos()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#888">✕</button>
     <div style="font-size:18px;font-weight:800;margin-bottom:1rem">✓ Gestionar Pagos</div>
     
@@ -8598,14 +8601,14 @@ function gestionGuardar(){
     <div id="gp-lotes" style="display:flex;flex-wrap:wrap;gap:8px;min-height:48px;margin-bottom:1rem"></div>
 
     <!-- Guardar -->
-    <button onclick="gestionGuardar()" style="width:100%;padding:10px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Guardar cambios</button>
+    <button onclick="gestionGuardar()" style="width:100%;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Guardar cambios</button>
     <div id="gp-msg" style="text-align:center;font-size:13px;color:#16a34a;margin-top:8px;min-height:20px"></div>
   </div>
 </div>
 
 <!-- Vista Cliente Result Modal -->
 <div id="vc-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:1rem">
-  <div style="background:#fff;border-radius:16px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;padding:1.5rem;position:relative">
+  <div style="background:var(--card);border-radius:16px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;padding:1.5rem;position:relative">
     <button onclick="document.getElementById('vc-modal').style.display='none'" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#888">✕</button>
     <div id="vc-modal-content"></div>
   </div>
