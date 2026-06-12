@@ -49,28 +49,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 
 /* ---- NAVBAR ---- */
-.navbar{background:#0a1510;color:var(--text);border-bottom:1px solid var(--border2);padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.navbar{background:#0c1e14;color:var(--text);border-bottom:2px solid var(--acc);padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
 .nav-logo{font-size:17px;font-weight:700;letter-spacing:.01em}
 .nav-logo span{opacity:.7;font-weight:400;font-size:13px;margin-left:8px}
 .nav-login-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:6px 14px;border-radius:var(--r);font-size:13px;cursor:pointer;transition:background .15s}
 .nav-login-btn:hover{background:rgba(255,255,255,.25)}
 
 /* ---- HERO / PUBLIC ---- */
-.hero{background:var(--card);color:var(--text);border-bottom:1px solid var(--border2);padding:3rem 2rem 2.5rem;text-align:center}
+.hero{background:var(--surface);color:var(--text);border-bottom:1px solid var(--border2);padding:3rem 2rem 2.5rem;text-align:center}
 .hero h1{font-size:26px;font-weight:700;margin-bottom:.5rem}
 .hero p{font-size:15px;opacity:.85;margin-bottom:2rem}
 .hero-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--rlg);padding:2rem;max-width:500px;margin:0 auto;color:var(--text);box-shadow:0 4px 24px rgba(0,0,0,.15)}
 .hero-card h2{font-size:16px;font-weight:600;margin-bottom:1.25rem;color:var(--text2);text-align:center}
 .select-group{margin-bottom:12px}
 .select-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
-.select-group select{width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:15px;background:var(--card);color:var(--text);cursor:pointer}
+.select-group select{width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:15px;background:var(--surface);color:var(--text);cursor:pointer}
 .select-group select:focus{outline:none;border-color:var(--blue)}
-.btn-consultar{width:100%;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;transition:opacity .15s}
+.btn-consultar{width:100%;padding:12px;background:var(--acc);color:#071510;border:none;border-radius:var(--r);font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;transition:opacity .15s}
 .btn-consultar:hover{opacity:.9}
 
 /* ---- RESULTADO CLIENTE ---- */
 .resultado-wrap{max-width:500px;margin:1.5rem auto;padding:0 1rem}
-.resultado-card{background:var(--surface);border-radius:var(--rlg);padding:1.75rem;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border)}
+.resultado-card{background:#132019;border-radius:var(--rlg);padding:1.75rem;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border)}
 .res-lote{font-size:13px;font-weight:700;color:var(--acc2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
 .res-titular{font-size:22px;font-weight:700;color:var(--text);margin-bottom:1.25rem;line-height:1.2}
 .res-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
@@ -82,7 +82,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .saldo-pos{color:var(--green);font-weight:600}
 .saldo-neg{color:var(--red);font-weight:600}
 .btn-back{background:none;border:none;cursor:pointer;color:var(--blue);font-size:13px;margin-bottom:1rem;padding:0;display:flex;align-items:center;gap:4px;text-decoration:none}
-.badge-tri{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:var(--blu-bg);color:var(--blu)}
+.badge-tri{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#1a3a4a;color:#7ab5d0}
 
 /* ---- LOGIN MODAL ---- */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center;padding:1rem}
@@ -92,24 +92,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .modal p{font-size:13px;color:var(--text2);margin-bottom:1.25rem}
 .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1.25rem}
 .role-card{padding:10px 8px;border:2px solid var(--border);border-radius:var(--r);cursor:pointer;text-align:center;font-size:12px;font-weight:600;color:var(--text2);transition:all .15s}
-.role-card.sel{border-color:var(--acc2);background:var(--blu-bg);color:var(--blu)}
+.role-card.sel{border-color:var(--acc2);background:#1a3a4a;color:#7ab5d0}
 .field label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px}
-.field input{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:14px;background:var(--surface);color:var(--text);letter-spacing:.1em}
+.field input{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:14px;background:#132019;color:var(--text);letter-spacing:.1em}
 .field input:focus{outline:none;border-color:var(--acc2)}
 .login-err{color:var(--red);font-size:12px;margin-top:8px;text-align:center;min-height:18px}
-.btn{padding:9px 18px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text);transition:all .15s}
+.btn{padding:9px 18px;border-radius:var(--r);border:1px solid var(--border2);background:#132019;font-size:13px;font-weight:500;cursor:pointer;color:var(--text);transition:all .15s}
 .btn:hover{background:var(--bg)}
-.btn-primary{background:var(--blu-bg);color:var(--blu);border-color:var(--blue-border)}
+.btn-primary{background:#1a3a4a;color:#7ab5d0;border-color:var(--blue-border)}
 .btn-primary:hover{opacity:.9}
 .btn-block{width:100%;margin-top:10px}
 .btn-sm{padding:5px 12px;font-size:12px}
-.btn-success{background:var(--green-bg);color:var(--green);border-color:var(--green-border)}
+.btn-success{background:var(--card);color:var(--green);border-color:var(--green-border)}
 .btn-danger{color:var(--red);border-color:var(--red-border)}
 .btn-wa{background:#25D366;color:#fff;border-color:#25D366;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
 .btn-wa:hover{opacity:.9}
 
 /* ---- TOPBAR (authenticated) ---- */
-.topbar{background:var(--acc);color:#fff;padding:0 1.5rem;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.topbar{background:var(--acc);color:#071510;padding:0 1.5rem;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
 .topbar-title{font-size:15px;font-weight:600}
 .topbar-right{display:flex;align-items:center;gap:10px}
 .role-pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,.2)}
@@ -133,17 +133,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tabs-nav{display:flex;justify-content:center;gap:0;border-bottom:2px solid var(--border);margin-bottom:0;overflow-x:auto;position:sticky;top:54px;z-index:150;background:var(--bg);padding:0 1.5rem;scrollbar-width:none}
 .tabs-nav::-webkit-scrollbar{display:none}
 @media(max-width:767px){.tabs-nav{justify-content:flex-start;padding:0 0.5rem}}
-.tab-btn{color:var(--text2);padding:10px 18px;font-size:15px;font-weight:500;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;border-radius:6px 6px 0 0;transition:background .15s,color .15s}
+.tab-btn{color:var(--text2);background:transparent;padding:10px 18px;font-size:15px;font-weight:500;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;border-radius:6px 6px 0 0;transition:background .15s,color .15s}
 .tab-btn:hover{background:rgba(0,0,0,0.04);color:var(--text)}
 .tab-btn.active{color:var(--acc2);border-bottom-color:var(--acc2);font-weight:700;background:rgba(26,82,147,0.06)}
 
 /* ---- TABLA LISTA ---- */
 .toolbar{display:flex;gap:8px;margin-bottom:0;flex-wrap:wrap;align-items:center;}
 .search-wrap{flex:1;min-width:200px;position:relative}
-.search-wrap input{width:100%;padding:8px 12px 8px 32px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text)}
+.search-wrap input{width:100%;padding:8px 12px 8px 32px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text)}
 .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px}
-.fsel{padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text);cursor:pointer}
-.table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg)}
+.fsel{padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);cursor:pointer}
+.table-wrap{overflow-x:auto;background:#132019;border:1px solid var(--border);border-radius:var(--rlg)}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);background:var(--bg);white-space:nowrap}
 td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
@@ -152,7 +152,7 @@ tr:hover td{background:#fafaf8}
 .lote-tag{font-weight:800;font-size:13px;color:var(--acc2);letter-spacing:.02em}
 .titular-name{font-weight:600;font-size:14px}
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
-.bg-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.bg-green{background:var(--card);color:var(--green);border:1px solid var(--green-border)}
 .bg-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
 .bg-amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
 .bg-gray{background:#f0ede8;color:#666;border:1px solid #ddd}
@@ -164,7 +164,7 @@ tr:hover td{background:#fafaf8}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .field{margin-bottom:11px}
 .field label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px}
-.field input,.field select,.field textarea{width:100%;padding:8px 11px;border:1px solid var(--border2);border-radius:var(--r);font-size:14px;background:var(--surface);color:var(--text)}
+.field input,.field select,.field textarea{width:100%;padding:8px 11px;border:1px solid var(--border2);border-radius:var(--r);font-size:14px;background:#132019;color:var(--text)}
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--acc2)}
 .field textarea{resize:vertical;min-height:60px}
 .form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}
@@ -173,10 +173,10 @@ tr:hover td{background:#fafaf8}
 /* ---- COBRADOR ---- */
 .cob-wrap{max-width:600px;margin:0 auto}
 .cob-filters{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1rem}
-.cob-search{padding:12px 14px;font-size:15px;border:1px solid var(--border2);border-radius:var(--r);width:100%;background:var(--card);color:var(--text);margin-bottom:1rem}
+.cob-search{padding:12px 14px;font-size:15px;border:1px solid var(--border2);border-radius:var(--r);width:100%;background:var(--surface);color:var(--text);margin-bottom:1rem}
 .cob-search:focus{outline:none;border-color:var(--acc2)}
 .cob-list{display:flex;flex-direction:column;gap:8px}
-.cob-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rlg);padding:1.1rem 1.25rem;cursor:pointer;transition:border-color .15s}
+.cob-card{background:#132019;border:1.5px solid var(--border);border-radius:var(--rlg);padding:1.1rem 1.25rem;cursor:pointer;transition:border-color .15s}
 .cob-card:hover{border-color:var(--acc2)}
 .cob-card-top{display:flex;justify-content:space-between;align-items:flex-start}
 .cob-lote{font-size:15px;font-weight:800;color:var(--acc2)}
@@ -185,7 +185,7 @@ tr:hover td{background:#fafaf8}
 
 /* Detalle cobrador */
 .det-wrap{max-width:100%;margin:0;padding:0 1.5rem 1rem 0.5rem;box-sizing:border-box}
-.det-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);padding:0.875rem 1.25rem}
+.det-card{background:#132019;border:1px solid var(--border);border-radius:var(--rlg);padding:0.875rem 1.25rem}
 .det-lote{font-size:13px;font-weight:800;color:var(--acc2);letter-spacing:.06em;text-transform:uppercase}
 .det-name{font-size:20px;font-weight:800;margin:2px 0 0.75rem}
 .det-monto{font-size:26px;font-weight:900;color:var(--acc2);text-align:center;padding:.25rem 0;margin-bottom:.4rem}
@@ -196,7 +196,7 @@ tr:hover td{background:#fafaf8}
 .det-label{color:var(--text2)}
 .det-val{font-weight:600}
 .hist-cuotas{display:flex;flex-direction:column;gap:4px;margin-top:.25rem}
-.hist-chip{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.hist-chip{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:var(--card);color:var(--green);border:1px solid var(--green-border)}
 .hist-chip.pend{background:var(--bg);color:var(--text2);border-color:var(--border)}
 .obs-area{margin-top:0.75rem}
 .obs-area h4{font-size:12px;font-weight:600;margin-bottom:4px}
@@ -207,13 +207,13 @@ tr:hover td{background:#fafaf8}
 /* ---- ICC PANEL ---- */
 .icc-box{background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--rlg);padding:1.25rem;margin-bottom:1rem}
 .icc-box h3{font-size:14px;font-weight:700;color:var(--amber);margin-bottom:.5rem}
-.icc-status{background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);padding:1.25rem;margin-bottom:1rem}
-.icc-hist{background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden}
+.icc-status{background:#132019;border:1px solid var(--border);border-radius:var(--rlg);padding:1.25rem;margin-bottom:1rem}
+.icc-hist{background:#132019;border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden}
 .icc-hist-item{display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px}
 .icc-hist-item:last-child{border-bottom:none}
 
 /* ---- HISTORIAL ---- */
-.hist-list{background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden}
+.hist-list{background:#132019;border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden}
 .hist-item{display:flex;gap:12px;align-items:flex-start;padding:11px 16px;border-bottom:1px solid var(--border);font-size:13px}
 .hist-item:last-child{border-bottom:none}
 .h-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
@@ -224,9 +224,9 @@ tr:hover td{background:#fafaf8}
 .h-time{font-size:11px;color:var(--text3);margin-left:auto;white-space:nowrap}
 .empty{text-align:center;padding:2.5rem;color:var(--text2);font-size:14px}
 .tri-mes-card{background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r);padding:.85rem;text-align:center}
-.tri-mes-card.done{background:var(--green-bg);border-color:var(--green-border)}
+.tri-mes-card.done{background:var(--card);border-color:var(--green-border)}
 .tri-mes-card.current{background:var(--amber-bg);border-color:var(--amber-border)}
-.tri-mes-card.current.ready{background:var(--green-bg);border-color:var(--green-border)}
+.tri-mes-card.current.ready{background:var(--card);border-color:var(--green-border)}
 .tri-mes-card.pending{background:var(--bg);border-color:var(--border);opacity:.6}
 .tri-mes-name{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
 .tri-mes-pct{font-size:22px;font-weight:800}
@@ -236,7 +236,7 @@ tr:hover td{background:#fafaf8}
 .tri-mes-pct.pending{color:var(--text3)}
 .tri-mes-label{font-size:11px;margin-top:4px}
 .tri-total{background:var(--brand-light);border:1.5px solid var(--blue-border);border-radius:var(--r);padding:.85rem 1.25rem;display:flex;justify-content:space-between;align-items:center}
-.tri-total.complete{background:var(--green-bg);border-color:var(--green-border)}
+.tri-total.complete{background:var(--card);border-color:var(--green-border)}
 @media(max-width:640px){
   .main{padding:1rem}
   .hero{padding:2rem 1rem 1.5rem}
@@ -247,7 +247,7 @@ tr:hover td{background:#fafaf8}
   th,td{padding:8px}
 }
 
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;margin-bottom:.75rem}
+.card{background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;margin-bottom:.75rem}
 .filters-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
 .fsel{padding:6px 8px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface)}
 .toolbar{margin-bottom:1rem}
@@ -460,7 +460,7 @@ tr:hover td{background:var(--bg)}
         </div>
 
         <!-- Lista + tarjeta desktop -->
-        <div style="width:1000px;max-width:1000px;margin:0 auto;min-width:0;display:flex;border:1px solid var(--border);border-radius:var(--rlg);background:var(--surface);overflow:hidden;min-height:0;flex-shrink:0;flex-grow:0">
+        <div style="width:1000px;max-width:1000px;margin:0 auto;min-width:0;display:flex;border:1px solid var(--border);border-radius:var(--rlg);background:#132019;overflow:hidden;min-height:0;flex-shrink:0;flex-grow:0">
           <div id="admin-list-panel" style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
             <div class="table-wrap" id="admin-table-wrap" style="border:none;border-radius:0;flex:1;overflow-y:auto;overflow-x:hidden;min-height:0"></div>
             <div class="table-foot" id="a-count" style="flex-shrink:0;padding:6px 12px;font-size:12px;color:var(--text2);border-top:1px solid var(--border)"></div>
@@ -471,7 +471,7 @@ tr:hover td{background:var(--bg)}
     </div>
     <!-- admin-detalle: sibling of atab-lista, same pattern as colab -->
     <div id="admin-detalle" style="display:none">
-      <div class="topbar" style="background:var(--surface);border-bottom:1px solid var(--border);padding:0 1rem">
+      <div class="topbar" style="background:#0f1e18;border-bottom:1px solid var(--border2);padding:0 1rem">
         <button onclick="cerrarAdminDet()" class="btn-back" style="font-size:13px">← Lista</button>
       </div>
       <div class="det-wrap" style="padding:1rem"><div style="padding:0" id="admin-det-content"></div></div>
@@ -481,21 +481,21 @@ tr:hover td{background:var(--bg)}
         <div style="font-size:22px;font-weight:800;margin-bottom:6px">💾 Exportar e Importar Datos</div>
         <div style="font-size:13px;color:var(--text2);margin-bottom:2rem">Usá estas opciones para hacer una copia de seguridad o para pasar los datos a otro dispositivo.</div>
 
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;margin-bottom:1rem">
+        <div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;margin-bottom:1rem">
           <div style="font-size:16px;font-weight:700;margin-bottom:6px">📤 Exportar datos</div>
           <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Descarga un archivo con todos tus datos: clientes, pagos, mora, historial, balances y configuración.</div>
-          <button onclick="exportarDatos()" style="background:var(--acc);color:#fff;border:none;border-radius:var(--r);padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%">⬇ Descargar mis datos</button>
+          <button onclick="exportarDatos()" style="background:var(--acc);color:#071510;border:none;border-radius:var(--r);padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%">⬇ Descargar mis datos</button>
         </div>
 
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem">
+        <div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1.5rem">
           <div style="font-size:16px;font-weight:700;margin-bottom:6px">📥 Importar datos</div>
           <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Cargá un archivo exportado previamente para restaurar todos tus datos. <strong>Atención: reemplaza los datos actuales.</strong></div>
           <input type="file" id="importar-input" accept=".json" onchange="importarDatos(this)" style="display:none">
-          <button onclick="document.getElementById('importar-input').click()" style="background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:var(--r);padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%">⬆ Seleccionar archivo de datos</button>
+          <button onclick="document.getElementById('importar-input').click()" style="background:var(--surface);color:var(--text);border:1.5px solid var(--border);border-radius:var(--r);padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%">⬆ Seleccionar archivo de datos</button>
           <div id="importar-msg" style="margin-top:8px;font-size:13px"></div>
         </div>
 
-        <div style="background:var(--surface);border:1px solid #86efac;border-radius:var(--r);padding:1.5rem;margin-top:1rem">
+        <div style="background:#132019;border:1px solid #86efac;border-radius:var(--r);padding:1.5rem;margin-top:1rem">
           <div style="font-size:16px;font-weight:700;margin-bottom:6px">☁️ Sincronizar con servidor</div>
           <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Subí todos los datos actuales al servidor para que otros dispositivos los vean automáticamente.</div>
           <button onclick="sincronizarTodo()" id="btn-sync-todo" style="background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%">☁️ Sincronizar todo ahora</button>
@@ -513,7 +513,7 @@ tr:hover td{background:var(--bg)}
       <div id="icc-status-box" sty
 " style="margin-bottom:1rem"></div>
       <!-- Trimestre visual -->
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);padding:1.25rem;margin-bottom:1rem">
+      <div style="background:#132019;border:1px solid var(--border);border-radius:var(--rlg);padding:1.25rem;margin-bottom:1rem">
         <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:1rem" id="icc-trimestre-titulo">Trimestre en curso</div>
         <div id="icc-trimestre-meses" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:1rem"></div>
         <div id="icc-trimestre-total"></div>
@@ -540,7 +540,7 @@ tr:hover td{background:var(--bg)}
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary" id="icc-apply-btn" onclick="aplicarICC()">&#10003; Confirmar y aplicar</button>
           <button class="btn" id="icc-fetch-btn" onclick="buscarICCIndec()" title="Requiere conexión — usa API pública del gobierno">&#127758; Buscar (API)</button>
-          <button class="btn" onclick="buscarICCClaude()" title="Usa Claude para buscar — requiere Claude disponible" style="background:var(--surface);border:1.5px solid var(--border)">&#129302; Buscar (Claude)</button>
+          <button class="btn" onclick="buscarICCClaude()" title="Usa Claude para buscar — requiere Claude disponible" style="background:#132019;border:1.5px solid var(--border)">&#129302; Buscar (Claude)</button>
         </div>
         <div id="icc-fetch-msg" style="font-size:13px;margin-top:10px;color:var(--text2)"></div>
       </div>
@@ -559,15 +559,15 @@ tr:hover td{background:var(--bg)}
         <div style="margin-bottom:1.5rem">
           <div style="font-size:18px;font-weight:800;margin-bottom:4px">👁 Vista del Cliente</div>
           <div style="font-size:13px;color:var(--text2);margin-bottom:1rem">Compartí este link para que los clientes consulten su cuota.</div>
-          <div style="display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px">
+          <div style="display:flex;gap:8px;align-items:center;background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:10px 14px">
             <div id="vc-link-txt" style="flex:1;font-size:13px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
-            <button onclick="copiarLinkCliente(this)" style="background:var(--acc);color:#fff;border:none;border-radius:var(--r);padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">📋 Copiar</button>
+            <button onclick="copiarLinkCliente(this)" style="background:var(--acc);color:#071510;border:none;border-radius:var(--r);padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">📋 Copiar</button>
           </div>
         </div>
         <!-- Preview -->
         <div style="border:2px dashed var(--border);border-radius:var(--rlg);padding:1.5rem;background:var(--bg)">
           <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:1rem">Preview</div>
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);padding:1.5rem">
+          <div style="background:#132019;border:1px solid var(--border);border-radius:var(--rlg);padding:1.5rem">
             <h3 style="font-size:16px;font-weight:700;margin-bottom:1rem;text-align:center">Consultá tu cuota</h3>
             <div class="select-group">
               <label>Etapa</label>
@@ -581,7 +581,7 @@ tr:hover td{background:var(--bg)}
               <label>Lote</label>
               <select id="prev-lote" onchange="onPrevLote()" disabled><option value="">— Seleccioná manzana —</option></select>
             </div>
-            <button onclick="consultarPrev()" style="width:100%;margin-top:1rem;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer">Ver cuota</button>
+            <button onclick="consultarPrev()" style="width:100%;margin-top:1rem;padding:10px;background:var(--acc);color:#071510;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer">Ver cuota</button>
             <div id="prev-resultado" style="margin-top:1rem"></div>
           </div>
         </div>
@@ -661,20 +661,20 @@ tr:hover td{background:var(--bg)}
     <div style="height:2px;background:var(--border);margin-bottom:14px"></div>
 
     <!-- ① TITULAR -->
-    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px"><div style="width:22px;height:22px;border-radius:50%;background:var(--acc);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div><span style="font-size:13px;font-weight:700;color:var(--text)">Titular / Titulares</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px"><div style="width:22px;height:22px;border-radius:50%;background:var(--acc);color:#071510;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div><span style="font-size:13px;font-weight:700;color:var(--text)">Titular / Titulares</span></div>
     <div class="field">
       <label style="font-size:12px">Fecha de firma <span style="color:#dc2626">*</span></label>
-      <input type="date" id="e-fecha-firma" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text);box-sizing:border-box">
+      <input type="date" id="e-fecha-firma" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);box-sizing:border-box">
     </div>
     <div id="titulares-fields"></div>
     <button class="btn btn-sm" onclick="addTitularField()" style="margin-bottom:4px;font-size:12px">+ Agregar titular</button>
     <div class="field" style="margin-top:8px">
       <label style="font-size:12px">Teléfono <span style="color:#dc2626">*</span></label>
-      <input type="text" id="e-tel" placeholder="11 30909889" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text);box-sizing:border-box">
+      <input type="text" id="e-tel" placeholder="11 30909889" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);box-sizing:border-box">
     </div>
     <div class="field">
       <label style="font-size:12px">Teléfono alternativo <span style="font-size:10px;color:var(--text2)">(opcional)</span></label>
-      <input type="text" id="e-tel2" placeholder="11 30909889" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text);box-sizing:border-box">
+      <input type="text" id="e-tel2" placeholder="11 30909889" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);box-sizing:border-box">
     </div>
 
     <!-- ② LOTES -->
@@ -683,8 +683,8 @@ tr:hover td{background:var(--bg)}
     <!-- Modo edición: campos libres -->
     <div id="e-edit-lote-wrap" style="display:none">
       <div class="form-row">
-        <div class="field"><label style="font-size:12px">Manzana</label><input type="text" id="e-mz" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text);box-sizing:border-box"></div>
-        <div class="field"><label style="font-size:12px">Lote</label><input type="text" id="e-lote" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text);box-sizing:border-box"></div>
+        <div class="field"><label style="font-size:12px">Manzana</label><input type="text" id="e-mz" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);box-sizing:border-box"></div>
+        <div class="field"><label style="font-size:12px">Lote</label><input type="text" id="e-lote" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);box-sizing:border-box"></div>
       </div>
     </div>
 
@@ -722,7 +722,7 @@ tr:hover td{background:var(--bg)}
     <!-- Estado (solo edición) -->
     <div class="field" id="e-est-wrap" style="display:none">
       <label style="font-size:12px">Estado</label>
-      <select id="e-est" style="padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;background:var(--surface);width:auto">
+      <select id="e-est" style="padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;background:#132019;width:auto">
         <option value="activo">Activo</option>
         <option value="finalizado">Finalizado</option>
       </select>
@@ -2081,10 +2081,10 @@ function renderResumenLotes(){
       f5.innerHTML = `
         <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Primera cuota en</div>
         <select id="pricuota-${i}" onchange="updateContratoLote(${i},'primeraCuota',this.value)"
-          style="width:100%;padding:6px 8px;border:1.5px solid ${borderC};border-radius:5px;font-size:12px;background:var(--surface);margin-bottom:6px">
+          style="width:100%;padding:6px 8px;border:1.5px solid ${borderC};border-radius:5px;font-size:12px;background:#132019;margin-bottom:6px">
           ${mOpts(s.primeraCuota)}
         </select>
-        <div id="tri-lote-${i}" style="font-size:10px;color:var(--text3);padding:3px 7px;background:var(--surface);border-radius:4px;margin-bottom:6px;display:${s.triDisplay&&!isUSD?'block':'none'}">${s.triDisplay?'📅 '+s.triDisplay:''}</div>`;
+        <div id="tri-lote-${i}" style="font-size:10px;color:var(--text3);padding:3px 7px;background:#132019;border-radius:4px;margin-bottom:6px;display:${s.triDisplay&&!isUSD?'block':'none'}">${s.triDisplay?'📅 '+s.triDisplay:''}</div>`;
     } else if(s.modoContrato==='pendiente'){
       f5.innerHTML = `
         <div style="display:flex;gap:6px;margin-bottom:6px">
@@ -2107,7 +2107,7 @@ function renderResumenLotes(){
       f5.innerHTML = `
         <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Primera cuota en</div>
         <select id="pricuota-${i}" onchange="updateContratoLote(${i},'primeraCuota',this.value)"
-          style="width:100%;padding:6px 8px;border:1.5px solid ${borderC};border-radius:5px;font-size:12px;background:var(--surface);margin-bottom:6px">
+          style="width:100%;padding:6px 8px;border:1.5px solid ${borderC};border-radius:5px;font-size:12px;background:#132019;margin-bottom:6px">
           ${mOpts(s.primeraCuota)}
         </select>
         <div style="display:flex;gap:6px;margin-bottom:6px">
@@ -2128,7 +2128,7 @@ function renderResumenLotes(){
               style="width:100%;padding:6px 8px;border:1.5px solid #bfdbfe;border-radius:5px;font-size:12px">
           </div>
         </div>
-        <div id="tri-lote-${i}" style="font-size:10px;color:var(--text3);padding:3px 7px;background:var(--surface);border-radius:4px;margin-bottom:6px;display:${s.triDisplay&&!isUSD?'block':'none'}">${s.triDisplay?'📅 '+s.triDisplay:''}</div>`;
+        <div id="tri-lote-${i}" style="font-size:10px;color:var(--text3);padding:3px 7px;background:#132019;border-radius:4px;margin-bottom:6px;display:${s.triDisplay&&!isUSD?'block':'none'}">${s.triDisplay?'📅 '+s.triDisplay:''}</div>`;
     }
     // trimestre ya se muestra dentro del bloque de cada modo
     const saldoAbs = Math.abs(s.saldo||0);
@@ -2788,7 +2788,7 @@ function renderPanelMora(){
         ${totalGeneralARS>0?`<div style="font-size:18px;font-weight:800;color:#dc2626">${fmtPeso(totalGeneralARS)}</div>`:''}
         ${totalGeneralUSD>0?`<div style="font-size:18px;font-weight:800;color:#dc2626">USD ${fmtPeso(totalGeneralUSD)}</div>`:''}
       </div>
-      <button onclick="renderPanelMora()" style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer">Actualizar</button>
+      <button onclick="renderPanelMora()" style="background:#132019;border:1.5px solid var(--border);border-radius:var(--r);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer">Actualizar</button>
       <button onclick="abrirModalAgregarMora()" style="background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">➕ Agregar a mora</button>
     </div>
   </div>`;
@@ -2808,7 +2808,7 @@ function renderPanelMora(){
     let totalMes=0;
     clientesArr.forEach(cl=>cl.cuotas.forEach(c=>{const mor=calcInteresMoraDesde(c.monto,c.anio,c.mes);totalMes+=c.monto+mor.interes;}));
 
-    html+=`<div style="background:var(--surface);border:2px solid #fca5a5;border-radius:var(--rlg);margin-bottom:1.25rem;overflow:hidden">
+    html+=`<div style="background:#132019;border:2px solid #fca5a5;border-radius:var(--rlg);margin-bottom:1.25rem;overflow:hidden">
       <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'"
         style="background:#fef2f2;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">
         <div style="font-size:16px;font-weight:800;color:#dc2626">${mesData.mesNombre}</div>
@@ -2930,7 +2930,7 @@ function abrirModalAgregarMora(){
   ov.id='modal-agregar-mora';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
   ov.innerHTML=
-    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'+
+    '<div style="background:#132019;border-radius:12px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'+
     '<div style="background:#dc2626;padding:14px 18px;display:flex;justify-content:space-between;align-items:center">'+
     '<div style="color:#fff;font-size:16px;font-weight:800">➕ Revertir cobro a mora</div>'+
     '<button onclick="document.getElementById(\'modal-agregar-mora\').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>'+
@@ -2938,7 +2938,7 @@ function abrirModalAgregarMora(){
     '<div style="padding:16px;display:flex;flex-direction:column;gap:10px">'+
     '<div>'+
     '<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">1. ELEGÍ EL CLIENTE</div>'+
-    '<select id="mam-cliente" onchange="mamCargarMeses()" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text)">'+
+    '<select id="mam-cliente" onchange="mamCargarMeses()" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text)">'+
     '<option value="">— Seleccioná un cliente —</option>'+clienteOpts+
     '</select>'+
     '</div>'+
@@ -2946,7 +2946,7 @@ function abrirModalAgregarMora(){
     '<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">2. ELEGÍ EL MES COBRADO A REVERTIR</div>'+
     '<div id="mam-meses-lista"></div>'+
     '</div>'+
-    '<div id="mam-sin-hist" style="display:none;padding:10px;background:var(--surface);border-radius:var(--r);font-size:13px;color:var(--text2);text-align:center">Este cliente no tiene cobros registrados en el historial</div>'+
+    '<div id="mam-sin-hist" style="display:none;padding:10px;background:#132019;border-radius:var(--r);font-size:13px;color:var(--text2);text-align:center">Este cliente no tiene cobros registrados en el historial</div>'+
     '</div></div>';
   document.body.appendChild(ov);
 }
@@ -3419,7 +3419,7 @@ function renderInicio(){
     <div style="font-size:14px;color:var(--text2);margin-bottom:1rem">${new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
     <button onclick="resetearADatosIniciales()" style="width:100%;padding:12px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:.5rem">🔄 Resetear a datos iniciales (Mayo)</button>
     <button onclick="syncFromSheets().then(()=>{location.reload();})" style="width:100%;padding:10px;background:#1a3a6b;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:1.5rem">☁️ Sincronizar desde Google Sheets</button>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;margin-bottom:1rem">
+    <div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;margin-bottom:1rem">
       <div style="font-weight:700;font-size:13px;color:var(--text2);margin-bottom:8px">ESTADO DE PAGOS — ${mesActual().toUpperCase()} ${new Date().getFullYear()}</div>
       <div style="background:#e5e7eb;border-radius:99px;height:10px;margin-bottom:8px">
         <div style="background:#da9e22;height:10px;border-radius:99px;width:${pct}%"></div>
@@ -3430,37 +3430,37 @@ function renderInicio(){
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
-      <div onclick="adminTab('stats')" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer">
+      <div onclick="adminTab('stats')" style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer">
         <div style="font-size:24px;margin-bottom:4px">📊</div>
         <div style="font-weight:700">Estadísticas</div>
         <div style="font-size:12px;color:var(--text2)">${pagados} pagados · ${total-pagados} pendientes</div>
       </div>
-      <div onclick="adminTab('balances')" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer">
+      <div onclick="adminTab('balances')" style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer">
         <div style="font-size:24px;margin-bottom:4px">💰</div>
         <div style="font-weight:700">Balances</div>
         <div style="font-size:12px;color:var(--text2)">Caja: ${fmtPeso(totalCaja)}</div>
       </div>
-      <div onclick="adminTab('lista')" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer">
+      <div onclick="adminTab('lista')" style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer">
         <div style="font-size:24px;margin-bottom:4px">👥</div>
         <div style="font-weight:700">Lista de clientes</div>
         <div style="font-size:12px;color:var(--text2)">Ver y editar todos los lotes</div>
       </div>
-      <div onclick="adminTab('icc')" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer">
+      <div onclick="adminTab('icc')" style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer">
         <div style="font-size:24px;margin-bottom:4px">📈</div>
         <div style="font-weight:700">Incremento ICC</div>
         <div style="font-size:12px;color:var(--text2)">Actualizar montos</div>
       </div>
-      <div onclick="adminTab('historial')" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer">
+      <div onclick="adminTab('historial')" style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer">
         <div style="font-size:24px;margin-bottom:4px">🕓</div>
         <div style="font-weight:700">Historial</div>
         <div style="font-size:12px;color:var(--text2)">Cobros registrados</div>
       </div>
-      <div onclick="adminTab('morapanel')" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer">
+      <div onclick="adminTab('morapanel')" style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer">
         <div style="font-size:24px;margin-bottom:4px">⚠️</div>
         <div style="font-weight:700">Mora</div>
         <div style="font-size:12px;color:var(--text2)">Clientes en mora</div>
       </div>
-      <div onclick="adminTab('vistaclient')" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer">
+      <div onclick="adminTab('vistaclient')" style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer">
         <div style="font-size:24px;margin-bottom:4px">👁</div>
         <div style="font-weight:700">Vista Cliente</div>
         <div style="font-size:12px;color:var(--text2)">Ver como cliente</div>
@@ -3500,7 +3500,7 @@ function renderResumen(){
   const total=dataGen.length;
   const pct=total?Math.round(pagados/total*100):0;
   el.innerHTML=`
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;margin-bottom:1rem">
+    <div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;margin-bottom:1rem">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-weight:700;font-size:13px;color:var(--text2)">ESTADO DE PAGOS — ${mesActual().toUpperCase()} ${new Date().getFullYear()}</div>
         <div style="font-size:20px;font-weight:900;color:${pct===100?'var(--green)':'var(--text)'}">${pct}%</div>
@@ -3518,7 +3518,7 @@ function renderResumen(){
     if(!cls.length)return '';
     const pag=cls.filter(c=>c.pago);
     const pen=cls.filter(c=>!c.pago);
-    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:1rem;overflow:hidden">
+    return `<div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);margin-bottom:1rem;overflow:hidden">
       <div style="padding:1rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
         <span style="font-weight:700">${etapa}</span>
         <span style="font-size:13px"><span style="color:var(--green)">${pag.length} ✓</span> · <span style="color:var(--text2)">${pen.length} pend.</span></span>
@@ -3561,7 +3561,7 @@ function fusionarCierre(srcIdx){
     <select id="fus-sel" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;margin-bottom:1rem">${opts}</select>
     <div style="display:flex;gap:8px">
       <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;padding:8px;background:var(--hov);border:1px solid #d1d5db;border-radius:8px;font-size:13px;cursor:pointer">Cancelar</button>
-      <button onclick="_doFusionar(${srcIdx},+document.getElementById('fus-sel').value);this.closest('div[style*=fixed]').remove()" style="flex:1;padding:8px;background:var(--acc);color:#0a1a12;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Fusionar</button>
+      <button onclick="_doFusionar(${srcIdx},+document.getElementById('fus-sel').value);this.closest('div[style*=fixed]').remove()" style="flex:1;padding:8px;background:#2d6a50;color:#d0f0e0;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Fusionar</button>
     </div>
   </div>`;
   document.body.appendChild(modal);
@@ -3612,7 +3612,7 @@ function renderBalances(seccion){
     const dp=getDistPct();
     el.innerHTML=`
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-        <div style="display:inline-flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:7px 12px;position:relative">
+        <div style="display:inline-flex;align-items:center;gap:10px;background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:7px 12px;position:relative">
           <div id="dist-toast" style="position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%);background:#dcfce7;color:#16a34a;font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;border:1px solid #86efac;opacity:0;transition:opacity .3s;white-space:nowrap;pointer-events:none">✓ Guardado</div>
           <span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Distribución</span>
           <div id="dist-pill-a" style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:4px 12px;font-size:13px;font-weight:500;color:#16a34a">${dp}%</div>
@@ -3625,7 +3625,7 @@ function renderBalances(seccion){
         <button onclick="resetTodoBalances()" style="background:var(--hov);border:1px solid #d1d5db;color:var(--text);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar todo</button>
       </div>
       <div style="display:grid;gap:12px">
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('caja')">
+        <div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('caja')">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
               <div style="font-size:16px;font-weight:700;margin-bottom:4px">⏳ Caja del día</div>
@@ -3640,7 +3640,7 @@ function renderBalances(seccion){
             </div>
           </div>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('cierres')">
+        <div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('cierres')">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
               <div style="font-size:16px;font-weight:700;margin-bottom:4px">✅ Cierres</div>
@@ -3655,7 +3655,7 @@ function renderBalances(seccion){
             </div>
           </div>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('adelantos')">
+        <div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('adelantos')">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
               <div style="font-size:16px;font-weight:700;margin-bottom:4px">⏭ Adelantos</div>
@@ -3674,7 +3674,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
             </div>
           </div>
         </div>
-        <div style="background:var(--surface);border:1px solid #fed7aa;border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('agrimensores')">
+        <div style="background:#132019;border:1px solid #fed7aa;border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('agrimensores')">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
               <div style="font-size:16px;font-weight:700;margin-bottom:4px">⚖️ Agrimensores</div>
@@ -3689,7 +3689,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
             </div>
           </div>
         </div>
-        <div style="background:var(--surface);border:1px solid #fca5a5;border-radius:var(--r);padding:1.25rem;cursor:pointer;position:relative" onclick="renderBalances('mora');saveUltimaVistaMora();actualizarBadgeMora()">
+        <div style="background:#132019;border:1px solid #fca5a5;border-radius:var(--r);padding:1.25rem;cursor:pointer;position:relative" onclick="renderBalances('mora');saveUltimaVistaMora();actualizarBadgeMora()">
           <span id="badge-caja-mora" style="display:none;position:absolute;top:-6px;right:-6px;background:#dc2626;color:#fff;border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:800;align-items:center;justify-content:center;border:2px solid #fff"></span>
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
@@ -3702,7 +3702,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
             </div>
           </div>
         </div>
-        <div style="background:var(--surface);border:1px solid #c7d2fe;border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('extras')">
+        <div style="background:#132019;border:1px solid #c7d2fe;border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('extras')">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
               <div style="font-size:16px;font-weight:700;margin-bottom:4px">💼 Gastos e Ingresos Extras</div>
@@ -3750,7 +3750,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
           <div style="font-size:14px;font-weight:700;color:var(--text2)">💵 PESOS</div>
           <div style="font-size:15px;font-weight:800">${fmtPeso(totalP)}</div>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem">
+        <div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem">
           ${renderPagos(abPesos)}
           ${abPesos.length?`<div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px;padding-top:10px"><span>Total pesos</span><span>${fmtPeso(totalP)}</span></div>`:''}
         </div>
@@ -3786,7 +3786,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         ?`<button onclick="setCierreEstado(${globalIdx},'guardado',false)" style="background:#16a34a;color:#fff;border:none;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">${dp}% ✓ Guardado</button>`
         :`<button onclick="setCierreEstado(${globalIdx},'guardado',true)" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">${dp}% Guardar</button>`;
       const btnB=est.rendido
-        ?`<button onclick="setCierreEstado(${globalIdx},'rendido',false)" style="background:var(--acc);color:#0a1a12;border:none;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">${dp2}% ✓ Rendido</button>`
+        ?`<button onclick="setCierreEstado(${globalIdx},'rendido',false)" style="background:#2d6a50;color:#d0f0e0;border:none;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">${dp2}% ✓ Rendido</button>`
         :`<button onclick="setCierreEstado(${globalIdx},'rendido',true)" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">${dp2}% Rendir</button>`;
       return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
@@ -3818,8 +3818,8 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         <div style="font-size:17px;font-weight:700">✅ Historial de cierres</div>
         <div style="display:flex;gap:8px;align-items:center">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            ${hayCierreFinal()?`<span style="background:#dcfce7;color:#16a34a;border:1px solid #86efac;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700">✓ Cierre realizado — ${loadCierreFinal().mesNombre}</span><button onclick="revertirCierre()" style="background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px">↩ Revertir</button>`:''}
-            <button onclick="mostrarResumenCierre()" style="background:var(--acc);color:#fff;border:none;padding:6px 14px;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">🔒 Cierre final</button>
+            ${hayCierreFinal()?`<span style="background:#1a3a4a;color:#7ab5d0;border:1px solid #3a6a8a;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700">✓ Cierre realizado — ${loadCierreFinal().mesNombre}</span><button onclick="revertirCierre()" style="background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px">↩ Revertir</button>`:''}
+            <button onclick="mostrarResumenCierre()" style="background:var(--acc);color:#071510;border:none;padding:6px 14px;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">🔒 Cierre final</button>
           </div>
           ${cierres.length?`<button onclick="resetCierres()" style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar</button>`:''}
         </div>
@@ -3828,7 +3828,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       <!-- CIERRES PESOS -->
       <div style="margin-bottom:1.25rem">
         <div style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:8px">💵 CIERRES EN PESOS</div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:8px">
+        <div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:8px">
           ${renderCierreList(cierresPesos,0)}
           ${cierresPesos.length?`<div style="display:flex;justify-content:space-between;font-weight:800;font-size:15px;padding-top:10px">
             <span>Total pesos</span><span>${fmtPeso(sumPesos)}</span>
@@ -3947,7 +3947,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
           etapa.replace('Etapa ','E')+'<br><span style="font-size:10px;opacity:.75">'+cant+'</span></button>';
       });
       moraHtml+='</div>';
-      moraHtml+='<div style="background:var(--surface);border:1.5px solid #1e40af;border-top:none;border-radius:0 0 8px 8px;padding:1rem;max-height:400px;overflow-y:auto">';
+      moraHtml+='<div style="background:#132019;border:1.5px solid #1e40af;border-top:none;border-radius:0 0 8px 8px;padding:1rem;max-height:400px;overflow-y:auto">';
       if(itemsActivosP.length) moraHtml+=renderMoraList(itemsActivosP,false);
       if(itemsActivosU.length) moraHtml+='<div style="font-size:11px;font-weight:700;color:#16a34a;margin:8px 0 4px">USD</div>'+renderMoraList(itemsActivosU,true);
       if(!itemsActivosP.length&&!itemsActivosU.length) moraHtml+='<div style="color:var(--text2);font-size:13px;text-align:center;padding:1rem">Sin pagos en esta etapa</div>';
@@ -3956,7 +3956,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       // DERECHA: tarjetas totales
       moraHtml+='<div style="display:flex;flex-direction:column;gap:8px">';
       if(totalEtapaP>0){
-        moraHtml+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">';
+        moraHtml+='<div style="background:#132019;border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">';
         moraHtml+='<div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:4px">TOTAL '+etapaActiva.toUpperCase()+'</div>';
         moraHtml+='<div style="font-size:16px;font-weight:800;color:#1e40af">'+fmtPeso(totalEtapaP)+'</div>';
         moraHtml+='</div>';
@@ -3970,7 +3970,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         moraHtml+='</div>';
       }
       if(totalEtapaU>0){
-        moraHtml+='<div style="background:var(--surface);border:1px solid #86efac;border-radius:8px;padding:12px;text-align:center">';
+        moraHtml+='<div style="background:#132019;border:1px solid #86efac;border-radius:8px;padding:12px;text-align:center">';
         moraHtml+='<div style="font-size:10px;font-weight:700;color:#16a34a;margin-bottom:4px">TOTAL USD '+etapaActiva.toUpperCase()+'</div>';
         moraHtml+='<div style="font-size:16px;font-weight:800;color:#16a34a">USD '+fmtPeso(totalEtapaU)+'</div>';
         moraHtml+='</div>';
@@ -3986,7 +3986,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       moraHtml+='</div></div>';
 
     } else {
-      moraHtml+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.25rem">'+renderMoraList(pesos,false)+'</div>';
+      moraHtml+='<div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.25rem">'+renderMoraList(pesos,false)+'</div>';
     }
 
     if(usd.length){
@@ -3995,7 +3995,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       moraHtml+='<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:var(--r);padding:.75rem;text-align:center"><div style="font-size:11px;color:#16a34a">Cuotas USD</div><div style="font-weight:700;color:#16a34a">USD '+fmtPeso(totalCuotaU)+'</div><div style="display:flex;gap:6px;margin-top:8px"><div style="flex:1;background:#dcfce7;border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:#16a34a">'+dp+'%</div><div style="font-size:12px;font-weight:800;color:#16a34a">USD '+fmtPeso(Math.round(totalCuotaU*dp/100))+'</div></div><div style="flex:1;background:#fef2f2;border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:#dc2626">'+dp2+'%</div><div style="font-size:12px;font-weight:800;color:#dc2626">USD '+fmtPeso(Math.round(totalCuotaU*dp2/100))+'</div></div></div></div>';
       moraHtml+='<div style="background:none;border:none;padding:4px 8px;text-align:right"><span style="font-size:11px;color:var(--text2)">Intereses USD: </span><span style="font-size:11px;font-weight:600;color:#dc2626">USD '+fmtPeso(totalInteresU)+'</span></div>';
       moraHtml+='</div>';
-      moraHtml+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem">'+renderMoraList(usd,true)+'</div>';
+      moraHtml+='<div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem">'+renderMoraList(usd,true)+'</div>';
     }
 
     el.innerHTML=moraHtml;
@@ -4050,11 +4050,11 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
     ).join(''):'<div style="padding:8px;font-size:12px;color:var(--text2)">Sin registros</div>';
     const colsHtml=window._extrasColView?
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">'
-      +'<div style="background:var(--surface);border:1.5px solid #86efac;border-radius:var(--r);overflow:hidden">'
+      +'<div style="background:#132019;border:1.5px solid #86efac;border-radius:var(--r);overflow:hidden">'
       +'<div style="background:#dcfce7;padding:8px 10px;font-size:12px;font-weight:700;color:#16a34a">💰 INGRESOS</div>'
       +mkCol(ings,'#16a34a','+')
       +'</div>'
-      +'<div style="background:var(--surface);border:1.5px solid #fca5a5;border-radius:var(--r);overflow:hidden">'
+      +'<div style="background:#132019;border:1.5px solid #fca5a5;border-radius:var(--r);overflow:hidden">'
       +'<div style="background:#fee2e2;padding:8px 10px;font-size:12px;font-weight:700;color:#dc2626">📤 EGRESOS</div>'
       +mkCol(gsts,'#dc2626','-')
       +'</div>'
@@ -4069,7 +4069,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       +'<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:var(--r);padding:.875rem;text-align:center"><div style="font-size:11px;font-weight:700;color:#dc2626">GASTOS</div><div style="font-size:16px;font-weight:800;color:#dc2626">-'+fmtPeso(totalGas)+'</div><div style="font-size:11px;color:var(--text2)">'+gastos.length+' reg.</div></div>'
       +'<div style="background:#ede9fe;border:1px solid #c4b5fd;border-radius:var(--r);padding:.875rem;text-align:center"><div style="font-size:11px;font-weight:700;color:#4f46e5">NETO</div><div style="font-size:16px;font-weight:800;color:'+netoColor+'">'+netoStr+'</div></div>'
       +'</div>'
-      +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.25rem">'
+      +'<div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.25rem">'
       +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">➕ Nuevo registro</div>'
       +'<div style="display:flex;gap:8px;margin-bottom:8px">'
       +'<button id="extra-tipo-ing" onclick="setExtraTipo(\'ingreso\')" style="flex:1;padding:8px;border-radius:var(--r);border:2px solid #86efac;background:#dcfce7;color:#16a34a;font-weight:700;cursor:pointer;font-size:13px">💰 Ingreso</button>'
@@ -4082,7 +4082,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       +'</div>'
       +'<button onclick="guardarExtra()" style="width:100%;padding:10px;background:#4f46e5;color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer">Guardar</button>'
       +'</div>'
-      +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">'
+      +'<div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);overflow:hidden">'
       +'<div style="padding:.875rem 1rem;font-weight:700;border-bottom:1px solid var(--border);display:flex;align-items:center"><span style="flex:1">Historial</span>'
       +'<button onclick="toggleVistaColumnasExtras()" id="btn-cols-extras" style="background:'+(window._extrasColView?'var(--brand)':'none')+';border:1.5px solid var(--border);border-radius:var(--r);padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;color:'+(window._extrasColView?'#fff':'var(--text2)')+'">⇄ Columnas</button>'
       +'<div style="flex:1;display:flex;justify-content:flex-end">'
@@ -4133,19 +4133,19 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       </div>
 
       <!-- Caja pesos -->
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden">
+      <div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden">
         <div style="padding:.875rem 1rem;font-weight:700;border-bottom:1px solid var(--border)">💰 Caja del día — Pesos</div>
         <div style="padding:1rem">${renderPagos(agrPesos)}</div>
       </div>
 
       <!-- Caja dolares -->
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden">
+      <div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden">
         <div style="padding:.875rem 1rem;font-weight:700;border-bottom:1px solid var(--border)">💵 Caja del día — Dólares</div>
         <div style="padding:1rem">${renderPagos(agrUSD)}</div>
       </div>
 
       <!-- Adelantos agrimensores -->
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
+      <div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
         <div style="padding:.875rem 1rem;font-weight:700;border-bottom:1px solid var(--border)">
           ⏭ Adelantos
           ${agrPend.length?`<span style="background:#fff3cd;border:1px solid #ffc107;color:#856404;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:8px">${agrPend.length} pendiente${agrPend.length>1?'s':''}</span>`:''}
@@ -4239,7 +4239,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       </div>`:''}
       <div>
         <div style="font-size:13px;font-weight:700;color:#16a34a;margin-bottom:8px">✅ APROBADOS</div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
+        <div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
           ${aprobados.length?aprobados.slice().reverse().map(a=>`
             <div style="display:flex;justify-content:space-between;padding:10px 1rem;border-bottom:1px solid var(--border);font-size:13px">
               <div>
@@ -4727,12 +4727,12 @@ function renderStats(){
 
   let html='';
   html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1.25rem">';
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.875rem;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text2)">PAGADOS</div><div style="font-size:28px;font-weight:800;color:#16a34a">'+pagados+'</div><div style="font-size:11px;color:var(--text2)">de '+activos.length+'</div></div>';
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.875rem;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text2)">PENDIENTES</div><div style="font-size:28px;font-weight:800;color:#d97706">'+pendientes+'</div></div>';
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.875rem;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text2)">COBRANZA</div><div style="font-size:28px;font-weight:800;color:#4f46e5">'+pct+'%</div></div>';
+  html+='<div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:.875rem;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text2)">PAGADOS</div><div style="font-size:28px;font-weight:800;color:#16a34a">'+pagados+'</div><div style="font-size:11px;color:var(--text2)">de '+activos.length+'</div></div>';
+  html+='<div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:.875rem;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text2)">PENDIENTES</div><div style="font-size:28px;font-weight:800;color:#d97706">'+pendientes+'</div></div>';
+  html+='<div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:.875rem;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text2)">COBRANZA</div><div style="font-size:28px;font-weight:800;color:#4f46e5">'+pct+'%</div></div>';
   html+='</div>';
 
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.25rem">';
+  html+='<div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.25rem">';
   html+='<div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text2)">POR ETAPA</div>';
   etapaStats.forEach(e=>{
     html+='<div style="margin-bottom:10px">';
@@ -4742,7 +4742,7 @@ function renderStats(){
   });
   html+='</div>';
 
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem">';
+  html+='<div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem">';
   html+='<div style="font-size:13px;font-weight:700;margin-bottom:1rem;color:var(--text2)">RECAUDACIÓN POR MES (PESOS)</div>';
   if(months.length){
     html+='<div style="display:flex;gap:8px;align-items:flex-end;overflow-x:auto;padding-bottom:4px">';
@@ -4763,7 +4763,7 @@ function renderStats(){
   html+='</div>';
 
   // ── Evolución mensual mejorada ──
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-top:1.25rem">';
+  html+='<div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-top:1.25rem">';
   html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
   html+='<div style="font-size:13px;font-weight:700;color:var(--text2)">📊 EVOLUCIÓN MENSUAL</div>';
   html+='<div style="display:flex;gap:6px">';
@@ -4856,7 +4856,7 @@ function renderStats(){
     });
     const grandTotal=clientesMora.reduce((s,c)=>s+c.totalDeuda+c.totalInteres,0);
 
-    html+='<div style="background:var(--surface);border:1.5px solid #fca5a5;border-radius:var(--r);padding:1rem;margin-top:1.25rem">';
+    html+='<div style="background:#132019;border:1.5px solid #fca5a5;border-radius:var(--r);padding:1rem;margin-top:1.25rem">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
     html+='<div style="font-size:13px;font-weight:700;color:#dc2626">⚠️ REPORTE DE MOROSIDAD</div>';
     html+='<div style="font-size:12px;font-weight:700;color:#dc2626">'+clientesMora.length+' clientes · '+fmtPeso(grandTotal)+'</div>';
@@ -4896,7 +4896,7 @@ function renderStats(){
   if(agrimensores.length){
     const agrPag=agrimensores.filter(c=>c.pago).length;
     const agrPend=agrimensores.length-agrPag;
-    html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-top:1.25rem">';
+    html+='<div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-top:1.25rem">';
     html+='<div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text2)">AGRIMENSORES ('+agrimensores.length+')</div>';
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
     html+='<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:var(--r);padding:.75rem;text-align:center"><div style="font-size:11px;font-weight:700;color:#16a34a">PAGADOS</div><div style="font-size:24px;font-weight:800;color:#16a34a">'+agrPag+'</div></div>';
@@ -5057,7 +5057,7 @@ function renderAdminDet(id){
   if(c.pago){
     pagoBtn=`<button class="btn btn-sm" data-mid="${id}" onclick="desmarcarPagoAdmin(this.dataset.mid)" style="color:#dc2626;border-color:#fca5a5;width:100%;margin-top:.75rem">↩ Desmarcar pago</button>`;
   } else if(tieneMora){
-    pagoBtn=`<div style="margin-top:.75rem;background:var(--surface);border:2px dashed #cbd5e1;border-radius:var(--r);padding:14px;text-align:center;color:#94a3b8">
+    pagoBtn=`<div style="margin-top:.75rem;background:#132019;border:2px dashed #cbd5e1;border-radius:var(--r);padding:14px;text-align:center;color:#94a3b8">
       <div style="font-size:13px;font-weight:700">Cuota ${mesEnCurso} — ${cur}${fmtPeso(c.monto)}</div>
       <div style="font-size:12px;margin-top:4px">⛔ Pagá las cuotas anteriores primero</div>
     </div>
@@ -5076,15 +5076,15 @@ function renderAdminDet(id){
       +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'
       +'<div style="display:flex;gap:6px;margin-bottom:8px">'
       +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="auto" data-cid="'+cid+'" data-cuota="'+c.monto+'" data-autopct="'+_mora.pct+'" data-autoint="'+_mora.interes+'" onchange="updateAdmMora(this)"> ⚡ Auto ('+_mora.pct+'%)</label>'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateAdmMora(this)"> % Porcentaje</label>'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateAdmMora(this)"> $ Monto</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#132019;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateAdmMora(this)"> % Porcentaje</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#132019;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateAdmMora(this)"> $ Monto</label>'
       +'</div>'
       +'<input id="'+cid+'-val" type="number" placeholder="Ingresá el valor..." data-cid="'+cid+'" data-cuota="'+c.monto+'" oninput="updateAdmMora(this)" style="width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
       +'<button data-mid="'+id+'" data-cuota="'+c.monto+'" data-cid="'+cid+'" onclick="confirmarAdmMora(this)" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'
       +'</div>'
       +'</div>';
   } else if(esPrimeraCuotaFutura(c)){
-    pagoBtn=`<div style="background:var(--surface);border:1.5px solid #e2e8f0;border-radius:var(--r);padding:10px 14px;margin-top:.5rem;text-align:center">
+    pagoBtn=`<div style="background:#132019;border:1.5px solid #e2e8f0;border-radius:var(--r);padding:10px 14px;margin-top:.5rem;text-align:center">
       <div style="font-size:13px;font-weight:700;color:#64748b">🗓 Primera cuota en ${nombreMesPrimeraCuota(c)}</div>
       <div style="font-size:11px;color:#94a3b8;margin-top:3px">Disponible para cobrar desde ${nombreMesPrimeraCuota(c)}</div>
     </div>`;
@@ -5102,7 +5102,7 @@ function renderAdminDet(id){
     <div class="det-card">
 
       <!-- 1. Lote + nombre -->
-      <div class="det-lote">${loteTag}${c.moneda==='USD'?'<span style="font-size:12px;background:#dcfce7;color:#16a34a;border:1px solid #86efac;padding:2px 8px;border-radius:6px;margin-left:8px;font-weight:700">💵 USD</span>':''}</div>
+      <div class="det-lote">${loteTag}${c.moneda==='USD'?'<span style="font-size:12px;background:#1a3a4a;color:#7ab5d0;border:1px solid #3a6a8a;padding:2px 8px;border-radius:6px;margin-left:8px;font-weight:700">💵 USD</span>':''}</div>
       <div class="det-name">${c.titular}</div>
 
       <!-- 2. Monto -->
@@ -5260,7 +5260,7 @@ function mostrarConfirmAdmin(titulo, msg, onOk){
       +'<div id="acm-title" style="font-size:16px;font-weight:700;margin-bottom:8px"></div>'
       +'<div id="acm-msg" style="font-size:14px;color:#555;margin-bottom:1.25rem"></div>'
       +'<div style="display:flex;gap:8px;justify-content:flex-end">'
-      +'<button onclick="cerrarConfirmAdmin()" style="padding:8px 16px;border:1px solid #ddd;border-radius:8px;background:var(--surface);cursor:pointer;font-size:14px">Cancelar</button>'
+      +'<button onclick="cerrarConfirmAdmin()" style="padding:8px 16px;border:1px solid #ddd;border-radius:8px;background:#132019;cursor:pointer;font-size:14px">Cancelar</button>'
       +'<button id="acm-ok" style="padding:8px 20px;border:none;border-radius:8px;background:#16a34a;color:#fff;font-weight:700;cursor:pointer;font-size:14px">Confirmar</button>'
       +'</div></div>';
     document.body.appendChild(modal);
@@ -5499,7 +5499,7 @@ function cobrarTodoColab(clienteId){
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   ov.onclick=function(e){if(e.target===ov)ov.remove();};
   ov.innerHTML=
-    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'
+    '<div style="background:#132019;border-radius:12px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'
     +'<div style="background:#7c3aed;padding:14px 18px;display:flex;justify-content:space-between;align-items:center">'
     +'<div style="color:#fff;font-size:16px;font-weight:800">⚡ Cobrar todo</div>'
     +'<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>'
@@ -5527,8 +5527,8 @@ function cobrarTodoColab(clienteId){
     +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente (mora)</div>'
     +'<div style="display:flex;gap:6px;margin-bottom:8px">'
     +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanelTodo()"> ⚡ Auto</label>'
-    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanelTodo()"> % Porc.</label>'
-    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanelTodo()"> $ Monto</label>'
+    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#132019;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanelTodo()"> % Porc.</label>'
+    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#132019;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanelTodo()"> $ Monto</label>'
     +'</div>'
     +'<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanelTodo()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
     +'<button onclick="admConfirmarTodoColab()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'
@@ -5602,7 +5602,7 @@ function cobrarTodoAdmin(clienteId){
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   ov.onclick=function(e){if(e.target===ov)ov.remove();};
   ov.innerHTML=
-    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'
+    '<div style="background:#132019;border-radius:12px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'
     +'<div style="background:#7c3aed;padding:14px 18px;display:flex;justify-content:space-between;align-items:center">'
     +'<div style="color:#fff;font-size:16px;font-weight:800">⚡ Cobrar todo</div>'
     +'<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>'
@@ -5634,8 +5634,8 @@ function cobrarTodoAdmin(clienteId){
     +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente (mora)</div>'
     +'<div style="display:flex;gap:6px;margin-bottom:8px">'
     +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanelTodo()" > ⚡ Auto</label>'
-    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanelTodo()"> % Porc.</label>'
-    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanelTodo()"> $ Monto</label>'
+    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#132019;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanelTodo()"> % Porc.</label>'
+    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#132019;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanelTodo()"> $ Monto</label>'
     +'</div>'
     +'<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanelTodo()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
     +'<button onclick="admConfirmarTodo()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'
@@ -5710,7 +5710,7 @@ function cobrarAdmMora(clienteId){
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   ov.onclick=function(e){if(e.target===ov)ov.remove();};
   ov.innerHTML=
-    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'+
+    '<div style="background:#132019;border-radius:12px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'+
     '<div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">'+
     '<div style="font-size:16px;font-weight:800">💰 Cobrar mora</div>'+
     '<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
@@ -5730,8 +5730,8 @@ function cobrarAdmMora(clienteId){
     '<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'+
     '<div style="display:flex;gap:6px;margin-bottom:8px">'+
     '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanel()"> ⚡ Auto ('+pct+'%)</label>'+
-    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanel()"> % Porc.</label>'+
-    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanel()"> $ Monto</label>'+
+    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#132019;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanel()"> % Porc.</label>'+
+    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#132019;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanel()"> $ Monto</label>'+
     '</div>'+
     '<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanel()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'+
     '<button onclick="admConfirmarMoraPanel()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'+
@@ -5966,7 +5966,7 @@ function mostrarResumenCierre(){
   modal.id='modal-resumen-cierre';
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 0';
   modal.innerHTML=`
-    <div style="background:var(--surface);border-radius:12px;width:100%;max-width:480px;margin:auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="background:#132019;border-radius:12px;width:100%;max-width:480px;margin:auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
       <!-- Header -->
       <div style="background:var(--acc);padding:16px 20px;display:flex;justify-content:space-between;align-items:center">
         <div>
@@ -6002,7 +6002,7 @@ function mostrarResumenCierre(){
       </div>
 
       <!-- Pausados -->
-      ${pausados.length?`<div style="margin:0 16px 10px;background:var(--surface);border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px">
+      ${pausados.length?`<div style="margin:0 16px 10px;background:#132019;border:1px solid var(--border2);border-radius:8px;padding:10px 12px">
         <div style="font-size:12px;font-weight:700;color:#64748b">🗓 ${pausados.length} cliente${pausados.length>1?'s':''} en pausa (primera cuota futura)</div>
         <div style="font-size:11px;color:#94a3b8;margin-top:3px">No entran al cierre ni generan mora</div>
       </div>`:''}
@@ -6021,7 +6021,7 @@ function mostrarResumenCierre(){
       <!-- Botones -->
       <div style="padding:0 16px 16px;display:flex;flex-direction:column;gap:8px">
         <button onclick="document.getElementById('modal-resumen-cierre').remove();ejecutarCierreFinal()" 
-          style="width:100%;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer">
+          style="width:100%;padding:12px;background:var(--acc);color:#071510;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer">
           🔒 Confirmar Cierre de ${mesNombre}
         </button>
         <button onclick="document.getElementById('modal-resumen-cierre').remove()"
@@ -6299,7 +6299,7 @@ function cobrarConMoraColab(btn){
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   ov.onclick=function(e){if(e.target===ov)ov.remove();};
   ov.innerHTML=
-    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'+
+    '<div style="background:#132019;border-radius:12px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'+
     '<div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">'+
     '<div style="font-size:16px;font-weight:800">💰 Confirmar cobro</div>'+
     '<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
@@ -6316,8 +6316,8 @@ function cobrarConMoraColab(btn){
     '<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'+
     '<div style="display:flex;gap:6px;margin-bottom:8px">'+
     '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanel()"> ⚡ Auto ('+pct+'%)</label>'+
-    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanel()"> % Porc.</label>'+
-    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanel()"> $ Monto</label>'+
+    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#132019;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanel()"> % Porc.</label>'+
+    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#132019;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanel()"> $ Monto</label>'+
     '</div>'+
     '<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanel()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'+
     '<button onclick="admConfirmarMoraPanelColab()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'+
@@ -6498,12 +6498,12 @@ function revertirCobroMesAnterior(clienteId){
   const opcionesHtml=opciones.map(o=>
     '<button data-mes="'+o.mes+'" data-anio="'+o.anio+'" data-label="'+o.label+'" data-cid="'+clienteId+'" '+
     'onclick="confirmarRevertirMes(this.dataset.cid,parseInt(this.dataset.mes),parseInt(this.dataset.anio),this.dataset.label)" '+
-    'style="width:100%;padding:10px;margin-bottom:6px;background:var(--surface);border:1.5px solid #e2e8f0;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;text-align:left">'+
+    'style="width:100%;padding:10px;margin-bottom:6px;background:#132019;border:1.5px solid #e2e8f0;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;text-align:left">'+
     '📅 '+o.label+'</button>'
   ).join('');
 
   ov.innerHTML=
-    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'+
+    '<div style="background:#132019;border-radius:12px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'+
     '<div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">'+
     '<div style="font-size:15px;font-weight:800">↩ ¿Qué mes revertir?</div>'+
     '<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
@@ -6734,26 +6734,26 @@ function renderAdminTable(){
   el.innerHTML=data.map(c=>{
     const isUSD=c.moneda==='USD';
     const isAgr=c.agrimensor===true;
-    const rowBg=c.est==='finalizado'?'background:var(--hov);':isAgr?'background:var(--card);':isUSD?'background:#dcfce7;':'';
-    const saldoColor=c.saldo===0?'#94a3b8':c.saldo>0?'#16a34a':'#dc2626';
+    const rowBg=c.est==='finalizado'?'background:#162820;':isAgr?'background:#0f2a1f;':isUSD?'background:#0d2a1a;':'';
+    const saldoColor=c.saldo===0?'#94a3b8':c.saldo>0?'#4caf82':'#e05050';
     const saldoLabel=c.saldo===0?'—':c.saldo>0?'+'+fmtPeso(c.saldo):'-'+fmtPeso(Math.abs(c.saldo));
     const hist3=(c.hist||[]).slice(-3).reverse();
-    const triColor=c.tri==='Mar-Jun-Sep-Dic'?'#ec4899':c.tri==='Feb-May-Ago-Nov'?'#16a34a':'#3b82f6';
+    const triColor=c.tri==='Mar-Jun-Sep-Dic'?'#f472b6':c.tri==='Feb-May-Ago-Nov'?'#4caf82':'#60a5fa';
     const triLabel=c.tri==='Mar-Jun-Sep-Dic'?'Rosa':c.tri==='Feb-May-Ago-Nov'?'Verde':'Azul';
-    const pagoColor=c.autopago?'#16a34a':c.est==='finalizado'?'#9ca3af':c.pago?'#16a34a':'#d97706';
+    const pagoColor=c.autopago?'#16a34a':c.est==='finalizado'?'#9ca3af':c.pago?'#4caf82':'#e09040';
     const _esFutura=esPrimeraCuotaFutura(c);
     const pagoTxt=c.autopago?'Terminó':c.est==='finalizado'?'Terminó':c.pago?'✓ Pagado':_esFutura?'🗓 1ª '+nombreMesPrimeraCuota(c):'Pendiente';
-    const pagoColor2=c.autopago?'#16a34a':c.est==='finalizado'?'#9ca3af':c.pago?'#16a34a':_esFutura?'#64748b':'#d97706';
+    const pagoColor2=c.autopago?'#16a34a':c.est==='finalizado'?'#9ca3af':c.pago?'#4caf82':_esFutura?'#506860':'#e09040';
     const _moraCnt=loadCuotasMora().filter(cm=>cm.clienteId===c.id&&!cm.pagada).length;
     const _moraBadge=_moraCnt>0?`<span style="display:inline-flex;align-items:center;justify-content:center;background:#dc2626;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;margin-left:4px">${_moraCnt}</span>`:'';
 
     const loteStr=formatLoteTag(c.mz,c.lote);
     const waLink=c.tel?`<a href="https://wa.me/54${c.tel.replace(/\D/g,'')}" target="_blank" onclick="event.stopPropagation();window.open(this.href,'_blank');return false;" style="display:inline-flex;align-items:center;justify-content:center;background:transparent;color:#fff;width:100%;height:100%;text-decoration:none;" onclick="event.stopPropagation();window.open(this.href,'_blank');return false;"><svg width="15" height="15" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.554 4.118 1.524 5.855L0 24l6.29-1.508A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.366l-.359-.214-3.733.894.944-3.632-.235-.374A9.818 9.818 0 1112 21.818z"/></svg></a>`:'';
-    return `<div data-usd="${isUSD}" style="border-bottom:1px solid var(--border);${rowBg};display:flex;align-items:stretch;border-radius:var(--r);margin:4px 8px;border:1px solid var(--border)" onmouseover="this.style.filter='brightness(0.97)'" onmouseout="this.style.filter=''">
+    return `<div data-usd="${isUSD}" style="border-bottom:1px solid var(--border2);${rowBg};display:flex;align-items:stretch;border-radius:var(--r);margin:4px 8px;border:1px solid #2a4a38" onmouseover="this.style.background='#1f3529'" onmouseout="this.style.background=''">
       <div onclick="mostrarAdminDet('${c.id}')" style="flex:1;min-width:0;cursor:pointer;padding:10px 12px">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:3px">
-        <span style="font-size:15px;font-weight:800;color:var(--acc2);flex-shrink:0;min-width:90px">${loteStr}</span>
-        ${isUSD?'<span style="font-size:11px;background:#dcfce7;color:#16a34a;border:1px solid #86efac;padding:2px 6px;border-radius:4px;font-weight:700;flex-shrink:0">💵</span>':''}
+        <span style="font-size:15px;font-weight:800;color:var(--acc2);font-weight:800;flex-shrink:0;min-width:90px">${loteStr}</span>
+        ${isUSD?'<span style="font-size:11px;background:#1a3a4a;color:#7ab5d0;border:1px solid #3a6a8a;padding:2px 6px;border-radius:4px;font-weight:700;flex-shrink:0">💵</span>':''}
         <span style="font-weight:600;font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.titular||'Sin titular'}</span>
         <span style="font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0">${c.ca||1}/${c.ct}</span>
         <span style="font-weight:800;font-size:15px;white-space:nowrap;flex-shrink:0;min-width:90px;text-align:right">${(()=>{
@@ -6771,7 +6771,7 @@ function renderAdminTable(){
       <div style="display:flex;align-items:center;gap:12px">
         <div style="display:flex;align-items:center;gap:6px;min-width:90px">
           <span style="font-size:11px;font-weight:700;color:${triColor}">${triLabel}</span>
-          ${hist3.map(h=>`<span style="font-size:10px;color:#94a3b8;border:1px solid #e2e8f0;border-radius:3px;padding:1px 4px">C${h.cuota}</span>`).join('')}
+          ${hist3.map(h=>`<span style="font-size:10px;color:#7ab5d0;border:1px solid #1a3a4a;background:#1a3a4a;border-radius:3px;padding:1px 4px">C${h.cuota}</span>`).join('')}
         </div>
         <span style="flex:1"></span>
         <span style="font-size:11px;font-weight:600;color:${saldoColor};white-space:nowrap">${saldoLabel}</span>
@@ -6780,9 +6780,9 @@ function renderAdminTable(){
     </div>
       <div style="display:flex;flex-direction:column;border-left:1px solid var(--border);flex-shrink:0;width:56px;overflow:hidden;border-radius:0 var(--r) var(--r) 0">
         ${waLink
-          ?`<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#25d366;border-bottom:1px solid #1ebe5d;cursor:pointer;transition:filter .15s" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">${waLink}</div>`
+          ?`<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#25d366;border-bottom:1px solid #1ebe5d;cursor:pointer;transition:filter .15s" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.background=''">${waLink}</div>`
           :'<div style="flex:1;border-bottom:1px solid var(--border);background:var(--hov)"></div>'}
-        <div onclick="event.stopPropagation();openEditModal('${c.id}')" style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--hov);cursor:pointer;transition:filter .15s" onmouseover="this.style.filter='brightness(0.95)'" onmouseout="this.style.filter=''">
+        <div onclick="event.stopPropagation();openEditModal('${c.id}')" style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--hov);cursor:pointer;transition:filter .15s" onmouseover="this.style.filter='brightness(0.95)'" onmouseout="this.style.background=''">
           <span style="font-size:17px">✏️</span>
         </div>
       </div>
@@ -6958,12 +6958,12 @@ function showConfirmModal(titulo, msg, onConfirm){
   div.id = 'confirm-modal-dyn';
   div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
   div.innerHTML = `
-    <div style="background:var(--surface);border-radius:12px;padding:24px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="background:#132019;border-radius:12px;padding:24px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
       <div style="font-size:16px;font-weight:800;margin-bottom:8px;color:var(--text)">${titulo}</div>
       <div style="font-size:13px;color:var(--text2);margin-bottom:20px;white-space:pre-line">${msg}</div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button onclick="document.getElementById('confirm-modal-dyn').remove()"
-          style="padding:8px 16px;border:1px solid var(--border2);border-radius:6px;background:var(--surface);font-size:13px;cursor:pointer">
+          style="padding:8px 16px;border:1px solid var(--border2);border-radius:6px;background:#132019;font-size:13px;cursor:pointer">
           Cancelar
         </button>
         <button id="confirm-modal-ok"
@@ -7018,11 +7018,11 @@ function renderHistorial(showAllPagos, showAllObs){
 
   el.innerHTML=limpiarBtn+`
     <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">📝 Observaciones y cambios (${obs.length})</div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.75rem;margin-bottom:1.5rem">
+    <div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:.75rem;margin-bottom:1.5rem">
       ${renderItems(obs, showAllObs, 'obs')}
     </div>
     <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">💰 Pagos (${pagos.length})</div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.75rem">
+    <div style="background:#132019;border:1px solid var(--border);border-radius:var(--r);padding:.75rem">
       ${renderItems(pagos, showAllPagos, 'pago')}
     </div>
   `;
@@ -7183,7 +7183,7 @@ function renderIccStatus(){
       </div></div>`;
   } else if(yaAplicado){
     const aplicado = icc.find(x => x.mesKey === getMesKey(hoy));
-    estadoHtml = `<div style="background:var(--green-bg);border:1px solid var(--green-border);border-radius:var(--rlg);padding:1.25rem;display:flex;gap:1rem;align-items:center">
+    estadoHtml = `<div style="background:var(--card);border:1px solid var(--green-border);border-radius:var(--rlg);padding:1.25rem;display:flex;gap:1rem;align-items:center">
       <div style="font-size:28px">✅</div>
       <div>
         <div style="font-weight:700;font-size:15px;color:var(--green)">Incremento de ${mesActual} ya aplicado</div>
@@ -7536,22 +7536,22 @@ function renderColab(){
   try{
   el.innerHTML=list.map(c=>{
     const isUSD=c.moneda==='USD';
-    const saldoColor=c.saldo===0?'#94a3b8':c.saldo>0?'#16a34a':'#dc2626';
+    const saldoColor=c.saldo===0?'#94a3b8':c.saldo>0?'#4caf82':'#e05050';
     const saldoLabel=c.saldo===0?'—':c.saldo>0?'+'+fmtPeso(c.saldo):'-'+fmtPeso(Math.abs(c.saldo));
     const hist3=(c.hist||[]).slice(-3).reverse();
-    const triColor=c.tri==='Mar-Jun-Sep-Dic'?'#ec4899':c.tri==='Feb-May-Ago-Nov'?'#16a34a':'#3b82f6';
+    const triColor=c.tri==='Mar-Jun-Sep-Dic'?'#f472b6':c.tri==='Feb-May-Ago-Nov'?'#4caf82':'#60a5fa';
     const triLabel=c.tri==='Mar-Jun-Sep-Dic'?'Rosa':c.tri==='Feb-May-Ago-Nov'?'Verde':'Azul';
-    const pagoColor=c.autopago?'#16a34a':c.est==='finalizado'?'#9ca3af':c.pago?'#16a34a':'#d97706';
+    const pagoColor=c.autopago?'#16a34a':c.est==='finalizado'?'#9ca3af':c.pago?'#4caf82':'#e09040';
     const _esFutura=esPrimeraCuotaFutura(c);
     const pagoTxt=c.autopago?'Terminó':c.est==='finalizado'?'Terminó':c.pago?'✓ Pagado':_esFutura?'🗓 1ª '+nombreMesPrimeraCuota(c):'Pendiente';
-    const pagoColor2=c.autopago?'#16a34a':c.est==='finalizado'?'#9ca3af':c.pago?'#16a34a':_esFutura?'#64748b':'#d97706';
+    const pagoColor2=c.autopago?'#16a34a':c.est==='finalizado'?'#9ca3af':c.pago?'#4caf82':_esFutura?'#506860':'#e09040';
     const cantMora=cuotasMoraAll.filter(cm=>cm.clienteId===c.id).length;
 
     const loteStr = formatLoteTag(c.mz,c.lote);
     return `<div onclick="mostrarDetColab('${c.id}')" style="cursor:pointer;border-radius:var(--r);margin:4px 8px;border:1px solid var(--border);padding:10px 12px;background:${isUSD?'#dcfce7':''}" data-usd="${isUSD}" onmouseover="this.style.background=this.dataset.usd==='true'?'#bbf7d0':'#f8fafc'" onmouseout="this.style.background=this.dataset.usd==='true'?'#dcfce7':''">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:3px">
         <span class="lote-tag" style="font-size:15px;padding:4px 12px 4px 0;font-weight:800;flex-shrink:0;min-width:90px;background:transparent;border:none;color:var(--acc2)">${loteStr}</span>
-        ${isUSD?'<span style="font-size:11px;background:#dcfce7;color:#16a34a;border:1px solid #86efac;padding:2px 6px;border-radius:4px;font-weight:700;flex-shrink:0">💵</span>':''}
+        ${isUSD?'<span style="font-size:11px;background:#1a3a4a;color:#7ab5d0;border:1px solid #3a6a8a;padding:2px 6px;border-radius:4px;font-weight:700;flex-shrink:0">💵</span>':''}
         <span style="font-weight:600;font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.titular}</span>
         ${cantMora>0?`<span style="background:#dc2626;color:#fff;border-radius:99px;font-size:10px;font-weight:800;padding:1px 6px;flex-shrink:0">${cantMora}</span>`:''}
         <span style="font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0">${c.ca||1}/${c.ct}</span>
@@ -7560,7 +7560,7 @@ function renderColab(){
       <div style="display:flex;align-items:center;gap:12px">
         <div style="display:flex;align-items:center;gap:6px;min-width:90px">
           <span style="font-size:11px;font-weight:700;color:${triColor}">${triLabel}</span>
-          ${hist3.map(h=>`<span style="font-size:10px;color:#94a3b8;border:1px solid #e2e8f0;border-radius:3px;padding:1px 4px">C${h.cuota}</span>`).join('')}
+          ${hist3.map(h=>`<span style="font-size:10px;color:#7ab5d0;border:1px solid #1a3a4a;background:#1a3a4a;border-radius:3px;padding:1px 4px">C${h.cuota}</span>`).join('')}
         </div>
         <span style="flex:1"></span>
         <span style="font-size:11px;font-weight:600;color:${saldoColor};white-space:nowrap;flex-shrink:0">${saldoLabel}</span>
@@ -7923,10 +7923,10 @@ function renderAgrLista(){
       if(row.type==='header') return `<tr><td colspan="6" style="padding:10px 6px 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--acc2);letter-spacing:.05em;border-bottom:1px solid #fed7aa">${row.mz}</td></tr>`;
       const c=row.c;
       const isUSD=c.moneda==='USD';
-      const pagoLabel=c.pago?'<span style="background:#dcfce7;color:#16a34a;border:1px solid #86efac;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700">Pagado</span>':'<span style="background:#fff3cd;color:#856404;border:1px solid #ffc107;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700">Pendiente</span>';
+      const pagoLabel=c.pago?'<span style="background:#1a3a4a;color:#7ab5d0;border:1px solid #3a6a8a;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700">Pagado</span>':'<span style="background:#fff3cd;color:#856404;border:1px solid #ffc107;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700">Pendiente</span>';
       const waLink=c.tel?`<a href="https://wa.me/54${c.tel.replace(/\D/g,'')}" target="_blank" onclick="event.stopPropagation();window.open(this.href,'_blank');return false;" style="display:inline-flex;align-items:center;gap:5px;background:#25d366;color:#fff;padding:4px 10px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;margin-left:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.554 4.118 1.524 5.855L0 24l6.29-1.508A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.366l-.359-.214-3.733.894.944-3.632-.235-.374A9.818 9.818 0 1112 21.818z"/></svg></a>`:'';
       return `<tr onclick="mostrarAdminDet('${c.id}')" style="cursor:pointer;border-bottom:1px solid var(--border);background:var(--card)">
-        <td style="padding:10px 6px"><span class="lote-tag" style="background:var(--acc);color:#0a1a12">${formatLoteTag(c.mz,c.lote)}</span>${isUSD?'<span style="font-size:10px;color:#16a34a;margin-left:4px">💵</span>':''}</td>
+        <td style="padding:10px 6px"><span class="lote-tag" style="background:#2d6a50;color:#d0f0e0">${formatLoteTag(c.mz,c.lote)}</span>${isUSD?'<span style="font-size:10px;color:#16a34a;margin-left:4px">💵</span>':''}</td>
         <td style="padding:10px 6px;font-weight:600">${c.titular}${waLink}</td>
         <td style="padding:10px 6px;text-align:right">${c.ca}/${c.ct}</td>
         <td style="padding:10px 6px;text-align:right;font-weight:600">${isUSD?'USD ':''} ${fmtPeso(c.monto)}</td>
@@ -8167,7 +8167,7 @@ function renderDetColab(id){
     pagoBtn=`<button class="btn btn-sm" onclick="desmarcarPago('${id}')" style="color:var(--text2);width:100%;margin-top:.75rem">Desmarcar pago</button>`;
   } else if(tieneMora){
     // Cuota del mes en curso DESHABILITADA mientras haya mora pendiente
-    pagoBtn=`<div style="margin-top:.75rem;background:var(--surface);border:2px dashed #cbd5e1;border-radius:var(--r);padding:14px;text-align:center;color:#94a3b8">
+    pagoBtn=`<div style="margin-top:.75rem;background:#132019;border:2px dashed #cbd5e1;border-radius:var(--r);padding:14px;text-align:center;color:#94a3b8">
       <div style="font-size:13px;font-weight:700">Cuota ${mesEnCurso} — ${cur}${fmtPeso(c.monto)}</div>
       <div style="font-size:12px;margin-top:4px">⛔ Pagá las cuotas anteriores primero</div>
     </div>`;
@@ -8175,7 +8175,7 @@ function renderDetColab(id){
     // Sin mora histórica pero sí interés del mes en curso
     const cid='mora-colab-'+id;
     pagoBtn='<div style="margin-top:.75rem">'
-      +'<button id="'+cid+'-btn" data-mid="'+id+'" data-cuota="'+c.monto+'" data-interes="'+_mora.interes+'" data-cid="'+cid+'" data-cur="'+cur+'" onclick="toggleVerPrecioColab(this)" style="width:100%;background:var(--acc);color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">👁 Ver precio</button>'
+      +'<button id="'+cid+'-btn" data-mid="'+id+'" data-cuota="'+c.monto+'" data-interes="'+_mora.interes+'" data-cid="'+cid+'" data-cur="'+cur+'" onclick="toggleVerPrecioColab(this)" style="width:100%;background:var(--acc);color:#071510;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">👁 Ver precio</button>'
       +'<div id="'+cid+'-extra" style="display:none">'
       +'<button onclick="colabToggleAdelanto(\''+id+'\')" style="width:100%;margin-bottom:6px;padding:5px;font-size:12px;background:none;border:1.5px solid #7dd3fc;color:#0369a1;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantar cuotas</button>'
       +'<div id="adelanto-selector-'+id+'" style="display:none"></div>'
@@ -8184,8 +8184,8 @@ function renderDetColab(id){
       +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'
       +'<div style="display:flex;gap:6px;margin-bottom:8px">'
       +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="auto" data-cid="'+cid+'" data-cuota="'+c.monto+'" data-autopct="'+_mora.pct+'" data-autoint="'+_mora.interes+'" onchange="updateMoraColab(this)"> ⚡ Auto ('+_mora.pct+'%)</label>'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateMoraColab(this)"> % Porcentaje</label>'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateMoraColab(this)"> $ Monto</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#132019;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateMoraColab(this)"> % Porcentaje</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:#132019;border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateMoraColab(this)"> $ Monto</label>'
       +'</div>'
       +'<input id="'+cid+'-val" type="number" placeholder="Ingresá el valor..." data-cid="'+cid+'" data-cuota="'+c.monto+'" oninput="updateMoraColab(this)" style="width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
       +'<button data-mid="'+id+'" data-cuota="'+c.monto+'" data-cid="'+cid+'" onclick="confirmarMoraManualColab(this)" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'
@@ -8193,13 +8193,13 @@ function renderDetColab(id){
       +'</div>'
       +'</div>';
   } else if(esPrimeraCuotaFutura(c)){
-    pagoBtn=`<div style="background:var(--surface);border:1.5px solid #e2e8f0;border-radius:var(--r);padding:10px 14px;margin-top:.5rem;text-align:center">
+    pagoBtn=`<div style="background:#132019;border:1.5px solid #e2e8f0;border-radius:var(--r);padding:10px 14px;margin-top:.5rem;text-align:center">
       <div style="font-size:13px;font-weight:700;color:#64748b">🗓 Primera cuota en ${nombreMesPrimeraCuota(c)}</div>
       <div style="font-size:11px;color:#94a3b8;margin-top:3px">Disponible para cobrar desde ${nombreMesPrimeraCuota(c)}</div>
     </div>`;
   } else {
     pagoBtn=`<div id="colab-accion-${id}">
-      <button onclick="colabVerCuota('${id}')" style="width:100%;margin-top:.5rem;padding:10px;font-size:14px;font-weight:700;background:var(--acc);color:#fff;border:none;border-radius:var(--r);cursor:pointer">👁 Ver cuota</button>
+      <button onclick="colabVerCuota('${id}')" style="width:100%;margin-top:.5rem;padding:10px;font-size:14px;font-weight:700;background:var(--acc);color:#071510;border:none;border-radius:var(--r);cursor:pointer">👁 Ver cuota</button>
     </div>`;
   }
 
@@ -8207,7 +8207,7 @@ function renderDetColab(id){
 
   document.getElementById('colab-det-content').innerHTML=`
     <div class="det-card">
-      <div class="det-lote">${loteTag}${c.moneda==='USD'?'<span style="font-size:12px;background:#dcfce7;color:#16a34a;border:1px solid #86efac;padding:2px 8px;border-radius:6px;margin-left:8px;font-weight:700">💵 USD</span>':''}</div>
+      <div class="det-lote">${loteTag}${c.moneda==='USD'?'<span style="font-size:12px;background:#1a3a4a;color:#7ab5d0;border:1px solid #3a6a8a;padding:2px 8px;border-radius:6px;margin-left:8px;font-weight:700">💵 USD</span>':''}</div>
       <div class="det-name">${c.titular}</div>
 
       ${(!c.pago&&!tieneMora&&_mora.interes>0)?`
@@ -8216,7 +8216,7 @@ function renderDetColab(id){
           <div style="font-size:36px;font-weight:800;color:#fff;filter:blur(8px);user-select:none">${cur}${fmtPeso(c.monto+_mora.interes)}</div>
           <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:4px">Apretar Ver precio para desbloquear</div>
         </div>
-        <div id="mora-colab-${id}-desglose" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin:.25rem 0">
+        <div id="mora-colab-${id}-desglose" style="display:none;background:#132019;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin:.25rem 0">
           <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 1rem;border-bottom:1px solid var(--border)">
             <span style="font-size:14px;color:var(--text2)">Cuota ${mesEnCurso}</span>
             <span style="font-size:16px;font-weight:700">${cur}${fmtPeso(c.monto)}</span>
@@ -8601,7 +8601,7 @@ function gestionGuardar(){
     <div id="gp-lotes" style="display:flex;flex-wrap:wrap;gap:8px;min-height:48px;margin-bottom:1rem"></div>
 
     <!-- Guardar -->
-    <button onclick="gestionGuardar()" style="width:100%;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Guardar cambios</button>
+    <button onclick="gestionGuardar()" style="width:100%;padding:10px;background:var(--acc);color:#071510;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Guardar cambios</button>
     <div id="gp-msg" style="text-align:center;font-size:13px;color:#16a34a;margin-top:8px;min-height:20px"></div>
   </div>
 </div>
