@@ -4617,10 +4617,12 @@ function mostrarAdminDet(id){
         sidebar.style.flexShrink='0';
         sidebar.style.alignSelf='flex-start';
       }
-      // Achicar panel
+      // Achicar panel — dejar margen para el sidebar absoluto
+      const sidebarW2=sidebar?Math.ceil(sidebar.getBoundingClientRect().width)+68:240;
       panelEl.style.width='420px';
       panelEl.style.maxWidth='420px';
-      panelEl.style.margin='0';
+      panelEl.style.marginLeft=sidebarW2+'px';
+      panelEl.style.marginRight='0';
       // Esperar un tick para que el layout se actualice
       requestAnimationFrame(()=>{
         const pr=panelEl.getBoundingClientRect();
@@ -4673,6 +4675,8 @@ function cerrarAdminDet(){
     panelElR.style.width='1000px';
     panelElR.style.maxWidth='1000px';
     panelElR.style.margin='0 auto';
+    panelElR.style.marginLeft='';
+    panelElR.style.marginRight='';
   }
 
   // Reset list panel
