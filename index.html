@@ -4628,12 +4628,15 @@ function mostrarAdminDet(id){
       // Esperar un tick para que el layout se actualice
       requestAnimationFrame(()=>{
         const pr=panelEl.getBoundingClientRect();
+        const sb=document.getElementById('admin-sidebar');
+        const sbRight=sb?sb.getBoundingClientRect().right:0;
+        const leftPos=Math.max(pr.right, sbRight);
         const tabTop=document.querySelector('.tabs-nav')?.getBoundingClientRect().bottom||54;
         det.style.display='block';
         det.style.position='fixed';
         det.style.top=tabTop+'px';
-        det.style.left=pr.right+'px';
-        det.style.width=(window.innerWidth-pr.right)+'px';
+        det.style.left=leftPos+'px';
+        det.style.width=(window.innerWidth-leftPos)+'px';
         det.style.bottom='0';
         det.style.overflowY='auto';
         det.style.zIndex='50';
