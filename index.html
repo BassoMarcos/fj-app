@@ -7,7 +7,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0d1a16;--surface:#132019;--border:#1f3529;--border2:#2a4a38;
+  --bg:#0a1512;--surface:#162b1f;--border:#1f3529;--border2:#2a4a38;
   --text:#e8f0ec;--text2:#8aaa99;--text3:#506860;
   --blue:#7ab5d0;--blue-bg:#1a3a4a;--blue-border:#3a6a8a;
   --green:#4caf82;--green-bg:#0f2e1a;--green-border:#1a4a2a;
@@ -15,7 +15,7 @@
   --amber:#e09040;--amber-bg:#2d1e08;--amber-border:#4a3010;
   --brand:#4F8F75;--brand-light:#1a2d24;
   --r:8px;--rlg:14px;
-  --card:#1a2d24;--hov:#1f3529;
+  --card:#1e3528;--hov:#253f30;
   --acc:#4F8F75;--acc2:#5DCAA5;--acc3:#9FC3B2;
   --blu-bg:#1a3a4a;--blu:#7ab5d0;--blu2:#5a9abf;
 }
@@ -6734,7 +6734,7 @@ function renderAdminTable(){
   el.innerHTML=data.map(c=>{
     const isUSD=c.moneda==='USD';
     const isAgr=c.agrimensor===true;
-    const rowBg=c.est==='finalizado'?'background:#162820;':isAgr?'background:#0f2a1f;':isUSD?'background:#0d2a1a;':'';
+    const rowBg=c.est==='finalizado'?'background:#1a3528;':isAgr?'background:#1a3528;':isUSD?'background:#0d2a1a;':'';
     const saldoColor=c.saldo===0?'#94a3b8':c.saldo>0?'#4caf82':'#e05050';
     const saldoLabel=c.saldo===0?'—':c.saldo>0?'+'+fmtPeso(c.saldo):'-'+fmtPeso(Math.abs(c.saldo));
     const hist3=(c.hist||[]).slice(-3).reverse();
