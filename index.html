@@ -4617,10 +4617,11 @@ function mostrarAdminDet(id){
         sidebar.style.flexShrink='0';
         sidebar.style.alignSelf='flex-start';
       }
-      // Achicar panel — dejar margen para el sidebar absoluto
-      const sidebarW2=sidebar?Math.ceil(sidebar.getBoundingClientRect().width)+68:240;
-      panelEl.style.width='420px';
-      panelEl.style.maxWidth='420px';
+      // Panel lista = 40% de la ventana, pegado al sidebar
+      const sidebarW2=sidebar?Math.ceil(sidebar.getBoundingClientRect().right):Math.round(window.innerWidth*0.16);
+      const panelW=Math.round(window.innerWidth*0.40);
+      panelEl.style.width=panelW+'px';
+      panelEl.style.maxWidth=panelW+'px';
       panelEl.style.marginLeft=sidebarW2+'px';
       panelEl.style.marginRight='0';
       // Esperar un tick para que el layout se actualice
