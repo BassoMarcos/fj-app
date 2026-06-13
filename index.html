@@ -4676,11 +4676,8 @@ function cerrarAdminDet(){
   // Restore panel central — puede estar en 480px o 1000px
   const panelElR=document.getElementById('admin-panel-wrap');
   if(panelElR){
-    panelElR.style.width='1000px';
-    panelElR.style.maxWidth='1000px';
-    panelElR.style.margin='0 auto';
-    panelElR.style.marginLeft='';
-    panelElR.style.marginRight='';
+    panelElR.removeAttribute('style');
+    panelElR.style.cssText='width:1000px;max-width:1000px;margin:0 auto;min-width:0;display:flex;border:1px solid var(--border);border-radius:var(--rlg);background:var(--surface);overflow:hidden;min-height:0;flex-shrink:0;flex-grow:0';
   }
 
   // Reset list panel
