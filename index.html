@@ -437,10 +437,10 @@ tr:hover td{background:var(--bg)}
       </div>
 
       <!-- DESKTOP layout (oculto en móvil) -->
-      <div id="admin-desktop-layout" style="display:flex;flex:1;padding:0.5rem 0;width:100%;box-sizing:border-box;overflow:visible;min-height:calc(100vh - 120px);align-items:flex-start;gap:0">
+      <div id="admin-desktop-layout" style="display:flex;flex:1;padding:0.5rem 0;width:100%;box-sizing:border-box;position:relative;overflow:visible;min-height:calc(100vh - 120px);align-items:flex-start">
 
         <!-- Sidebar: espacio gris izquierdo -->
-        <div id="admin-sidebar" style="position:sticky;top:0.5rem;width:220px;flex-shrink:0;display:flex;flex-direction:column;gap:4px;padding:0 8px 0 0;align-items:stretch;align-self:flex-start">
+        <div id="admin-sidebar" style="position:absolute;top:0.5rem;left:0;right:calc(50% + 500px);display:flex;flex-direction:column;gap:4px;padding:0 34px;align-items:stretch">
           <button class="btn btn-primary btn-sm" onclick="openAddModal()" style="width:100%;padding:5px;font-size:11px;font-weight:700">+ Nuevo</button>
           <button class="btn btn-sm" onclick="abrirGestionPagos()" style="width:100%;padding:5px;font-size:11px;font-weight:600;background:#f0fdf4;border-color:#86efac;color:#16a34a">✓ Pagos</button>
           <button id="btn-mora-toggle-desk" onclick="toggleMoraDesactivada()" style="width:100%;padding:5px;font-size:11px;font-weight:600;border-radius:var(--r);cursor:pointer;border:1px solid #fde68a;background:#fffbeb;color:#b45309">⚡ Mora activa</button>
@@ -467,7 +467,7 @@ tr:hover td{background:var(--bg)}
         </div>
 
         <!-- Lista + tarjeta desktop -->
-        <div style="flex:1;min-width:0;display:flex;border:1px solid var(--border);border-radius:var(--rlg);background:var(--surface);overflow:hidden;min-height:0;flex-shrink:1;flex-grow:1">
+        <div style="width:1000px;max-width:1000px;margin:0 auto;min-width:0;display:flex;border:1px solid var(--border);border-radius:var(--rlg);background:var(--surface);overflow:hidden;min-height:0;flex-shrink:0;flex-grow:0">
           <div id="admin-list-panel" style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
             <div class="table-wrap" id="admin-table-wrap" style="border:none;border-radius:0;flex:1;overflow-y:auto;overflow-x:hidden;min-height:0"></div>
             <div class="table-foot" id="a-count" style="flex-shrink:0;padding:6px 12px;font-size:12px;color:var(--text2);border-top:1px solid var(--border)"></div>
@@ -4622,11 +4622,12 @@ function mostrarAdminDet(id){
     if(panelEl){
       const sidebar=document.getElementById('admin-sidebar');
       const sidebarW=sidebar?sidebar.getBoundingClientRect().width:220;
-      // Panel lista = 40% de la ventana
+      // Panel lista = 40% de la ventana, pegado al sidebar
+      const sidebarW2=sidebar?Math.ceil(sidebar.getBoundingClientRect().right):Math.round(window.innerWidth*0.16);
       const panelW=Math.round(window.innerWidth*0.40);
       panelEl.style.width=panelW+'px';
       panelEl.style.maxWidth=panelW+'px';
-      panelEl.style.marginLeft='';
+      panelEl.style.marginLeft=sidebarW2+'px';
       panelEl.style.marginRight='0';
       // Esperar un tick para que el layout se actualice
       requestAnimationFrame(()=>{
@@ -4676,12 +4677,12 @@ function cerrarAdminDet(){
   const panelElR=listPanel.querySelector('[style*="px"]')
     ||document.querySelector('#admin-desktop-layout>div:nth-child(2)');
   if(panelElR){
-    panelElR.style.width='';
-    panelElR.style.maxWidth='';
-    panelElR.style.margin='';
+    panelElR.style.width='1000px';
+    panelElR.style.maxWidth='1000px';
+    panelElR.style.margin='0 auto';
     panelElR.style.marginLeft='';
     panelElR.style.marginRight='';
-    panelElR.style.flex='1';
+    panelElR.style.flex='';
   }
 
   // Reset list panel
