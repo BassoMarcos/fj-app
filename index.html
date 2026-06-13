@@ -4622,12 +4622,11 @@ function mostrarAdminDet(id){
     if(panelEl){
       const sidebar=document.getElementById('admin-sidebar');
       const sidebarW=sidebar?sidebar.getBoundingClientRect().width:220;
-      // Panel lista = 40% de la ventana, pegado al sidebar
-      const sidebarW2=sidebar?Math.ceil(sidebar.getBoundingClientRect().right):Math.round(window.innerWidth*0.16);
+      // Panel lista = 40% de la ventana
       const panelW=Math.round(window.innerWidth*0.40);
       panelEl.style.width=panelW+'px';
       panelEl.style.maxWidth=panelW+'px';
-      panelEl.style.marginLeft=sidebarW2+'px';
+      panelEl.style.marginLeft='';
       panelEl.style.marginRight='0';
       // Esperar un tick para que el layout se actualice
       requestAnimationFrame(()=>{
