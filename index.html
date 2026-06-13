@@ -19,6 +19,12 @@
   --acc:#4F8F75;--acc2:#5DCAA5;--acc3:#9FC3B2;
   --blu-bg:#1a3a4a;--blu:#7ab5d0;--blu2:#5a9abf;
 }
+#theme-panel{display:none;position:fixed;top:52px;right:12px;z-index:9999;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:14px;box-shadow:0 8px 32px rgba(0,0,0,.5);width:240px;}
+#theme-panel.open{display:block;}
+#theme-panel h3{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+.theme-opt{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;cursor:pointer;border:none;width:100%;text-align:left;background:transparent;color:var(--text);font-size:12px;font-weight:500;margin-bottom:2px;}
+.theme-opt:hover,.theme-opt.active{background:var(--hov);}
+.theme-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:1.5px solid rgba(255,255,255,.2);}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
 /* ---- PAGE ROUTER ---- */
@@ -383,6 +389,7 @@ tr:hover td{background:var(--bg)}
     <div class="topbar-title" id="admin-topbar-title">F&amp;J — Administración</div>
     <div class="topbar-right">
       <div class="role-pill">Administrador</div>
+      <button onclick="toggleThemePanel()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);padding:4px 10px;border-radius:6px;font-size:13px;cursor:pointer;margin-right:4px" title="Cambiar tema">🎨</button>
       <button class="logout-btn" onclick="doLogout()">Salir</button>
     </div>
   </div>
@@ -8613,5 +8620,130 @@ function gestionGuardar(){
     <div id="vc-modal-content"></div>
   </div>
 </div>
+<!-- THEME PANEL -->
+<div id="theme-panel">
+  <h3>🎨 Elegir tema</h3>
+</div>
+
+<script>
+const FJ_THEMES = [
+  {id:'gris-oscuro', name:'Gris oscuro', dot:'#888888',
+    bg:'#222222',surf:'#2d2d2d',card:'#363636',hov:'#404040',bor:'#444444',bor2:'#4e4e4e',
+    txt:'#e8e8e8',txt2:'#aaaaaa',txt3:'#666666',
+    acc:'#4F8F75',acc2:'#5DCAA5',acc3:'#9FC3B2',
+    blu:'#1a3a4a',bluTxt:'#7ab5d0',nav:'#1a1a1a'},
+  {id:'verde-bosque', name:'Verde bosque', dot:'#4F8F75',
+    bg:'#0d1a16',surf:'#132019',card:'#1a2d24',hov:'#1f3529',bor:'#1f3529',bor2:'#2a4a38',
+    txt:'#e8f0ec',txt2:'#8aaa99',txt3:'#506860',
+    acc:'#4F8F75',acc2:'#5DCAA5',acc3:'#9FC3B2',
+    blu:'#1a3a4a',bluTxt:'#7ab5d0',nav:'#0a1510'},
+  {id:'azul-marino', name:'Azul marino', dot:'#378ADD',
+    bg:'#0d1520',surf:'#101d2e',card:'#152436',hov:'#1a2d42',bor:'#1f3650',bor2:'#243d5e',
+    txt:'#e4edf5',txt2:'#7a9ab5',txt3:'#3d5a72',
+    acc:'#378ADD',acc2:'#85B7EB',acc3:'#b5d4f4',
+    blu:'#0c2a4a',bluTxt:'#85B7EB',nav:'#090f1a'},
+  {id:'marron-cuero', name:'Marrón cuero', dot:'#a0785a',
+    bg:'#1a1208',surf:'#251a0e',card:'#2e2010',hov:'#3a2a15',bor:'#4a3820',bor2:'#5a4828',
+    txt:'#f0e8d8',txt2:'#c0a880',txt3:'#806840',
+    acc:'#8B6040',acc2:'#d4a870',acc3:'#e8c898',
+    blu:'#3a2a15',bluTxt:'#d4a870',nav:'#120d05'},
+  {id:'oliva-crema', name:'Oliva & crema', dot:'#7a8c4a',
+    bg:'#1a1e10',surf:'#22280e',card:'#2a3214',hov:'#343e1a',bor:'#404e20',bor2:'#4e5e28',
+    txt:'#f0ecd8',txt2:'#b0b880',txt3:'#707840',
+    acc:'#5a6e30',acc2:'#c8d870',acc3:'#d8e8a0',
+    blu:'#2a3214',bluTxt:'#a8c050',nav:'#141810'},
+  {id:'blanco-gris', name:'Blanco & gris', dot:'#555555',
+    bg:'#f5f5f5',surf:'#ffffff',card:'#ffffff',hov:'#f0f0f0',bor:'#e0e0e0',bor2:'#cccccc',
+    txt:'#1a1a1a',txt2:'#555555',txt3:'#999999',
+    acc:'#1a56db',acc2:'#1a56db',acc3:'#3b82f6',
+    blu:'#dbeafe',bluTxt:'#1e40af',nav:'#1a56db'},
+  {id:'pizarra-azul', name:'Pizarra azul', dot:'#6a8aaa',
+    bg:'#151c25',surf:'#1c2535',card:'#222e40',hov:'#2a3850',bor:'#2e3e54',bor2:'#3a4e68',
+    txt:'#d8e4f0',txt2:'#8090a8',txt3:'#506070',
+    acc:'#2e4a6a',acc2:'#90b8e0',acc3:'#b0d0f0',
+    blu:'#1a2e45',bluTxt:'#70a0c8',nav:'#0f1620'},
+  {id:'vino-tinto', name:'Vino tinto', dot:'#8B2252',
+    bg:'#1a0812',surf:'#250e1a',card:'#30121f',hov:'#3d1828',bor:'#4a2030',bor2:'#5a2840',
+    txt:'#f0d8e4',txt2:'#c080a0',txt3:'#804060',
+    acc:'#6B1840',acc2:'#f0a0c0',acc3:'#f8c0d8',
+    blu:'#3d1828',bluTxt:'#d070a0',nav:'#120508'},
+  {id:'arena-desierto', name:'Arena desierto', dot:'#c8823a',
+    bg:'#1e1508',surf:'#28200e',card:'#332a14',hov:'#3e331a',bor:'#504020',bor2:'#604e28',
+    txt:'#f0e4c8',txt2:'#c0a070',txt3:'#806040',
+    acc:'#a06030',acc2:'#d09050',acc3:'#e8b878',
+    blu:'#3e2a0a',bluTxt:'#d09050',nav:'#150e04'},
+  {id:'noche-purpura', name:'Noche púrpura', dot:'#7a50c8',
+    bg:'#120d1e',surf:'#1a1228',card:'#221830',hov:'#2a2038',bor:'#382848',bor2:'#483858',
+    txt:'#e8d8f8',txt2:'#a080c8',txt3:'#604888',
+    acc:'#4a2880',acc2:'#c0a0f0',acc3:'#d8c0ff',
+    blu:'#2a1848',bluTxt:'#9070d0',nav:'#0c0818'},
+];
+
+function toggleThemePanel(){
+  const p=document.getElementById('theme-panel');
+  p.classList.toggle('open');
+}
+
+function applyFjTheme(t){
+  const r=document.documentElement.style;
+  r.setProperty('--bg', t.bg);
+  r.setProperty('--surface', t.surf);
+  r.setProperty('--card', t.card);
+  r.setProperty('--hov', t.hov);
+  r.setProperty('--border', t.bor);
+  r.setProperty('--border2', t.bor2);
+  r.setProperty('--text', t.txt);
+  r.setProperty('--text2', t.txt2);
+  r.setProperty('--text3', t.txt3);
+  r.setProperty('--brand', t.acc);
+  r.setProperty('--acc', t.acc);
+  r.setProperty('--acc2', t.acc2);
+  r.setProperty('--acc3', t.acc3);
+  r.setProperty('--blu-bg', t.blu);
+  r.setProperty('--blu', t.bluTxt);
+  r.setProperty('--blu2', t.bluTxt);
+  r.setProperty('--blue-bg', t.blu);
+  r.setProperty('--blue', t.bluTxt);
+  r.setProperty('--blue-border', t.bluTxt+'88');
+  // Navbar
+  const nb=document.querySelector('.topbar')||document.querySelector('.navbar');
+  if(nb) nb.style.background=t.nav;
+  document.body.style.background=t.bg;
+  document.body.style.color=t.txt;
+  // Save
+  localStorage.setItem('fj_theme', t.id);
+  // Update active
+  document.querySelectorAll('.theme-opt').forEach(el=>el.classList.toggle('active', el.dataset.id===t.id));
+  // Re-render current tab
+  try{ if(window._adminTabActiva) adminTab(window._adminTabActiva); }catch(e){}
+  // Close panel
+  document.getElementById('theme-panel').classList.remove('open');
+}
+
+// Build panel options
+(function(){
+  const panel=document.getElementById('theme-panel');
+  FJ_THEMES.forEach(t=>{
+    const btn=document.createElement('button');
+    btn.className='theme-opt';
+    btn.dataset.id=t.id;
+    btn.innerHTML=`<span class="theme-dot" style="background:${t.dot}"></span>${t.name}`;
+    btn.onclick=()=>applyFjTheme(t);
+    panel.appendChild(btn);
+  });
+  // Close panel clicking outside
+  document.addEventListener('click', e=>{
+    if(!e.target.closest('#theme-panel')&&!e.target.closest('[onclick*="toggleThemePanel"]')){
+      document.getElementById('theme-panel').classList.remove('open');
+    }
+  });
+  // Restore saved theme
+  const saved=localStorage.getItem('fj_theme');
+  if(saved){
+    const t=FJ_THEMES.find(x=>x.id===saved);
+    if(t) setTimeout(()=>applyFjTheme(t), 300);
+  }
+})();
+</script>
 </body>
 </html>
