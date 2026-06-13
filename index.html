@@ -154,7 +154,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}
 th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);background:var(--bg);white-space:nowrap}
 td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:#fafaf8}
+tr:hover td{background:var(--hov)}
 .lote-tag{font-weight:800;font-size:13px;color:var(--acc2);letter-spacing:.02em}
 .titular-name{font-weight:600;font-size:14px}
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
@@ -416,7 +416,7 @@ tr:hover td{background:var(--bg)}
         <div class="cob-wrap">
           <div class="toolbar" style="flex-wrap:wrap;gap:8px;margin-bottom:0">
             <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Nuevo</button>
-            <button class="btn btn-sm" onclick="abrirGestionPagos()" style="padding:5px 8px;font-size:11px;font-weight:600;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);color:var(--green);border-radius:var(--r);cursor:pointer">✓ Pagos</button>
+            <button class="btn btn-sm" onclick="abrirGestionPagos()" style="padding:5px 8px;font-size:11px;font-weight:600;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;color:var(--green);border-radius:var(--r);cursor:pointer">✓ Pagos</button>
             <button id="btn-mora-toggle" onclick="toggleMoraDesactivada()" style="padding:5px 8px;font-size:11px;font-weight:600;border-radius:var(--r);cursor:pointer;border:1px solid var(--amber-border);background:var(--amber-bg);color:var(--amber)">⚡ Mora activa</button>
             <div class="search-wrap" style="flex:1;min-width:200px"><span class="search-icon">&#128269;</span><input type="text" id="a-search" placeholder="Buscar nombre, manzana, lote..." oninput="renderAdminTable()"></div>
             <select class="fsel" id="a-etapa" onchange="initAdminMzFilter();renderAdminTable()"><option value="">Etapa</option></select>
@@ -1552,7 +1552,7 @@ function renderTarjetaCliente(id, containerId){
   const proximoInc=getProximoIncrementoHtml(c.tri);
 
   const montoHtml=c.pago
-    ?`<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:var(--r);padding:1rem;text-align:center;margin:.5rem 0">
+    ?`<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:var(--r);padding:1rem;text-align:center;margin:.5rem 0">
         <div style="font-size:28px">✅</div>
         <div style="font-weight:700;color:var(--green);font-size:16px">Cuota ${mes} — Ya pagó</div>
       </div>`
@@ -2620,7 +2620,7 @@ function mostrarVCModal(id){
   html+='<div style="font-size:22px;font-weight:800;margin-bottom:12px">'+c.titular+'</div>';
 
   if(c.pago){
-    html+='<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:10px;padding:1rem;text-align:center;margin-bottom:12px">';
+    html+='<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:10px;padding:1rem;text-align:center;margin-bottom:12px">';
     html+='<div style="font-size:32px">✅</div>';
     html+='<div style="font-weight:700;color:var(--green);font-size:16px;margin-top:6px">Cuota '+mes+' — Ya pagó</div>';
     html+='</div>';
@@ -2977,7 +2977,7 @@ function mamSeleccionarMesManual(clienteId, mesNombre, monto, cuota){
     '<input type="checkbox" id="mam-revertir" checked style="width:16px;height:16px">'+
     '<span>Revertir cobro del historial y balances</span>'+
     '</label>'+
-    '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:var(--r);margin-bottom:8px">'+
+    '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:var(--r);margin-bottom:8px">'+
     '<input type="checkbox" id="mam-avanzar-ca" checked style="width:16px;height:16px">'+
     '<span>Avanzar cuota al número correcto (ca +1)</span>'+
     '</label>'+
@@ -3622,7 +3622,7 @@ function renderBalances(seccion){
         <div style="display:inline-flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:7px 12px;position:relative">
           <div id="dist-toast" style="position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%);background:var(--green-bg);color:var(--green);font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;border:1px solid var(--green-border);opacity:0;transition:opacity .3s;white-space:nowrap;pointer-events:none">✓ Guardado</div>
           <span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Distribución</span>
-          <div id="dist-pill-a" style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:6px;padding:4px 12px;font-size:13px;font-weight:500;color:var(--green)">${dp}%</div>
+          <div id="dist-pill-a" style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:4px 12px;font-size:13px;font-weight:500;color:var(--green)">${dp}%</div>
           <div id="dist-pill-b" style="background:var(--red-bg);border:1px solid #fca5a5;border-radius:6px;padding:4px 12px;font-size:13px;font-weight:500;color:var(--red)">${100-dp}%</div>
           <input type="number" id="dist-pct-input" value="${dp}" min="1" max="99" step="1"
             style="width:48px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:500;text-align:center"
@@ -3639,7 +3639,7 @@ function renderBalances(seccion){
               <div style="font-size:13px;color:var(--text2)">${abierto.length} pago${abierto.length!==1?'s':''} sin cerrar</div>
             </div>
             <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-              <div style="font-size:20px;font-weight:800;color:#856404">${fmtPeso(totalAbierto)}</div>
+              <div style="font-size:20px;font-weight:800;color:var(--amber)">${fmtPeso(totalAbierto)}</div>
               <div style="display:flex;align-items:center;gap:8px">
                 ${abierto.length?`<button onclick="event.stopPropagation();resetCajaAbierta()" style="background:var(--amber-bg);border:1px solid var(--amber-border);color:var(--amber);padding:3px 8px;border-radius:var(--r);font-size:11px;cursor:pointer">🗑 Limpiar</button>`:''}
                 <div style="font-size:12px;color:var(--text2)">›</div>
@@ -3769,7 +3769,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
           <div style="font-size:14px;font-weight:700;color:var(--green)">💵 USD</div>
           <div style="font-size:15px;font-weight:800;color:var(--green)">USD ${fmtPeso(totalU)}</div>
         </div>
-        <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:var(--r);padding:1rem">
+        <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:var(--r);padding:1rem">
           ${renderPagos(abUSD)}
           ${abUSD.length?`<div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px;padding-top:10px;color:var(--green)"><span>Total USD</span><span>USD ${fmtPeso(totalU)}</span></div>`:''}
         </div>
@@ -3804,7 +3804,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
           <div style="font-weight:700">${isUSD?'USD ':''} ${fmtPeso(t)}</div>
         </div>
         <div style="display:flex;gap:4px;margin-top:3px;align-items:center;flex-wrap:wrap">
-          <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:4px;padding:2px 8px;display:flex;gap:6px;align-items:center">
+          <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:4px;padding:2px 8px;display:flex;gap:6px;align-items:center">
             <span style="font-size:10px;font-weight:700;color:var(--green)">${dp}%</span>
             <span style="font-size:11px;font-weight:600;color:var(--green)">${isUSD?'USD ':''} ${fmtPeso(pA)}</span>
           </div>
@@ -3843,7 +3843,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         </div>
         ${cierresPesos.length?`<div style="display:flex;gap:6px;align-items:center;padding:6px 0 2px">
           <span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Distribución total</span>
-          <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:4px;padding:3px 10px;display:flex;gap:6px;align-items:center">
+          <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:4px;padding:3px 10px;display:flex;gap:6px;align-items:center">
             <span style="font-size:10px;font-weight:700;color:var(--green)">${dp}%</span>
             <span style="font-size:12px;font-weight:700;color:var(--green)">${pct(sumPesos,dp)}</span>
           </div>
@@ -3857,7 +3857,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       <!-- CIERRES USD -->
       <div>
         <div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:8px">💵 CIERRES EN USD</div>
-        <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:var(--r);padding:1rem;margin-bottom:8px">
+        <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:var(--r);padding:1rem;margin-bottom:8px">
           ${renderCierreList(cierresUSD,cierresPesos.length)}
           ${cierresUSD.length?`<div style="display:flex;justify-content:space-between;font-weight:800;font-size:15px;padding-top:10px;color:var(--green)">
             <span>Total USD</span><span>USD ${fmtPeso(sumUSD)}</span>
@@ -3865,7 +3865,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         </div>
         ${cierresUSD.length?`<div style="display:flex;gap:6px;align-items:center;padding:6px 0 2px">
           <span style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Distribución total USD</span>
-          <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:4px;padding:3px 10px;display:flex;gap:6px;align-items:center">
+          <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:4px;padding:3px 10px;display:flex;gap:6px;align-items:center">
             <span style="font-size:10px;font-weight:700;color:var(--green)">${dp}%</span>
             <span style="font-size:12px;font-weight:700;color:var(--green)">USD ${pct(sumUSD,dp)}</span>
           </div>
@@ -3909,7 +3909,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
     moraHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">';
     moraHtml+='<div style="font-size:17px;font-weight:700">⚠️ Caja de Mora</div>';
     moraHtml+='<div style="display:flex;gap:8px;align-items:center">';
-    moraHtml+=cf?'<span style="font-size:11px;color:var(--text2)">Cierre final: '+cf.fecha+' '+cf.hora+'</span>':'<span style="font-size:11px;color:#856404">Sin cierre final</span>';
+    moraHtml+=cf?'<span style="font-size:11px;color:var(--text2)">Cierre final: '+cf.fecha+' '+cf.hora+'</span>':'<span style="font-size:11px;color:var(--amber)">Sin cierre final</span>';
     moraHtml+='<button onclick="toggleMoraCajaEtapas()" id="btn-mora-etapas" style="background:'+(window._moraCajaEtapas?'var(--brand)':'none')+';border:1.5px solid var(--border);border-radius:var(--r);padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;color:'+(window._moraCajaEtapas?'#fff':'var(--text2)')+'">⇄ Etapas</button>';
     moraHtml+=mora.length?'<button onclick="resetMora()" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar</button>':'';
     moraHtml+='</div></div>';
@@ -3917,7 +3917,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
     moraHtml+='<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px">PESOS</div>';
     moraHtml+='<div style="margin-bottom:4px">';
     moraHtml+='<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:.75rem;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.12),0 1px 3px rgba(0,0,0,0.08)"><div style="font-size:11px;color:var(--text2)">Total CP Mora</div><div style="font-weight:700">'+fmtPeso(totalCuotaP)+'</div><div style="display:flex;gap:6px;margin-top:8px"><div style="flex:1;background:var(--green-bg);border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:var(--green)">'+dp+'%</div><div style="font-size:12px;font-weight:800;color:var(--green)">'+fmtPeso(Math.round(totalCuotaP*dp/100))+'</div></div><div style="flex:1;background:var(--red-bg);border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:var(--red)">'+dp2+'%</div><div style="font-size:12px;font-weight:800;color:var(--red)">'+fmtPeso(Math.round(totalCuotaP*dp2/100))+'</div></div></div></div>';
-    moraHtml+='<div style="padding:4px 0"><span style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--green)">Intereses: '+fmtPeso(totalInteresP)+'</span></div>';
+    moraHtml+='<div style="padding:4px 0"><span style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--green)">Intereses: '+fmtPeso(totalInteresP)+'</span></div>';
     moraHtml+='</div>';
     if(window._moraCajaEtapas){
       // Vista split: izquierda acordeón, derecha totales 70/30
@@ -3967,7 +3967,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         moraHtml+='<div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:4px">TOTAL '+etapaActiva.toUpperCase()+'</div>';
         moraHtml+='<div style="font-size:16px;font-weight:800;color:var(--blue)">'+fmtPeso(totalEtapaP)+'</div>';
         moraHtml+='</div>';
-        moraHtml+='<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:8px;padding:12px;text-align:center">';
+        moraHtml+='<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:8px;padding:12px;text-align:center">';
         moraHtml+='<div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:2px">'+dp+'%</div>';
         moraHtml+='<div style="font-size:15px;font-weight:800;color:var(--green)">'+fmtPeso(Math.round(totalEtapaP*dp/100))+'</div>';
         moraHtml+='</div>';
@@ -3981,7 +3981,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         moraHtml+='<div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:4px">TOTAL USD '+etapaActiva.toUpperCase()+'</div>';
         moraHtml+='<div style="font-size:16px;font-weight:800;color:var(--green)">USD '+fmtPeso(totalEtapaU)+'</div>';
         moraHtml+='</div>';
-        moraHtml+='<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:8px;padding:12px;text-align:center">';
+        moraHtml+='<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:8px;padding:12px;text-align:center">';
         moraHtml+='<div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:2px">'+dp+'%</div>';
         moraHtml+='<div style="font-size:15px;font-weight:800;color:var(--green)">USD '+fmtPeso(Math.round(totalEtapaU*dp/100))+'</div>';
         moraHtml+='</div>';
@@ -3999,7 +3999,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
     if(usd.length){
       moraHtml+='<div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:6px">USD</div>';
       moraHtml+='<div style="margin-bottom:4px">';
-      moraHtml+='<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:var(--r);padding:.75rem;text-align:center"><div style="font-size:11px;color:var(--green)">Cuotas USD</div><div style="font-weight:700;color:var(--green)">USD '+fmtPeso(totalCuotaU)+'</div><div style="display:flex;gap:6px;margin-top:8px"><div style="flex:1;background:var(--green-bg);border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:var(--green)">'+dp+'%</div><div style="font-size:12px;font-weight:800;color:var(--green)">USD '+fmtPeso(Math.round(totalCuotaU*dp/100))+'</div></div><div style="flex:1;background:var(--red-bg);border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:var(--red)">'+dp2+'%</div><div style="font-size:12px;font-weight:800;color:var(--red)">USD '+fmtPeso(Math.round(totalCuotaU*dp2/100))+'</div></div></div></div>';
+      moraHtml+='<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:var(--r);padding:.75rem;text-align:center"><div style="font-size:11px;color:var(--green)">Cuotas USD</div><div style="font-weight:700;color:var(--green)">USD '+fmtPeso(totalCuotaU)+'</div><div style="display:flex;gap:6px;margin-top:8px"><div style="flex:1;background:var(--green-bg);border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:var(--green)">'+dp+'%</div><div style="font-size:12px;font-weight:800;color:var(--green)">USD '+fmtPeso(Math.round(totalCuotaU*dp/100))+'</div></div><div style="flex:1;background:var(--red-bg);border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:var(--red)">'+dp2+'%</div><div style="font-size:12px;font-weight:800;color:var(--red)">USD '+fmtPeso(Math.round(totalCuotaU*dp2/100))+'</div></div></div></div>';
       moraHtml+='<div style="background:none;border:none;padding:4px 8px;text-align:right"><span style="font-size:11px;color:var(--text2)">Intereses USD: </span><span style="font-size:11px;font-weight:600;color:var(--red)">USD '+fmtPeso(totalInteresU)+'</span></div>';
       moraHtml+='</div>';
       moraHtml+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem">'+renderMoraList(usd,true)+'</div>';
@@ -4072,7 +4072,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">'
       +'<div style="display:flex;align-items:center;gap:8px"><div style="font-size:17px;font-weight:700">💼 Gastos e Ingresos Extras</div><button onclick="toggleModoEdicionExtras()" id="btn-edit-extras" style="background:none;border:none;color:var(--bg);font-size:12px;cursor:pointer;padding:4px 6px">✏</button></div></div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1.25rem">'
-      +'<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:var(--r);padding:.875rem;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--green)">INGRESOS</div><div style="font-size:16px;font-weight:800;color:var(--green)">+'+fmtPeso(totalIng)+'</div><div style="font-size:11px;color:var(--text2)">'+ingresos.length+' reg.</div></div>'
+      +'<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:var(--r);padding:.875rem;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--green)">INGRESOS</div><div style="font-size:16px;font-weight:800;color:var(--green)">+'+fmtPeso(totalIng)+'</div><div style="font-size:11px;color:var(--text2)">'+ingresos.length+' reg.</div></div>'
       +'<div style="background:var(--red-bg);border:1px solid #fca5a5;border-radius:var(--r);padding:.875rem;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--red)">GASTOS</div><div style="font-size:16px;font-weight:800;color:var(--red)">-'+fmtPeso(totalGas)+'</div><div style="font-size:11px;color:var(--text2)">'+gastos.length+' reg.</div></div>'
       +'<div style="background:var(--surface);border:1px solid #c4b5fd;border-radius:var(--r);padding:.875rem;text-align:center"><div style="font-size:11px;font-weight:700;color:#4f46e5">NETO</div><div style="font-size:16px;font-weight:800;color:'+netoColor+'">'+netoStr+'</div></div>'
       +'</div>'
@@ -4132,7 +4132,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
           <div style="font-size:18px;font-weight:800">${fmtPeso(totalAgrP)}</div>
           <div style="font-size:11px;color:var(--text2)">${agrPesos.length} pago${agrPesos.length!==1?'s':''}</div>
         </div>
-        <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:var(--r);padding:.875rem">
+        <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:var(--r);padding:.875rem">
           <div style="font-size:11px;font-weight:700;color:var(--green)">💵 DÓLARES</div>
           <div style="font-size:18px;font-weight:800">USD ${totalAgrU}</div>
           <div style="font-size:11px;color:var(--text2)">${agrUSD.length} pago${agrUSD.length!==1?'s':''}</div>
@@ -4158,7 +4158,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
           ${agrPend.length?`<span style="background:var(--amber-bg);border:1px solid var(--amber-border);color:var(--amber);font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:8px">${agrPend.length} pendiente${agrPend.length>1?'s':''}</span>`:''}
         </div>
         <div style="padding:1rem">
-          ${agrPend.length?`<div style="font-size:12px;font-weight:700;color:#856404;margin-bottom:8px">⏳ Pendientes</div>
+          ${agrPend.length?`<div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:8px">⏳ Pendientes</div>
           ${agrPend.map(a=>{
             const gi=loadAdelantos().indexOf(a);
             return `<div style="background:var(--card);border:1px solid var(--border2);border-radius:var(--r);padding:12px;margin-bottom:8px">
@@ -4212,12 +4212,12 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         <button onclick="resetAdelantos()" style="background:var(--blue-bg);border:1px solid #93c5fd;color:var(--blue);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem">
-        <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:var(--r);padding:.875rem">
-          <div style="font-size:11px;font-weight:700;color:#856404">⏳ PENDIENTES</div>
+        <div style="background:var(--card);border:1px solid var(--amber-border);border-radius:var(--r);padding:.875rem">
+          <div style="font-size:11px;font-weight:700;color:var(--amber)">⏳ PENDIENTES</div>
           <div style="font-size:18px;font-weight:800">${fmtPeso(totalPendientes)}</div>
           <div style="font-size:11px;color:var(--text2)">${pendientes.length} adelanto${pendientes.length!==1?'s':''}</div>
         </div>
-        <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:var(--r);padding:.875rem">
+        <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:var(--r);padding:.875rem">
           <div style="font-size:11px;font-weight:700;color:var(--green)">✅ APROBADOS</div>
           <div style="font-size:18px;font-weight:800">${fmtPeso(totalAprobados)}</div>
           <div style="font-size:11px;color:var(--text2)">${aprobados.length} adelanto${aprobados.length!==1?'s':''}</div>
@@ -4225,7 +4225,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       </div>
       ${pendientes.length?`
       <div style="margin-bottom:1rem">
-        <div style="font-size:13px;font-weight:700;color:#856404;margin-bottom:8px">⏳ PENDIENTES DE APROBACIÓN</div>
+        <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:8px">⏳ PENDIENTES DE APROBACIÓN</div>
         ${pendientes.map(a=>{
           const gi=adelantos.indexOf(a);
           return `<div style="background:var(--card);border:1px solid var(--border2);border-radius:var(--r);padding:12px;margin-bottom:8px">
@@ -4896,7 +4896,7 @@ function renderStats(){
     html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-top:1.25rem">';
     html+='<div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text2)">AGRIMENSORES ('+agrimensores.length+')</div>';
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
-    html+='<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:var(--r);padding:.75rem;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--green)">PAGADOS</div><div style="font-size:24px;font-weight:800;color:var(--green)">'+agrPag+'</div></div>';
+    html+='<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:var(--r);padding:.75rem;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--green)">PAGADOS</div><div style="font-size:24px;font-weight:800;color:var(--green)">'+agrPag+'</div></div>';
     html+='<div style="background:var(--card);border:1px solid var(--border2);border-radius:var(--r);padding:.75rem;text-align:center"><div style="font-size:11px;font-weight:700;color:#d97706">PENDIENTES</div><div style="font-size:24px;font-weight:800;color:#d97706">'+agrPend+'</div></div>';
     html+='</div>';
     if(agrPend>0){
@@ -5072,7 +5072,7 @@ function renderAdminDet(id){
       +'<div id="'+cid+'-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
       +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'
       +'<div style="display:flex;gap:6px;margin-bottom:8px">'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="auto" data-cid="'+cid+'" data-cuota="'+c.monto+'" data-autopct="'+_mora.pct+'" data-autoint="'+_mora.interes+'" onchange="updateAdmMora(this)"> ⚡ Auto ('+_mora.pct+'%)</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="auto" data-cid="'+cid+'" data-cuota="'+c.monto+'" data-autopct="'+_mora.pct+'" data-autoint="'+_mora.interes+'" onchange="updateAdmMora(this)"> ⚡ Auto ('+_mora.pct+'%)</label>'
       +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateAdmMora(this)"> % Porcentaje</label>'
       +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateAdmMora(this)"> $ Monto</label>'
       +'</div>'
@@ -5523,7 +5523,7 @@ function cobrarTodoColab(clienteId){
     +'<div id="mora-adm-panel-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
     +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente (mora)</div>'
     +'<div style="display:flex;gap:6px;margin-bottom:8px">'
-    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanelTodo()"> ⚡ Auto</label>'
+    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanelTodo()"> ⚡ Auto</label>'
     +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanelTodo()"> % Porc.</label>'
     +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanelTodo()"> $ Monto</label>'
     +'</div>'
@@ -5630,7 +5630,7 @@ function cobrarTodoAdmin(clienteId){
     +'<div id="mora-adm-panel-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
     +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente (mora)</div>'
     +'<div style="display:flex;gap:6px;margin-bottom:8px">'
-    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanelTodo()" > ⚡ Auto</label>'
+    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanelTodo()" > ⚡ Auto</label>'
     +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanelTodo()"> % Porc.</label>'
     +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanelTodo()"> $ Monto</label>'
     +'</div>'
@@ -5726,7 +5726,7 @@ function cobrarAdmMora(clienteId){
     '<div id="mora-adm-panel-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'+
     '<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'+
     '<div style="display:flex;gap:6px;margin-bottom:8px">'+
-    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanel()"> ⚡ Auto ('+pct+'%)</label>'+
+    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanel()"> ⚡ Auto ('+pct+'%)</label>'+
     '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanel()"> % Porc.</label>'+
     '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanel()"> $ Monto</label>'+
     '</div>'+
@@ -6013,7 +6013,7 @@ function mostrarResumenCierre(){
             <span>Total mora</span><span style="color:var(--red)">\$${fmtPeso(totalMora)}</span>
           </div>
         </div>
-      </div>`:'<div style="margin:0 16px 16px;padding:12px;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:8px;text-align:center;font-size:13px;color:var(--green);font-weight:600">🎉 ¡Todos pagaron este mes!</div>'}
+      </div>`:'<div style="margin:0 16px 16px;padding:12px;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:8px;text-align:center;font-size:13px;color:var(--green);font-weight:600">🎉 ¡Todos pagaron este mes!</div>'}
 
       <!-- Botones -->
       <div style="padding:0 16px 16px;display:flex;flex-direction:column;gap:8px">
@@ -6312,7 +6312,7 @@ function cobrarConMoraColab(btn){
     '<div id="mora-adm-panel-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'+
     '<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'+
     '<div style="display:flex;gap:6px;margin-bottom:8px">'+
-    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanel()"> ⚡ Auto ('+pct+'%)</label>'+
+    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanel()"> ⚡ Auto ('+pct+'%)</label>'+
     '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanel()"> % Porc.</label>'+
     '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanel()"> $ Monto</label>'+
     '</div>'+
@@ -6368,7 +6368,7 @@ function cobrarMoraManualColab(id){
   if(existing){existing.remove();return;}
   const div=document.createElement('div');
   div.id='mora-manual-colab';
-  div.style.cssText='background:#fff3cd;border:1px solid #ffc107;border-radius:var(--r);padding:.875rem;margin-top:8px';
+  div.style.cssText='background:var(--card);border:1px solid var(--amber-border);border-radius:var(--r);padding:.875rem;margin-top:8px';
   div.innerHTML='<div style="font-size:12px;font-weight:700;margin-bottom:8px">Interés manual (requiere contraseña admin)</div>'
     +'<div style="display:flex;gap:8px;margin-bottom:8px">'
     +'<input id="mora-manual-val" type="number" placeholder="Monto interés $" style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px">'
@@ -7171,7 +7171,7 @@ function renderIccStatus(){
 
   let estadoHtml = '';
   if(dia < 20){
-    estadoHtml = `<div style="background:#f1f0ea;border:1px solid var(--border);border-radius:var(--rlg);padding:1.25rem;display:flex;gap:1rem;align-items:center">
+    estadoHtml = `<div style="background:var(--card);border:1px solid var(--border2);border-radius:var(--rlg);padding:1.25rem;display:flex;gap:1rem;align-items:center">
       <div style="font-size:28px">🕐</div>
       <div>
         <div style="font-weight:700;font-size:15px">Esperando publicación del INDEC</div>
@@ -7642,8 +7642,8 @@ function getProximoIncrementoHtml(tri){
     const icc=loadICC();
     const yaAplicado=icc.some(x=>{const d=new Date(x.ts||'');return d.getFullYear()===hoy.getFullYear()&&d.getMonth()===mesIdx&&(x.planillaNombre===tri||x.planilla===tri.split('-')[0]);});
     if(meses.includes(mesIdx)){
-      if(yaAplicado)return '<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--green);margin-top:6px">✓ ICC aplicado este mes</div>';
-      return '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:5px 10px;font-size:11px;color:#856404;margin-top:6px;font-weight:600">⚡ Este mes aumenta — verificar ICC</div>';
+      if(yaAplicado)return '<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:5px 10px;font-size:11px;color:var(--green);margin-top:6px">✓ ICC aplicado este mes</div>';
+      return '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:5px 10px;font-size:11px;color:var(--amber);margin-top:6px;font-weight:600">⚡ Este mes aumenta — verificar ICC</div>';
     }
     const next=meses.find(m=>m>mesIdx)??meses[0];
     const nextAnio=next>mesIdx?hoy.getFullYear():hoy.getFullYear()+1;
@@ -7861,7 +7861,7 @@ function renderAdelantoSelector(id){
           return `<button onclick="${enabled?`toggleAdelantoCuota('${id}',${n},${montoMes})`:'void(0)'}"
             style="padding:4px 10px;border-radius:var(--r);font-size:12px;font-weight:600;
               border:2px solid ${sel?'#0369a1':enabled?'#7dd3fc':'#e2e8f0'};
-              background:${sel?'#0369a1':enabled?'#f0f9ff':'#f8fafc'};
+              background:${sel?'var(--blue)':enabled?'var(--blue-bg)':'var(--surface)'};
               color:${sel?'#fff':enabled?'#0369a1':'#94a3b8'};
               cursor:${enabled?'pointer':'not-allowed'}">${n}</button>`;
         }).join('')}
@@ -7920,7 +7920,7 @@ function renderAgrLista(){
       if(row.type==='header') return `<tr><td colspan="6" style="padding:10px 6px 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--acc2);letter-spacing:.05em;border-bottom:1px solid #fed7aa">${row.mz}</td></tr>`;
       const c=row.c;
       const isUSD=c.moneda==='USD';
-      const pagoLabel=c.pago?'<span style="background:#1a3a4a;color:#7ab5d0;border:1px solid #3a6a8a;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700">Pagado</span>':'<span style="background:#fff3cd;color:#856404;border:1px solid #ffc107;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700">Pendiente</span>';
+      const pagoLabel=c.pago?'<span style="background:#1a3a4a;color:#7ab5d0;border:1px solid #3a6a8a;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700">Pagado</span>':'<span style="background:#fff3cd;color:var(--amber);border:1px solid #ffc107;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700">Pendiente</span>';
       const waLink=c.tel?`<a href="https://wa.me/54${c.tel.replace(/\D/g,'')}" target="_blank" onclick="event.stopPropagation();window.open(this.href,'_blank');return false;" style="display:inline-flex;align-items:center;gap:5px;background:#25d366;color:#fff;padding:4px 10px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:600;margin-left:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.554 4.118 1.524 5.855L0 24l6.29-1.508A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.366l-.359-.214-3.733.894.944-3.632-.235-.374A9.818 9.818 0 1112 21.818z"/></svg></a>`:'';
       return `<tr onclick="mostrarAdminDet('${c.id}')" style="cursor:pointer;border-bottom:1px solid var(--border);background:var(--card)">
         <td style="padding:10px 6px"><span class="lote-tag" style="background:#2d6a50;color:#d0f0e0">${formatLoteTag(c.mz,c.lote)}</span>${isUSD?'<span style="font-size:10px;color:var(--green);margin-left:4px">💵</span>':''}</td>
@@ -8180,7 +8180,7 @@ function renderDetColab(id){
       +'<div id="'+cid+'-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
       +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'
       +'<div style="display:flex;gap:6px;margin-bottom:8px">'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="auto" data-cid="'+cid+'" data-cuota="'+c.monto+'" data-autopct="'+_mora.pct+'" data-autoint="'+_mora.interes+'" onchange="updateMoraColab(this)"> ⚡ Auto ('+_mora.pct+'%)</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="auto" data-cid="'+cid+'" data-cuota="'+c.monto+'" data-autopct="'+_mora.pct+'" data-autoint="'+_mora.interes+'" onchange="updateMoraColab(this)"> ⚡ Auto ('+_mora.pct+'%)</label>'
       +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateMoraColab(this)"> % Porcentaje</label>'
       +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateMoraColab(this)"> $ Monto</label>'
       +'</div>'
@@ -8562,7 +8562,7 @@ function gestionGuardar(){
     <div style="display:flex;flex-direction:column;gap:10px">
       <button onclick="modalModoConfirm(true)" style="padding:12px;background:#fff3cd;border:2px solid #ffc107;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;text-align:left">
         🧪 Modo Prueba
-        <div style="font-size:12px;font-weight:400;color:#856404;margin-top:2px">Limpia la caja Y revierte los pagos a pendiente</div>
+        <div style="font-size:12px;font-weight:400;color:var(--amber);margin-top:2px">Limpia la caja Y revierte los pagos a pendiente</div>
       </button>
       <button onclick="modalModoConfirm(false)" style="padding:12px;background:var(--green-bg);border:2px solid #86efac;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;text-align:left">
         ✅ Modo Real
