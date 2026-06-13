@@ -6788,8 +6788,8 @@ function renderAdminTable(){
       <div style="display:flex;flex-direction:column;border-left:1px solid var(--border);flex-shrink:0;width:56px;overflow:hidden;border-radius:0 var(--r) var(--r) 0">
         ${waLink
           ?`<div style="flex:1;display:flex;align-items:center;justify-content:center;background:#25d366;border-bottom:1px solid #1ebe5d;cursor:pointer;transition:filter .15s" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.background=''">${waLink}</div>`
-          :'<div style="flex:1;border-bottom:1px solid var(--border);background:var(--hov)"></div>'}
-        <div onclick="event.stopPropagation();openEditModal('${c.id}')" style="flex:1;display:flex;align-items:center;justify-content:center;background:var(--hov);cursor:pointer;transition:filter .15s" onmouseover="this.style.filter='brightness(0.95)'" onmouseout="this.style.background=''">
+          :'<div style="flex:1;border-bottom:1px solid var(--border)"></div>'}
+        <div onclick="event.stopPropagation();openEditModal('${c.id}')" style="flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .15s;opacity:.7" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.7'">
           <span style="font-size:17px">✏️</span>
         </div>
       </div>
