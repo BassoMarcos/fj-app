@@ -8440,10 +8440,16 @@ window.addEventListener("resize",aplicarModoAdmin);
 
 // ============ GESTION DE PAGOS ============
 let _gpPendingChanges={};
+let _gpRegistrarCaja=false;
 
 function abrirGestionPagos(){
   _gpPendingChanges={};
+  _gpRegistrarCaja=false;
   document.getElementById('gestion-pagos-modal').style.display='block';
+  const cajaToggle=document.getElementById('gp-caja-toggle');
+  if(cajaToggle) cajaToggle.checked=false;
+  const cajaLabel=document.getElementById('gp-caja-label');
+  if(cajaLabel){cajaLabel.style.background='var(--surface)';cajaLabel.style.borderColor='var(--border)';cajaLabel.style.color='var(--text)';}
   const data=loadData();
   const etapas=[...new Set(data.filter(c=>c.est==='activo').map(c=>getEtapa(c.mz)))].sort();
   const sel=document.getElementById('gp-etapa');
@@ -8453,6 +8459,16 @@ function abrirGestionPagos(){
   document.getElementById('gp-mz').disabled=true;
   document.getElementById('gp-lotes').innerHTML='';
   document.getElementById('gp-msg').textContent='';
+}
+
+function gestionToggleCaja(){
+  _gpRegistrarCaja=document.getElementById('gp-caja-toggle').checked;
+  const label=document.getElementById('gp-caja-label');
+  if(label){
+    label.style.background=_gpRegistrarCaja?'var(--green-bg)':'var(--surface)';
+    label.style.borderColor=_gpRegistrarCaja?'var(--green-border)':'var(--border)';
+    label.style.color=_gpRegistrarCaja?'var(--green)':'var(--text)';
+  }
 }
 
 function cerrarGestionPagos(){
@@ -8466,9 +8482,12 @@ function gestionMarcarTodosConfirm(pago){
   const accion = pago
     ? 'marcar TODOS los clientes activos como <b>PAGADOS</b>'
     : 'desmarcar TODOS los clientes activos (van a quedar como <b>NO PAGADOS</b>)';
+  const avisoCaja = _gpRegistrarCaja
+    ? '\n\n💰 La opción "Registrar en la caja del día" está ACTIVADA: cada cambio se va a registrar como un cobro real (o reversión) en la caja, igual que si lo hiciera colab/admin desde la ficha.'
+    : '';
   showConfirmModal(
     '⚠️ Acción masiva',
-    'Estás a punto de '+accion+'.\n\nEsto afecta a los '+count+' clientes activos del proyecto, sin importar la etapa o manzana que tengas seleccionada.\n\nLos cambios se aplican recién al apretar "Guardar cambios".',
+    'Estás a punto de '+accion+'.\n\nEsto afecta a los '+count+' clientes activos del proyecto, sin importar la etapa o manzana que tengas seleccionada.\n\nLos cambios se aplican recién al apretar "Guardar cambios".'+avisoCaja,
     ()=>confirmarConClave(()=>gestionMarcarTodos(pago)),
     pago?'Marcar todos':'Desmarcar todos',
     pago?'#16a34a':'#dc2626'
@@ -8550,24 +8569,40 @@ function gestionToggleLote(id){
 function gestionGuardar(){
   const keys=Object.keys(_gpPendingChanges);
   if(!keys.length){document.getElementById('gp-msg').textContent='Sin cambios pendientes';return;}
-  // pago is determined by pagoStore — update that
-  const pagoStore=loadPagoStore();
-  const ts=new Date().toISOString();
   let count=0;
-  keys.forEach(id=>{
-    if(_gpPendingChanges[id]){
-      pagoStore[id]=ts; // mark as paid
-    } else {
-      delete pagoStore[id]; // mark as unpaid
-    }
-    count++;
-  });
-  savePagoStore(pagoStore);
+  if(_gpRegistrarCaja){
+    // Usar el mismo flujo que el cobro desde la ficha: registra en caja del día / caja de mora
+    const pagoStoreActual=loadPagoStore();
+    keys.forEach(id=>{
+      const yaPagado=pagoStoreActual.hasOwnProperty(id);
+      const nuevoPago=_gpPendingChanges[id];
+      if(nuevoPago&&!yaPagado){
+        marcarPago(id);
+        count++;
+      } else if(!nuevoPago&&yaPagado){
+        desmarcarPago(id);
+        count++;
+      }
+    });
+  } else {
+    // Solo marca el estado de la cuota (pagoStore), sin tocar la caja
+    const pagoStore=loadPagoStore();
+    const ts=new Date().toISOString();
+    keys.forEach(id=>{
+      if(_gpPendingChanges[id]){
+        pagoStore[id]=ts; // mark as paid
+      } else {
+        delete pagoStore[id]; // mark as unpaid
+      }
+      count++;
+    });
+    savePagoStore(pagoStore);
+  }
   _gpPendingChanges={};
   renderAdminTable();
   const msg=document.getElementById('gp-msg');
-  if(msg) msg.textContent='Guardados: '+count+' cambios';
-  setTimeout(()=>{const el=document.getElementById('gp-msg');if(el)el.textContent='';},2000);
+  if(msg) msg.textContent='Guardados: '+count+' cambios'+(_gpRegistrarCaja?' (registrados en caja)':'');
+  setTimeout(()=>{const el=document.getElementById('gp-msg');if(el)el.textContent='';},2500);
 }
 
 
@@ -8595,6 +8630,12 @@ function gestionGuardar(){
     <button onclick="cerrarGestionPagos()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#888">✕</button>
     <div style="font-size:18px;font-weight:800;margin-bottom:1rem">✓ Gestionar Pagos</div>
     
+    <!-- Toggle registrar en caja -->
+    <label id="gp-caja-label" style="display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;font-size:12.5px;font-weight:600;cursor:pointer;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text)">
+      <input type="checkbox" id="gp-caja-toggle" onchange="gestionToggleCaja()" style="width:18px;height:18px;cursor:pointer;flex-shrink:0">
+      <span>💰 Registrar estos cambios en la caja del día (igual que si lo cobrara colab/admin desde la ficha). Si está desactivado, solo se marca el estado de la cuota.</span>
+    </label>
+
     <!-- Marcar todos -->
     <div style="display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap">
       <button onclick="gestionMarcarTodosConfirm(true)" style="flex:1;padding:8px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✓ Marcar todos como pagados</button>
