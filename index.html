@@ -6947,7 +6947,9 @@ function delCliente(){
   );
 }
 
-function showConfirmModal(titulo, msg, onConfirm){
+function showConfirmModal(titulo, msg, onConfirm, btnLabel, btnColor){
+  btnLabel = btnLabel || 'Eliminar';
+  btnColor = btnColor || '#dc2626';
   // Crear modal de confirmación dinámico
   const existing = document.getElementById('confirm-modal-dyn');
   if(existing) existing.remove();
@@ -6964,8 +6966,8 @@ function showConfirmModal(titulo, msg, onConfirm){
           Cancelar
         </button>
         <button id="confirm-modal-ok"
-          style="padding:8px 16px;border:none;border-radius:6px;background:#dc2626;color:#fff;font-size:13px;font-weight:700;cursor:pointer">
-          Eliminar
+          style="padding:8px 16px;border:none;border-radius:6px;background:${btnColor};color:#fff;font-size:13px;font-weight:700;cursor:pointer">
+          ${btnLabel}
         </button>
       </div>
     </div>`;
@@ -8458,6 +8460,21 @@ function cerrarGestionPagos(){
   _gpPendingChanges={};
 }
 
+function gestionMarcarTodosConfirm(pago){
+  const data=loadData();
+  const count=data.filter(c=>c.est==='activo').length;
+  const accion = pago
+    ? 'marcar TODOS los clientes activos como <b>PAGADOS</b>'
+    : 'desmarcar TODOS los clientes activos (van a quedar como <b>NO PAGADOS</b>)';
+  showConfirmModal(
+    '⚠️ Acción masiva',
+    'Estás a punto de '+accion+'.\n\nEsto afecta a los '+count+' clientes activos del proyecto, sin importar la etapa o manzana que tengas seleccionada.\n\nLos cambios se aplican recién al apretar "Guardar cambios".',
+    ()=>confirmarConClave(()=>gestionMarcarTodos(pago)),
+    pago?'Marcar todos':'Desmarcar todos',
+    pago?'#16a34a':'#dc2626'
+  );
+}
+
 function gestionMarcarTodos(pago){
   const data=loadData();
   // Load into pending changes
@@ -8580,8 +8597,8 @@ function gestionGuardar(){
     
     <!-- Marcar todos -->
     <div style="display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap">
-      <button onclick="gestionMarcarTodos(true)" style="flex:1;padding:8px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✓ Marcar todos como pagados</button>
-      <button onclick="gestionMarcarTodos(false)" style="flex:1;padding:8px;background:var(--red-bg);color:var(--red);border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✕ Desmarcar todos</button>
+      <button onclick="gestionMarcarTodosConfirm(true)" style="flex:1;padding:8px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✓ Marcar todos como pagados</button>
+      <button onclick="gestionMarcarTodosConfirm(false)" style="flex:1;padding:8px;background:var(--red-bg);color:var(--red);border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✕ Desmarcar todos</button>
     </div>
 
     <!-- Selector etapa/manzana -->
