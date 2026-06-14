@@ -1487,7 +1487,7 @@ function onPubEtapa(){
     if(mzGroup) mzGroup.style.display='none';
     mzSel.disabled=true;
     // Cargar todos los lotes de la etapa directo
-    const lotes=clientes.sort((a,b)=>a.lote.localeCompare(b.lote,undefined,{numeric:true}));
+    const lotes=clientes.sort((a,b)=>String(a.lote).localeCompare(String(b.lote),undefined,{numeric:true}));
     loteSel.innerHTML='<option value="">— Seleccioná lote —</option>';
     lotes.forEach(c=>loteSel.innerHTML+=`<option value="${c.id}">Lote ${c.lote}</option>`);
     loteSel.disabled=false;
@@ -1506,7 +1506,7 @@ function onPubMz(){
   const loteSel=document.getElementById('pub-lote');
   loteSel.innerHTML='<option value="">— Seleccioná —</option>';
   if(!mz){loteSel.disabled=true;return;}
-  const lotes=data.filter(c=>getEtapa(c.mz)===etapa&&c.mz===mz&&c.est==='activo').sort((a,b)=>a.lote.localeCompare(b.lote,undefined,{numeric:true}));
+  const lotes=data.filter(c=>getEtapa(c.mz)===etapa&&c.mz===mz&&c.est==='activo').sort((a,b)=>String(a.lote).localeCompare(String(b.lote),undefined,{numeric:true}));
   lotes.forEach(c=>loteSel.innerHTML+=`<option value="${c.id}">Lote ${c.lote}</option>`);
   loteSel.disabled=false;
   // Reset resultado
@@ -2563,7 +2563,7 @@ function onPrevEtapa(){
   if(sinManzana){
     if(mzGroup) mzGroup.style.display='none';
     mzSel.disabled=true;
-    const lotes=clientes.sort((a,b)=>a.lote.localeCompare(b.lote,undefined,{numeric:true}));
+    const lotes=clientes.sort((a,b)=>String(a.lote).localeCompare(String(b.lote),undefined,{numeric:true}));
     loteSel.innerHTML='<option value="">— Seleccioná lote —</option>';
     lotes.forEach(c=>loteSel.innerHTML+=`<option value="${c.id}">Lote ${c.lote}</option>`);
     loteSel.disabled=false;
@@ -2582,7 +2582,7 @@ function onPrevMz(){
   const loteSel=document.getElementById('prev-lote');
   loteSel.innerHTML='<option value="">— Seleccioná —</option>';
   if(!mz){loteSel.disabled=true;return;}
-  const lotes=data.filter(c=>getEtapa(c.mz)===etapa&&c.mz===mz&&c.est==='activo').sort((a,b)=>a.lote.localeCompare(b.lote,undefined,{numeric:true}));
+  const lotes=data.filter(c=>getEtapa(c.mz)===etapa&&c.mz===mz&&c.est==='activo').sort((a,b)=>String(a.lote).localeCompare(String(b.lote),undefined,{numeric:true}));
   lotes.forEach(c=>loteSel.innerHTML+=`<option value="${c.id}">Lote ${c.lote}</option>`);
   loteSel.disabled=false;
 }
@@ -8502,7 +8502,7 @@ function gestionRenderLotes(etapa,mz){
     if(getEtapa(c.mz)!==etapa) return false;
     if(mz&&c.mz!==mz) return false;
     return true;
-  }).sort((a,b)=>a.lote.localeCompare(b.lote,undefined,{numeric:true}));
+  }).sort((a,b)=>String(a.lote).localeCompare(String(b.lote),undefined,{numeric:true}));
   const container=document.getElementById('gp-lotes');
   if(!clientes.length){container.innerHTML='<span style="color:#aaa;font-size:13px">Sin clientes</span>';return;}
   container.innerHTML=clientes.map(c=>{
