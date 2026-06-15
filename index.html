@@ -856,8 +856,30 @@ function _parseAdelantoCuotas(c){
 function loadAdelantos(){try{const d=JSON.parse(_lsGet(dKey('adelantos'))||'[]');return d.map(a=>({...a,cuotas:_parseAdelantoCuotas(a.cuotas)}));}catch(e){return[];}}
 function saveAdelantos(d){_lsSet(dKey('adelantos'),JSON.stringify(d));sheetsSet('Adelantos',d);if(window._firebaseReady)window._fbSet('adelantos',d).catch(e=>console.warn('FB adel error:',e));}
 
-const AGRIMENSORES_LOTES = [];
-function esAgrimensor(id){return AGRIMENSOR_LOTES.has(id);}
+// ── Agrimensores: lista dinámica persistida ──────────────────────────
+function loadAgrimensorLotes(){
+  try{
+    const s=_lsGet(dKey('agrimensorLotes'));
+    if(s) return new Set(JSON.parse(s));
+  }catch(e){}
+  return new Set(AGRIMENSOR_LOTES_DEFAULT);
+}
+function saveAgrimensorLotes(set){
+  const arr=[...set];
+  _lsSet(dKey('agrimensorLotes'),JSON.stringify(arr));
+  if(window._firebaseReady)
+    window._fbSet('agrimensorLotes',arr).catch(e=>console.warn('FB agrLotes error:',e));
+}
+function toggleLoteAgrimensor(loteId, makeAgri){
+  const set=loadAgrimensorLotes();
+  if(makeAgri) set.add(loteId); else set.delete(loteId);
+  saveAgrimensorLotes(set);
+  // Si hay cliente con ese id, sincronizar su campo agrimensor
+  const data=loadData();
+  const c=data.find(x=>x.id===loteId);
+  if(c){ c.agrimensor=makeAgri; saveData(data); }
+}
+function esAgrimensor(id){return loadAgrimensorLotes().has(id);}
 
 function registrarPagoEnCaja(id,monto,ts){
   const bal=loadBalances();
@@ -904,7 +926,7 @@ const COLAB_PASS = 'fyj4125';
 const EDIT_PASS = 'm4rk14125';
 const SK = 'fj_v2_data';
 // Agrimensor lotes - auto-detected when adding new clients
-const AGRIMENSOR_LOTES = new Set([
+const AGRIMENSOR_LOTES_DEFAULT = new Set([
   'ETAPA 2-36','ETAPA 2-37','ETAPA 2-38',
   'ETAPA 3-9','ETAPA 3-27','ETAPA 3-28','ETAPA 3-37','ETAPA 3-54',
   'E4-M5-8B','E4-M5-9A','E4-M5-12A',
@@ -971,7 +993,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0297';
+  datos['_version']='v1.0298';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1868,7 +1890,7 @@ function getLotesDisponibles(etapa, mz){
 
 function esLoteAgrimensor(etapa, mz, lote){
   const id = etapa+'-'+mz+'-'+lote;
-  return LOTES_LIBRES_E4[id] === true;
+  return loadAgrimensorLotes().has(id);
 }
 function getManzanasPorEtapa(etapa){
   if(etapa==='E4') return ['M1','M2','M3','M4','M5'].filter(m=>getLotesDisponibles(etapa,m).length>0);
@@ -3245,12 +3267,8 @@ function cobrarMoraSeleccionadas(clienteId){
       // Marcar como pagada en cuotas mora
       const idx=cuotasMoraAll.findIndex(cm=>cm.clienteId===c.clienteId&&cm.mes===c.mes&&cm.anio===c.anio);
       if(idx>=0){cuotasMoraAll[idx].pagada=true;cuotasMoraAll[idx].pagoTs=ts;}
-      // Registrar en mora (caja de mora)
-      mora.push({
-        id:c.clienteId, cuota:c.monto, interes:c.interes, ts, fecha,
-        mz:c.mz, lote:c.lote, titular:c.titular, moneda:c.moneda||'ARS',
-        mesNombre:c.mesNombre, numeroCuota:c.numeroCuota
-      });
+      // Registrar en mora (caja de mora), con routing especial para agrimensores
+      registrarCobroCuotaMora(mora, c, c.interes, ts, fecha);
       // Avanzar ca del cliente si corresponde
       const data=loadData();
       const cl=data.find(x=>x.id===c.clienteId);
@@ -3385,7 +3403,7 @@ function cobrarColabMoraSeleccionadas(clienteId){
       const idx=cuotasMoraAll.findIndex(cm=>cm.clienteId===c.clienteId&&cm.mes===c.mes&&cm.anio===c.anio);
       if(idx>=0){cuotasMoraAll[idx].pagada=true;cuotasMoraAll[idx].pagoTs=ts;}
       // Registrar en caja mora
-      mora.push({id:c.clienteId,cuota:c.monto,interes:c.interes,ts,fecha,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',mesNombre:c.mesNombre,numeroCuota:c.numeroCuota});
+      registrarCobroCuotaMora(mora, c, c.interes, ts, fecha);
       // Avanzar ca si corresponde
       const cl=dataAll.find(x=>x.id===c.clienteId);
       if(cl&&cl.ca===c.numeroCuota){
@@ -3898,7 +3916,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
           +'<div><div style="font-weight:600">'+formatLoteTag(p.mz,p.lote)+' — '+p.titular+'</div>'
           +'<div style="font-size:11px;color:var(--text2)">'+p.fecha+'</div></div>'
           +'<div style="text-align:right">'
-          +'<div style="color:var(--text2);font-size:11px">Cuota: <b>'+cur+fmtPeso(p.cuota||0)+'</b></div>'
+          +(p.cuotaAgrimensor?'<div style="color:var(--acc2);font-size:11px">Cuota (⚖️ Agr.): <b>'+cur+fmtPeso(p.cuotaAgrimensor)+'</b></div>':'<div style="color:var(--text2);font-size:11px">Cuota: <b>'+cur+fmtPeso(p.cuota||0)+'</b></div>')
           +'<div style="color:var(--red);font-size:11px">Interés: <b>'+cur+fmtPeso(p.interes||0)+'</b></div>'
           +'<div style="font-weight:700">'+cur+fmtPeso((p.cuota||0)+(p.interes||0))+'</div>'
           +extraBtn+desmarcaBtn+'</div></div>';
@@ -4124,6 +4142,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         <div style="display:flex;gap:8px">
           <button onclick="resetAgrimensores()" style="background:var(--card);border:1px solid #fed7aa;color:var(--acc2);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar</button>
           <button onclick="renderBalances('agr-lista')" style="background:var(--card);border:1px solid #fed7aa;color:var(--acc2);padding:6px 14px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer">📋 Ver lista</button>
+          <button onclick="renderBalances('agr-gestionar')" style="background:var(--card);border:1px solid #fed7aa;color:var(--acc2);padding:6px 14px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer">⚙️ Gestionar lotes</button>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem">
@@ -4205,7 +4224,82 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
     return;
   }
 
+  if(seccion==='agr-gestionar'){
+    const backToAgr=`<button onclick="renderBalances('agrimensores')" style="background:none;border:none;color:var(--acc2);font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:1rem">‹ Volver</button>`;
+    const agrSet=loadAgrimensorLotes();
+    // Orden manzanas
+    const mzOrder=['M1','M2','M3','M4','ETAPA 2','ETAPA 3','E4-M1','E4-M2','E4-M3','E4-M4','E4-M5'];
+    const sortedLotes=[...agrSet].sort((a,b)=>{
+      const mzA=mzOrder.findIndex(m=>a.startsWith(m+'-'));
+      const mzB=mzOrder.findIndex(m=>b.startsWith(m+'-'));
+      if(mzA!==mzB) return (mzA<0?99:mzA)-(mzB<0?99:mzB);
+      return a.localeCompare(b,undefined,{numeric:true});
+    });
+
+    const filas=sortedLotes.map(id=>{
+      const c=data.find(x=>x.id===id);
+      const titular=c?c.titular:'— Lote vacío —';
+      const tag=c?formatLoteTag(c.mz,c.lote):('<span style="font-size:11px;background:#f3f4f6;border:1px solid var(--border);border-radius:4px;padding:1px 6px">'+id+'</span>');
+      const esTitularClass=c?'':'color:var(--text2);font-style:italic';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <div><span style="margin-right:8px">${tag}</span><span style="${esTitularClass}">${titular}</span></div>
+        <button onclick="(function(){confirmarConClave(function(){toggleLoteAgrimensor('${id}',false);renderBalances('agr-gestionar');},'Quitar ${id} de agrimensores');})()" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);border-radius:4px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">✗ Quitar</button>
+      </div>`;
+    }).join('');
+
+    el.innerHTML=backToAgr+`
+      <div style="font-size:17px;font-weight:700;margin-bottom:1rem">⚙️ Gestionar lotes agrimensor</div>
+
+      <!-- Lista actual -->
+      <div style="background:var(--surface);border:1px solid #fed7aa;border-radius:var(--r);padding:1rem;margin-bottom:1rem">
+        <div style="font-size:13px;font-weight:700;color:var(--acc2);margin-bottom:8px">Lotes actuales (${agrSet.size})</div>
+        ${filas||'<div style="font-size:13px;color:var(--text2)">Sin lotes registrados</div>'}
+      </div>
+
+      <!-- Agregar lote -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">➕ Agregar lote</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end">
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">MANZANA / ETAPA</label>
+            <select id="agr-add-mz" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px">
+              <option value="M1">Etapa 1 — M1</option>
+              <option value="M2">Etapa 1 — M2</option>
+              <option value="M3">Etapa 1 — M3</option>
+              <option value="M4">Etapa 1 — M4</option>
+              <option value="ETAPA 2">Etapa 2</option>
+              <option value="ETAPA 3">Etapa 3</option>
+              <option value="E4-M1">E4 — M1</option>
+              <option value="E4-M2">E4 — M2</option>
+              <option value="E4-M3">E4 — M3</option>
+              <option value="E4-M4">E4 — M4</option>
+              <option value="E4-M5">E4 — M5</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">LOTE</label>
+            <input id="agr-add-lote" type="text" placeholder="ej: 36 o 1A"
+              style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;box-sizing:border-box">
+          </div>
+          <button onclick="(function(){
+            const mz=document.getElementById('agr-add-mz').value;
+            const lote=document.getElementById('agr-add-lote').value.trim();
+            if(!lote){alert('Ingresá el número o código del lote');return;}
+            const id=mz+'-'+lote;
+            if(loadAgrimensorLotes().has(id)){alert(id+' ya está en la lista');return;}
+            confirmarConClave(function(){toggleLoteAgrimensor(id,true);renderBalances('agr-gestionar');},'Agregar '+id+' a agrimensores');
+          })()" style="padding:7px 14px;background:#d97706;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">✓ Agregar</button>
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:8px">
+          El lote se agrega inmediatamente. Si ya existe como cliente, su campo agrimensor se actualiza automáticamente.
+        </div>
+      </div>
+    `;
+    return;
+  }
+
   if(seccion==='adelantos'){
+
     el.innerHTML=backBtn+`
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
         <div style="font-size:17px;font-weight:700">⏭ Adelantos</div>
@@ -5784,7 +5878,7 @@ function _ejecutarCobroAdmMora(seleccionadas, clienteId, cur, totalTotal){
   seleccionadas.forEach(c=>{
     const idx=cuotasMoraAll.findIndex(cm=>cm.clienteId===c.clienteId&&cm.mes===c.mes&&cm.anio===c.anio);
     if(idx>=0){cuotasMoraAll[idx].pagada=true;cuotasMoraAll[idx].pagoTs=ts;}
-    mora.push({id:c.clienteId,cuota:c.monto,interes:c.interes,ts,fecha,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',mesNombre:c.mesNombre,numeroCuota:c.numeroCuota});
+    registrarCobroCuotaMora(mora, c, c.interes, ts, fecha);
     const cl=dataAll.find(x=>x.id===c.clienteId);
     if(cl&&cl.ca===c.numeroCuota){if(cl.ca<cl.ct)cl.ca=cl.ca+1;if(!cl.hist)cl.hist=[];cl.hist.push({cuota:c.numeroCuota,monto:c.monto,mes:c.mesNombre,ts});}
   });
@@ -5838,7 +5932,7 @@ function borrarCierreFinalYReaplicar(){
     let nuevasMora=0;
 
     data.forEach(c=>{
-      if(c.est!=='activo'||c.autopago||c.agrimensor) return;
+      if(c.est!=='activo'||c.autopago) return;
       if(c.pago) return;
       if((c.monto||0)<=0) return;
       const yaExiste=cuotasMoraExist.some(m=>m.clienteId===c.id&&m.mes===mes&&m.anio===anio);
@@ -6054,7 +6148,7 @@ function ejecutarCierreFinal(){
     let nuevasMora=0;
 
     data.forEach(c=>{
-      if(c.est!=='activo'||c.autopago||c.agrimensor) return;
+      if(c.est!=='activo'||c.autopago) return;
       if(c.pago) return;
       if((c.monto||0)<=0) return;
       if(esPrimeraCuotaFutura(c)) return;
@@ -6123,7 +6217,7 @@ function hacerCierreFinal(){
     let nuevasMora=0;
 
     data.forEach(c=>{
-      if(c.est!=='activo'||c.autopago||c.agrimensor) return;
+      if(c.est!=='activo'||c.autopago) return;
       if(c.pago) return; // pagó en tiempo -> no va a mora
       if((c.monto||0)<=0) return; // sin monto
       if(esPrimeraCuotaFutura(c)) return; // primera cuota todavía no llegó
@@ -6193,16 +6287,37 @@ function hacerCierreFinal(){
   });
 }
 
+// Registra un cobro de cuota con mora (post-cierre).
+// Si el lote es agrimensor, la cuota pura va a bal.agrimensores; el interés
+// permanece en mora para ser transferido a Extras via pasarInteresMora.
+function registrarCobroCuotaMora(mora, c, interes, ts, fecha){
+  const id=c.clienteId||c.id;
+  const moneda=c.moneda||'ARS';
+  const entry={
+    id, interes, ts, fecha,
+    mz:c.mz, lote:c.lote, titular:c.titular, moneda,
+    mesNombre:c.mesNombre, numeroCuota:c.numeroCuota
+  };
+  if(esAgrimensor(id)){
+    entry.cuota=0;
+    entry.cuotaAgrimensor=c.monto;
+    const bal=loadBalances();
+    (bal.agrimensores=bal.agrimensores||[]).push({id,monto:c.monto,ts,fecha,moneda});
+    saveBalances(bal);
+  } else {
+    entry.cuota=c.monto;
+  }
+  mora.push(entry);
+}
+
 function registrarPagoMora(id, cuota, interes, ts){
   const mora=loadMora();
   const data=loadData();
   const c=data.find(x=>x.id===id);
   if(!c) return;
   const fecha=new Date(ts||Date.now()).toLocaleDateString('es-AR');
-  mora.push({
-    id, cuota, interes, ts:ts||new Date().toISOString(), fecha,
-    mz:c.mz, lote:c.lote, titular:c.titular, moneda:c.moneda||'ARS'
-  });
+  // Reusar lógica de routing agrimensor
+  registrarCobroCuotaMora(mora, {clienteId:id,monto:cuota,interes,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS'}, interes, ts||new Date().toISOString(), fecha);
   saveMora(mora);
   actualizarBadgeMora();
 }
@@ -6920,7 +7035,7 @@ function saveCliente(){
   // Auto-detect agrimensor
   const agrKey=`${mz}-${lote}`;
   const agrC=data.find(x=>x.id===newId);
-  if(agrC&&AGRIMENSOR_LOTES.has(agrKey)) agrC.agrimensor=true;
+  if(agrC&&loadAgrimensorLotes().has(agrKey)) agrC.agrimensor=true;
   saveData(data);closeModal('modal-edit');renderAdminTable();
   // Refresh admin detail if open
   if(document.getElementById('admin-detalle')&&document.getElementById('admin-detalle').style.display!=='none'){
@@ -8368,6 +8483,7 @@ async function init(){
       const fbMoraReg = await window._fbGet('mora');
       const fbExtras = await window._fbGet('extras');
       const fbMesActual = await window._fbGet('mesActual');
+      const fbAgrLotes = await window._fbGet('agrimensorLotes');
       if(fbData) _lsSet(dKey('data'), JSON.stringify(fbData));
       if(fbMora) localStorage.setItem('fj_cuotas_mora', JSON.stringify(fbMora));
       if(fbBal) _lsSet(dKey('balances'), JSON.stringify(fbBal));
@@ -8377,6 +8493,7 @@ async function init(){
       if(fbMoraReg) localStorage.setItem('fj_mora', JSON.stringify(fbMoraReg));
       if(fbExtras) localStorage.setItem('fj_extras', JSON.stringify(fbExtras));
       if(fbMesActual) localStorage.setItem('fj_mes_actual', JSON.stringify(fbMesActual));
+      if(fbAgrLotes) _lsSet(dKey('agrimensorLotes'), JSON.stringify(fbAgrLotes));
       console.log('Firebase data loaded');
       // Escuchar cambios en tiempo real
       let _fbInitDone = false;
@@ -8405,6 +8522,7 @@ async function init(){
       window._fbListen('balances', (d) => { if(d){ _lsSet(dKey('balances'), JSON.stringify(d)); _fbRerender('balances'); } });
       window._fbListen('icc', (d) => { if(d) _lsSet(dKey('icc'), JSON.stringify(d)); });
       window._fbListen('adelantos', (d) => { if(d){ _lsSet(dKey('adelantos'), JSON.stringify(d)); _fbRerender('balances'); } });
+      window._fbListen('agrimensorLotes', (d) => { if(d){ _lsSet(dKey('agrimensorLotes'), JSON.stringify(d)); _fbRerender('balances'); } });
       window._fbListen('mora', (d) => { if(d) localStorage.setItem('fj_mora', JSON.stringify(d)); });
       window._fbListen('extras', (d) => { if(d) localStorage.setItem('fj_extras', JSON.stringify(d)); });
       window._fbListen('mesActual', (d) => { if(d) localStorage.setItem('fj_mes_actual', JSON.stringify(d)); });
