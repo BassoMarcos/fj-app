@@ -37,7 +37,7 @@ Campos clave: `id` (ej `"M1-4B"`, `"ETAPA 2-3"`, `"E4-M1-9B"`), `mz` (manzana/et
 ## Constantes / passwords
 
 - `ADMIN_PASS = 'fyj41252.0'`, `COLAB_PASS = 'fyj4125'`, `EDIT_PASS = 'm4rk14125'`
-- `AGRIMENSOR_LOTES` — Set de ids con lote de agrimensor
+- `AGRIMENSOR_LOTES_DEFAULT` — Set estático de 19 ids (seed/fallback). **Ya no usar `AGRIMENSOR_LOTES` directo.**
 - `FJ_THEMES` — 10 temas (incluye Cian profundo, Grafito & naranja, Lavanda oscuro, Acero azul, Ámbar negro), aplicados vía CSS variables con `applyFjTheme(t)`. Selector en navbar (`toggleThemePanel`).
 
 ## Sistema de pagos / caja (clave para entender bugs)
@@ -52,7 +52,24 @@ Campos clave: `id` (ej `"M1-4B"`, `"ETAPA 2-3"`, `"E4-M1-9B"`), `mz` (manzana/et
 - "Caja" = `bal.abierto` (caja del día) + `bal.cierres` (cierres mensuales) + `bal.agrimensores`, todo dentro de `loadBalances()`/`saveBalances()`. Caja de mora aparte vía `loadMora()`/`saveMora()`.
 - Cierre mensual: `ejecutarCierreFinal()` → avanza `ca` de todos los activos no pausados, genera mora para los que no pagaron, limpia `pagoStore`.
 
-## Gotchas / convenciones importantes
+## Agrimensores — sistema dinámico (v1.0298+)
+
+- `loadAgrimensorLotes()` → `Set` de ids. Fuente: `dKey('agrimensorLotes')` en localStorage/Firebase. Si vacío, usa `AGRIMENSOR_LOTES_DEFAULT` (seed de 19 ids).
+- `saveAgrimensorLotes(set)` → guarda en localStorage + Firebase (`_fbSet('agrimensorLotes',arr)`).
+- `toggleLoteAgrimensor(loteId, makeAgri)` → agrega/quita lote del Set, persiste, y si el cliente existe setea `c.agrimensor`.
+- `esAgrimensor(id)` → `loadAgrimensorLotes().has(id)` (antes era `AGRIMENSOR_LOTES.has(id)` estático).
+- `esLoteAgrimensor(etapa,mz,lote)` → `loadAgrimensorLotes().has(id)` (antes chequeaba `LOTES_LIBRES_E4[id]===true`).
+- `LOTES_LIBRES_E4` sigue existiendo como inventario de lotes disponibles E4 (sólo sus keys importan; los booleans ya no definen qué es agrimensor).
+- Firebase init carga `agrimensorLotes`; listener actualiza localStorage y re-renderiza `balances` en tiempo real.
+- UI: Balances → ⚖️ Agrimensores → botón **⚙️ Gestionar lotes** → `renderBalances('agr-gestionar')` — lista actual con "✗ Quitar" y form "+ Agregar lote".
+
+## Mora — routing para agrimensores (v1.0298+)
+
+- **`registrarCobroCuotaMora(mora, c, interes, ts, fecha)`** — helper centralizado para los 3 sitios de cobro de mora (panel admin, colab, modal flujo) y `registrarPagoMora`. Si `esAgrimensor(id)` → `entry.cuota=0`, `entry.cuotaAgrimensor=c.monto`, y la cuota pura va a `bal.agrimensores`. El interés queda en el entry de mora igual que cualquier cliente (para ser transferido a extras vía `pasarInteresMora`).
+- `cuotaAgrimensor` — campo opcional en entries de `mora[]`. Presente sólo para lotes agrimensor. En el display de "Caja de Mora" aparece como "Cuota (⚖️ Agr.): $X" en lugar de "Cuota: $0".
+- **Cierre final**: removida exclusión `||c.agrimensor` en los 3 sitios de generación de mora (`ejecutarCierreFinal`, `borrarCierreFinalYReaplicar`, `hacerCierreFinal`). Ahora los lotes agrimensor que no pagaron entran a mora igual que cualquier cliente.
+
+
 
 - **`c.lote` puede ser `number`** para Etapa 2/3 (y algunos E4). Cualquier `.localeCompare`, `.toLowerCase()`, `===` contra un string del DOM debe envolver en `String()`. Ya fixeado en 5 lugares (`a.lote.localeCompare(b.lote,...)` → `String(a.lote).localeCompare(String(b.lote),...)`), pero si se agregan nuevos filtros/sorts por lote, aplicar el mismo patrón.
 - `dKey('xxx')` prefija localStorage con `fj_eucaliptus_` (multi-desarrollo).
@@ -70,6 +87,7 @@ Campos clave: `id` (ej `"M1-4B"`, `"ETAPA 2-3"`, `"E4-M1-9B"`), `mz` (manzana/et
 
 ## Changelog reciente
 
+- **v1.0298** — Agrimensores en mora: cierre final ya no excluye lotes agrimensor; cuota pura va a Caja Agrimensores, interés fluye igual que cualquier mora. Lista dinámica de lotes agrimensor (Firebase-synced, UI Gestionar lotes en Balances).
 - Fix `lote.localeCompare` con `String()` en 5 funciones (incluye Gestión de Pagos) — resolvía que Etapa 2/3 no mostraran lotes en varios selectores.
 - `showConfirmModal` ahora acepta `btnLabel`/`btnColor` configurables.
 - Nueva `gestionMarcarTodosConfirm` — aviso + contraseña admin antes de marcar/desmarcar todos los pagos en bloque.
