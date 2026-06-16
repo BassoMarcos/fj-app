@@ -7430,13 +7430,13 @@ function aplicarICC(){
     totalTri=parseFloat((pctPrev+pctMes).toFixed(2));
   }
   const data=loadData();
-  const cnt=data.filter(c=>c.tri===planilla&&c.est==='activo').length;
+  const cnt=data.filter(c=>c.tri===planilla&&(c.est==='activo'||(c.est==='finalizado'&&c.autopago))).length;
   if(cnt===0){alert('No hay clientes activos con planilla '+planilla+'.');return;}
   // Ejecutar directamente sin clave para ICC
   const d=loadData();
   let aplicados=0;
   d.forEach(c=>{
-    if(c.tri===planilla&&c.est==='activo'){
+    if(c.tri===planilla&&(c.est==='activo'||(c.est==='finalizado'&&c.autopago))){
       c.monto=Math.round(c.monto*(1+totalTri/100));
       aplicados++;
     }
