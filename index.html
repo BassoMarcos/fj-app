@@ -881,6 +881,23 @@ function toggleLoteAgrimensor(loteId, makeAgri){
 }
 function esAgrimensor(id){return loadAgrimensorLotes().has(id);}
 
+// ── Lotes libres E1/E2/E3 (vacantes al eliminar clientes) ──────────────────
+function loadLotesLibresE123(){
+  try{
+    const s=_lsGet(dKey('lotesLibresE123'));
+    if(s) return new Set(JSON.parse(s));
+  }catch(e){}
+  return new Set();
+}
+function saveLotesLibresE123(set){
+  const arr=[...set];
+  _lsSet(dKey('lotesLibresE123'),JSON.stringify(arr));
+  if(window._firebaseReady)
+    window._fbSet('lotesLibresE123',arr).catch(e=>console.warn('FB lotesLibres error:',e));
+}
+function agregarLoteLibreE123(id){ const s=loadLotesLibresE123(); s.add(id); saveLotesLibresE123(s); }
+function quitarLoteLibreE123(id){ const s=loadLotesLibresE123(); s.delete(id); saveLotesLibresE123(s); }
+
 function registrarPagoEnCaja(id,monto,ts){
   const bal=loadBalances();
   ts=ts||new Date().toISOString();
@@ -1878,11 +1895,22 @@ const LOTES_LIBRES_E4 = {
 function getLotesDisponibles(etapa, mz){
   const data=loadData();
   const ocupados=new Set(data.filter(c=>c.est!=='disponible'&&c.titular).map(c=>c.id));
-  if(etapa==='E1'||etapa==='E2'||etapa==='E3') return []; // E1-E3 sin lotes libres
+  // E1: M1/M2/M3/M4 — devolver lotes vacantes guardados
+  if(etapa==='E1'){
+    const libres=loadLotesLibresE123();
+    return [...libres].filter(id=>id.startsWith(mz+'-')&&!ocupados.has(id)).map(id=>id.replace(mz+'-',''));
+  }
+  // E2/E3 — devolver lotes vacantes guardados
+  if(etapa==='E2'){
+    const libres=loadLotesLibresE123();
+    return [...libres].filter(id=>id.startsWith('ETAPA 2-')&&!ocupados.has(id)).map(id=>id.replace('ETAPA 2-',''));
+  }
+  if(etapa==='E3'){
+    const libres=loadLotesLibresE123();
+    return [...libres].filter(id=>id.startsWith('ETAPA 3-')&&!ocupados.has(id)).map(id=>id.replace('ETAPA 3-',''));
+  }
   // E4: filtrar lotes libres que no tengan titular
   let mzKey = etapa+'-'+mz; // e.g. 'E4-M1'
-  if(etapa==='E2') mzKey='ETAPA 2';
-  if(etapa==='E3') mzKey='ETAPA 3';
   return Object.entries(LOTES_LIBRES_E4)
     .filter(([id,_]) => id.startsWith(mzKey+'-') && !ocupados.has(id))
     .map(([id,_]) => id.replace(mzKey+'-',''));
@@ -1894,6 +1922,8 @@ function esLoteAgrimensor(etapa, mz, lote){
 }
 function getManzanasPorEtapa(etapa){
   if(etapa==='E4') return ['M1','M2','M3','M4','M5'].filter(m=>getLotesDisponibles(etapa,m).length>0);
+  if(etapa==='E1') return ['M1','M2','M3','M4'].filter(m=>getLotesDisponibles(etapa,m).length>0);
+  if(etapa==='E2'||etapa==='E3') return []; // E2/E3 no tienen sub-manzana
   return [];
 }
 
@@ -1914,6 +1944,9 @@ function renderSelectorEtapa(){
   ['E1','E2','E3','E4'].forEach(val => {
     let libres = 0;
     if(val==='E4') ['M1','M2','M3','M4','M5'].forEach(m => libres += getLotesDisponibles(val,m).length);
+    else if(val==='E1') ['M1','M2','M3','M4'].forEach(m => libres += getLotesDisponibles(val,m).length);
+    else if(val==='E2') libres = getLotesDisponibles('E2','ETAPA 2').length;
+    else if(val==='E3') libres = getLotesDisponibles('E3','ETAPA 3').length;
     const tiene = libres > 0;
     const bg = tiene ? '#16a34a' : '#dc2626';
     const isSelected = _etapaActual === val;
@@ -1924,7 +1957,7 @@ function renderSelectorEtapa(){
     btn.onclick = () => {
       if(!tiene) return;
       _etapaActual = val;
-      _mzActual = (val==='E4') ? '' : val; // E2/E3 no tienen manzana
+      _mzActual = (val==='E4'||val==='E1') ? '' : val; // E2/E3 no tienen sub-manzana
       renderSelectorEtapa();
       renderSelectorManzana();
       renderSelectorLotes();
@@ -1937,10 +1970,11 @@ function renderSelectorManzana(){
   const wrap = document.getElementById('sel-mz-wrap');
   const grid = document.getElementById('sel-mz-grid');
   if(!wrap||!grid) return;
-  if(_etapaActual !== 'E4'){ wrap.style.display='none'; return; }
+  if(_etapaActual !== 'E4' && _etapaActual !== 'E1'){ wrap.style.display='none'; return; }
   wrap.style.display = 'block';
   grid.innerHTML = '';
-  ['M1','M2','M3','M4','M5'].forEach(mz => {
+  const mzList = _etapaActual==='E1' ? ['M1','M2','M3','M4'] : ['M1','M2','M3','M4','M5'];
+  mzList.forEach(mz => {
     const lotes = getLotesDisponibles(_etapaActual, mz);
     const tiene = lotes.length > 0;
     const bg = tiene ? '#16a34a' : '#dc2626';
@@ -1959,13 +1993,13 @@ function renderSelectorLotes(){
   const grid = document.getElementById('sel-lotes-grid');
   if(!wrap||!grid) return;
   if(!_etapaActual){ wrap.style.display='none'; return; }
-  if(_etapaActual==='E4' && !_mzActual){ wrap.style.display='none'; return; }
+  if((_etapaActual==='E4'||_etapaActual==='E1') && !_mzActual){ wrap.style.display='none'; return; }
   const mz = _mzActual;
   const lotes = getLotesDisponibles(_etapaActual, mz);
   wrap.style.display = 'block';
   grid.innerHTML = '';
   lotes.forEach(l => {
-    const id = (_etapaActual==='E2'?'ETAPA 2':_etapaActual==='E3'?'ETAPA 3':_etapaActual+'-'+mz)+'-'+l;
+    const id = (_etapaActual==='E2'?'ETAPA 2':_etapaActual==='E3'?'ETAPA 3':mz)+'-'+l;
     const isAgri = esLoteAgrimensor(_etapaActual, mz, l);
     const yaSelec = _lotesSeleccionados.some(s => s.id === id);
     const bg = yaSelec ? '#1e40af' : isAgri ? '#d97706' : '#16a34a';
@@ -6920,6 +6954,11 @@ function saveCliente(){
     else mz=s0.etapa+'-'+s0.mz;
     lote=s0.lote;
     lotesExtra=slots.slice(1);
+    // Quitar lotes usados de lista de vacantes E1/E2/E3
+    slots.forEach(s => {
+      const lId = (s.etapa==='E2'?'ETAPA 2':s.etapa==='E3'?'ETAPA 3':s.mz)+'-'+s.lote;
+      quitarLoteLibreE123(lId);
+    });
     // Aviso agrimensor
     const agriSlots=slots.filter(s=>s.isAgri);
     // Solo informar si es agrimensor, no bloquear
@@ -7055,6 +7094,9 @@ function delCliente(){
       const d=loadData();
       d.splice(d.findIndex(x=>x.id===editId),1);
       saveData(d);
+      // Si es E1/E2/E3, guardar el lote como vacante
+      const mzE1=['M1','M2','M3','M4'];
+      if(mzE1.includes(c.mz)||c.mz==='ETAPA 2'||c.mz==='ETAPA 3') agregarLoteLibreE123(c.id);
       addHist('edit','Eliminado: '+c.mz+' Lote '+c.lote+' — '+c.titular,editId);
       closeModal('modal-edit');
       renderAdminTable();
@@ -8484,6 +8526,7 @@ async function init(){
       const fbExtras = await window._fbGet('extras');
       const fbMesActual = await window._fbGet('mesActual');
       const fbAgrLotes = await window._fbGet('agrimensorLotes');
+      const fbLotesLibres = await window._fbGet('lotesLibresE123');
       if(fbData) _lsSet(dKey('data'), JSON.stringify(fbData));
       if(fbMora) localStorage.setItem('fj_cuotas_mora', JSON.stringify(fbMora));
       if(fbBal) _lsSet(dKey('balances'), JSON.stringify(fbBal));
@@ -8494,6 +8537,7 @@ async function init(){
       if(fbExtras) localStorage.setItem('fj_extras', JSON.stringify(fbExtras));
       if(fbMesActual) localStorage.setItem('fj_mes_actual', JSON.stringify(fbMesActual));
       if(fbAgrLotes) _lsSet(dKey('agrimensorLotes'), JSON.stringify(fbAgrLotes));
+      if(fbLotesLibres) _lsSet(dKey('lotesLibresE123'), JSON.stringify(fbLotesLibres));
       console.log('Firebase data loaded');
       // Escuchar cambios en tiempo real
       let _fbInitDone = false;
@@ -8523,6 +8567,7 @@ async function init(){
       window._fbListen('icc', (d) => { if(d) _lsSet(dKey('icc'), JSON.stringify(d)); });
       window._fbListen('adelantos', (d) => { if(d){ _lsSet(dKey('adelantos'), JSON.stringify(d)); _fbRerender('balances'); } });
       window._fbListen('agrimensorLotes', (d) => { if(d){ _lsSet(dKey('agrimensorLotes'), JSON.stringify(d)); _fbRerender('balances'); } });
+      window._fbListen('lotesLibresE123', (d) => { if(d){ _lsSet(dKey('lotesLibresE123'), JSON.stringify(d)); } });
       window._fbListen('mora', (d) => { if(d) localStorage.setItem('fj_mora', JSON.stringify(d)); });
       window._fbListen('extras', (d) => { if(d) localStorage.setItem('fj_extras', JSON.stringify(d)); });
       window._fbListen('mesActual', (d) => { if(d) localStorage.setItem('fj_mes_actual', JSON.stringify(d)); });
