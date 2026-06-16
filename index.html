@@ -4818,6 +4818,29 @@ function cerrarAdminDet(){
   renderAdminTable();
 }
 
+// ── Lotes terminados: metadata de certificados ──────────────────────────────
+function loadLotesCerts(){
+  try{ const s=_lsGet(dKey('lotesCerts')); if(s) return JSON.parse(s); }catch(e){}
+  return {};
+}
+function saveLotesCerts(obj){
+  _lsSet(dKey('lotesCerts'),JSON.stringify(obj));
+  if(window._firebaseReady) window._fbSet('lotesCerts',obj).catch(e=>console.warn('FB lotesCerts error:',e));
+}
+function toggleCertField(id, field){
+  const certs=loadLotesCerts();
+  if(!certs[id]) certs[id]={};
+  certs[id][field]=!certs[id][field];
+  saveLotesCerts(certs);
+  renderStats();
+}
+function setCertFecha(id, fecha){
+  const certs=loadLotesCerts();
+  if(!certs[id]) certs[id]={};
+  certs[id].fecha=fecha;
+  saveLotesCerts(certs);
+}
+
 function renderStats(){
   const el=document.getElementById('a-stats-content');
   if(!el) return;
@@ -5055,6 +5078,73 @@ function renderStats(){
     }
     html+='</div>';
   }
+
+  // ── Lotes que terminaron ────────────────────────────────────────────────
+  const finalizados = data.filter(c => c.est === 'finalizado').sort((a,b)=>{
+    // Préstamos primero, luego el resto
+    if(a.autopago && !b.autopago) return -1;
+    if(!a.autopago && b.autopago) return 1;
+    return (a.id||'').localeCompare(b.id||'');
+  });
+  const certs = loadLotesCerts();
+
+  html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-top:1.25rem">';
+  html += '<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:1rem">🏁 LOTES QUE TERMINARON ('+finalizados.length+')</div>';
+
+  if(!finalizados.length){
+    html += '<div style="font-size:13px;color:var(--text2);text-align:center;padding:1rem">Sin lotes finalizados aún</div>';
+  } else {
+    finalizados.forEach(c => {
+      const cert = certs[c.id] || {};
+      const esPrestamo = !!c.autopago;
+      // Fecha: desde cert o desde último hist
+      const lastHist = c.hist && c.hist.length ? c.hist[c.hist.length-1] : null;
+      const fechaAuto = lastHist ? (lastHist.ts ? lastHist.ts.split('T')[0] : '') : '';
+      const fecha = cert.fecha || fechaAuto;
+      const urgente = !!cert.urgente;
+
+      // Colores cert
+      const btnCert = (field, label, color) => {
+        const active = !!cert[field];
+        return `<button onclick="toggleCertField('${c.id}','${field}')" style="padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid ${active?color:'var(--border)'};background:${active?color:'transparent'};color:${active?'#fff':'var(--text2)'}">${label}</button>`;
+      };
+
+      html += `<div style="border:1px solid ${urgente?'#dc2626':'var(--border)'};border-radius:8px;padding:10px 12px;margin-bottom:8px;background:${urgente?'rgba(220,38,38,0.05)':'var(--card)'}">`;
+
+      // Header: lote + titular + urgente
+      html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">`;
+      html += `<div><span style="font-size:11px;font-weight:800;color:var(--acc)">${c.id}</span>${esPrestamo?'<span style="margin-left:6px;background:#d97706;color:#fff;font-size:9px;padding:1px 5px;border-radius:3px">PRÉSTAMO</span>':''}</div>`;
+      html += `<button onclick="toggleCertField('${c.id}','urgente')" style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid ${urgente?'#dc2626':'var(--border)'};background:${urgente?'#dc2626':'transparent'};color:${urgente?'#fff':'var(--text2)'}">⚡ Urgente</button>`;
+      html += `</div>`;
+
+      html += `<div style="font-size:13px;font-weight:600;margin-bottom:6px">${c.titular}</div>`;
+
+      // Si es préstamo: barra de progreso cuotas
+      if(esPrestamo && c.ct > 0){
+        const pct = Math.round((c.ca-1)/c.ct*100);
+        html += `<div style="margin-bottom:8px">`;
+        html += `<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px"><span>Cuotas devueltas</span><span>${c.ca-1}/${c.ct}</span></div>`;
+        html += `<div style="background:var(--border2);border-radius:99px;height:6px;overflow:hidden"><div style="background:#d97706;width:${pct}%;height:100%;border-radius:99px"></div></div>`;
+        html += `</div>`;
+      }
+
+      // Fecha de finalización
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">`;
+      html += `<span style="font-size:11px;color:var(--text2);white-space:nowrap">📅 Finalizó:</span>`;
+      html += `<input type="date" value="${fecha}" onchange="setCertFecha('${c.id}',this.value)" style="font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card);color:var(--text);flex:1">`;
+      html += `</div>`;
+
+      // Certificado: 3 pasos
+      html += `<div style="display:flex;gap:6px;flex-wrap:wrap">`;
+      html += btnCert('certSolicitado','✉ Solicitado','#4f46e5');
+      html += btnCert('certRecibido','📄 Recibido','#16a34a');
+      html += btnCert('certEntregado','✅ Entregado al cliente','#0891b2');
+      html += `</div>`;
+
+      html += `</div>`;
+    });
+  }
+  html += '</div>';
 
   el.innerHTML=html;
 }
@@ -8527,6 +8617,7 @@ async function init(){
       const fbMesActual = await window._fbGet('mesActual');
       const fbAgrLotes = await window._fbGet('agrimensorLotes');
       const fbLotesLibres = await window._fbGet('lotesLibresE123');
+      const fbLotesCerts = await window._fbGet('lotesCerts');
       if(fbData) _lsSet(dKey('data'), JSON.stringify(fbData));
       if(fbMora) localStorage.setItem('fj_cuotas_mora', JSON.stringify(fbMora));
       if(fbBal) _lsSet(dKey('balances'), JSON.stringify(fbBal));
@@ -8538,6 +8629,7 @@ async function init(){
       if(fbMesActual) localStorage.setItem('fj_mes_actual', JSON.stringify(fbMesActual));
       if(fbAgrLotes) _lsSet(dKey('agrimensorLotes'), JSON.stringify(fbAgrLotes));
       if(fbLotesLibres) _lsSet(dKey('lotesLibresE123'), JSON.stringify(fbLotesLibres));
+      if(fbLotesCerts) _lsSet(dKey('lotesCerts'), JSON.stringify(fbLotesCerts));
       console.log('Firebase data loaded');
       // Escuchar cambios en tiempo real
       let _fbInitDone = false;
@@ -8568,6 +8660,7 @@ async function init(){
       window._fbListen('adelantos', (d) => { if(d){ _lsSet(dKey('adelantos'), JSON.stringify(d)); _fbRerender('balances'); } });
       window._fbListen('agrimensorLotes', (d) => { if(d){ _lsSet(dKey('agrimensorLotes'), JSON.stringify(d)); _fbRerender('balances'); } });
       window._fbListen('lotesLibresE123', (d) => { if(d){ _lsSet(dKey('lotesLibresE123'), JSON.stringify(d)); } });
+      window._fbListen('lotesCerts', (d) => { if(d){ _lsSet(dKey('lotesCerts'), JSON.stringify(d)); } });
       window._fbListen('mora', (d) => { if(d) localStorage.setItem('fj_mora', JSON.stringify(d)); });
       window._fbListen('extras', (d) => { if(d) localStorage.setItem('fj_extras', JSON.stringify(d)); });
       window._fbListen('mesActual', (d) => { if(d) localStorage.setItem('fj_mes_actual', JSON.stringify(d)); });
