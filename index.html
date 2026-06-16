@@ -403,6 +403,7 @@ tr:hover td{background:var(--bg)}
       <button class="tab-btn" onclick="adminTab('datos')">💾 Datos</button>
       <button class="tab-btn" onclick="adminTab('icc')">Incremento ICC</button>
       <button class="tab-btn" onclick="adminTab('morapanel')" id="tab-btn-mora">⚠️ Mora</button>
+      <button class="tab-btn" onclick="adminTab('terminados')" id="tab-btn-terminados">🏁 Lotes Finalizados</button>
       <button class="tab-btn" onclick="adminTab('vistaclient')">👁 Vista Cliente</button>
     </div>
     <div class="tab-content-area">
@@ -559,6 +560,7 @@ tr:hover td{background:var(--bg)}
     </div>
 </div></div>
     <div id="atab-stats" style="display:none"><div id="a-stats-content" style="padding:1rem 1.5rem;max-width:1000px;margin:0 auto"></div></div>
+    <div id="atab-terminados" style="display:none"><div id="a-terminados-content" style="padding:1rem 1.5rem;max-width:1000px;margin:0 auto"></div></div>
     <div id="atab-morapanel" style="display:none"><div class="main" id="a-mora-content" style="max-width:1000px;margin:0 auto;padding-top:1rem"></div></div>
     <div id="atab-vistaclient" style="display:none">
       <div class="main" style="max-width:700px;margin:0 auto;padding-top:1rem">
@@ -2532,12 +2534,12 @@ function adminTab(t){
   const sidebarEl=document.getElementById('admin-sidebar');
   if(sidebarEl){sidebarEl.style.position='absolute';sidebarEl.style.top='0.5rem';sidebarEl.style.right='calc(50% + 500px)';sidebarEl.style.width='';sidebarEl.style.flexShrink='';sidebarEl.style.alignSelf='';}
   adminDetId=null;
-  ['inicio','resumen','balances','lista','historial','icc','stats','morapanel','vistaclient','datos'].forEach(x=>{
+  ['inicio','resumen','balances','lista','historial','icc','stats','terminados','morapanel','vistaclient','datos'].forEach(x=>{
     const el=document.getElementById('atab-'+x);
     if(el)el.style.display=x===t?(x==='lista'?'flex':'block'):'none';
   });
   document.querySelectorAll('#page-admin .tab-btn').forEach(b=>{
-    const map={'Inicio':'inicio','Resumen':'resumen','Balances':'balances','Lista de clientes':'lista','Historial':'historial','Incremento ICC':'icc','📊 Estadísticas':'stats','⚠️ Mora':'morapanel'};
+    const map={'Inicio':'inicio','Resumen':'resumen','Balances':'balances','Lista de clientes':'lista','Historial':'historial','Incremento ICC':'icc','📊 Estadísticas':'stats','⚠️ Mora':'morapanel','🏁 Lotes Finalizados':'terminados'};
     b.classList.toggle('active',map[b.textContent.trim()]===t);
   });
   if(t==='inicio')renderInicio();
@@ -2547,6 +2549,7 @@ function adminTab(t){
   if(t==='historial')renderHistorial();
   if(t==='icc'){renderIccStatus();renderIccHist();}
   if(t==='stats')renderStats();
+  if(t==='terminados')renderLotesTerminados('terminados');
   if(t==='morapanel')renderPanelMora();
   if(t==='vistaclient')renderVistaCliente();
   if(t==='lista') aplicarModoAdmin();
@@ -5080,11 +5083,32 @@ function renderStats(){
   }
 
   // ── Lotes que terminaron ────────────────────────────────────────────────
+  // Resumen lotes finalizados
+  const finalizadosTodos = data.filter(c=>c.est==='finalizado');
+  const finNormal = finalizadosTodos.filter(c=>!c.autopago).length;
+  const finPrestamo = finalizadosTodos.filter(c=>c.autopago).length;
+  const certsAll = loadLotesCerts();
+  const nCertPend = finalizadosTodos.filter(c=>!certsAll[c.id]?.certEntregado).length;
+  const nCertOk = finalizadosTodos.filter(c=>certsAll[c.id]?.certEntregado).length;
+  const nUrgAll = Object.values(certsAll).filter(v=>v.urgente).length;
+
+  html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-top:1.25rem">';
+  html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px">🏁 RESUMEN FINALIZADOS</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:0">';
+  html += `<div style="text-align:center;padding:8px 4px"><div style="font-size:20px;font-weight:800">${finNormal}</div><div style="font-size:10px;color:var(--text2)">Terminaron</div></div>`;
+  html += `<div style="text-align:center;padding:8px 4px"><div style="font-size:20px;font-weight:800;color:#d97706">${finPrestamo}</div><div style="font-size:10px;color:var(--text2)">Préstamos</div></div>`;
+  html += `<div style="text-align:center;padding:8px 4px"><div style="font-size:20px;font-weight:800;color:#dc2626">${nUrgAll}</div><div style="font-size:10px;color:var(--text2)">Urgentes</div></div>`;
+  html += '</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">';
+  html += `<div style="text-align:center;padding:6px 4px"><div style="font-size:18px;font-weight:800;color:#f59e0b">${nCertPend}</div><div style="font-size:10px;color:var(--text2)">Sin cert. entregado</div></div>`;
+  html += `<div style="text-align:center;padding:6px 4px"><div style="font-size:18px;font-weight:800;color:#16a34a">${nCertOk}</div><div style="font-size:10px;color:var(--text2)">Cert. entregado</div></div>`;
+  html += '</div></div>';
+
   // Botón acceso a lotes terminados
   const nFin = data.filter(c=>c.est==='finalizado').length;
   const nUrg = Object.values(loadLotesCerts()).filter(v=>v.urgente).length;
   html += `<div style="margin-top:1.25rem">
-    <button onclick="renderLotesTerminados()" style="width:100%;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+    <button onclick="adminTab('terminados')" style="width:100%;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;display:flex;justify-content:space-between;align-items:center">
       <span style="font-size:14px;font-weight:700">🏁 Lotes que terminaron</span>
       <span style="display:flex;gap:8px;align-items:center">
         ${nUrg?`<span style="background:#dc2626;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px">⚡ ${nUrg} urgente${nUrg>1?'s':''}</span>`:''}
@@ -5097,8 +5121,10 @@ function renderStats(){
     el.innerHTML=html;
 }
 
-function renderLotesTerminados(){
-  const el=document.getElementById('a-stats-content');
+function renderLotesTerminados(origen){
+  window._ltOrigen = origen || 'terminados';
+  const elId = origen==='terminados' ? 'a-terminados-content' : 'a-stats-content';
+  const el=document.getElementById(elId);
   if(!el) return;
   const data=loadData();
   const certs=loadLotesCerts();
@@ -5109,8 +5135,11 @@ function renderLotesTerminados(){
     return (a.id||'').localeCompare(b.id||'');
   });
 
-  let html=`<button onclick="renderStats()" style="background:none;border:none;color:var(--acc2);font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:1rem">‹ Volver</button>`;
-  html+=`<div style="font-size:16px;font-weight:800;margin-bottom:1rem">🏁 Lotes que terminaron <span style="font-size:13px;font-weight:400;color:var(--text2)">(${finalizados.length})</span></div>`;
+  const volverFn = origen==='terminados' ? '' : `renderStats()`;
+  let html = origen==='terminados'
+    ? `<div style="font-size:16px;font-weight:800;margin-bottom:1rem">🏁 Lotes que terminaron <span style="font-size:13px;font-weight:400;color:var(--text2)">(${finalizados.length})</span></div>`
+    : `<button onclick="${volverFn}" style="background:none;border:none;color:var(--acc2);font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:1rem">‹ Volver</button>
+       <div style="font-size:16px;font-weight:800;margin-bottom:1rem">🏁 Lotes que terminaron <span style="font-size:13px;font-weight:400;color:var(--text2)">(${finalizados.length})</span></div>`;
 
   finalizados.forEach(c=>{
     const cert=certs[c.id]||{};
@@ -5146,16 +5175,16 @@ function renderLotesTerminados(){
       const pct=Math.round((c.ca-1)/c.ct*100);
       html+=`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px"><span>Cuotas devueltas</span><span>${c.ca-1}/${c.ct}</span></div><div style="background:var(--border2);border-radius:99px;height:5px;overflow:hidden"><div style="background:#d97706;width:${pct}%;height:100%;border-radius:99px"></div></div></div>`;
     }
-    html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:11px;color:var(--text2)">📅 Finalizó:</span><input type="date" value="${fecha}" onclick="event.stopPropagation()" onchange="setCertFecha('${c.id}',this.value);renderLotesTerminados()" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card);color:var(--text)"></div>`;
+    html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:11px;color:var(--text2)">📅 Finalizó:</span><input type="date" value="${fecha}" onclick="event.stopPropagation()" onchange="setCertFecha('${c.id}',this.value);renderLotesTerminados(_ltOrigen)" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card);color:var(--text)"></div>`;
     html+=`<div style="display:flex;gap:6px;flex-wrap:wrap">`;
     const btnCert=(field,label,color)=>{
       const active=!!cert[field];
-      return `<button onclick="event.stopPropagation();toggleCertField('${c.id}','${field}');renderLotesTerminados()" style="padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${active?color:'var(--border)'};background:${active?color:'transparent'};color:${active?'#fff':'var(--text2)'}">${label}</button>`;
+      return `<button onclick="event.stopPropagation();toggleCertField('${c.id}','${field}');renderLotesTerminados(_ltOrigen)" style="padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${active?color:'var(--border)'};background:${active?color:'transparent'};color:${active?'#fff':'var(--text2)'}">${label}</button>`;
     };
     html+=btnCert('certSolicitado','✉ Solicitado','#4f46e5');
     html+=btnCert('certRecibido','📄 Recibido','#16a34a');
     html+=btnCert('certEntregado','✅ Entregado','#0891b2');
-    html+=`<button onclick="event.stopPropagation();toggleCertField('${c.id}','urgente');renderLotesTerminados()" style="padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${urgente?'#dc2626':'var(--border)'};background:${urgente?'#dc2626':'transparent'};color:${urgente?'#fff':'var(--text2)'}">⚡ Urgente</button>`;
+    html+=`<button onclick="event.stopPropagation();toggleCertField('${c.id}','urgente');renderLotesTerminados(_ltOrigen)" style="padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${urgente?'#dc2626':'var(--border)'};background:${urgente?'#dc2626':'transparent'};color:${urgente?'#fff':'var(--text2)'}">⚡ Urgente</button>`;
     html+=`</div></div></div>`;
   });
 
