@@ -5129,19 +5129,40 @@ function renderLotesTerminados(origen){
   const data=loadData();
   const certs=loadLotesCerts();
 
-  const finalizados=data.filter(c=>c.est==='finalizado').sort((a,b)=>{
-    if(a.autopago&&!b.autopago) return -1;
-    if(!a.autopago&&b.autopago) return 1;
-    return (a.id||'').localeCompare(b.id||'');
-  });
+  const normales = data.filter(c=>c.est==='finalizado'&&!c.autopago);
+  const prestamos = data.filter(c=>c.est==='finalizado'&&c.autopago);
+
+  // Orden de manzanas por etapa
+  const mzOrder = {'M1':0,'M2':1,'M3':2,'M4':3,'ETAPA 2':4,'ETAPA 3':5};
+  const e4MzOrder = {'E4-M5':0,'E4-M4':1,'E4-M3':2,'E4-M2':3,'E4-M1':4};
+
+  function getMzGroup(c){
+    const mz = c.mz||'';
+    if(['M1','M2','M3','M4'].includes(mz)) return {etapa:'E1', mz, sub:mzOrder[mz]};
+    if(mz==='ETAPA 2') return {etapa:'E2', mz, sub:4};
+    if(mz==='ETAPA 3') return {etapa:'E3', mz, sub:5};
+    if(mz.startsWith('E4-')) return {etapa:'E4', mz, sub:e4MzOrder[mz]??9};
+    return {etapa:'ZZ', mz, sub:99};
+  }
+
+  function sortLotes(arr){
+    return arr.sort((a,b)=>{
+      const ga=getMzGroup(a), gb=getMzGroup(b);
+      const etapaOrd={'E1':0,'E2':1,'E3':2,'E4':3,'ZZ':4};
+      if(etapaOrd[ga.etapa]!==etapaOrd[gb.etapa]) return etapaOrd[ga.etapa]-etapaOrd[gb.etapa];
+      if(ga.sub!==gb.sub) return ga.sub-gb.sub;
+      return String(a.lote||'').localeCompare(String(b.lote||''), undefined, {numeric:true});
+    });
+  }
 
   const volverFn = origen==='terminados' ? '' : `renderStats()`;
+  const totalFin = normales.length + prestamos.length;
   let html = origen==='terminados'
-    ? `<div style="font-size:16px;font-weight:800;margin-bottom:1rem">🏁 Lotes que terminaron <span style="font-size:13px;font-weight:400;color:var(--text2)">(${finalizados.length})</span></div>`
+    ? `<div style="font-size:16px;font-weight:800;margin-bottom:1rem">🏁 Lotes que terminaron <span style="font-size:13px;font-weight:400;color:var(--text2)">(${totalFin})</span></div>`
     : `<button onclick="${volverFn}" style="background:none;border:none;color:var(--acc2);font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:1rem">‹ Volver</button>
-       <div style="font-size:16px;font-weight:800;margin-bottom:1rem">🏁 Lotes que terminaron <span style="font-size:13px;font-weight:400;color:var(--text2)">(${finalizados.length})</span></div>`;
+       <div style="font-size:16px;font-weight:800;margin-bottom:1rem">🏁 Lotes que terminaron <span style="font-size:13px;font-weight:400;color:var(--text2)">(${totalFin})</span></div>`;
 
-  finalizados.forEach(c=>{
+  function renderFila(c){
     const cert=certs[c.id]||{};
     const esPrestamo=!!c.autopago;
     const urgente=!!cert.urgente;
@@ -5155,37 +5176,57 @@ function renderLotesTerminados(origen){
       return `<span style="width:10px;height:10px;border-radius:50%;background:${active?color:'var(--border2)'};display:inline-block;border:1.5px solid ${active?color:'var(--border)'}"></span>`;
     };
 
-    html+=`<div onclick="expandLoteTerminado('${c.id}')" style="border:1px solid ${urgente?'#dc2626':'var(--border)'};border-radius:8px;padding:9px 12px;margin-bottom:6px;background:${urgente?'rgba(220,38,38,0.04)':'var(--card)'};cursor:pointer">`;
-    html+=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">`;
-    html+=`<div style="min-width:0;flex:1">`;
-    html+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">`;
-    html+=`${urgente?'<span style="color:#dc2626;font-size:12px">⚡</span>':''}`;
-    html+=`<span style="font-size:11px;font-weight:800;color:var(--acc)">${c.id}</span>`;
-    if(esPrestamo) html+=`<span style="background:#d97706;color:#fff;font-size:9px;padding:1px 5px;border-radius:3px">${c.ca-1}/${c.ct}</span>`;
-    html+=`</div>`;
-    html+=`<div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.titular}</div>`;
-    html+=`</div>`;
-    html+=`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">`;
-    html+=`<span style="font-size:10px;color:var(--text2)">📅 ${fechaDisplay}</span>`;
-    html+=`<div style="display:flex;gap:4px;align-items:center">${dot('certSolicitado','#4f46e5')}${dot('certRecibido','#16a34a')}${dot('certEntregado','#0891b2')}</div>`;
-    html+=`</div></div>`;
+    let row=`<div onclick="expandLoteTerminado('${c.id}')" style="border:1px solid ${urgente?'#dc2626':'var(--border)'};border-radius:8px;padding:9px 12px;margin-bottom:6px;background:${urgente?'rgba(220,38,38,0.04)':'var(--card)'};cursor:pointer">`;
+    row+=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">`;
+    row+=`<div style="min-width:0;flex:1">`;
+    row+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">`;
+    row+=`${urgente?'<span style="color:#dc2626;font-size:12px">⚡</span>':''}`;
+    row+=`<span style="font-size:11px;font-weight:800;color:var(--acc)">${c.id}</span>`;
+    if(esPrestamo) row+=`<span style="background:#d97706;color:#fff;font-size:9px;padding:1px 5px;border-radius:3px">${c.ca-1}/${c.ct}</span>`;
+    row+=`</div>`;
+    row+=`<div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.titular}</div>`;
+    row+=`</div>`;
+    row+=`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">`;
+    row+=`<span style="font-size:10px;color:var(--text2)">📅 ${fechaDisplay}</span>`;
+    row+=`<div style="display:flex;gap:4px;align-items:center">${dot('certSolicitado','#4f46e5')}${dot('certRecibido','#16a34a')}${dot('certEntregado','#0891b2')}</div>`;
+    row+=`</div></div>`;
 
-    html+=`<div id="lt-exp-${c.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">`;
+    row+=`<div id="lt-exp-${c.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">`;
     if(esPrestamo&&c.ct>0){
       const pct=Math.round((c.ca-1)/c.ct*100);
-      html+=`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px"><span>Cuotas devueltas</span><span>${c.ca-1}/${c.ct}</span></div><div style="background:var(--border2);border-radius:99px;height:5px;overflow:hidden"><div style="background:#d97706;width:${pct}%;height:100%;border-radius:99px"></div></div></div>`;
+      row+=`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px"><span>Cuotas devueltas</span><span>${c.ca-1}/${c.ct}</span></div><div style="background:var(--border2);border-radius:99px;height:5px;overflow:hidden"><div style="background:#d97706;width:${pct}%;height:100%;border-radius:99px"></div></div></div>`;
     }
-    html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:11px;color:var(--text2)">📅 Finalizó:</span><input type="date" value="${fecha}" onclick="event.stopPropagation()" onchange="setCertFecha('${c.id}',this.value);renderLotesTerminados(_ltOrigen)" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card);color:var(--text)"></div>`;
-    html+=`<div style="display:flex;gap:6px;flex-wrap:wrap">`;
+    row+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:11px;color:var(--text2)">📅 Finalizó:</span><input type="date" value="${fecha}" onclick="event.stopPropagation()" onchange="setCertFecha('${c.id}',this.value);renderLotesTerminados(_ltOrigen)" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--card);color:var(--text)"></div>`;
+    row+=`<div style="display:flex;gap:6px;flex-wrap:wrap">`;
     const btnCert=(field,label,color)=>{
       const active=!!cert[field];
       return `<button onclick="event.stopPropagation();toggleCertField('${c.id}','${field}');renderLotesTerminados(_ltOrigen)" style="padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${active?color:'var(--border)'};background:${active?color:'transparent'};color:${active?'#fff':'var(--text2)'}">${label}</button>`;
     };
-    html+=btnCert('certSolicitado','✉ Solicitado','#4f46e5');
-    html+=btnCert('certRecibido','📄 Recibido','#16a34a');
-    html+=btnCert('certEntregado','✅ Entregado','#0891b2');
-    html+=`<button onclick="event.stopPropagation();toggleCertField('${c.id}','urgente');renderLotesTerminados(_ltOrigen)" style="padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${urgente?'#dc2626':'var(--border)'};background:${urgente?'#dc2626':'transparent'};color:${urgente?'#fff':'var(--text2)'}">⚡ Urgente</button>`;
-    html+=`</div></div></div>`;
+    row+=btnCert('certSolicitado','✉ Solicitado','#4f46e5');
+    row+=btnCert('certRecibido','📄 Recibido','#16a34a');
+    row+=btnCert('certEntregado','✅ Entregado','#0891b2');
+    row+=`<button onclick="event.stopPropagation();toggleCertField('${c.id}','urgente');renderLotesTerminados(_ltOrigen)" style="padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${urgente?'#dc2626':'var(--border)'};background:${urgente?'#dc2626':'transparent'};color:${urgente?'#fff':'var(--text2)'}">⚡ Urgente</button>`;
+    row+=`</div></div></div>`;
+    return row;
+  }
+
+  // Renderizar grupos por etapa
+  const grupos = [
+    {label:'Etapa 1', lotes: sortLotes(normales.filter(c=>['M1','M2','M3','M4'].includes(c.mz)))},
+    {label:'Etapa 2', lotes: sortLotes(normales.filter(c=>c.mz==='ETAPA 2'))},
+    {label:'Etapa 3', lotes: sortLotes(normales.filter(c=>c.mz==='ETAPA 3'))},
+    {label:'Etapa 4', lotes: sortLotes(normales.filter(c=>(c.mz||'').startsWith('E4-')))},
+    {label:'Préstamos', lotes: sortLotes([...prestamos]), isPrestamo:true},
+  ];
+
+  grupos.forEach(g=>{
+    if(!g.lotes.length) return;
+    html+=`<div style="margin-bottom:1.25rem">`;
+    html+=`<div style="font-size:12px;font-weight:800;color:var(--text2);letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid ${g.isPrestamo?'#d97706':'var(--border)'}">`;
+    html+=g.isPrestamo?`🏦 ${g.label.toUpperCase()} (${g.lotes.length})`:`${g.label.toUpperCase()} (${g.lotes.length})`;
+    html+=`</div>`;
+    g.lotes.forEach(c=>{ html+=renderFila(c); });
+    html+=`</div>`;
   });
 
   el.innerHTML=html;
