@@ -5181,7 +5181,7 @@ function renderLotesTerminados(origen){
     row+=`<div style="min-width:0;flex:1">`;
     row+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">`;
     row+=`${urgente?'<span style="color:#dc2626;font-size:12px">⚡</span>':''}`;
-    row+=`<span style="font-size:11px;font-weight:800;color:var(--acc)">${c.id}</span>`;
+    row+=`<span style="background:var(--card);border:1.5px solid var(--green-border);border-radius:5px;padding:2px 8px;font-size:11px;font-weight:800;color:var(--green)">${c.id}</span>`;
     if(esPrestamo) row+=`<span style="background:#d97706;color:#fff;font-size:9px;padding:1px 5px;border-radius:3px">${c.ca-1}/${c.ct}</span>`;
     row+=`</div>`;
     row+=`<div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.titular}</div>`;
