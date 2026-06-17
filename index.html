@@ -8660,6 +8660,24 @@ function marcarPago(id, interesOverride){
   c.pago=true;c.pagoTs=ts;
   saveData(data);
 
+  // ── Detección de última cuota ─────────────────────────────────────────
+  if(c.ca>=c.ct && c.est==='activo'){
+    // Es la última cuota — finalizar automáticamente
+    const data2=loadData();
+    const c2=data2.find(x=>x.id===id);
+    if(c2){
+      c2.est='finalizado';
+      saveData(data2);
+    }
+    // Registrar fecha de finalización en lotesCerts
+    const certs=loadLotesCerts();
+    if(!certs[id]) certs[id]={};
+    certs[id].fecha=ts.split('T')[0];
+    saveLotesCerts(certs);
+    // Toast especial
+    setTimeout(()=>mostrarToastCobro('🏁 ¡Última cuota! Lote finalizado'),100);
+  }
+
   if(tieneMora){
     // Cliente con mora: cuota + interes van a caja de mora
     registrarPagoMora(id, c.monto, interes, ts);
