@@ -5210,26 +5210,51 @@ function renderLotesTerminados(origen){
     return row;
   }
 
-  // Renderizar grupos por etapa
+  // Renderizar grupos por etapa como acordeones
   const grupos = [
-    {label:'Etapa 1', lotes: sortLotes(normales.filter(c=>['M1','M2','M3','M4'].includes(c.mz)))},
-    {label:'Etapa 2', lotes: sortLotes(normales.filter(c=>c.mz==='ETAPA 2'))},
-    {label:'Etapa 3', lotes: sortLotes(normales.filter(c=>c.mz==='ETAPA 3'))},
-    {label:'Etapa 4', lotes: sortLotes(normales.filter(c=>(c.mz||'').startsWith('E4-')))},
-    {label:'Préstamos', lotes: sortLotes([...prestamos]), isPrestamo:true},
+    {label:'Etapa 1', key:'e1', lotes: sortLotes(normales.filter(c=>['M1','M2','M3','M4'].includes(c.mz)))},
+    {label:'Etapa 2', key:'e2', lotes: sortLotes(normales.filter(c=>c.mz==='ETAPA 2'))},
+    {label:'Etapa 3', key:'e3', lotes: sortLotes(normales.filter(c=>c.mz==='ETAPA 3'))},
+    {label:'Etapa 4', key:'e4', lotes: sortLotes(normales.filter(c=>(c.mz||'').startsWith('E4-')))},
+    {label:'Préstamos', key:'prest', lotes: sortLotes([...prestamos]), isPrestamo:true},
   ];
 
   grupos.forEach(g=>{
     if(!g.lotes.length) return;
-    html+=`<div style="margin-bottom:1.25rem">`;
-    html+=`<div style="font-size:12px;font-weight:800;color:var(--text2);letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid ${g.isPrestamo?'#d97706':'var(--border)'}">`;
-    html+=g.isPrestamo?`🏦 ${g.label.toUpperCase()} (${g.lotes.length})`:`${g.label.toUpperCase()} (${g.lotes.length})`;
+    const chips = g.lotes.map(c=>`<span style="background:var(--border);border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700;color:var(--text2)">${c.id}</span>`).join(' ');
+
+    html+=`<div style="border:1px solid ${g.isPrestamo?'#d97706':'var(--border)'};border-radius:10px;margin-bottom:8px;overflow:hidden">`;
+
+    // Header acordeón (siempre visible)
+    html+=`<div onclick="toggleGrupoTerminados('${g.key}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;background:var(--surface)">`;
+    html+=`<div>`;
+    html+=`<div style="font-size:13px;font-weight:800;${g.isPrestamo?'color:#d97706':''}">`;
+    html+=g.isPrestamo?`🏦 ${g.label}`:`${g.label}`;
+    html+=` <span style="font-size:11px;font-weight:400;color:var(--text2)">(${g.lotes.length})</span></div>`;
+    html+=`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${chips}</div>`;
     html+=`</div>`;
+    html+=`<span id="lt-arrow-${g.key}" style="color:var(--text2);font-size:16px;flex-shrink:0;margin-left:8px">›</span>`;
+    html+=`</div>`;
+
+    // Contenido expandible (oculto por defecto)
+    html+=`<div id="lt-grupo-${g.key}" style="display:none;padding:10px 12px;border-top:1px solid var(--border)">`;
     g.lotes.forEach(c=>{ html+=renderFila(c); });
+    html+=`</div>`;
+
     html+=`</div>`;
   });
 
   el.innerHTML=html;
+}
+
+function toggleGrupoTerminados(key){
+  const panel=document.getElementById('lt-grupo-'+key);
+  const arrow=document.getElementById('lt-arrow-'+key);
+  if(!panel) return;
+  const open=panel.style.display==='none';
+  panel.style.display=open?'block':'none';
+  if(arrow) arrow.style.transform=open?'rotate(90deg)':'';
+  if(arrow) arrow.style.transition='transform .2s';
 }
 
 function expandLoteTerminado(id){
