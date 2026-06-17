@@ -5123,6 +5123,17 @@ function renderStats(){
 
 function renderLotesTerminados(origen){
   window._ltOrigen = origen || 'terminados';
+
+  // Guardar estado actual de grupos y lotes abiertos
+  const gruposAbiertos = new Set();
+  const lotesAbiertos = new Set();
+  ['e1','e2','e3','e4','prest'].forEach(key=>{
+    const el=document.getElementById('lt-grupo-'+key);
+    if(el&&el.style.display!=='none') gruposAbiertos.add(key);
+  });
+  document.querySelectorAll('[id^="lt-exp-"]').forEach(el=>{
+    if(el.style.display!=='none') lotesAbiertos.add(el.id.replace('lt-exp-',''));
+  });
   const elId = origen==='terminados' ? 'a-terminados-content' : 'a-stats-content';
   const el=document.getElementById(elId);
   if(!el) return;
@@ -5245,6 +5256,19 @@ function renderLotesTerminados(origen){
   });
 
   el.innerHTML=html;
+
+  // Restaurar grupos abiertos
+  gruposAbiertos.forEach(key=>{
+    const panel=document.getElementById('lt-grupo-'+key);
+    const arrow=document.getElementById('lt-arrow-'+key);
+    if(panel){ panel.style.display='block'; }
+    if(arrow){ arrow.style.transform='rotate(90deg)'; }
+  });
+  // Restaurar lotes expandidos
+  lotesAbiertos.forEach(id=>{
+    const panel=document.getElementById('lt-exp-'+id);
+    if(panel) panel.style.display='block';
+  });
 }
 
 function toggleGrupoTerminados(key){
@@ -5253,8 +5277,7 @@ function toggleGrupoTerminados(key){
   if(!panel) return;
   const open=panel.style.display==='none';
   panel.style.display=open?'block':'none';
-  if(arrow) arrow.style.transform=open?'rotate(90deg)':'';
-  if(arrow) arrow.style.transition='transform .2s';
+  if(arrow){ arrow.style.transform=open?'rotate(90deg)':''; arrow.style.transition='transform .2s'; }
 }
 
 function expandLoteTerminado(id){
