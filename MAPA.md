@@ -63,7 +63,48 @@ Campos clave: `id` (ej `"M1-4B"`, `"ETAPA 2-3"`, `"E4-M1-9B"`), `mz` (manzana/et
 - Firebase init carga `agrimensorLotes`; listener actualiza localStorage y re-renderiza `balances` en tiempo real.
 - UI: Balances → ⚖️ Agrimensores → botón **⚙️ Gestionar lotes** → `renderBalances('agr-gestionar')` — lista actual con "✗ Quitar" y form "+ Agregar lote".
 
-## Mora — routing para agrimensores (v1.0298+)
+## Lotes vacantes E1/E2/E3 (v1.0298+)
+
+- **`loadLotesLibresE123()`/`saveLotesLibresE123()`** — Set persistido (Firebase-synced) de lotes que quedaron vacantes al eliminar un cliente de M1/M2/M3/M4/ETAPA 2/ETAPA 3.
+- `delCliente()` ahora llama `agregarLoteLibreE123(c.id)` si el lote pertenece a esas manzanas.
+- `getLotesDisponibles(etapa,mz)` actualizado: para `etapa==='E1'/'E2'/'E3'` ahora lee de `loadLotesLibresE123()` (antes devolvía `[]` siempre).
+- `getManzanasPorEtapa('E1')` ahora también cuenta lotes libres (antes solo E4).
+- `renderSelectorManzana()` muestra sub-manzanas M1-M4 para E1 igual que E4-M1...M5.
+- Al guardar nuevo cliente (`saveCliente`), cada lote asignado se quita de la lista de vacantes vía `quitarLoteLibreE123(lId)`.
+
+## Lotes Finalizados — vista + certificados (v1.0298+)
+
+- Nuevo tab **"🏁 Lotes Finalizados"** en la barra de navegación admin (`adminTab('terminados')` → `atab-terminados` → `renderLotesTerminados('terminados')`).
+- También accesible desde Estadísticas vía botón compacto que llama `adminTab('terminados')`.
+- **`loadLotesCerts()`/`saveLotesCerts()`** — Firebase-synced, key `lotesCerts`. Por lote: `{fecha, certSolicitado, certRecibido, certEntregado, urgente}`.
+- `renderLotesTerminados(origen)` — agrupa en acordeones por etapa (Etapa 1: M1→M2→M3→M4; Etapa 2; Etapa 3; Etapa 4: **orden invertido M5→M4→M3→M2→M1**, igual que el resto de la app; Préstamos al final). Cerrados muestran chips verdes con los IDs; al abrir, fila por lote con fecha editable y 3 botones de certificado + urgente.
+- Estado de acordeones/filas abiertas se preserva entre re-renders (guardado antes de `innerHTML=html`, restaurado después) — necesario porque cada toggle de certificado re-renderiza toda la vista.
+- **Auto-finalización**: `marcarPago()` detecta `c.ca>=c.ct` tras el pago → setea `c.est='finalizado'` automáticamente, registra fecha en `lotesCerts`, muestra toast "🏁 ¡Última cuota! Lote finalizado". El cliente sale solo del cobro/cierre/mora y aparece en Lotes Finalizados sin acción manual.
+- Resumen agregado en `renderStats()`: cards de Terminaron/Préstamos/Urgentes + Sin cert. entregado/Cert. entregado.
+- **Lotes "préstamo"** = `est:'finalizado'` + `autopago:true`. Son lotes 100% pagados por el cliente pero cuya plata FJ tomó prestada de los dueños del campo; FJ les devuelve mes a mes. Funcionan como cualquier lote (reciben ICC), la ÚNICA diferencia es que `autopago` los excluye del cierre mensual (no generan mora, no se cobran). `aplicarICC` y su preview (`iccPctEditado`) ahora SÍ los incluyen (antes solo filtraba por `est==='activo'`).
+
+## ICC — rediseño completo del flujo (v1.0298+)
+
+Rediseño basado en la lógica real del negocio, conversada y confirmada con el usuario tras detectar que el ICC de Mayo 2026 no se aplicó a 10+ clientes (M2-17A entre ellos) por una doble-lectura de `loadData()` con posible carrera con Firebase.
+
+**Lista 1 — ICC mensual individual** (nueva, independiente de si se aplicó algo):
+- `loadIccMensual()`/`saveIccMensual()` — Firebase-synced, key `iccMensual`.
+- `registrarIccMensual(mesIdx, anio, pct)` — guarda/actualiza `{mesKey, mes, anio, pct, ts}`. Se llama automáticamente desde `buscarICCClaude()` y `buscarICCIndec()` cuando encuentran un dato válido nuevo, y también desde `aplicarICC()` con el % tipeado manualmente.
+- `getIccMensual(mesIdx, anio)` / `trimestreCompletoEnLista1(mesIdx, anio)` — verifica si el mes en curso + los 2 anteriores están registrados.
+
+**Lista 2 — Incrementos trimestrales aplicados** = el `loadICC()`/`saveICC()` que ya existía, sin cambios de estructura.
+
+**`aplicarICC()` — 2 candados nuevos antes de cualquier cálculo:**
+1. Cierre final del mes en curso (`loadCierreFinal()`, comparado contra mes/año de HOY, no contra el cierre más reciente cualquiera) debe estar hecho → si no, alert explicativo y `return`.
+2. Lista 1 debe tener los 3 meses consecutivos (mes en curso + 2 anteriores) → si falta alguno, alert con los nombres de los meses faltantes y `return`.
+
+**Cambio de lógica de color**: el trimestre/planilla a incrementar se determina por el **mes SIGUIENTE** al mes en curso (`ICC_MAP[(mesEnCurso+1)%12]`), NO por el mes del cierre final como antes (eso era ambiguo/incorrecto). El total trimestral se calcula sumando los 3 valores reales de Lista 1, no leyendo el dataset de `icc-apply-btn` ni recalculando contra el historial de aplicados.
+
+**Bug eliminado**: la función hacía `loadData()` dos veces (`data` para contar, `d` para aplicar) — sospechoso de ser la causa de clientes que quedaban afuera del incremento por sincronización de Firebase entre ambas lecturas. Ahora usa una sola lectura (`data`) para contar y aplicar.
+
+**`iccPctEditado()`** (preview en vivo mientras se tipea el %) corregido para usar la misma lógica: mes siguiente para el color, conteo incluye préstamos (`est==='finalizado'&&autopago`), suma desde Lista 1 en vez de `getIccDeHistorial` (que solo encontraba meses con trimestre YA aplicado, no meses individuales sueltos).
+
+## Agrimensores en mora (v1.0298+)
 
 - **`registrarCobroCuotaMora(mora, c, interes, ts, fecha)`** — helper centralizado para los 3 sitios de cobro de mora (panel admin, colab, modal flujo) y `registrarPagoMora`. Si `esAgrimensor(id)` → `entry.cuota=0`, `entry.cuotaAgrimensor=c.monto`, y la cuota pura va a `bal.agrimensores`. El interés queda en el entry de mora igual que cualquier cliente (para ser transferido a extras vía `pasarInteresMora`).
 - `cuotaAgrimensor` — campo opcional en entries de `mora[]`. Presente sólo para lotes agrimensor. En el display de "Caja de Mora" aparece como "Cuota (⚖️ Agr.): $X" en lugar de "Cuota: $0".
@@ -87,7 +128,7 @@ Campos clave: `id` (ej `"M1-4B"`, `"ETAPA 2-3"`, `"E4-M1-9B"`), `mz` (manzana/et
 
 ## Changelog reciente
 
-- **v1.0298** — Agrimensores en mora: cierre final ya no excluye lotes agrimensor; cuota pura va a Caja Agrimensores, interés fluye igual que cualquier mora. Lista dinámica de lotes agrimensor (Firebase-synced, UI Gestionar lotes en Balances).
+- **v1.0298** — Sesión grande: (1) Agrimensores reciben mora correctamente + lista dinámica de lotes agrimensor con UI de gestión. (2) Lotes vacantes E1/E2/E3 al eliminar cliente, reutilizables en selector de nuevo cliente. (3) Tab nuevo "Lotes Finalizados" con certificados de firma, urgencias, y auto-finalización al pagar la última cuota. (4) Préstamos (finalizado+autopago) ahora reciben ICC. (5) Rediseño completo del flujo ICC: Lista 1 (mensual individual) + 2 candados (cierre final hecho + trimestre completo) + fix de bug de doble loadData() que causaba clientes excluidos del incremento.
 - Fix `lote.localeCompare` con `String()` en 5 funciones (incluye Gestión de Pagos) — resolvía que Etapa 2/3 no mostraran lotes en varios selectores.
 - `showConfirmModal` ahora acepta `btnLabel`/`btnColor` configurables.
 - Nueva `gestionMarcarTodosConfirm` — aviso + contraseña admin antes de marcar/desmarcar todos los pagos en bloque.
