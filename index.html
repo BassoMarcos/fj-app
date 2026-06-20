@@ -1168,6 +1168,42 @@ function addHist(tipo,desc,cid){
   if(h.length>1000)h.pop();
   saveHist(h);
 }
+// ── Lista 1: ICC mensual individual (registro de cada mes publicado por INDEC) ──
+function loadIccMensual(){
+  try{ const s=_lsGet(dKey('iccMensual')); if(s) return JSON.parse(s); }catch(e){}
+  return [];
+}
+function saveIccMensual(arr){
+  _lsSet(dKey('iccMensual'),JSON.stringify(arr));
+  if(window._firebaseReady) window._fbSet('iccMensual',arr).catch(e=>console.warn('FB iccMensual error:',e));
+}
+// Registra el % de un mes específico (mesIdx 0-indexed, anio ej 2026). No duplica.
+function registrarIccMensual(mesIdx, anio, pct){
+  const arr=loadIccMensual();
+  const mesKey=anio+'-'+String(mesIdx+1).padStart(2,'0');
+  const existe=arr.findIndex(x=>x.mesKey===mesKey);
+  const entry={mesKey, mes:MESES[mesIdx], anio, pct, ts:new Date().toISOString()};
+  if(existe>=0) arr[existe]=entry; else arr.push(entry);
+  saveIccMensual(arr);
+  return entry;
+}
+function getIccMensual(mesIdx, anio){
+  const mesKey=anio+'-'+String(mesIdx+1).padStart(2,'0');
+  return loadIccMensual().find(x=>x.mesKey===mesKey)||null;
+}
+// Verifica si están los 3 meses consecutivos (mesIdx + los 2 anteriores) registrados en Lista 1
+function trimestreCompletoEnLista1(mesIdx, anio){
+  const meses=[];
+  for(let i=2;i>=0;i--){
+    let m=mesIdx-i, a=anio;
+    if(m<0){ m+=12; a-=1; }
+    meses.push({m,a});
+  }
+  const entradas=meses.map(({m,a})=>getIccMensual(m,a));
+  const completo=entradas.every(e=>e!==null);
+  return {completo, entradas, meses};
+}
+
 function loadICC(){
   try{
     const stored = JSON.parse(_lsGet(dKey('icc'))||'[]');
@@ -7635,47 +7671,60 @@ function aplicarICC(){
   const pctMes=parseFloat(document.getElementById('icc-pct').value);
   if(isNaN(pctMes)||pctMes<=0){alert('Ingresá el porcentaje del mes actual');return;}
   const hoy=new Date();
+
+  // ── Candado 1: el cierre final del mes en curso tiene que estar hecho ──
   const cf=loadCierreFinal();
-  const mesIdx=cf&&cf.mes!==undefined?cf.mes:hoy.getMonth();
-  const info=ICC_MAP[mesIdx];
+  const mesEnCurso=hoy.getMonth();
+  const anioEnCurso=hoy.getFullYear();
+  const cierreHecho = cf && cf.mes===mesEnCurso && cf.anio===anioEnCurso;
+  if(!cierreHecho){
+    alert('⚠️ Todavía no hiciste el cierre final de '+MESES[mesEnCurso]+'.\n\nEl cierre final tiene que estar hecho ANTES de aplicar el ICC, porque el cierre avanza las cuotas. Si aplicás el ICC antes, el incremento se va a calcular mal.\n\nPrimero corré el cierre final de '+MESES[mesEnCurso]+', después volvé acá.');
+    return;
+  }
+
+  // ── Candado 2: Lista 1 tiene que tener los 3 meses (actual + 2 anteriores) ──
+  // Asegurar que el mes actual quede registrado en Lista 1 con el % ingresado
+  registrarIccMensual(mesEnCurso, anioEnCurso, pctMes);
+  const tri1=trimestreCompletoEnLista1(mesEnCurso, anioEnCurso);
+  if(!tri1.completo){
+    const faltan = tri1.meses.filter((_,i)=>tri1.entradas[i]===null).map(({m})=>MESES[m]);
+    alert('⚠️ Todavía falta registrar el ICC de: '+faltan.join(', ')+'.\n\nNecesitás los 3 meses del trimestre cargados (mes en curso + los 2 anteriores) antes de poder aplicar el incremento.');
+    return;
+  }
+
+  // ── El color se identifica según el mes SIGUIENTE al mes en curso ──
+  const mesSiguiente=(mesEnCurso+1)%12;
+  const info=ICC_MAP[mesSiguiente];
   if(!info){alert('No se pudo determinar la planilla.');return;}
   const planilla=info.planillaVal;
-  const mesActualNombre=MESES[mesIdx];
   const yaAplicado=loadICC().some(i=>i.planilla===planilla&&i.aumentaEn===info.aumentaEn);
   if(yaAplicado){alert('Ya se aplicó el incremento de '+info.aumentaEn+'.');return;}
-  // Usar totalTri guardado por buscarICCIndec, o calcular si no existe
-  const _storedTotalTri=parseFloat(document.getElementById('icc-apply-btn').dataset.totalTri||'0');
-  let totalTri;
-  if(_storedTotalTri>0){
-    totalTri=_storedTotalTri;
-  } else {
-    const iccHistPlanilla=loadICC().filter(i=>i.planilla===planilla&&i.aumentaEn!==info.aumentaEn);
-    let pctPrev=0;
-    iccHistPlanilla.slice(0,2).forEach(e=>{ pctPrev+=Number(e.pct)||0; });
-    totalTri=parseFloat((pctPrev+pctMes).toFixed(2));
-  }
+
+  // ── Total trimestral: suma exacta de los 3 meses registrados en Lista 1 ──
+  const totalTri=parseFloat(tri1.entradas.reduce((s,e)=>s+(Number(e.pct)||0),0).toFixed(2));
+
   const data=loadData();
   const cnt=data.filter(c=>c.tri===planilla&&(c.est==='activo'||(c.est==='finalizado'&&c.autopago))).length;
   if(cnt===0){alert('No hay clientes activos con planilla '+planilla+'.');return;}
-  // Ejecutar directamente sin clave para ICC
-  const d=loadData();
+  // Ejecutar el incremento sobre la misma lectura de datos (sin doble loadData)
   let aplicados=0;
-  d.forEach(c=>{
+  data.forEach(c=>{
     if(c.tri===planilla&&(c.est==='activo'||(c.est==='finalizado'&&c.autopago))){
       c.monto=Math.round(c.monto*(1+totalTri/100));
       aplicados++;
     }
   });
-  if(aplicados===0){alert('No se encontraron clientes con planilla '+planilla+'. tri en data: '+[...new Set(d.map(c=>c.tri))].join(', '));return;}
-  saveData(d);
+  if(aplicados===0){alert('No se encontraron clientes con planilla '+planilla+'.');return;}
+  saveData(data);
+  const mesEnCursoNombre=MESES[mesEnCurso];
   const icc=loadICC().filter(i=>!(i.planilla===planilla&&i.aumentaEn===info.aumentaEn));
   icc.unshift({pct:pctMes,totalTri,planilla,planillaNombre:info.planillaNombre,
-    mes:mesActualNombre+' '+hoy.getFullYear(),aumentaEn:info.aumentaEn,
+    mes:mesEnCursoNombre+' '+anioEnCurso,aumentaEn:info.aumentaEn,
     mesKey:getMesKey(hoy),cnt:aplicados,ts:new Date().toISOString()});
   saveICC(icc);
-  addHist('icc','ICC '+mesActualNombre+' '+pctMes+'% → '+info.aumentaEn+' — '+planilla+' — '+aplicados+' clientes',null);
+  addHist('icc','ICC '+mesEnCursoNombre+' '+pctMes+'% → '+info.aumentaEn+' — '+planilla+' — '+aplicados+' clientes',null);
   renderIccStatus();renderIccHist();renderAdminTable();
-  alert('ICC '+mesActualNombre+' '+pctMes+'% (trimestre '+totalTri+'%) aplicado a '+aplicados+' clientes planilla '+info.planillaNombre+'. Montos de '+info.aumentaEn+' actualizados.');
+  alert('✅ ICC '+mesEnCursoNombre+' '+pctMes+'% (trimestre '+totalTri+'%) aplicado a '+aplicados+' clientes planilla '+info.planillaNombre+'. Montos de '+info.aumentaEn+' actualizados.');
 }
 
 
@@ -7698,16 +7747,21 @@ function iccPctEditado(){
   if(isNaN(pct) || pct <= 0){ preview.style.display='none'; return; }
   const hoy = new Date();
   const mesIdx = hoy.getMonth();
-  const mesesTri = getTrimestreMeses(mesIdx);
+  const anio = hoy.getFullYear();
+  // Tomar los 2 meses anteriores de Lista 1 (sin contar el actual, que viene del input)
   let pctPrev = 0;
-  mesesTri.slice(0,2).forEach(m => {
-    const entry = getIccDeHistorial(m);
-    if(entry) pctPrev += entry.pct;
-  });
+  for(let i=2;i>=1;i--){
+    let m=mesIdx-i, a=anio;
+    if(m<0){ m+=12; a-=1; }
+    const entry=getIccMensual(m,a);
+    if(entry) pctPrev += Number(entry.pct)||0;
+  }
   const totalTri = parseFloat((pctPrev + pct).toFixed(2));
-  const info = ICC_MAP[mesIdx];
+  // El color corresponde al mes SIGUIENTE al actual
+  const mesSiguiente = (mesIdx+1)%12;
+  const info = ICC_MAP[mesSiguiente];
   const data = loadData();
-  const cnt = data.filter(c => c.tri === info.planillaVal && c.est === 'activo').length;
+  const cnt = data.filter(c => c.tri === info.planillaVal && (c.est==='activo'||(c.est==='finalizado'&&c.autopago))).length;
   preview.style.display = 'block';
   preview.innerHTML = '<strong>Total trimestral: ' + totalTri + '%</strong> &middot; Se aplicar&aacute; a <strong>' + cnt + ' clientes</strong> de planilla <strong>' + info.planillaNombre + '</strong> &middot; Montos de <strong>' + info.aumentaEn + '</strong> actualizados.';
 }
@@ -7757,6 +7811,7 @@ function buscarICCClaude(){
     const pubValida=(mesPub===hoyNow.getMonth()&&anioPub===hoyNow.getFullYear())||(mesPub===(hoyNow.getMonth()-1+12)%12);
     const mesPubNombre=MESES[mesPub>=0?mesPub:hoyNow.getMonth()];
     if(pubValida&&!yaAplicado){
+      registrarIccMensual(mesPub>=0?mesPub:hoyNow.getMonth(), anioPub, pct);
       document.getElementById('icc-pct').value=pct;
       document.getElementById('icc-planilla').value=detInfo.planillaVal;
       document.getElementById('icc-planilla-display').textContent=detInfo.planillaNombre+' — '+detInfo.planillaVal.replace(/-/g,'/');
@@ -7823,6 +7878,7 @@ function buscarICCIndec(){
     const mesPubNombre=MESES[mesPub];
 
     if(pubValida&&!yaAplicado){
+      registrarIccMensual(mesPub, anioPub, pct);
       document.getElementById('icc-pct').value=pct;
       document.getElementById('icc-planilla').value=detInfo.planillaVal;
       document.getElementById('icc-planilla-display').textContent=detInfo.planillaNombre+' — '+detInfo.planillaVal.replace(/-/g,'/');
@@ -8771,6 +8827,7 @@ async function init(){
       const fbAgrLotes = await window._fbGet('agrimensorLotes');
       const fbLotesLibres = await window._fbGet('lotesLibresE123');
       const fbLotesCerts = await window._fbGet('lotesCerts');
+      const fbIccMensual = await window._fbGet('iccMensual');
       if(fbData) _lsSet(dKey('data'), JSON.stringify(fbData));
       if(fbMora) localStorage.setItem('fj_cuotas_mora', JSON.stringify(fbMora));
       if(fbBal) _lsSet(dKey('balances'), JSON.stringify(fbBal));
@@ -8783,6 +8840,7 @@ async function init(){
       if(fbAgrLotes) _lsSet(dKey('agrimensorLotes'), JSON.stringify(fbAgrLotes));
       if(fbLotesLibres) _lsSet(dKey('lotesLibresE123'), JSON.stringify(fbLotesLibres));
       if(fbLotesCerts) _lsSet(dKey('lotesCerts'), JSON.stringify(fbLotesCerts));
+      if(fbIccMensual) _lsSet(dKey('iccMensual'), JSON.stringify(fbIccMensual));
       console.log('Firebase data loaded');
       // Escuchar cambios en tiempo real
       let _fbInitDone = false;
@@ -8814,6 +8872,7 @@ async function init(){
       window._fbListen('agrimensorLotes', (d) => { if(d){ _lsSet(dKey('agrimensorLotes'), JSON.stringify(d)); _fbRerender('balances'); } });
       window._fbListen('lotesLibresE123', (d) => { if(d){ _lsSet(dKey('lotesLibresE123'), JSON.stringify(d)); } });
       window._fbListen('lotesCerts', (d) => { if(d){ _lsSet(dKey('lotesCerts'), JSON.stringify(d)); } });
+      window._fbListen('iccMensual', (d) => { if(d){ _lsSet(dKey('iccMensual'), JSON.stringify(d)); } });
       window._fbListen('mora', (d) => { if(d) localStorage.setItem('fj_mora', JSON.stringify(d)); });
       window._fbListen('extras', (d) => { if(d) localStorage.setItem('fj_extras', JSON.stringify(d)); });
       window._fbListen('mesActual', (d) => { if(d) localStorage.setItem('fj_mes_actual', JSON.stringify(d)); });
