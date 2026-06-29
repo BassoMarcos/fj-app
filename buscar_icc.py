@@ -4,35 +4,31 @@ from datetime import datetime
 MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
             "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
-# El INDEC carga el contenido via un endpoint JSON interno
-# Probamos directamente ese endpoint
-urls_a_probar = [
-    "https://www.indec.gob.ar/ftp/cuadros/economia/icc_03_26.xls",
-    "https://www.indec.gob.ar/uploads/informesdeprensa/icc_05_2673538FC44D.pdf",
-    "https://www.indec.gob.ar/nivel4Default.asp?id_tema_1=3&id_tema_2=5&id_tema_3=33",
-]
-
-results = {}
-for url in urls_a_probar:
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=10) as r:
-            content_type = r.headers.get("Content-Type", "")
-            size = len(r.read())
-            results[url] = {"status": r.status, "type": content_type, "size": size}
-    except Exception as e:
-        results[url] = {"error": str(e)[:100]}
-
-# También buscar en el HTML principal si hay una URL de API interna
-req_main = urllib.request.Request("https://www.indec.gob.ar/indec/web/Nivel4-Tema-3-5-33",
-    headers={"User-Agent": "Mozilla/5.0"})
-with urllib.request.urlopen(req_main, timeout=30) as r:
-    html = r.read().decode("utf-8", errors="ignore")
-
-# Buscar patrones de API o endpoints JSON
-api_patterns = re.findall(r'["\']([^"\']*(?:api|json|datos|informes|icc)[^"\']{5,50})["\']', html, re.IGNORECASE)
-results["api_patterns"] = list(set(api_patterns))[:20]
+# El INDEC tiene una página de informes técnicos con los links a los PDFs
+# Probar la URL de informes técnicos que vimos en el HTML
+url = "https://www.indec.gob.ar/indec/web/Institucional/Indec/InformesTecnicos"
+req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+try:
+    with urllib.request.urlopen(req, timeout=30) as r:
+        html = r.read().decode("utf-8", errors="ignore")
+    
+    # Buscar links a PDFs del ICC
+    icc_links = re.findall(r'icc_\d{2}_[A-F0-9]+\.pdf', html, re.IGNORECASE)
+    # Buscar cualquier link a PDF que tenga ICC
+    pdf_links = re.findall(r'href=["\']([^"\']*icc[^"\']*\.pdf)["\']', html, re.IGNORECASE)
+    
+    res = {
+        "encontrado": False,
+        "url_probada": url,
+        "html_len": len(html),
+        "icc_links": icc_links[:10],
+        "pdf_links": pdf_links[:10],
+        "sample": html[5000:5500],
+        "ts": datetime.utcnow().isoformat()
+    }
+except Exception as e:
+    res = {"encontrado": False, "error": str(e), "ts": datetime.utcnow().isoformat()}
 
 with open("icc-data.json", "w") as f:
-    json.dump({"encontrado": False, "diag": results, "ts": datetime.utcnow().isoformat()}, f, ensure_ascii=False)
+    json.dump(res, f, ensure_ascii=False)
 print("OK")
