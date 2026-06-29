@@ -14,8 +14,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Buscar ICC en INDEC
+      - name: Buscar ICC con navegador
         run: python3 buscar_icc.py
+        timeout-minutes: 5
 
       - name: Commit y push
         run: |
