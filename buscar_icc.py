@@ -4,29 +4,35 @@ from datetime import datetime
 MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
             "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
-url = "https://www.indec.gob.ar/indec/web/Nivel4-Tema-3-5-33"
-req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0"})
-try:
-    with urllib.request.urlopen(req, timeout=30) as r:
-        html = r.read().decode("utf-8", errors="ignore")
+# El INDEC carga el contenido via un endpoint JSON interno
+# Probamos directamente ese endpoint
+urls_a_probar = [
+    "https://www.indec.gob.ar/ftp/cuadros/economia/icc_03_26.xls",
+    "https://www.indec.gob.ar/uploads/informesdeprensa/icc_05_2673538FC44D.pdf",
+    "https://www.indec.gob.ar/nivel4Default.asp?id_tema_1=3&id_tema_2=5&id_tema_3=33",
+]
 
-    # El HTML estatico contiene los links a los PDFs de los informes
-    # Buscar el link al PDF del ultimo informe: icc_MM_YYYYXXXXXXXX.pdf
-    # Ejemplo: icc_05_2673538FC44D.pdf -> mes 05 = Mayo
-    patron_pdf = r'icc_(\d{2})_[A-F0-9]+\.pdf'
-    matches = re.findall(patron_pdf, html, re.IGNORECASE)
+results = {}
+for url in urls_a_probar:
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            content_type = r.headers.get("Content-Type", "")
+            size = len(r.read())
+            results[url] = {"status": r.status, "type": content_type, "size": size}
+    except Exception as e:
+        results[url] = {"error": str(e)[:100]}
 
-    # Mostrar los primeros matches para diagnostico
-    res = {
-        "encontrado": False,
-        "pdf_matches": matches[:10],
-        "html_sample": html[15000:15500].replace('"', "'"),
-        "ts": datetime.utcnow().isoformat()
-    }
+# También buscar en el HTML principal si hay una URL de API interna
+req_main = urllib.request.Request("https://www.indec.gob.ar/indec/web/Nivel4-Tema-3-5-33",
+    headers={"User-Agent": "Mozilla/5.0"})
+with urllib.request.urlopen(req_main, timeout=30) as r:
+    html = r.read().decode("utf-8", errors="ignore")
 
-except Exception as e:
-    res = {"encontrado": False, "error": str(e), "ts": datetime.utcnow().isoformat()}
+# Buscar patrones de API o endpoints JSON
+api_patterns = re.findall(r'["\']([^"\']*(?:api|json|datos|informes|icc)[^"\']{5,50})["\']', html, re.IGNORECASE)
+results["api_patterns"] = list(set(api_patterns))[:20]
 
 with open("icc-data.json", "w") as f:
-    json.dump(res, f, ensure_ascii=False)
-print(json.dumps(res))
+    json.dump({"encontrado": False, "diag": results, "ts": datetime.utcnow().isoformat()}, f, ensure_ascii=False)
+print("OK")
