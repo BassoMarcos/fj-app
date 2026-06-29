@@ -2,52 +2,44 @@ import json, re
 from datetime import datetime
 from playwright.sync_api import sync_playwright
 
-MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
-            "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
-
 try:
+    api_responses = []
+    
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
+        page = context.new_page()
+        
+        # Interceptar todas las respuestas JSON/text
+        def handle_response(response):
+            url = response.url
+            if any(x in url for x in ['api', 'json', 'icc', 'datos', 'informe', 'prensa']):
+                try:
+                    body = response.text()
+                    if len(body) > 20 and len(body) < 50000:
+                        api_responses.append({"url": url, "status": response.status, "body_sample": body[:500]})
+                except:
+                    api_responses.append({"url": url, "status": response.status, "error": "no body"})
+        
+        page.on("response", handle_response)
+        
         page.goto("https://www.indec.gob.ar/indec/web/Nivel4-Tema-3-5-33", 
                   timeout=60000, wait_until="networkidle")
         
-        # Usar inner_text para obtener solo el texto visible, sin HTML ni base64
-        content = page.inner_text("body")
         browser.close()
 
-    patron = r"correspondiente a\s+(\w+)\s+de\s+(\d{4})\s+registra una\s+(?:suba|baja)\s+de\s+([\d,\.]+)%"
-    m = re.search(patron, content, re.IGNORECASE)
-
-    if m:
-        mes_indec_nombre = m.group(1).capitalize()
-        anio_indec = int(m.group(2))
-        pct = float(m.group(3).replace(",", "."))
-        mes_indec_idx = next((i for i,n in enumerate(MESES_ES) if n.lower() == mes_indec_nombre.lower()), -1)
-        hoy = datetime.utcnow()
-        mes_actual_idx = hoy.month - 1
-        mes_anterior_idx = (mes_actual_idx - 1) % 12
-        disponible = (mes_indec_idx == mes_anterior_idx)
-        res = {
-            "encontrado": True, "disponible": disponible,
-            "mes_indec": mes_indec_nombre, "anio_indec": anio_indec,
-            "mes_actual_idx": mes_actual_idx, "pct": pct,
-            "ts": hoy.isoformat()
-        }
-    else:
-        # Buscar cualquier fragmento con porcentajes para diagnostico
-        idx = content.find("correspondiente")
-        sample = content[idx:idx+400] if idx >= 0 else content[2000:2400]
-        res = {"encontrado": False, "disponible": False,
-               "error": "No coincide patron",
-               "text_len": len(content),
-               "sample": sample[:400],
-               "ts": datetime.utcnow().isoformat()}
+    res = {
+        "encontrado": False,
+        "api_responses": api_responses[:15],
+        "total_responses": len(api_responses),
+        "ts": datetime.utcnow().isoformat()
+    }
 
 except Exception as e:
-    res = {"encontrado": False, "disponible": False,
-           "error": str(e)[:300], "ts": datetime.utcnow().isoformat()}
+    res = {"encontrado": False, "error": str(e)[:300], "ts": datetime.utcnow().isoformat()}
 
 with open("icc-data.json", "w") as f:
     json.dump(res, f, ensure_ascii=False)
-print(json.dumps(res))
+print(json.dumps({"total": res.get("total_responses"), "error": res.get("error")}))
