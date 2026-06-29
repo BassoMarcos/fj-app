@@ -1,0 +1,44 @@
+import urllib.request, json, re
+from datetime import datetime
+
+MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+            "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+
+url = "https://www.indec.gob.ar/indec/web/Nivel4-Tema-3-5-33"
+req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+try:
+    with urllib.request.urlopen(req, timeout=30) as r:
+        html = r.read().decode("utf-8", errors="ignore")
+
+    patron = r"correspondiente a\s+(\w+)\s+de\s+(\d{4})\s+registra una\s+(?:suba|baja)\s+de\s+([\d,\.]+)%"
+    m = re.search(patron, html, re.IGNORECASE)
+
+    if m:
+        mes_indec_nombre = m.group(1).capitalize()
+        anio_indec = int(m.group(2))
+        pct = float(m.group(3).replace(",","."))
+
+        mes_indec_idx = next((i for i,n in enumerate(MESES_ES) if n.lower() == mes_indec_nombre.lower()), -1)
+        hoy = datetime.utcnow()
+        mes_actual_idx = hoy.month - 1
+        mes_anterior_idx = (mes_actual_idx - 1) % 12
+        disponible = (mes_indec_idx == mes_anterior_idx)
+
+        res = {
+            "encontrado": True,
+            "disponible": disponible,
+            "mes_indec": mes_indec_nombre,
+            "anio_indec": anio_indec,
+            "mes_actual_idx": mes_actual_idx,
+            "pct": pct,
+            "ts": hoy.isoformat()
+        }
+    else:
+        res = {"encontrado": False, "disponible": False, "error": "No se encontro el dato", "ts": datetime.utcnow().isoformat()}
+
+except Exception as e:
+    res = {"encontrado": False, "disponible": False, "error": str(e), "ts": datetime.utcnow().isoformat()}
+
+with open("icc-data.json", "w") as f:
+    json.dump(res, f, ensure_ascii=False)
+print(json.dumps(res))
