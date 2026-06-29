@@ -2,7 +2,8 @@ name: Buscar ICC INDEC
 
 on:
   schedule:
-    - cron: "0 11 17-26 * *"  # 8am Argentina (UTC-3), dias 17 al 26 de cada mes
+    - cron: "0 11 * * *"  # 8am Argentina (UTC-3), todos los dias
+  workflow_dispatch:       # tambien se puede activar manualmente
 
 jobs:
   buscar-icc:
