@@ -1,7 +1,8 @@
 name: Buscar ICC INDEC
 
 on:
-  workflow_dispatch:
+  schedule:
+    - cron: "0 11 17-26 * *"  # 8am Argentina (UTC-3), dias 17 al 26 de cada mes
 
 jobs:
   buscar-icc:
@@ -29,9 +30,10 @@ jobs:
                   pct = float(m.group(3).replace(",","."))
                   res = {"encontrado": True, "mes": m.group(1), "anio": int(m.group(2)), "pct": pct, "ts": datetime.utcnow().isoformat()}
               else:
-                  res = {"encontrado": False, "error": "No se encontro el dato en la pagina del INDEC", "ts": datetime.utcnow().isoformat()}
+                  res = {"encontrado": False, "error": "No se encontro el dato", "ts": datetime.utcnow().isoformat()}
           except Exception as e:
               res = {"encontrado": False, "error": str(e), "ts": datetime.utcnow().isoformat()}
+
           with open("icc-data.json", "w") as f:
               json.dump(res, f, ensure_ascii=False)
           print(json.dumps(res))
