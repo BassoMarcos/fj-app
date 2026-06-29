@@ -1,45 +1,27 @@
-import json, re
+import json, re, ftplib, io
 from datetime import datetime
-from playwright.sync_api import sync_playwright
+
+MESES_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+            "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
 try:
-    api_responses = []
+    hoy = datetime.utcnow()
+    mes_actual_idx = hoy.month - 1
+    mes_anterior_idx = (mes_actual_idx - 1) % 12
+
+    # Conectar al FTP del INDEC
+    ftp = ftplib.FTP("ftp.indec.gob.ar", timeout=30)
+    ftp.login()
     
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
-        page = context.new_page()
-        
-        # Interceptar todas las respuestas JSON/text
-        def handle_response(response):
-            url = response.url
-            if any(x in url for x in ['api', 'json', 'icc', 'datos', 'informe', 'prensa']):
-                try:
-                    body = response.text()
-                    if len(body) > 20 and len(body) < 50000:
-                        api_responses.append({"url": url, "status": response.status, "body_sample": body[:500]})
-                except:
-                    api_responses.append({"url": url, "status": response.status, "error": "no body"})
-        
-        page.on("response", handle_response)
-        
-        page.goto("https://www.indec.gob.ar/indec/web/Nivel4-Tema-3-5-33", 
-                  timeout=60000, wait_until="networkidle")
-        
-        browser.close()
-
-    res = {
-        "encontrado": False,
-        "api_responses": api_responses[:15],
-        "total_responses": len(api_responses),
-        "ts": datetime.utcnow().isoformat()
-    }
-
+    # Listar directorio de construccion
+    lines = []
+    ftp.retrlines("LIST /Varios/economia/icc/", lines.append)
+    ftp.quit()
+    
+    res = {"encontrado": False, "ftp_lines": lines[:20], "ts": hoy.isoformat()}
 except Exception as e:
-    res = {"encontrado": False, "error": str(e)[:300], "ts": datetime.utcnow().isoformat()}
+    res = {"encontrado": False, "error": str(e), "ts": datetime.utcnow().isoformat()}
 
 with open("icc-data.json", "w") as f:
     json.dump(res, f, ensure_ascii=False)
-print(json.dumps({"total": res.get("total_responses"), "error": res.get("error")}))
+print(json.dumps({"error": res.get("error"), "lines": res.get("ftp_lines", [])[:5]}))
