@@ -7767,6 +7767,49 @@ function iccPctEditado(){
 }
 
 
+function buscarICCIndec(){
+  const msg=document.getElementById('icc-fetch-msg');
+  const hoy=new Date();
+  const mesActualIdx=hoy.getMonth();
+  const mesActualNombre=MESES[mesActualIdx];
+  const detInfo=autoDetectarPlanilla();
+
+  msg.innerHTML='<span style="color:var(--text2)">⏳ Buscando ICC...</span>';
+
+  fetch('https://raw.githubusercontent.com/BassoMarcos/fj-app/main/icc-data.json?t='+Date.now())
+  .then(r=>{ if(!r.ok) throw new Error('No se pudo leer el archivo'); return r.json(); })
+  .then(data=>{
+    if(!data.encontrado){
+      msg.innerHTML='<span style="color:var(--red)">❌ Error del robot: '+(data.error||'desconocido')+'</span>';
+      return;
+    }
+    if(!data.disponible){
+      msg.innerHTML='<span style="color:var(--amber)">⏳ Todavía no salió el ICC de <strong>'+mesActualNombre+'</strong>.<br><small>El robot verifica todos los días a las 8am.</small></span>';
+      return;
+    }
+    const pct=data.pct;
+    const mesKeyActual=hoy.getFullYear()+'-'+String(mesActualIdx+1).padStart(2,'0');
+    const yaAplicado=(loadICC()||[]).some(x=>x.mesKey===mesKeyActual);
+    if(yaAplicado){
+      msg.innerHTML='<span style="color:var(--amber)">⚠ El ICC de <strong>'+mesActualNombre+'</strong> ya fue aplicado anteriormente.</span>';
+      return;
+    }
+    registrarIccMensual(mesActualIdx, hoy.getFullYear(), pct);
+    document.getElementById('icc-pct').value=pct;
+    document.getElementById('icc-planilla').value=detInfo.planillaVal;
+    document.getElementById('icc-planilla-display').textContent=detInfo.planillaNombre+' — '+detInfo.planillaVal.replace(/-/g,'/');
+    const applyBtn=document.getElementById('icc-apply-btn');
+    applyBtn.disabled=false; applyBtn.style.opacity='1';
+    const triInfo=renderTrimestreMeses(mesActualIdx,pct);
+    const totalStr=triInfo.total!==null?' · Trimestre total: <strong>'+triInfo.total.toFixed(2)+'%</strong>':'';
+    if(triInfo.total) applyBtn.dataset.totalTri=triInfo.total.toFixed(2);
+    msg.innerHTML='<span style="color:var(--green)">✅ ICC de <strong>'+mesActualNombre+' '+hoy.getFullYear()+': '+pct+'%</strong>.'+totalStr+'<br><strong>Presioná "Aplicar incremento trimestral" para confirmar.</strong></span>';
+  })
+  .catch(err=>{
+    msg.innerHTML='<span style="color:var(--red)">❌ '+err.message+'.<br>Podés ingresar el % manualmente o revisar <a href="https://www.indec.gob.ar/indec/web/Nivel4-Tema-3-5-33" target="_blank" style="color:var(--blue)">INDEC ICC</a>.</span>';
+  });
+}
+
 // ===================== COLABORADOR =====================
 function initCobFilters(){
   const data=loadData();
