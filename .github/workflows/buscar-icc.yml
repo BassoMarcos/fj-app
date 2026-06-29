@@ -14,9 +14,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Buscar ICC con navegador
+      - name: Instalar Playwright y Chromium
+        run: |
+          pip install playwright
+          playwright install chromium --with-deps
+
+      - name: Buscar ICC en INDEC
         run: python3 buscar_icc.py
-        timeout-minutes: 5
+        timeout-minutes: 3
 
       - name: Commit y push
         run: |
