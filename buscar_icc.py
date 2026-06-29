@@ -9,9 +9,13 @@ try:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto("https://www.indec.gob.ar/indec/web/Nivel4-Tema-3-5-33", timeout=30000)
-        page.wait_for_selector(".card-texto3", timeout=20000)
-        content = page.text_content(".card-texto3")
+        
+        # Navegar y esperar que la red este quieta (todo cargado)
+        page.goto("https://www.indec.gob.ar/indec/web/Nivel4-Tema-3-5-33", 
+                  timeout=60000, wait_until="networkidle")
+        
+        # Obtener todo el texto de la pagina
+        content = page.content()
         browser.close()
 
     patron = r"correspondiente a\s+(\w+)\s+de\s+(\d{4})\s+registra una\s+(?:suba|baja)\s+de\s+([\d,\.]+)%"
@@ -33,13 +37,18 @@ try:
             "ts": hoy.isoformat()
         }
     else:
+        # Diagnostico: mostrar fragmento del HTML para ver que llego
+        idx = content.find("card-texto3")
+        sample = content[idx:idx+500] if idx >= 0 else content[20000:20500]
         res = {"encontrado": False, "disponible": False,
-               "error": "No coincide patron", "content": content[:300],
+               "error": "No coincide patron", 
+               "html_len": len(content),
+               "card_sample": sample[:300],
                "ts": datetime.utcnow().isoformat()}
 
 except Exception as e:
     res = {"encontrado": False, "disponible": False,
-           "error": str(e), "ts": datetime.utcnow().isoformat()}
+           "error": str(e)[:300], "ts": datetime.utcnow().isoformat()}
 
 with open("icc-data.json", "w") as f:
     json.dump(res, f, ensure_ascii=False)
