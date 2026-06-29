@@ -2,8 +2,8 @@ name: Buscar ICC INDEC
 
 on:
   schedule:
-    - cron: "0 11 * * *"  # 8am Argentina (UTC-3), todos los dias
-  workflow_dispatch:       # activacion manual desde GitHub
+    - cron: "0 11 * * *"
+  workflow_dispatch:
 
 jobs:
   buscar-icc:
@@ -16,7 +16,7 @@ jobs:
 
       - name: Buscar ICC en INDEC
         run: |
-          python3 << PYEOF
+          python3 - <<'PYEOF'
           import urllib.request, json, re
           from datetime import datetime
 
@@ -29,8 +29,7 @@ jobs:
               with urllib.request.urlopen(req, timeout=30) as r:
                   html = r.read().decode("utf-8", errors="ignore")
 
-              # Buscar el mes y porcentaje publicado por el INDEC
-              patron = r"correspondiente a\s+(\w+)\s+de\s+(\d{4})\s+registra una\s+(?:suba|baja)\s+de\s+([\d,\.]+)%"
+              patron = "correspondiente a\s+(\w+)\s+de\s+(\d{4})\s+registra una\s+(?:suba|baja)\s+de\s+([\d,\.]+)%"
               m = re.search(patron, html, re.IGNORECASE)
 
               if m:
@@ -38,15 +37,10 @@ jobs:
                   anio_indec = int(m.group(2))
                   pct = float(m.group(3).replace(",","."))
 
-                  # El mes que publica el INDEC (0-indexed)
                   mes_indec_idx = next((i for i,n in enumerate(MESES_ES) if n.lower() == mes_indec_nombre.lower()), -1)
 
-                  # Mes actual del calendario (0-indexed)
                   hoy = datetime.utcnow()
                   mes_actual_idx = hoy.month - 1
-                  anio_actual = hoy.year
-
-                  # El dato esta disponible si el INDEC publico el mes anterior al mes actual
                   mes_anterior_idx = (mes_actual_idx - 1) % 12
                   disponible = (mes_indec_idx == mes_anterior_idx)
 
