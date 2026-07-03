@@ -7837,8 +7837,9 @@ function iccPctEditado(){
 
 function buscarICCIndec(){
   const msg=document.getElementById('icc-fetch-msg');
-  const hoy=new Date();
-  const mesActualIdx=hoy.getMonth();
+  const mesOp=getMesOperativoICC();
+  const mesActualIdx=mesOp.mesIdx;
+  const anioActual=mesOp.anio;
   const mesActualNombre=MESES[mesActualIdx];
   const detInfo=autoDetectarPlanilla();
 
@@ -7851,18 +7852,24 @@ function buscarICCIndec(){
       msg.innerHTML='<span style="color:var(--red)">❌ Error del robot: '+(data.error||'desconocido')+'</span>';
       return;
     }
-    if(!data.disponible){
-      msg.innerHTML='<span style="color:var(--amber)">⏳ Todavía no salió el ICC de <strong>'+mesActualNombre+'</strong>.<br><small>El robot verifica todos los días a las 8am.</small></span>';
+    // El INDEC publica el mes ANTERIOR al mes operativo en curso.
+    // Verificar contra el mes operativo (no el calendario).
+    const mesIndecIdx = MESES.indexOf(data.mes_indec);
+    const mesAnteriorAlOperativo = (mesActualIdx - 1 + 12) % 12;
+    const disponibleParaOperativo = (mesIndecIdx === mesAnteriorAlOperativo);
+
+    if(!disponibleParaOperativo){
+      msg.innerHTML='<span style="color:var(--amber)">⏳ Todavía no salió el ICC de <strong>'+mesActualNombre+'</strong>.<br><small>El INDEC publicó hasta '+data.mes_indec+'. El robot verifica todos los días a las 8am.</small></span>';
       return;
     }
     const pct=data.pct;
-    const mesKeyActual=hoy.getFullYear()+'-'+String(mesActualIdx+1).padStart(2,'0');
+    const mesKeyActual=anioActual+'-'+String(mesActualIdx+1).padStart(2,'0');
     const yaAplicado=(loadICC()||[]).some(x=>x.mesKey===mesKeyActual);
     if(yaAplicado){
       msg.innerHTML='<span style="color:var(--amber)">⚠ El ICC de <strong>'+mesActualNombre+'</strong> ya fue aplicado anteriormente.</span>';
       return;
     }
-    registrarIccMensual(mesActualIdx, hoy.getFullYear(), pct);
+    registrarIccMensual(mesActualIdx, anioActual, pct);
     document.getElementById('icc-pct').value=pct;
     document.getElementById('icc-planilla').value=detInfo.planillaVal;
     document.getElementById('icc-planilla-display').textContent=detInfo.planillaNombre+' — '+detInfo.planillaVal.replace(/-/g,'/');
@@ -7871,7 +7878,7 @@ function buscarICCIndec(){
     const triInfo=renderTrimestreMeses(mesActualIdx,pct);
     const totalStr=triInfo.total!==null?' · Trimestre total: <strong>'+triInfo.total.toFixed(2)+'%</strong>':'';
     if(triInfo.total) applyBtn.dataset.totalTri=triInfo.total.toFixed(2);
-    msg.innerHTML='<span style="color:var(--green)">✅ ICC de <strong>'+mesActualNombre+' '+hoy.getFullYear()+': '+pct+'%</strong>.'+totalStr+'<br><strong>Presioná "Aplicar incremento trimestral" para confirmar.</strong></span>';
+    msg.innerHTML='<span style="color:var(--green)">✅ ICC de <strong>'+mesActualNombre+' '+anioActual+': '+pct+'%</strong>.'+totalStr+'<br><strong>Presioná "Aplicar incremento trimestral" para confirmar.</strong></span>';
   })
   .catch(err=>{
     msg.innerHTML='<span style="color:var(--red)">❌ '+err.message+'.<br>Podés ingresar el % manualmente o revisar <a href="https://www.indec.gob.ar/indec/web/Nivel4-Tema-3-5-33" target="_blank" style="color:var(--blue)">INDEC ICC</a>.</span>';
