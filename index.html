@@ -872,6 +872,59 @@ function saveAgrimensorLotes(set){
   if(window._firebaseReady)
     window._fbSet('agrimensorLotes',arr).catch(e=>console.warn('FB agrLotes error:',e));
 }
+
+// Cascada Etapa → Manzana → Lote para agregar agrimensor
+function agrAddEtapaChange(){
+  const etapa=document.getElementById('agr-add-etapa').value;
+  const mzWrap=document.getElementById('agr-add-mz-wrap');
+  const mzSel=document.getElementById('agr-add-mz');
+  const loteWrap=document.getElementById('agr-add-lote-wrap');
+  const loteSel=document.getElementById('agr-add-lote-sel');
+  loteSel.innerHTML='<option value="">— Lote —</option>';
+  loteWrap.style.display='none';
+  if(etapa==='E1'){
+    mzWrap.style.display='block';
+    mzSel.innerHTML='<option value="">— Manzana —</option><option value="M1">M1</option><option value="M2">M2</option><option value="M3">M3</option><option value="M4">M4</option>';
+  } else if(etapa==='E4'){
+    mzWrap.style.display='block';
+    mzSel.innerHTML='<option value="">— Manzana —</option><option value="E4-M5">M5</option><option value="E4-M4">M4</option><option value="E4-M3">M3</option><option value="E4-M2">M2</option><option value="E4-M1">M1</option>';
+  } else if(etapa==='E2'||etapa==='E3'){
+    mzWrap.style.display='none';
+    agrAddLlenarLotes(etapa==='E2'?'ETAPA 2':'ETAPA 3');
+  } else {
+    mzWrap.style.display='none';
+  }
+}
+function agrAddMzChange(){
+  const mz=document.getElementById('agr-add-mz').value;
+  if(mz) agrAddLlenarLotes(mz);
+}
+function agrAddLlenarLotes(prefijo){
+  const loteWrap=document.getElementById('agr-add-lote-wrap');
+  const loteSel=document.getElementById('agr-add-lote-sel');
+  const data=loadData();
+  const agrSet=loadAgrimensorLotes();
+  const libres=loadLotesLibresE123();
+  const pref=prefijo+'-';
+  const activos=data.filter(c=>c.est==='activo'&&!agrSet.has(c.id)&&c.id.startsWith(pref))
+    .sort((a,b)=>String(a.lote||'').localeCompare(String(b.lote||''),undefined,{numeric:true}));
+  const vacantes=[...libres].filter(id=>!agrSet.has(id)&&id.startsWith(pref))
+    .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  let opts='<option value="">— Lote —</option>';
+  if(activos.length){
+    opts+='<optgroup label="Activos">';
+    activos.forEach(c=>{opts+=`<option value="${c.id}">${c.id.replace(pref,'')} — ${c.titular.substring(0,30)}</option>`;});
+    opts+='</optgroup>';
+  }
+  if(vacantes.length){
+    opts+='<optgroup label="Vacantes">';
+    vacantes.forEach(id=>{opts+=`<option value="${id}">${id.replace(pref,'')} — (vacante)</option>`;});
+    opts+='</optgroup>';
+  }
+  loteSel.innerHTML=opts;
+  loteWrap.style.display='block';
+}
+
 function toggleLoteAgrimensor(loteId, makeAgri){
   const set=loadAgrimensorLotes();
   if(makeAgri) set.add(loteId); else set.delete(loteId);
@@ -4332,37 +4385,31 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       <!-- Agregar lote -->
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem">
         <div style="font-size:13px;font-weight:700;margin-bottom:10px">➕ Agregar lote</div>
-        <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end">
           <div>
-            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">SELECCIONAR LOTE</label>
-            <select id="agr-add-select" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px">
-              <option value="">— Elegí un lote —</option>
-              ${(()=>{
-                const data=loadData();
-                const agrSet=loadAgrimensorLotes();
-                const libresE123=loadLotesLibresE123();
-                // Todos los lotes activos que no son ya agrimensores
-                const activos=data.filter(c=>c.est==='activo'&&!agrSet.has(c.id))
-                  .sort((a,b)=>a.id.localeCompare(b.id));
-                // Lotes vacantes que no son ya agrimensores
-                const vacantes=[...libresE123].filter(id=>!agrSet.has(id)).sort();
-                let opts='';
-                if(activos.length){
-                  opts+='<optgroup label="Lotes activos">';
-                  activos.forEach(c=>{ opts+=`<option value="${c.id}">${c.id} — ${c.titular.substring(0,35)}</option>`; });
-                  opts+='</optgroup>';
-                }
-                if(vacantes.length){
-                  opts+='<optgroup label="Lotes vacantes">';
-                  vacantes.forEach(id=>{ opts+=`<option value="${id}">${id} — (vacante)</option>`; });
-                  opts+='</optgroup>';
-                }
-                return opts;
-              })()}
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">ETAPA</label>
+            <select id="agr-add-etapa" onchange="agrAddEtapaChange()" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px">
+              <option value="">— Etapa —</option>
+              <option value="E1">Etapa 1</option>
+              <option value="E2">Etapa 2</option>
+              <option value="E3">Etapa 3</option>
+              <option value="E4">Etapa 4</option>
+            </select>
+          </div>
+          <div id="agr-add-mz-wrap" style="display:none">
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">MANZANA</label>
+            <select id="agr-add-mz" onchange="agrAddMzChange()" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px">
+              <option value="">— Manzana —</option>
+            </select>
+          </div>
+          <div id="agr-add-lote-wrap" style="display:none">
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">LOTE</label>
+            <select id="agr-add-lote-sel" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px">
+              <option value="">— Lote —</option>
             </select>
           </div>
           <button onclick="(function(){
-            const id=document.getElementById('agr-add-select').value;
+            const id=document.getElementById('agr-add-lote-sel').value;
             if(!id){alert('Seleccioná un lote');return;}
             if(loadAgrimensorLotes().has(id)){alert(id+' ya está en la lista');return;}
             confirmarConClave(function(){toggleLoteAgrimensor(id,true);renderBalances('agr-gestionar');},'Agregar '+id+' a agrimensores');
