@@ -4365,7 +4365,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
     const filas=sortedLotes.map(id=>{
       const c=data.find(x=>x.id===id);
       const titular=c?c.titular:'— Lote vacío —';
-      const tag=c?formatLoteTag(c.mz,c.lote):('<span style="font-size:11px;background:#f3f4f6;border:1px solid var(--border);border-radius:4px;padding:1px 6px">'+id+'</span>');
+      const tag=c?formatLoteTag(c.mz,c.lote):('<span style="font-size:11px;font-weight:800;background:var(--card);border:1.5px solid var(--border2);border-radius:4px;padding:1px 6px;color:var(--text2)">'+id+'</span>');
       const esTitularClass=c?'':'color:var(--text2);font-style:italic';
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px">
         <div><span style="margin-right:8px">${tag}</span><span style="${esTitularClass}">${titular}</span></div>
