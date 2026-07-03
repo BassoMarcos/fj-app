@@ -2240,7 +2240,7 @@ function renderResumenLotes(){
       f5.innerHTML = `
         <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Primera cuota en</div>
         <select id="pricuota-${i}" onchange="updateContratoLote(${i},'primeraCuota',this.value)"
-          style="width:100%;padding:6px 8px;border:1.5px solid ${borderC};border-radius:5px;font-size:12px;background:var(--surface);margin-bottom:6px">
+          style="width:100%;padding:6px 8px;border:1.5px solid ${borderC};border-radius:5px;font-size:12px;background:var(--surface);color:var(--text);margin-bottom:6px">
           ${mOpts(s.primeraCuota)}
         </select>
         <div id="tri-lote-${i}" style="font-size:10px;color:var(--text3);padding:3px 7px;background:var(--surface);border-radius:4px;margin-bottom:6px;display:${s.triDisplay&&!isUSD?'block':'none'}">${s.triDisplay?'📅 '+s.triDisplay:''}</div>`;
@@ -2266,7 +2266,7 @@ function renderResumenLotes(){
       f5.innerHTML = `
         <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Primera cuota en</div>
         <select id="pricuota-${i}" onchange="updateContratoLote(${i},'primeraCuota',this.value)"
-          style="width:100%;padding:6px 8px;border:1.5px solid ${borderC};border-radius:5px;font-size:12px;background:var(--surface);margin-bottom:6px">
+          style="width:100%;padding:6px 8px;border:1.5px solid ${borderC};border-radius:5px;font-size:12px;background:var(--surface);color:var(--text);margin-bottom:6px">
           ${mOpts(s.primeraCuota)}
         </select>
         <div style="display:flex;gap:6px;margin-bottom:6px">
