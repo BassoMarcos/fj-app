@@ -7616,22 +7616,37 @@ function renderTrimestreMeses(mesPublicacion, pctActualFromFetch){
   return {total: triComplete ? total : null, planillaVal: info.planillaVal, planillaNombre: info.planillaNombre, aumentaEn: info.aumentaEn};
 }
 
+// Mes operativo del ICC: el mes siguiente al último ICC aplicado (Lista 2).
+// No se rige por el calendario — si todavía no aplicaste Junio, seguís en Junio aunque sea Julio.
+function getMesOperativoICC(){
+  const hoy=new Date();
+  let best=-1;
+  (loadICC()||[]).forEach(e=>{
+    if(!e.mes) return;
+    const parts=String(e.mes).trim().split(/\s+/);
+    const mi=MESES.indexOf(parts[0]);
+    const an=parseInt(parts[1]);
+    if(mi>=0&&an>0){
+      const v=an*12+mi;
+      if(v>best) best=v;
+    }
+  });
+  const calVal=hoy.getFullYear()*12+hoy.getMonth();
+  if(best<0) return {mesIdx:hoy.getMonth(), anio:hoy.getFullYear(), atrasado:false};
+  const next=best+1;
+  return {mesIdx:next%12, anio:Math.floor(next/12), atrasado: next<calVal};
+}
+
 function renderIccStatus(){
   const hoy = new Date();
   const dia = hoy.getDate();
-  // Avanzar al siguiente trimestre solo si: ya aplicaste el ICC Y ya es el mes siguiente
-  const mesIdxReal = hoy.getMonth();
-  const infoReal = ICC_MAP[mesIdxReal];
-  const yaAplicadoActual = loadICC().some(i=>i.planilla===infoReal.planillaVal&&i.aumentaEn===infoReal.aumentaEn);
-  // Obtener el mes en que se aplicó el ultimo ICC
-  const ultimoICC = loadICC().find(i=>i.planilla===infoReal.planillaVal&&i.aumentaEn===infoReal.aumentaEn);
-  const mesAplicado = ultimoICC ? new Date(ultimoICC.ts).getMonth() : -1;
-  // Avanzar solo si ya aplicaste Y estamos en un mes posterior al de aplicacion
-  const debeAvanzar = yaAplicadoActual && mesIdxReal > mesAplicado;
-  const mesIdx = debeAvanzar ? (mesIdxReal+1)%12 : mesIdxReal;
+  const mesOp = getMesOperativoICC();
+  const mesIdx = mesOp.mesIdx;
   const mesActual = MESES[mesIdx];
   const info = ICC_MAP[mesIdx];
-  const yaAplicado = yaAplicadoActual && !debeAvanzar;
+  const yaAplicado = loadICC().some(i=>i.mes===mesActual+' '+mesOp.anio);
+  // Si estamos atrasados (mes operativo < mes calendario), el INDEC ya publicó — no bloquear por día 20
+  const esperandoPublicacion = (dia < 20) && !mesOp.atrasado;
   const icc = loadICC();
   const el = document.getElementById('icc-status-box');
 
@@ -7639,7 +7654,7 @@ function renderIccStatus(){
   renderTrimestreMeses(mesIdx, null);
 
   let estadoHtml = '';
-  if(dia < 20){
+  if(esperandoPublicacion){
     estadoHtml = `<div style="background:var(--card);border:1px solid var(--border2);border-radius:var(--rlg);padding:1.25rem;display:flex;gap:1rem;align-items:center">
       <div style="font-size:28px">🕐</div>
       <div>
@@ -7648,7 +7663,7 @@ function renderIccStatus(){
         <div style="font-size:13px;color:var(--text2);margin-top:2px">Al publicarse se completa el trimestre y se actualizan los montos de <strong>${info.aumentaEn}</strong> — planilla <strong>${info.planillaNombre}</strong>.</div>
       </div></div>`;
   } else if(yaAplicado){
-    const aplicado = icc.find(x => x.mesKey === getMesKey(hoy));
+    const aplicado = icc.find(x => x.mes === mesActual+' '+mesOp.anio) || icc[0];
     estadoHtml = `<div style="background:var(--card);border:1px solid var(--green-border);border-radius:var(--rlg);padding:1.25rem;display:flex;gap:1rem;align-items:center">
       <div style="font-size:28px">✅</div>
       <div>
@@ -7668,7 +7683,7 @@ function renderIccStatus(){
   el.innerHTML = estadoHtml;
 
   const applyBox = document.getElementById('icc-apply-box');
-  if(dia < 20){
+  if(esperandoPublicacion){
     // Show box, fetch button active, only apply button locked
     applyBox.style.display = 'block';
     applyBox.style.opacity = '1';
@@ -7720,19 +7735,19 @@ function aplicarICC(){
   const pctMes=parseFloat(document.getElementById('icc-pct').value);
   if(isNaN(pctMes)||pctMes<=0){alert('Ingresá el porcentaje del mes actual');return;}
   const hoy=new Date();
+  const mesOp=getMesOperativoICC();
+  const mesEnCurso=mesOp.mesIdx;
+  const anioEnCurso=mesOp.anio;
 
-  // ── Candado 1: el cierre final del mes en curso tiene que estar hecho ──
+  // ── Candado 1: el cierre final del mes operativo tiene que estar hecho ──
   const cf=loadCierreFinal();
-  const mesEnCurso=hoy.getMonth();
-  const anioEnCurso=hoy.getFullYear();
-  const cierreHecho = cf && cf.mes===mesEnCurso && cf.anio===anioEnCurso;
+  const cierreHecho = cf && Number(cf.mes)===mesEnCurso && Number(cf.anio)===anioEnCurso;
   if(!cierreHecho){
     alert('⚠️ Todavía no hiciste el cierre final de '+MESES[mesEnCurso]+'.\n\nEl cierre final tiene que estar hecho ANTES de aplicar el ICC, porque el cierre avanza las cuotas. Si aplicás el ICC antes, el incremento se va a calcular mal.\n\nPrimero corré el cierre final de '+MESES[mesEnCurso]+', después volvé acá.');
     return;
   }
 
-  // ── Candado 2: Lista 1 tiene que tener los 3 meses (actual + 2 anteriores) ──
-  // Asegurar que el mes actual quede registrado en Lista 1 con el % ingresado
+  // ── Candado 2: Lista 1 tiene que tener los 3 meses (operativo + 2 anteriores) ──
   registrarIccMensual(mesEnCurso, anioEnCurso, pctMes);
   const tri1=trimestreCompletoEnLista1(mesEnCurso, anioEnCurso);
   if(!tri1.completo){
@@ -7741,9 +7756,8 @@ function aplicarICC(){
     return;
   }
 
-  // ── El color se identifica según el mes SIGUIENTE al mes en curso ──
-  const mesSiguiente=(mesEnCurso+1)%12;
-  const info=ICC_MAP[mesSiguiente];
+  // ── El color: ICC_MAP[mes operativo] → aumenta el mes siguiente ──
+  const info=ICC_MAP[mesEnCurso];
   if(!info){alert('No se pudo determinar la planilla.');return;}
   const planilla=info.planillaVal;
   const yaAplicado=loadICC().some(i=>i.planilla===planilla&&i.aumentaEn===info.aumentaEn);
@@ -7769,7 +7783,7 @@ function aplicarICC(){
   const icc=loadICC().filter(i=>!(i.planilla===planilla&&i.aumentaEn===info.aumentaEn));
   icc.unshift({pct:pctMes,totalTri,planilla,planillaNombre:info.planillaNombre,
     mes:mesEnCursoNombre+' '+anioEnCurso,aumentaEn:info.aumentaEn,
-    mesKey:getMesKey(hoy),cnt:aplicados,ts:new Date().toISOString()});
+    mesKey:anioEnCurso+'-'+String(mesEnCurso+1).padStart(2,'0'),cnt:aplicados,ts:new Date().toISOString()});
   saveICC(icc);
   addHist('icc','ICC '+mesEnCursoNombre+' '+pctMes+'% → '+info.aumentaEn+' — '+planilla+' — '+aplicados+' clientes',null);
   renderIccStatus();renderIccHist();renderAdminTable();
@@ -7780,12 +7794,13 @@ function aplicarICC(){
 function autoDetectarPlanilla(){
   const hoy = new Date();
   const dia = hoy.getDate();
-  const info = ICC_MAP[hoy.getMonth()];
+  const mesOp = getMesOperativoICC();
+  const info = ICC_MAP[mesOp.mesIdx];
   return {
     planillaVal: info.planillaVal,
     planillaNombre: info.planillaNombre,
     mesAplicacion: info.aumentaEn,
-    autoDetectado: dia >= 20
+    autoDetectado: dia >= 20 || mesOp.atrasado
   };
 }
 
@@ -7794,9 +7809,9 @@ function iccPctEditado(){
   const preview = document.getElementById('icc-preview-tri');
   if(!preview) return;
   if(isNaN(pct) || pct <= 0){ preview.style.display='none'; return; }
-  const hoy = new Date();
-  const mesIdx = hoy.getMonth();
-  const anio = hoy.getFullYear();
+  const mesOp = getMesOperativoICC();
+  const mesIdx = mesOp.mesIdx;
+  const anio = mesOp.anio;
   // Tomar los 2 meses anteriores de Lista 1 (sin contar el actual, que viene del input)
   let pctPrev = 0;
   for(let i=2;i>=1;i--){
@@ -7806,9 +7821,8 @@ function iccPctEditado(){
     if(entry) pctPrev += Number(entry.pct)||0;
   }
   const totalTri = parseFloat((pctPrev + pct).toFixed(2));
-  // El color corresponde al mes SIGUIENTE al actual
-  const mesSiguiente = (mesIdx+1)%12;
-  const info = ICC_MAP[mesSiguiente];
+  // El color: ICC_MAP[mes operativo] → aumenta el mes siguiente
+  const info = ICC_MAP[mesIdx];
   const data = loadData();
   const cnt = data.filter(c => c.tri === info.planillaVal && (c.est==='activo'||(c.est==='finalizado'&&c.autopago))).length;
   preview.style.display = 'block';
