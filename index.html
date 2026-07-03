@@ -1515,6 +1515,11 @@ function mesActual(){
     const nextMes=(cf.mes+1)%12;
     return MESES[nextMes];
   }
+  // Sin cierre final: usar mes operativo del ICC (mes siguiente al último ICC aplicado)
+  try{
+    const mo=getMesOperativoICC();
+    if(mo) return MESES[mo.mesIdx];
+  }catch(e){}
   return MESES[new Date().getMonth()];
 }
 
