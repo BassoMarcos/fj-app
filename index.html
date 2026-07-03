@@ -4332,39 +4332,41 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       <!-- Agregar lote -->
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem">
         <div style="font-size:13px;font-weight:700;margin-bottom:10px">➕ Agregar lote</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end">
+        <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
           <div>
-            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">MANZANA / ETAPA</label>
-            <select id="agr-add-mz" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px">
-              <option value="M1">Etapa 1 — M1</option>
-              <option value="M2">Etapa 1 — M2</option>
-              <option value="M3">Etapa 1 — M3</option>
-              <option value="M4">Etapa 1 — M4</option>
-              <option value="ETAPA 2">Etapa 2</option>
-              <option value="ETAPA 3">Etapa 3</option>
-              <option value="E4-M1">E4 — M1</option>
-              <option value="E4-M2">E4 — M2</option>
-              <option value="E4-M3">E4 — M3</option>
-              <option value="E4-M4">E4 — M4</option>
-              <option value="E4-M5">E4 — M5</option>
+            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">SELECCIONAR LOTE</label>
+            <select id="agr-add-select" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px">
+              <option value="">— Elegí un lote —</option>
+              ${(()=>{
+                const data=loadData();
+                const agrSet=loadAgrimensorLotes();
+                const libresE123=loadLotesLibresE123();
+                // Todos los lotes activos que no son ya agrimensores
+                const activos=data.filter(c=>c.est==='activo'&&!agrSet.has(c.id))
+                  .sort((a,b)=>a.id.localeCompare(b.id));
+                // Lotes vacantes que no son ya agrimensores
+                const vacantes=[...libresE123].filter(id=>!agrSet.has(id)).sort();
+                let opts='';
+                if(activos.length){
+                  opts+='<optgroup label="Lotes activos">';
+                  activos.forEach(c=>{ opts+=`<option value="${c.id}">${c.id} — ${c.titular.substring(0,35)}</option>`; });
+                  opts+='</optgroup>';
+                }
+                if(vacantes.length){
+                  opts+='<optgroup label="Lotes vacantes">';
+                  vacantes.forEach(id=>{ opts+=`<option value="${id}">${id} — (vacante)</option>`; });
+                  opts+='</optgroup>';
+                }
+                return opts;
+              })()}
             </select>
           </div>
-          <div>
-            <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">LOTE</label>
-            <input id="agr-add-lote" type="text" placeholder="ej: 36 o 1A"
-              style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;box-sizing:border-box">
-          </div>
           <button onclick="(function(){
-            const mz=document.getElementById('agr-add-mz').value;
-            const lote=document.getElementById('agr-add-lote').value.trim();
-            if(!lote){alert('Ingresá el número o código del lote');return;}
-            const id=mz+'-'+lote;
+            const id=document.getElementById('agr-add-select').value;
+            if(!id){alert('Seleccioná un lote');return;}
             if(loadAgrimensorLotes().has(id)){alert(id+' ya está en la lista');return;}
             confirmarConClave(function(){toggleLoteAgrimensor(id,true);renderBalances('agr-gestionar');},'Agregar '+id+' a agrimensores');
           })()" style="padding:7px 14px;background:#d97706;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">✓ Agregar</button>
-        </div>
-        <div style="font-size:11px;color:var(--text2);margin-top:8px">
-          El lote se agrega inmediatamente. Si ya existe como cliente, su campo agrimensor se actualiza automáticamente.
         </div>
       </div>
     `;
