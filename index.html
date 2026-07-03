@@ -2140,11 +2140,11 @@ function renderResumenLotes(){
     if(!s.moneda) s.moneda = 'ARS';
     if(!s.modoContrato) s.modoContrato = 'normal';
     const isUSD = s.moneda === 'USD';
-    const bgColor = isUSD ? '#f0fdf4' : '#f0f9ff';
-    const borderColor = isUSD ? '#86efac' : '#bae6fd';
+    const bgColor = 'var(--card)';
+    const borderColor = isUSD ? 'var(--green-border)' : 'var(--border2)';
     const sym = isUSD ? 'U$S' : '$';
-    const borderC = isUSD ? '#86efac' : '#93c5fd';
-    const textColor = isUSD ? '#065f46' : '#0369a1';
+    const borderC = isUSD ? 'var(--green-border)' : 'var(--border2)';
+    const textColor = isUSD ? 'var(--green)' : 'var(--acc2)';
     const outer = document.createElement('div');
     outer.style.cssText = `margin-bottom:8px;background:${bgColor};border:1.5px solid ${borderColor};border-radius:7px;padding:8px 10px`;
     const agriTag = s.isAgri ? ' <span style="background:#d97706;color:#fff;font-size:9px;padding:1px 4px;border-radius:3px">AGRIMENSOR</span>' : '';
@@ -2185,7 +2185,7 @@ function renderResumenLotes(){
     outer.appendChild(f2);
     if(isUSD){
       const note = document.createElement('div');
-      note.style.cssText = 'font-size:10px;color:#065f46;background:var(--green-bg);border-radius:4px;padding:3px 7px;margin-bottom:8px';
+      note.style.cssText = 'font-size:10px;color:var(--green);background:var(--green-bg);border-radius:4px;padding:3px 7px;margin-bottom:8px';
       note.textContent = '⚠️ Sin incrementos ICC';
       outer.appendChild(note);
     }
@@ -2251,12 +2251,12 @@ function renderResumenLotes(){
             <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Cuota actual</div>
             <input type="number" id="ca-lote-${i}" min="1" value="${s.caActual||1}"
               onchange="updateContratoLote(${i},'caActual',this.value)"
-              style="width:100%;padding:6px 8px;border:1.5px solid #fde68a;border-radius:5px;font-size:12px">
+              style="width:100%;padding:6px 8px;border:1.5px solid var(--amber-border,var(--border2));border-radius:5px;font-size:12px;background:var(--card);color:var(--text)">
           </div>
           <div style="flex:1">
             <div style="font-size:10px;color:var(--text3);margin-bottom:3px">La paga en</div>
             <select id="mespaga-${i}" onchange="updateContratoLote(${i},'mesPaga',this.value)"
-              style="width:100%;padding:6px 8px;border:1.5px solid #fde68a;border-radius:5px;font-size:12px;background:var(--card);color:var(--text)">
+              style="width:100%;padding:6px 8px;border:1.5px solid var(--amber-border,var(--border2));border-radius:5px;font-size:12px;background:var(--card);color:var(--text)">
               ${mOpts(s.mesPaga)}
             </select>
           </div>
@@ -2277,14 +2277,14 @@ function renderResumenLotes(){
               <input type="text" inputmode="numeric" id="adicional-${i}"
                 value="${s.adicionalMonto?Number(s.adicionalMonto).toLocaleString('es-AR'):''}" placeholder="0"
                 oninput="formatAdicionalLote(${i},this)"
-                style="width:100%;padding:6px 8px 6px 28px;border:1.5px solid #bfdbfe;border-radius:5px;font-size:12px;box-sizing:border-box">
+                style="width:100%;padding:6px 8px 6px 28px;border:1.5px solid var(--border2);border-radius:5px;font-size:12px;box-sizing:border-box;background:var(--card);color:var(--text)">
             </div>
           </div>
           <div style="flex:0 0 75px">
             <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Cuotas</div>
             <input type="number" id="adicional-hasta-${i}" value="${s.adicionalHasta||3}" min="1"
               oninput="updateContratoLote(${i},'adicionalHasta',this.value)"
-              style="width:100%;padding:6px 8px;border:1.5px solid #bfdbfe;border-radius:5px;font-size:12px">
+              style="width:100%;padding:6px 8px;border:1.5px solid var(--border2);border-radius:5px;font-size:12px;background:var(--card);color:var(--text)">
           </div>
         </div>
         <div id="tri-lote-${i}" style="font-size:10px;color:var(--text3);padding:3px 7px;background:var(--surface);border-radius:4px;margin-bottom:6px;display:${s.triDisplay&&!isUSD?'block':'none'}">${s.triDisplay?'📅 '+s.triDisplay:''}</div>`;
