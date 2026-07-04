@@ -9026,13 +9026,23 @@ function gestionGuardar(){
   const keys=Object.keys(_gpPendingChanges);
   if(!keys.length){document.getElementById('gp-msg').textContent='Sin cambios pendientes';return;}
   let count=0;
+  const salteados=[]; // clientes con mora que no se pudieron cobrar en masa
   if(_gpRegistrarCaja){
     // Usar el mismo flujo que el cobro desde la ficha: registra en caja del día / caja de mora
     const pagoStoreActual=loadPagoStore();
+    const dataAll=loadData();
+    const cuotasMoraAll=loadCuotasMora();
     keys.forEach(id=>{
       const yaPagado=pagoStoreActual.hasOwnProperty(id);
       const nuevoPago=_gpPendingChanges[id];
       if(nuevoPago&&!yaPagado){
+        // Verificar que no tenga cuotas morosas anteriores sin pagar
+        const tieneMora=cuotasMoraAll.some(cm=>cm.clienteId===id&&!cm.pagada);
+        if(tieneMora){
+          const cl=dataAll.find(x=>x.id===id);
+          salteados.push(cl?(cl.id+' — '+(cl.titular||'')):id);
+          return; // saltear, no cobrar en masa
+        }
         marcarPago(id);
         count++;
       } else if(!nuevoPago&&yaPagado){
@@ -9044,8 +9054,17 @@ function gestionGuardar(){
     // Solo marca el estado de la cuota (pagoStore), sin tocar la caja
     const pagoStore=loadPagoStore();
     const ts=new Date().toISOString();
+    const cuotasMoraAll=loadCuotasMora();
+    const dataAll=loadData();
     keys.forEach(id=>{
       if(_gpPendingChanges[id]){
+        // Verificar mora también en modo "solo marcar"
+        const tieneMora=cuotasMoraAll.some(cm=>cm.clienteId===id&&!cm.pagada);
+        if(tieneMora){
+          const cl=dataAll.find(x=>x.id===id);
+          salteados.push(cl?(cl.id+' — '+(cl.titular||'')):id);
+          return;
+        }
         pagoStore[id]=ts; // mark as paid
       } else {
         delete pagoStore[id]; // mark as unpaid
@@ -9058,6 +9077,14 @@ function gestionGuardar(){
   renderAdminTable();
   const msg=document.getElementById('gp-msg');
   if(msg) msg.textContent='Guardados: '+count+' cambios'+(_gpRegistrarCaja?' (registrados en caja)':'');
+  // Avisar sobre los salteados por mora
+  if(salteados.length){
+    showConfirmModal(
+      '⚠️ '+salteados.length+' lote'+(salteados.length>1?'s':'')+' con mora no se cobr'+(salteados.length>1?'aron':'ó'),
+      'Estos lotes tienen cuotas anteriores en mora y NO se cobraron en el pago masivo. Cobralos desde su ficha individual para que se aplique el interés correcto:\n\n'+salteados.join('\n'),
+      ()=>{}, 'Entendido', '#d97706'
+    );
+  }
   setTimeout(()=>{const el=document.getElementById('gp-msg');if(el)el.textContent='';},2500);
 }
 
