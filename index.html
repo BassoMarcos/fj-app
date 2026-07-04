@@ -1067,7 +1067,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0298';
+  datos['_version']='v1.0299';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5554,6 +5554,25 @@ function renderAdminDet(id){
           <div style="font-size:13px;font-weight:700;color:#d97706">⏳ Esperando incremento ICC</div>
           <div style="font-size:12px;color:var(--amber);margin-top:2px">Aplicá el ICC de ${mesEnCurso} para habilitar este lote</div>
         </div>
+      `:(!c.pago&&!tieneMora&&_mora.interes>0)?`
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin:.25rem 0">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 1rem;border-bottom:1px solid var(--border)">
+            <span style="font-size:14px;color:var(--text2)">Cuota ${mesEnCurso}</span>
+            <span style="font-size:16px;font-weight:700">${cur}${fmtPeso(c.monto)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 1rem;border-bottom:1px solid var(--border);background:var(--red-bg)">
+            <div>
+              <div style="font-size:14px;font-weight:600;color:var(--red)">⚠️ Mora</div>
+              <div style="font-size:12px;color:var(--red)">${_mora.dias} días × 2% = ${_mora.pct}%</div>
+            </div>
+            <span style="font-size:16px;font-weight:700;color:var(--red)">+${cur}${fmtPeso(_mora.interes)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 1rem;background:var(--green-bg)">
+            <span style="font-size:15px;font-weight:700">Total</span>
+            <span style="font-size:22px;font-weight:800;color:var(--green)">${cur}${fmtPeso(c.monto+_mora.interes)}</span>
+          </div>
+          <div id="det-adelanto-desglose-${id}"></div>
+        </div>
       `:`<div id="det-monto-box-${id}" style="background:${c.pago?'#dcfce7':'var(--brand-light)'};border-radius:var(--r);padding:.75rem 0;margin-bottom:.4rem;border:${c.pago?'2px solid #86efac':'none'}">
           <div id="det-monto-val-${id}" class="${montoClass}" style="margin-bottom:0;color:${c.pago?'#16a34a':'var(--brand)'}">${cur}${fmtPeso(c.monto)}</div>
           <div id="det-adelanto-desglose-${id}"></div>
@@ -5670,10 +5689,11 @@ function admCobrarAutoById(btn){
   const totalAdelantos=_adelantoCuotas.reduce((s,q)=>s+q.monto,0);
   const totalFinal=cuota+interes+totalAdelantos;
 
-  let msg='Cuota: '+cur+fmtPeso(cuota);
-  if(interes) msg+=' + Mora: '+cur+fmtPeso(interes);
-  if(totalAdelantos) msg+=' + Adelantos ('+_adelantoCuotas.length+' cuota'+(_adelantoCuotas.length>1?'s':'')+' — cuotas '+_adelantoCuotas.map(q=>q.num).sort((a,b)=>b-a).join(', ')+'): '+cur+fmtPeso(totalAdelantos);
-  msg+=' = Total: '+cur+fmtPeso(totalFinal);
+  let msg='<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">'
+    +'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:13px">Cuota</span><span style="font-weight:700">'+cur+fmtPeso(cuota)+'</span></div>';
+  if(interes) msg+='<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--red-bg)"><span style="color:var(--red);font-size:13px;font-weight:600">⚠️ Mora</span><span style="font-weight:700;color:var(--red)">+'+cur+fmtPeso(interes)+'</span></div>';
+  if(totalAdelantos) msg+='<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:#eff6ff"><span style="color:#0369a1;font-size:13px;font-weight:600">⏭ Adelantos ('+_adelantoCuotas.map(q=>q.num).sort((a,b)=>a-b).join(', ')+')</span><span style="font-weight:700;color:#0369a1">+'+cur+fmtPeso(totalAdelantos)+'</span></div>';
+  msg+='<div style="display:flex;justify-content:space-between;padding:12px;background:var(--green-bg)"><span style="font-weight:700">Total</span><span style="font-size:18px;font-weight:800;color:var(--green)">'+cur+fmtPeso(totalFinal)+'</span></div></div>';
 
   const adelantosCopy=[..._adelantoCuotas];
   mostrarConfirmAdmin(
@@ -5709,7 +5729,8 @@ function mostrarConfirmAdmin(titulo, msg, onOk){
     document.body.appendChild(modal);
   }
   document.getElementById('acm-title').textContent=titulo;
-  document.getElementById('acm-msg').textContent=msg;
+  if(msg&&msg.trim().startsWith('<')){document.getElementById('acm-msg').innerHTML=msg;}
+  else{document.getElementById('acm-msg').textContent=msg;}
   modal.style.display='flex';
   const okBtn=document.getElementById('acm-ok');
   okBtn.onclick=()=>{modal.style.display='none';onOk();};
