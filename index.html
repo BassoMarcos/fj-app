@@ -1528,16 +1528,17 @@ function esPrimeraCuotaFutura(c){
   if(c.primeraCuota===null||c.primeraCuota===undefined||c.primeraCuota==='') return false;
   const pc = parseInt(c.primeraCuota);
   if(isNaN(pc)) return false;
-  // Mes/año actual de la app
+  // Mes/año en curso de la app
   const cf = loadCierreFinal();
-  const hoy = new Date();
   let mesIdx, anioIdx;
   if(cf&&cf.mes!==undefined&&cf.anio!==undefined){
     mesIdx = (cf.mes+1)%12;
     anioIdx = cf.mes===11 ? cf.anio+1 : cf.anio;
   } else {
-    mesIdx = hoy.getMonth();
-    anioIdx = hoy.getFullYear();
+    // Sin cierre final: usar mes operativo del ICC (no el calendario)
+    const mo = getMesOperativoICC();
+    mesIdx = mo.mesIdx;
+    anioIdx = mo.anio;
   }
   // Si el cliente tiene año guardado, comparar año+mes
   if(c.primeraCuotaAnio){
