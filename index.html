@@ -1066,7 +1066,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0302';
+  datos['_version']='v1.0303';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1246,8 +1246,18 @@ function getIccMensual(mesIdx, anio){
   return loadIccMensual().find(x=>x.mesKey===mesKey)||null;
 }
 // Verifica si están los 3 meses consecutivos (mesIdx + los 2 anteriores) registrados en Lista 1
+// Si un mes falta en Lista 1 pero ya existe en el historial aplicado (Lista 2), lo completa automáticamente.
 function trimestreCompletoEnLista1(mesIdx, anio){
   const meses=[];
+  for(let i=2;i>=0;i--){
+    let m=mesIdx-i, a=anio;
+    if(m<0){m+=12;a--;}
+    if(!getIccMensual(m,a)){
+      const h=getIccDeHistorial(m);
+      const p=h?Number(h.pct):NaN;
+      if(!isNaN(p)&&p>0) registrarIccMensual(m,a,p);
+    }
+  }
   for(let i=2;i>=0;i--){
     let m=mesIdx-i, a=anio;
     if(m<0){ m+=12; a-=1; }
@@ -7730,6 +7740,20 @@ function renderIccStatus(){
       ${_paso(3,yaAplicado,'Aplicar incremento', yaAplicado?'Ya aplicado — planilla actualizada.':(_cierreOk&&_tri.completo?'Listo para aplicar con el botón de abajo.':'Bloqueado hasta completar los pasos anteriores. La app no deja aplicarlo antes.'), !(_cierreOk&&_tri.completo))}
     </div>`;
     el.innerHTML = guia + estadoHtml;
+    // Bloquear el botón Aplicar si falta el cierre final del mes operativo (corre al final del render)
+    if(!_cierreOk && !yaAplicado){
+      setTimeout(()=>{
+        const _btn=document.getElementById('icc-apply-btn');
+        if(_btn){
+          _btn.disabled=true;
+          _btn.style.opacity='0.4';
+          _btn.style.cursor='not-allowed';
+          _btn.title='🔒 Primero hacé el cierre final de '+mesActual;
+        }
+        const _desc=document.getElementById('icc-box-desc');
+        if(_desc) _desc.textContent='🔒 Bloqueado: primero hacé el cierre final de '+mesActual+'. Después volvé acá para aplicar el incremento.';
+      },0);
+    }
   }catch(e){}
 
   const applyBox = document.getElementById('icc-apply-box');
