@@ -1067,7 +1067,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0300';
+  datos['_version']='v1.0301';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3753,6 +3753,7 @@ function _doFusionar(srcIdx,dstIdx){
 function getDistPct(){const v=parseInt(localStorage.getItem('fj_dist_pct')||'70');return isNaN(v)||v<1||v>99?70:v;}
 function setDistPct(v){const n=parseInt(v);if(!isNaN(n)&&n>=1&&n<=99){localStorage.setItem('fj_dist_pct',n);renderBalances();}}
 function renderBalances(seccion){
+  window._balancesSeccion=seccion||null;
   const el=document.getElementById('a-balances-content');if(!el)return;
   const bal=loadBalances();
   const data=loadData();
@@ -8894,7 +8895,11 @@ async function init(){
             // No interrumpir inicio ni datos
             if(tabActiva === 'inicio' || tabActiva === 'datos') return;
             // Re-renderizar la pestaña activa
-            adminTab(tabActiva);
+            if(tabActiva==='balances' && window._balancesSeccion){
+              renderBalances(window._balancesSeccion);
+            } else {
+              adminTab(tabActiva);
+            }
           }
         }catch(e){}
       }
