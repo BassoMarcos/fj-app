@@ -518,8 +518,7 @@ tr:hover td{background:var(--bg)}
     </div></div>
     <div id="atab-icc" style="display:none"><div style="max-width:1000px;margin:0 auto;padding:2rem 1.5rem">
       <!-- Estado general -->
-      <div id="icc-status-box" sty
-" style="margin-bottom:1rem"></div>
+      <div id="icc-status-box" style="margin-bottom:1rem"></div>
       <!-- Trimestre visual -->
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);padding:1.25rem;margin-bottom:1rem">
         <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:1rem" id="icc-trimestre-titulo">Trimestre en curso</div>
@@ -1067,7 +1066,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0301';
+  datos['_version']='v1.0302';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7711,6 +7710,27 @@ function renderIccStatus(){
       </div></div>`;
   }
   el.innerHTML = estadoHtml;
+
+  // ── Guía de orden con estado en vivo ──
+  try{
+    const _cf=loadCierreFinal();
+    const _cierreOk=!!(_cf && Number(_cf.mes)===mesIdx && Number(_cf.anio)===mesOp.anio);
+    const _tri=trimestreCompletoEnLista1(mesIdx, mesOp.anio);
+    const _faltan=_tri.completo?[]:_tri.meses.filter((_,i)=>_tri.entradas[i]===null).map(({m})=>MESES[m]);
+    const _paso=(n,ok,txt,sub,locked)=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;${n<3?'border-bottom:1px dashed var(--border);':''}">
+      <div style="font-size:18px;flex-shrink:0">${ok?'✅':(locked?'🔒':'⏳')}</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;${ok?'color:var(--green)':''}">${n}. ${txt}</div>
+        <div style="font-size:12px;color:var(--text2)">${sub}</div>
+      </div></div>`;
+    const guia=`<div style="background:var(--surface);border:1.5px solid var(--border2);border-radius:var(--rlg);padding:12px 16px;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);margin-bottom:4px">📌 Orden correcto — mes operativo: ${mesActual} ${mesOp.anio}</div>
+      ${_paso(1,_cierreOk,'Cierre final de '+mesActual, _cierreOk?'Hecho — las cuotas ya avanzaron.':'Pendiente. Hacelo primero en Balances → Cierre final.')}
+      ${_paso(2,_tri.completo,'Registrar ICC de los 3 meses en Lista 1', _tri.completo?'Trimestre completo.':'Faltan: '+_faltan.join(', ')+'.')}
+      ${_paso(3,yaAplicado,'Aplicar incremento', yaAplicado?'Ya aplicado — planilla actualizada.':(_cierreOk&&_tri.completo?'Listo para aplicar con el botón de abajo.':'Bloqueado hasta completar los pasos anteriores. La app no deja aplicarlo antes.'), !(_cierreOk&&_tri.completo))}
+    </div>`;
+    el.innerHTML = guia + estadoHtml;
+  }catch(e){}
 
   const applyBox = document.getElementById('icc-apply-box');
   if(esperandoPublicacion){
