@@ -1066,7 +1066,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0306';
+  datos['_version']='v1.0307';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3592,6 +3592,12 @@ function renderInicio(){
   const _futuros=_act.filter(c=>esPrimeraCuotaFutura(c));
   const _triCnt={'Feb-May-Ago-Nov':0,'Ene-Abr-Jul-Oct':0,'Mar-Jun-Sep-Dic':0};
   _act.filter(c=>c.moneda!=='USD').forEach(c=>{if(_triCnt[c.tri]!==undefined)_triCnt[c.tri]++;});
+  // Total esperado del mes: activos cobrables (sin agrimensores, sin préstamos, sin 1ª cuota futura)
+  const _cobrables=_act.filter(c=>!esAgrimensor(c.id)&&!c.autopago&&!esPrimeraCuotaFutura(c));
+  const _cobrARS=_cobrables.filter(c=>c.moneda!=='USD');
+  const _cobrUSD=_cobrables.filter(c=>c.moneda==='USD');
+  const _totARS=_cobrARS.reduce((s,c)=>s+(Number(c.monto)||0),0);
+  const _totUSD=_cobrUSD.reduce((s,c)=>s+(Number(c.monto)||0),0);
   const _stat=(n,l,color,tip)=>`<div title="${tip||''}" style="text-align:center;padding:6px 2px;cursor:help"><div style="font-size:20px;font-weight:800;color:${color||'var(--text)'}">${n}</div><div style="font-size:10px;color:var(--text2)">${l}</div></div>`;
   const resumenLotes=`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:1rem">
@@ -3609,6 +3615,10 @@ function renderInicio(){
         ${_stat(_triCnt['Ene-Abr-Jul-Oct'],'Azul (Ene/Abr/Jul/Oct)','#60a5fa','Lotes activos en pesos del grupo Azul: sus cuotas aumentan por ICC en Enero, Abril, Julio y Octubre.')}
         ${_stat(_triCnt['Mar-Jun-Sep-Dic'],'Rosa (Mar/Jun/Sep/Dic)','#f472b6','Lotes activos en pesos del grupo Rosa: sus cuotas aumentan por ICC en Marzo, Junio, Septiembre y Diciembre.')}
         ${_stat(_usd.length,'USD (sin trimestre)','var(--text2)','Lotes activos en dólares: no tienen trimestre ni reciben incrementos ICC.')}
+      </div>
+      <div title="Suma de las cuotas del mes de todos los lotes cobrables: activos, sin agrimensores, sin préstamos y sin primera cuota futura. No incluye moras ni adelantos." style="display:flex;justify-content:space-around;gap:8px;border-top:1px dashed var(--border);padding-top:8px;margin-top:6px;cursor:help;flex-wrap:wrap">
+        <div style="text-align:center"><div style="font-size:11px;color:var(--text2);margin-bottom:2px">💰 A COBRAR ESTE MES (PESOS)</div><div style="font-size:19px;font-weight:800;color:var(--green)">$${fmtPeso(_totARS)}</div><div style="font-size:10px;color:var(--text3)">${_cobrARS.length} lotes</div></div>
+        <div style="text-align:center"><div style="font-size:11px;color:var(--text2);margin-bottom:2px">💵 A COBRAR ESTE MES (USD)</div><div style="font-size:19px;font-weight:800;color:var(--green)">USD ${fmtPeso(_totUSD)}</div><div style="font-size:10px;color:var(--text3)">${_cobrUSD.length} lotes</div></div>
       </div>
     </div>`;
   el.innerHTML=`
