@@ -1066,7 +1066,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0304';
+  datos['_version']='v1.0305';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3582,9 +3582,39 @@ function renderInicio(){
   const pct=total?Math.round(pagados/total*100):0;
   const bal=loadBalances();
   const totalCaja=(bal.abierto||[]).reduce((s,p)=>s+p.monto,0);
+  // ── Resumen de lotes ──
+  const _all=loadData();
+  const _act=_all.filter(c=>c.est==='activo');
+  const _fin=_all.filter(c=>c.est==='finalizado');
+  const _agr=_all.filter(c=>esAgrimensor(c.id));
+  const _prest=_all.filter(c=>c.autopago);
+  const _usd=_act.filter(c=>c.moneda==='USD');
+  const _futuros=_act.filter(c=>esPrimeraCuotaFutura(c));
+  const _triCnt={'Feb-May-Ago-Nov':0,'Ene-Abr-Jul-Oct':0,'Mar-Jun-Sep-Dic':0};
+  _act.filter(c=>c.moneda!=='USD').forEach(c=>{if(_triCnt[c.tri]!==undefined)_triCnt[c.tri]++;});
+  const _stat=(n,l,color)=>`<div style="text-align:center;padding:6px 2px"><div style="font-size:20px;font-weight:800;color:${color||'var(--text)'}">${n}</div><div style="font-size:10px;color:var(--text2)">${l}</div></div>`;
+  const resumenLotes=`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:1rem">
+      <div style="font-weight:700;font-size:13px;color:var(--text2);margin-bottom:6px">📋 RESUMEN DE LOTES</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(85px,1fr));gap:4px;border-bottom:1px dashed var(--border);padding-bottom:6px;margin-bottom:6px">
+        ${_stat(_all.length,'Total')}
+        ${_stat(_act.length,'Activos','var(--green)')}
+        ${_stat(_fin.length,'Finalizados','#7ab5d0')}
+        ${_stat(_agr.length,'Agrimensores','#d97706')}
+        ${_stat(_prest.length,'Préstamos','#d97706')}
+        ${_stat(_futuros.length,'1ª cuota futura','var(--text3)')}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(85px,1fr));gap:4px">
+        ${_stat(_triCnt['Feb-May-Ago-Nov'],'Verde (Feb/May/Ago/Nov)','#4caf82')}
+        ${_stat(_triCnt['Ene-Abr-Jul-Oct'],'Azul (Ene/Abr/Jul/Oct)','#60a5fa')}
+        ${_stat(_triCnt['Mar-Jun-Sep-Dic'],'Rosa (Mar/Jun/Sep/Dic)','#f472b6')}
+        ${_stat(_usd.length,'USD (sin trimestre)','var(--text2)')}
+      </div>
+    </div>`;
   el.innerHTML=`
     <div style="font-size:22px;font-weight:800;margin-bottom:4px">Bienvenido, Administrador</div>
     <div style="font-size:14px;color:var(--text2);margin-bottom:1rem">${new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+    ${resumenLotes}
     <button onclick="resetearADatosIniciales()" style="width:100%;padding:12px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:.5rem">🔄 Resetear a datos iniciales (Mayo)</button>
     <button onclick="syncFromSheets().then(()=>{location.reload();})" style="width:100%;padding:10px;background:#1a3a6b;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:1.5rem">☁️ Sincronizar desde Google Sheets</button>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;margin-bottom:1rem">
