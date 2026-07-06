@@ -731,7 +731,7 @@ tr:hover td{background:var(--bg)}
           <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Cuota actual</div>
           <input type="number" id="e-ca-visible" min="1" disabled
             style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:80px;opacity:.5"
-            oninput="document.getElementById('e-ca').value=this.value">
+            oninput="document.getElementById('e-ca').value=this.value;actualizarEscalonInfo()">
         </div>
         <div>
           <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Cuota pura ($)</div>
@@ -741,17 +741,21 @@ tr:hover td{background:var(--bg)}
         <div>
           <div style="font-size:10px;color:var(--text3);margin-bottom:2px">🪜 Escalón ($)</div>
           <input type="number" id="e-adic-monto" min="0" disabled placeholder="0"
-            style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:110px;opacity:.5">
+            style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:110px;opacity:.5"
+            oninput="actualizarEscalonInfo()">
         </div>
         <div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Hasta cuota N°</div>
-          <input type="number" id="e-adic-hasta" min="0" disabled placeholder="0"
-            style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:90px;opacity:.5">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Cantidad de cuotas</div>
+          <input type="number" id="e-adic-cant" min="0" disabled placeholder="0"
+            style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:90px;opacity:.5"
+            oninput="actualizarEscalonInfo()">
         </div>
+        <input type="hidden" id="e-adic-hasta" value="0">
         <button type="button" id="e-ca-unlock" onclick="desbloquearCuotaActual()"
           style="padding:7px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;background:var(--surface);cursor:pointer">🔒 Habilitar edición</button>
       </div>
-      <div id="e-ca-warn" style="display:none;font-size:11px;color:var(--red);margin-top:4px">⚠️ Estos campos modifican el plan del cliente. El escalón se suma a la cuota hasta la cuota N inclusive; el ICC solo aumenta la cuota pura. Usalo solo para correcciones.</div>
+      <div id="e-escalon-info" style="display:none;font-size:11px;color:#0369a1;margin-top:4px;background:#eff6ff;border-radius:6px;padding:5px 8px"></div>
+      <div id="e-ca-warn" style="display:none;font-size:11px;color:var(--red);margin-top:4px">⚠️ Estos campos modifican el plan del cliente. El escalón se suma a la cuota durante la cantidad de cuotas indicada (contando desde la cuota actual); el ICC solo aumenta la cuota pura. Usalo solo para correcciones.</div>
     </div>
 
     <input type="hidden" id="e-saldo-tipo" value="favor">
@@ -1105,7 +1109,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0309';
+  datos['_version']='v1.0310';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1919,7 +1923,10 @@ function openEditModal(id){
     set('e-ca-visible',c.ca||1);
     set('e-monto-visible',c.monto||0);
     set('e-adic-monto',c.adicionalMonto||0);
-    set('e-adic-hasta',c.adicionalHasta||0);
+    const _cantIni=(c.adicionalMonto&&c.adicionalHasta)?Math.max(0,(c.adicionalHasta-(c.ca||1))+1):0;
+    set('e-adic-cant',_cantIni);
+    const _h=document.getElementById('e-adic-hasta'); if(_h) _h.value=c.adicionalHasta||0;
+    setTimeout(actualizarEscalonInfo,0);
     const b=document.getElementById('e-ca-unlock');
     if(b){ b.style.display='inline-block'; b.textContent='🔒 Habilitar edición'; }
     const w=document.getElementById('e-ca-warn'); if(w) w.style.display='none';
@@ -2642,9 +2649,35 @@ function confirmarConClaveColab(accion){
   setTimeout(()=>document.getElementById('clave-input').focus(),50);
 }
 
+function actualizarEscalonInfo(){
+  const info=document.getElementById('e-escalon-info');
+  const caEl=document.getElementById('e-ca-visible');
+  const cantEl=document.getElementById('e-adic-cant');
+  const montoEl=document.getElementById('e-adic-monto');
+  const hastaEl=document.getElementById('e-adic-hasta');
+  if(!info||!caEl||!cantEl||!hastaEl) return;
+  const ca=+caEl.value||1;
+  const cant=+cantEl.value||0;
+  const adic=+((montoEl||{}).value)||0;
+  if(cant<=0||adic<=0){ hastaEl.value=0; info.style.display='none'; return; }
+  const hasta=ca+cant-1; // incluye la cuota actual
+  hastaEl.value=hasta;
+  // Mes de la última cuota escalonada: mes en curso + (cant-1)
+  let mesIdx=MESES.indexOf(mesActual()); if(mesIdx<0) mesIdx=new Date().getMonth();
+  let anio=new Date().getFullYear();
+  // Si el mes operativo quedó "atrás" en el calendario, mantener el año coherente
+  const mesCal=new Date().getMonth();
+  if(mesIdx>mesCal+6) anio--; // caso diciembre operativo con enero calendario
+  let finIdx=mesIdx+(cant-1);
+  const finAnio=anio+Math.floor(finIdx/12);
+  finIdx=finIdx%12;
+  info.style.display='block';
+  info.textContent='🪜 Escalón desde la cuota '+ca+' hasta la cuota '+hasta+' inclusive — última cuota escalonada: '+MESES[finIdx]+' '+finAnio;
+}
+
 function desbloquearCuotaActual(){
   confirmarConClave(()=>{
-    ['e-ca-visible','e-monto-visible','e-adic-monto','e-adic-hasta'].forEach(eid=>{
+    ['e-ca-visible','e-monto-visible','e-adic-monto','e-adic-cant'].forEach(eid=>{
       const v=document.getElementById(eid);
       if(v){ v.disabled=false; v.style.opacity='1'; v.style.borderColor='var(--red)'; }
     });
