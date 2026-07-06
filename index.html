@@ -723,6 +723,19 @@ tr:hover td{background:var(--bg)}
     <input type="hidden" id="e-tri" value="Mar-Jun-Sep-Dic">
     <input type="hidden" id="e-ca" value="1">
 
+    <!-- Cuota actual (solo edición, bloqueado por defecto) -->
+    <div class="field" id="e-ca-wrap" style="display:none">
+      <label style="font-size:12px">Cuota actual <span style="font-weight:400;color:var(--text3)">(corrección manual)</span></label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="number" id="e-ca-visible" min="1" disabled
+          style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:90px;opacity:.5"
+          oninput="document.getElementById('e-ca').value=this.value">
+        <button type="button" id="e-ca-unlock" onclick="desbloquearCuotaActual()"
+          style="padding:7px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;background:var(--surface);cursor:pointer">🔒 Habilitar edición</button>
+      </div>
+      <div id="e-ca-warn" style="display:none;font-size:11px;color:var(--red);margin-top:4px">⚠️ Cambiar la cuota actual modifica en qué cuota está el cliente. Usalo solo para corregir errores.</div>
+    </div>
+
     <input type="hidden" id="e-saldo-tipo" value="favor">
     <input type="hidden" id="e-saldo-monto" value="0">
     <input type="hidden" id="e-saldo" value="0">
@@ -1066,7 +1079,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0307';
+  datos['_version']='v1.0308';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1874,6 +1887,14 @@ function openEditModal(id){
   document.getElementById('btn-del').style.display='inline-block';
   // Mostrar/ocultar secciones
   safeDisp('e-est-wrap','block');
+  safeDisp('e-ca-wrap','block');
+  (function(){
+    const v=document.getElementById('e-ca-visible');
+    if(v){ v.value=c.ca||1; v.disabled=true; v.style.opacity='.5'; v.style.borderColor='var(--border2)'; }
+    const b=document.getElementById('e-ca-unlock');
+    if(b){ b.style.display='inline-block'; b.textContent='🔒 Habilitar edición'; }
+    const w=document.getElementById('e-ca-warn'); if(w) w.style.display='none';
+  })();
   safeDisp('e-lotes-nuevo-wrap','none');
   safeDisp('e-edit-lote-wrap','block');
   // Campos básicos
@@ -2547,7 +2568,8 @@ function openAddModal(){
   document.getElementById('btn-del').style.display='none';
   const estWrap=document.getElementById('e-est-wrap');
   if(estWrap) estWrap.style.display='none';
-  // Lotes
+  const caWrap=document.getElementById('e-ca-wrap');
+  if(caWrap) caWrap.style.display='none';
   const editWrap=document.getElementById('e-edit-lote-wrap');
   if(editWrap) editWrap.style.display='none';
   const nuevoWrap=document.getElementById('e-lotes-nuevo-wrap');
@@ -2589,6 +2611,15 @@ function confirmarConClaveColab(accion){
   document.getElementById('clave-input').value='';
   modal.style.display='flex';
   setTimeout(()=>document.getElementById('clave-input').focus(),50);
+}
+
+function desbloquearCuotaActual(){
+  confirmarConClave(()=>{
+    const v=document.getElementById('e-ca-visible');
+    if(v){ v.disabled=false; v.style.opacity='1'; v.style.borderColor='var(--red)'; v.focus(); }
+    const b=document.getElementById('e-ca-unlock'); if(b) b.style.display='none';
+    const w=document.getElementById('e-ca-warn'); if(w) w.style.display='block';
+  });
 }
 
 function confirmarConClave(accion){
@@ -7392,7 +7423,9 @@ function saveCliente(){
       c.titular=titularPrincipal;c.titulares=titulares;
       c.tel=tel;c.dni=dni;c.fechaFirma=fechaFirma;
       const safe2=(eid)=>{const el=document.getElementById(eid);return el?el.value:null;};
+      const _caAnt=c.ca;
       c.ca=+safe2('e-ca')||c.ca||1;
+      if(_caAnt!==undefined&&c.ca!==_caAnt) addHist('edit','⚠️ Cuota actual corregida manualmente: '+_caAnt+' → '+c.ca+' — '+mz+' Lote '+lote,newId);
       c.ct=+safe2('e-ct')||c.ct||48;
       c.saldo=saldo;
       if(safe2('e-tri')) c.tri=safe2('e-tri');
