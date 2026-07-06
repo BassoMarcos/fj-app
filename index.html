@@ -723,17 +723,35 @@ tr:hover td{background:var(--bg)}
     <input type="hidden" id="e-tri" value="Mar-Jun-Sep-Dic">
     <input type="hidden" id="e-ca" value="1">
 
-    <!-- Cuota actual (solo edición, bloqueado por defecto) -->
+    <!-- Cuota actual / cuota pura / escalonado (solo edición, bloqueado por defecto) -->
     <div class="field" id="e-ca-wrap" style="display:none">
-      <label style="font-size:12px">Cuota actual <span style="font-weight:400;color:var(--text3)">(corrección manual)</span></label>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input type="number" id="e-ca-visible" min="1" disabled
-          style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:90px;opacity:.5"
-          oninput="document.getElementById('e-ca').value=this.value">
+      <label style="font-size:12px">Corrección manual <span style="font-weight:400;color:var(--text3)">(cuota actual, cuota pura y escalonado)</span></label>
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Cuota actual</div>
+          <input type="number" id="e-ca-visible" min="1" disabled
+            style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:80px;opacity:.5"
+            oninput="document.getElementById('e-ca').value=this.value">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Cuota pura ($)</div>
+          <input type="number" id="e-monto-visible" min="0" disabled
+            style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:120px;opacity:.5">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">🪜 Escalón ($)</div>
+          <input type="number" id="e-adic-monto" min="0" disabled placeholder="0"
+            style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:110px;opacity:.5">
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Hasta cuota N°</div>
+          <input type="number" id="e-adic-hasta" min="0" disabled placeholder="0"
+            style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:90px;opacity:.5">
+        </div>
         <button type="button" id="e-ca-unlock" onclick="desbloquearCuotaActual()"
           style="padding:7px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;background:var(--surface);cursor:pointer">🔒 Habilitar edición</button>
       </div>
-      <div id="e-ca-warn" style="display:none;font-size:11px;color:var(--red);margin-top:4px">⚠️ Cambiar la cuota actual modifica en qué cuota está el cliente. Usalo solo para corregir errores.</div>
+      <div id="e-ca-warn" style="display:none;font-size:11px;color:var(--red);margin-top:4px">⚠️ Estos campos modifican el plan del cliente. El escalón se suma a la cuota hasta la cuota N inclusive; el ICC solo aumenta la cuota pura. Usalo solo para correcciones.</div>
     </div>
 
     <input type="hidden" id="e-saldo-tipo" value="favor">
@@ -803,6 +821,14 @@ function saveCuotasMora(v){localStorage.setItem('fj_cuotas_mora',JSON.stringify(
 function loadMesActual(){try{return JSON.parse(localStorage.getItem('fj_mes_actual')||'null');}catch(e){return null;}}
 function saveMesActual(v){localStorage.setItem('fj_mes_actual',JSON.stringify(v));sheetsSet('MesActual',[v]);if(window._firebaseReady)window._fbSet('mesActual',v).catch(e=>console.warn('FB mes error:',e));}
 
+// ── Escalonado: cuota pura + adicional fijo hasta la cuota N (inclusive) ──
+function montoCobrable(c){
+  const base=Number(c.monto)||0;
+  const adic=Number(c.adicionalMonto)||0;
+  const hasta=Number(c.adicionalHasta)||0;
+  const activo=adic>0 && hasta>0 && Number(c.ca)<=hasta;
+  return {base, adicional:activo?adic:0, total:base+(activo?adic:0), escalonActivo:activo, hasta};
+}
 function calcInteresAuto(monto, desdeTs){
   const hoy=new Date();
   if(getMoraDesactivada()) return {dias:0,pct:0,interes:0};
@@ -1079,7 +1105,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0308';
+  datos['_version']='v1.0309';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1718,7 +1744,7 @@ function renderTarjetaCliente(id, containerId){
       </div>`
     :`<div style="background:var(--brand-light);border-radius:var(--r);padding:1rem;text-align:center;margin:.5rem 0">
         <div style="font-size:13px;color:var(--text2);margin-bottom:4px">Cuota ${mes} ${anio}</div>
-        <div style="font-size:28px;font-weight:900;color:var(--acc2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cur}${fmtPeso(c.monto)}</div>
+        <div style="font-size:28px;font-weight:900;color:var(--acc2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cur}${fmtPeso(montoCobrable(c).total)}</div>
       </div>`;
 
   // Build HTML without inner quotes conflicting
@@ -1889,8 +1915,11 @@ function openEditModal(id){
   safeDisp('e-est-wrap','block');
   safeDisp('e-ca-wrap','block');
   (function(){
-    const v=document.getElementById('e-ca-visible');
-    if(v){ v.value=c.ca||1; v.disabled=true; v.style.opacity='.5'; v.style.borderColor='var(--border2)'; }
+    const set=(eid,val)=>{const el=document.getElementById(eid);if(el){el.value=val;el.disabled=true;el.style.opacity='.5';el.style.borderColor='var(--border2)';}};
+    set('e-ca-visible',c.ca||1);
+    set('e-monto-visible',c.monto||0);
+    set('e-adic-monto',c.adicionalMonto||0);
+    set('e-adic-hasta',c.adicionalHasta||0);
     const b=document.getElementById('e-ca-unlock');
     if(b){ b.style.display='inline-block'; b.textContent='🔒 Habilitar edición'; }
     const w=document.getElementById('e-ca-warn'); if(w) w.style.display='none';
@@ -2615,8 +2644,11 @@ function confirmarConClaveColab(accion){
 
 function desbloquearCuotaActual(){
   confirmarConClave(()=>{
-    const v=document.getElementById('e-ca-visible');
-    if(v){ v.disabled=false; v.style.opacity='1'; v.style.borderColor='var(--red)'; v.focus(); }
+    ['e-ca-visible','e-monto-visible','e-adic-monto','e-adic-hasta'].forEach(eid=>{
+      const v=document.getElementById(eid);
+      if(v){ v.disabled=false; v.style.opacity='1'; v.style.borderColor='var(--red)'; }
+    });
+    const first=document.getElementById('e-ca-visible'); if(first) first.focus();
     const b=document.getElementById('e-ca-unlock'); if(b) b.style.display='none';
     const w=document.getElementById('e-ca-warn'); if(w) w.style.display='block';
   });
@@ -2823,7 +2855,7 @@ function mostrarVCModal(id){
   } else {
     html+='<div style="background:#e8f0fe;border-radius:10px;padding:1rem;text-align:center;margin-bottom:12px">';
     html+='<div style="font-size:13px;color:#555;margin-bottom:4px">Cuota '+mes+' '+anio+'</div>';
-    html+='<div style="font-size:32px;font-weight:900;color:#1a3a6b">'+fmtPeso(c.monto)+'</div>';
+    html+='<div style="font-size:32px;font-weight:900;color:#1a3a6b">'+fmtPeso(montoCobrable(c).total)+'</div>';
     html+='</div>';
   }
 
@@ -3038,7 +3070,7 @@ function renderPanelMora(){
           <td style="padding:8px 10px"><input type="checkbox" id="${checkId}" data-cid="${c.clienteId}" data-anio="${c.anio}" data-mes="${c.mes}" data-monto="${c.monto}" data-interes="${mor.interes}" onchange="onMoraCheckChange('${cl.clienteId}')" ${i===0?'':'disabled'} style="width:16px;height:16px;cursor:pointer"></td>
           <td style="padding:8px 10px;font-size:13px;font-weight:600">${c.mesNombre}</td>
           <td style="padding:8px 10px;font-size:13px">Cuota ${c.numeroCuota}/${c.totalCuotas}</td>
-          <td style="padding:8px 10px;font-size:13px">${cur2}${fmtPeso(c.monto)}</td>
+          <td style="padding:8px 10px;font-size:13px">${cur2}${fmtPeso(montoCobrable(c).total)}</td>
           <td style="padding:8px 10px;font-size:13px;color:var(--red)">${mor.dias} dias</td>
           <td style="padding:8px 10px;min-width:110px">
             <div style="display:flex;align-items:center;gap:3px">
@@ -3074,7 +3106,7 @@ function renderPanelMora(){
               <div style="font-size:11px;color:var(--red)">${mor.dias} días mora</div>
             </div>
             <div style="text-align:right">
-              <div style="font-size:12px;color:var(--text2)">${cur2}${fmtPeso(c.monto)} + <span style="color:var(--red)">${cur2}${fmtPeso(mor.interes)}</span></div>
+              <div style="font-size:12px;color:var(--text2)">${cur2}${fmtPeso(montoCobrable(c).total)} + <span style="color:var(--red)">${cur2}${fmtPeso(mor.interes)}</span></div>
               <div style="font-size:14px;font-weight:800;color:var(--red)">${cur2}${fmtPeso(total)}</div>
             </div>
           </div>
@@ -3627,8 +3659,8 @@ function renderInicio(){
   const _cobrables=_act.filter(c=>!esAgrimensor(c.id)&&!c.autopago&&!esPrimeraCuotaFutura(c));
   const _cobrARS=_cobrables.filter(c=>c.moneda!=='USD');
   const _cobrUSD=_cobrables.filter(c=>c.moneda==='USD');
-  const _totARS=_cobrARS.reduce((s,c)=>s+(Number(c.monto)||0),0);
-  const _totUSD=_cobrUSD.reduce((s,c)=>s+(Number(c.monto)||0),0);
+  const _totARS=_cobrARS.reduce((s,c)=>s+montoCobrable(c).total,0);
+  const _totUSD=_cobrUSD.reduce((s,c)=>s+montoCobrable(c).total,0);
   const _stat=(n,l,color,tip)=>`<div title="${tip||''}" style="text-align:center;padding:6px 2px;cursor:help"><div style="font-size:20px;font-weight:800;color:${color||'var(--text)'}">${n}</div><div style="font-size:10px;color:var(--text2)">${l}</div></div>`;
   const resumenLotes=`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:1rem">
@@ -5503,7 +5535,8 @@ function renderAdminDet(id){
   // Cuotas morosas
   const cuotasMoraCliente=loadCuotasMora().filter(cm=>cm.clienteId===id&&!cm.pagada).sort((a,b)=>(a.anio-b.anio)||(a.mes-b.mes));
   const tieneMora=cuotasMoraCliente.length>0;
-  const _mora=calcInteresAuto(c.monto);
+  const _mc=montoCobrable(c);
+  const _mora=calcInteresAuto(_mc.total);
 
   const obsAll=(c.obs||[]).slice().reverse();
   const OBS_LIMIT=3;
@@ -5582,7 +5615,7 @@ function renderAdminDet(id){
     pagoBtn=`<button class="btn btn-sm" data-mid="${id}" onclick="desmarcarPagoAdmin(this.dataset.mid)" style="color:var(--red);border-color:var(--red-border);width:100%;margin-top:.75rem">↩ Desmarcar pago</button>`;
   } else if(tieneMora){
     pagoBtn=`<div style="margin-top:.75rem;background:var(--surface);border:2px dashed #cbd5e1;border-radius:var(--r);padding:14px;text-align:center;color:#94a3b8">
-      <div style="font-size:13px;font-weight:700">Cuota ${mesEnCurso} — ${cur}${fmtPeso(c.monto)}</div>
+      <div style="font-size:13px;font-weight:700">Cuota ${mesEnCurso} — ${cur}${fmtPeso(montoCobrable(c).total)}</div>
       <div style="font-size:12px;margin-top:4px">⛔ Pagá las cuotas anteriores primero</div>
     </div>
     <button class="btn" onclick="adminMarcarPago('${id}')" style="width:100%;margin-top:6px;font-size:13px;color:var(--text2)">Marcar igualmente (admin)</button>`;
@@ -5592,7 +5625,7 @@ function renderAdminDet(id){
     const _moraCuota=c.monto;
     const _moraCur=cur;
     pagoBtn='<div style="margin-top:.75rem">'
-      +'<button id="'+cid+'-btn" data-mid="'+id+'" data-cuota="'+c.monto+'" data-interes="'+_mora.interes+'" data-cid="'+cid+'" data-cur="'+cur+'" onclick="admCobrarAutoById(this)" style="width:100%;background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">✓ Cobrar</button>'
+      +'<button id="'+cid+'-btn" data-mid="'+id+'" data-cuota="'+montoCobrable(c).total+'" data-base="'+montoCobrable(c).base+'" data-adicional="'+montoCobrable(c).adicional+'" data-interes="'+_mora.interes+'" data-cid="'+cid+'" data-cur="'+cur+'" onclick="admCobrarAutoById(this)" style="width:100%;background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">✓ Cobrar</button>'
       +'<button onclick="admToggleAdelanto(\''+id+'\')" style="width:100%;margin-top:4px;margin-bottom:4px;padding:5px;font-size:12px;background:none;border:1.5px solid #7dd3fc;color:#0369a1;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantar cuotas</button>'
       +'<div id="adelanto-selector-'+id+'" style="display:none"></div>'
       +'<button data-cid="'+cid+'" onclick="admToggleInteresDif(this.dataset.cid)" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente</button>'
@@ -5635,27 +5668,35 @@ function renderAdminDet(id){
           <div style="font-size:13px;font-weight:700;color:#d97706">⏳ Esperando incremento ICC</div>
           <div style="font-size:12px;color:var(--amber);margin-top:2px">Aplicá el ICC de ${mesEnCurso} para habilitar este lote</div>
         </div>
-      `:(!c.pago&&!tieneMora&&_mora.interes>0)?`
+      `:(!c.pago&&!tieneMora&&(_mora.interes>0||_mc.escalonActivo))?`
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin:.25rem 0">
           <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 1rem;border-bottom:1px solid var(--border)">
-            <span style="font-size:14px;color:var(--text2)">Cuota ${mesEnCurso}</span>
-            <span style="font-size:16px;font-weight:700">${cur}${fmtPeso(c.monto)}</span>
+            <span style="font-size:14px;color:var(--text2)">Cuota ${mesEnCurso}${_mc.escalonActivo?' (pura)':''}</span>
+            <span style="font-size:16px;font-weight:700">${cur}${fmtPeso(_mc.base)}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 1rem;border-bottom:1px solid var(--border);background:var(--red-bg)">
+          ${_mc.escalonActivo?`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 1rem;border-bottom:1px solid var(--border);background:#eff6ff">
+            <div>
+              <div style="font-size:14px;font-weight:600;color:#0369a1">🪜 Escalonado</div>
+              <div style="font-size:12px;color:#0369a1">hasta la cuota ${_mc.hasta}</div>
+            </div>
+            <span style="font-size:16px;font-weight:700;color:#0369a1">+${cur}${fmtPeso(_mc.adicional)}</span>
+          </div>`:''}
+          ${_mora.interes>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 1rem;border-bottom:1px solid var(--border);background:var(--red-bg)">
             <div>
               <div style="font-size:14px;font-weight:600;color:var(--red)">⚠️ Mora</div>
               <div style="font-size:12px;color:var(--red)">${_mora.dias} días × 2% = ${_mora.pct}%</div>
             </div>
             <span style="font-size:16px;font-weight:700;color:var(--red)">+${cur}${fmtPeso(_mora.interes)}</span>
-          </div>
+          </div>`:''}
           <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 1rem;background:var(--green-bg)">
             <span style="font-size:15px;font-weight:700">Total</span>
-            <span style="font-size:22px;font-weight:800;color:var(--green)">${cur}${fmtPeso(c.monto+_mora.interes)}</span>
+            <span style="font-size:22px;font-weight:800;color:var(--green)">${cur}${fmtPeso(_mc.total+_mora.interes)}</span>
           </div>
           <div id="det-adelanto-desglose-${id}"></div>
         </div>
       `:`<div id="det-monto-box-${id}" style="background:${c.pago?'#dcfce7':'var(--brand-light)'};border-radius:var(--r);padding:.75rem 0;margin-bottom:.4rem;border:${c.pago?'2px solid #86efac':'none'}">
-          <div id="det-monto-val-${id}" class="${montoClass}" style="margin-bottom:0;color:${c.pago?'#16a34a':'var(--brand)'}">${cur}${fmtPeso(c.monto)}</div>
+          <div id="det-monto-val-${id}" class="${montoClass}" style="margin-bottom:0;color:${c.pago?'#16a34a':'var(--brand)'}">${cur}${fmtPeso(_mc.total)}</div>
+          ${_mc.escalonActivo?`<div style="font-size:11px;color:#0369a1;margin-top:2px">🪜 ${cur}${fmtPeso(_mc.base)} pura + ${cur}${fmtPeso(_mc.adicional)} escalón (hasta cuota ${_mc.hasta})</div>`:''}
           <div id="det-adelanto-desglose-${id}"></div>
         </div>
         <div class="det-monto-label">${c.pago?'Cuota '+mesEnCurso+' — Pagada':esPrimeraCuotaFutura(c)?'Cuota '+nombreMesPrimeraCuota(c):'Cuota '+mesEnCurso}</div>`}
@@ -5711,12 +5752,12 @@ function actualizarResumenAdminConAdelantos(id){
       desgloseEl.innerHTML=
         '<div style="border-top:1px solid var(--blue-border);margin:4px 8px;padding:4px 0">'
         +'<div style="display:flex;justify-content:space-between;padding:2px 8px;font-size:11px;color:var(--text2)">'
-        +'<span>Cuota del mes</span><span>'+fmtPeso(c.monto)+'</span></div>'
+        +'<span>Cuota del mes</span><span>'+fmtPeso(montoCobrable(c).total)+'</span></div>'
         +'<div style="display:flex;justify-content:space-between;padding:2px 8px;font-size:11px;color:var(--blue)">'
         +'<span>⏭ Adelantos x'+nAdel+'</span><span>+'+fmtPeso(totalAdel)+'</span></div>'
         +'</div>';
     } else {
-      montoValEl.textContent=cur+fmtPeso(c.monto);
+      montoValEl.textContent=cur+fmtPeso(montoCobrable(c).total);
       desgloseEl.innerHTML='';
     }
   }
@@ -5724,7 +5765,7 @@ function actualizarResumenAdminConAdelantos(id){
   // También actualizar bloque mora si existe
   const totalEl=document.getElementById('mora-adm-'+id+'-total');
   const adelantoRowEl=document.getElementById('mora-adm-'+id+'-adelanto-row');
-  const mora=calcInteresAuto(c.monto);
+  const mora=calcInteresAuto(montoCobrable(c).total);
   const totalConAdelanto=c.monto+mora.interes+totalAdelantos;
   if(totalEl){
     if(_adelantoCuotas.length>0){
@@ -5743,7 +5784,7 @@ function actualizarResumenAdminConAdelantos(id){
       totalEl.textContent=cur+fmtPeso(totalConAdelanto);
     } else {
       if(adelantoRowEl) adelantoRowEl.remove();
-      totalEl.textContent=cur+fmtPeso(c.monto+mora.interes);
+      totalEl.textContent=cur+fmtPeso(montoCobrable(c).total+mora.interes);
     }
   }
 }
@@ -5770,8 +5811,11 @@ function admCobrarAutoById(btn){
   const totalAdelantos=_adelantoCuotas.reduce((s,q)=>s+q.monto,0);
   const totalFinal=cuota+interes+totalAdelantos;
 
+  const _base=parseFloat(btn.dataset.base)||cuota;
+  const _adic=parseFloat(btn.dataset.adicional)||0;
   let msg='<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">'
-    +'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:13px">Cuota</span><span style="font-weight:700">'+cur+fmtPeso(cuota)+'</span></div>';
+    +'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:13px">Cuota'+(_adic?' pura':'')+'</span><span style="font-weight:700">'+cur+fmtPeso(_base)+'</span></div>';
+  if(_adic) msg+='<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:#eff6ff"><span style="color:#0369a1;font-size:13px;font-weight:600">🪜 Escalonado</span><span style="font-weight:700;color:#0369a1">+'+cur+fmtPeso(_adic)+'</span></div>';
   if(interes) msg+='<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--red-bg)"><span style="color:var(--red);font-size:13px;font-weight:600">⚠️ Mora</span><span style="font-weight:700;color:var(--red)">+'+cur+fmtPeso(interes)+'</span></div>';
   if(totalAdelantos) msg+='<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:#eff6ff"><span style="color:#0369a1;font-size:13px;font-weight:600">⏭ Adelantos ('+_adelantoCuotas.map(q=>q.num).sort((a,b)=>a-b).join(', ')+')</span><span style="font-weight:700;color:#0369a1">+'+cur+fmtPeso(totalAdelantos)+'</span></div>';
   msg+='<div style="display:flex;justify-content:space-between;padding:12px;background:var(--green-bg)"><span style="font-weight:700">Total</span><span style="font-size:18px;font-weight:800;color:var(--green)">'+cur+fmtPeso(totalFinal)+'</span></div></div>';
@@ -6394,7 +6438,7 @@ function borrarCierreFinalYReaplicar(){
       cuotasMoraExist.push({
         clienteId:c.id, mz:c.mz, lote:c.lote, titular:c.titular,
         moneda:c.moneda||'ARS', numeroCuota:c.ca, totalCuotas:c.ct,
-        monto:c.monto, mes:mes, anio:anio, mesNombre:mesNombre,
+        monto:montoCobrable(c).total, mes:mes, anio:anio, mesNombre:mesNombre,
         dia10Ts:new Date(anio,mes,10,23,59,59).toISOString(),
         pagada:false, pagoTs:null
       });
@@ -6408,7 +6452,7 @@ function borrarCierreFinalYReaplicar(){
       if(c.pago){
         if(!c.hist) c.hist=[];
         const yaEnHist=c.hist.some(h=>h.mes===mesNombre&&h.cuota===c.ca);
-        if(!yaEnHist) c.hist.push({cuota:c.ca, monto:c.monto, mes:mesNombre, ts:ts});
+        if(!yaEnHist) c.hist.push({cuota:c.ca, monto:montoCobrable(c).total, mes:mesNombre, ts:ts});
       }
       if(c.ca < c.ct) c.ca=c.ca+1;
       c.pago=false; c.pagoTs=null;
@@ -6495,7 +6539,7 @@ function mostrarResumenCierre(){
   const listaMora=vanAMora.map(c=>`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-bottom:1px solid #fecaca;font-size:13px">
       <span><strong>${formatLoteTag(c.mz,c.lote)}</strong> ${c.titular||''}</span>
-      <span style="font-weight:700;color:var(--red)">${c.moneda==='USD'?'USD ':''}{fmtPeso(c.monto)}</span>
+      <span style="font-weight:700;color:var(--red)">${c.moneda==='USD'?'USD ':''}{fmtPeso(montoCobrable(c).total)}</span>
     </div>`
   ).join('').replace(/\{fmtPeso\(c\.monto\)\}/g,'').replace(/\{fmtPeso\(c\.monto\)\}/g,'');
 
@@ -6503,7 +6547,7 @@ function mostrarResumenCierre(){
   const listaMoraHtml=vanAMora.map(c=>`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-bottom:1px solid #fecaca;font-size:13px">
       <span><b style="color:var(--acc2)">${formatLoteTag(c.mz,c.lote)}</b> <span style="color:var(--text)">${c.titular||''}</span></span>
-      <span style="font-weight:700;color:var(--red)">${c.moneda==='USD'?'USD ':'\$'}${fmtPeso(c.monto)}</span>
+      <span style="font-weight:700;color:var(--red)">${c.moneda==='USD'?'USD ':'\$'}${fmtPeso(montoCobrable(c).total)}</span>
     </div>`).join('');
 
   // Crear modal
@@ -6930,7 +6974,7 @@ function admConfirmarMoraPanelColab(){
 function cobrarMoraManualColab(id){
   // Requires admin password
   const c=loadData().find(x=>x.id===id);if(!c)return;
-  const mora=calcInteresAuto(c.monto);
+  const mora=calcInteresAuto(montoCobrable(c).total);
   const det=document.getElementById('colab-detalle');
   // Show input for manual interest
   const existing=document.getElementById('mora-manual-colab');
@@ -7026,7 +7070,7 @@ function adminMarcarConMora(id, esAuto){
   const c=loadData().find(x=>x.id===id);if(!c)return;
   let interes;
   if(esAuto){
-    interes=calcInteresAuto(c.monto).interes;
+    interes=calcInteresAuto(montoCobrable(c).total).interes;
   } else {
     const val=document.getElementById('interes-manual-'+id)?.value;
     interes=parseFloat(val)||0;
@@ -7329,9 +7373,9 @@ function renderAdminTable(){
           const _aum=_nmi>=0?(ICC_MAP[(_nmi-1+12)%12]||{}).aumentaEn:null;
           const _iccAplic=_aum?loadICC().some(i=>i.planilla===c.tri&&i.aumentaEn===_aum):true;
           if(_pln&&c.tri===_pln&&!_iccAplic) return '<span style="color:#d97706;font-size:12px;font-weight:700">⏳ Sin ICC</span>';
-          if(c.pago) return fmtPeso(c.monto);
-          const m=calcInteresAuto(c.monto);
-          return m.interes>0?'<span style="color:var(--red)">'+fmtPeso(c.monto+m.interes)+'</span>':fmtPeso(c.monto);
+          if(c.pago) return fmtPeso(montoCobrable(c).total);
+          const m=calcInteresAuto(montoCobrable(c).total);
+          return m.interes>0?'<span style="color:var(--red)">'+fmtPeso(montoCobrable(c).total+m.interes)+'</span>':fmtPeso(montoCobrable(c).total);
         })()}</span>
       </div>
       <div style="display:flex;align-items:center;gap:12px">
@@ -7426,6 +7470,20 @@ function saveCliente(){
       const _caAnt=c.ca;
       c.ca=+safe2('e-ca')||c.ca||1;
       if(_caAnt!==undefined&&c.ca!==_caAnt) addHist('edit','⚠️ Cuota actual corregida manualmente: '+_caAnt+' → '+c.ca+' — '+mz+' Lote '+lote,newId);
+      // Cuota pura y escalonado (solo si el campo fue desbloqueado y tiene valor)
+      const _montoEl=document.getElementById('e-monto-visible');
+      if(_montoEl&&!_montoEl.disabled){
+        const _mAnt=c.monto, _mNew=+_montoEl.value;
+        if(!isNaN(_mNew)&&_mNew>0&&_mNew!==_mAnt){ c.monto=_mNew; addHist('edit','⚠️ Cuota pura corregida manualmente: '+fmtPeso(_mAnt)+' → '+fmtPeso(_mNew)+' — '+mz+' Lote '+lote,newId); }
+        const _aM=+((document.getElementById('e-adic-monto')||{}).value)||0;
+        const _aH=+((document.getElementById('e-adic-hasta')||{}).value)||0;
+        if(_aM!==(c.adicionalMonto||0)||_aH!==(c.adicionalHasta||0)){
+          const _antes=(c.adicionalMonto||0)?fmtPeso(c.adicionalMonto)+' hasta cuota '+(c.adicionalHasta||0):'sin escalón';
+          c.adicionalMonto=_aM; c.adicionalHasta=_aH;
+          const _desp=_aM?fmtPeso(_aM)+' hasta cuota '+_aH:'sin escalón';
+          addHist('edit','🪜 Escalonado modificado: '+_antes+' → '+_desp+' — '+mz+' Lote '+lote,newId);
+        }
+      }
       c.ct=+safe2('e-ct')||c.ct||48;
       c.saldo=saldo;
       if(safe2('e-tri')) c.tri=safe2('e-tri');
@@ -8140,7 +8198,7 @@ function renderColab(){
         <span style="font-weight:600;font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.titular}</span>
         ${cantMora>0?`<span style="background:#dc2626;color:#fff;border-radius:99px;font-size:10px;font-weight:800;padding:1px 6px;flex-shrink:0">${cantMora}</span>`:''}
         <span style="font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0">${c.ca||1}/${c.ct}</span>
-        <span style="font-weight:800;font-size:15px;white-space:nowrap;flex-shrink:0;min-width:90px;text-align:right">${fmtPeso(c.monto)}</span>
+        <span style="font-weight:800;font-size:15px;white-space:nowrap;flex-shrink:0;min-width:90px;text-align:right">${fmtPeso(montoCobrable(c).total)}</span>
       </div>
       <div style="display:flex;align-items:center;gap:12px">
         <div style="display:flex;align-items:center;gap:6px;min-width:90px">
@@ -8523,7 +8581,7 @@ function renderAgrLista(){
         <td style="padding:10px 6px"><span class="lote-tag" style="background:#2d6a50;color:#d0f0e0">${formatLoteTag(c.mz,c.lote)}</span>${isUSD?'<span style="font-size:10px;color:var(--green);margin-left:4px">💵</span>':''}</td>
         <td style="padding:10px 6px;font-weight:600">${c.titular}${waLink}</td>
         <td style="padding:10px 6px;text-align:right">${c.ca}/${c.ct}</td>
-        <td style="padding:10px 6px;text-align:right;font-weight:600">${isUSD?'USD ':''} ${fmtPeso(c.monto)}</td>
+        <td style="padding:10px 6px;text-align:right;font-weight:600">${isUSD?'USD ':''} ${fmtPeso(montoCobrable(c).total)}</td>
         <td style="padding:10px 6px;text-align:right"><span style="background:${c.saldo===0?'#f3f4f6':c.saldo<0?'#fee2e2':'#dcfce7'};color:${saldoColor(c)};padding:2px 8px;border-radius:99px;font-weight:600">${saldoTxt(c)}</span></td>
         <td style="padding:10px 6px;text-align:center">${pagoLabel}</td>
       </tr>`;
@@ -8538,11 +8596,13 @@ function agrCobrarDesdeLista(id){
   const c=data.find(x=>x.id===id);
   if(!c||c.pago) return;
   const cur=c.moneda==='USD'?'USD ':'$';
-  const mora=calcInteresAuto(c.monto);
-  const total=c.monto+(mora.interes||0);
+  const _mc=montoCobrable(c);
+  const mora=calcInteresAuto(_mc.total);
+  const total=_mc.total+(mora.interes||0);
   let msg='<div style="font-size:13px;color:var(--text2);margin-bottom:8px">'+formatLoteTag(c.mz,c.lote)+' — '+c.titular+'</div>'
     +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">'
-    +'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:13px">Cuota '+mesActual()+'</span><span style="font-weight:700">'+cur+fmtPeso(c.monto)+'</span></div>';
+    +'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:13px">Cuota '+mesActual()+(_mc.escalonActivo?' (pura)':'')+'</span><span style="font-weight:700">'+cur+fmtPeso(_mc.base)+'</span></div>'
+    +(_mc.escalonActivo?'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:#eff6ff"><span style="color:#0369a1;font-size:13px;font-weight:600">🪜 Escalonado (hasta cuota '+_mc.hasta+')</span><span style="font-weight:700;color:#0369a1">+'+cur+fmtPeso(_mc.adicional)+'</span></div>':'');
   if(mora.interes) msg+='<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--red-bg)"><span style="color:var(--red);font-size:13px;font-weight:600">⚠️ Mora ('+mora.dias+' días × 2% = '+mora.pct+'%)</span><span style="font-weight:700;color:var(--red)">+'+cur+fmtPeso(mora.interes)+'</span></div>';
   msg+='<div style="display:flex;justify-content:space-between;padding:12px;background:var(--green-bg)"><span style="font-weight:700">Total</span><span style="font-size:18px;font-weight:800;color:var(--green)">'+cur+fmtPeso(total)+'</span></div></div>';
   mostrarConfirmAdmin('Confirmar cobro',msg,()=>{
@@ -8568,19 +8628,19 @@ function actualizarResumenColabConAdelantos(id){
       desgloseEl.innerHTML=
         '<div style="border-top:1px solid var(--blue-border);margin:4px 8px;padding:4px 0">'
         +'<div style="display:flex;justify-content:space-between;padding:2px 8px;font-size:11px;color:var(--text2)">'
-        +'<span>Cuota del mes</span><span>'+fmtPeso(c.monto)+'</span></div>'
+        +'<span>Cuota del mes</span><span>'+fmtPeso(montoCobrable(c).total)+'</span></div>'
         +'<div style="display:flex;justify-content:space-between;padding:2px 8px;font-size:11px;color:var(--blue)">'
         +'<span>⏭ Adelantos x'+nAdel+'</span><span>+'+fmtPeso(totalAdelantos)+'</span></div>'
         +'</div>';
     } else {
-      montoValEl.textContent=fmtPeso(c.monto);
+      montoValEl.textContent=fmtPeso(montoCobrable(c).total);
       desgloseEl.innerHTML='';
     }
   }
 
   // También actualizar bloque mora si existe
   const cur=c.moneda==='USD'?'USD ':'';
-  const mora=calcInteresAuto(c.monto);
+  const mora=calcInteresAuto(montoCobrable(c).total);
   const totalEl=document.getElementById('mora-colab-'+id+'-total');
   const adelantoRowId='mora-colab-'+id+'-adelanto-row';
   let adelantoRowEl=document.getElementById(adelantoRowId);
@@ -8595,10 +8655,10 @@ function actualizarResumenColabConAdelantos(id){
       } else {
         adelantoRowEl.innerHTML='<span style="font-size:12px;color:var(--blue)">⏭ Adelantos x'+nAdel+'</span><span style="font-size:12px;font-weight:700;color:var(--blue)">+'+cur+fmtPeso(totalAdelantos)+'</span>';
       }
-      totalEl.textContent=cur+fmtPeso(c.monto+mora.interes+totalAdelantos);
+      totalEl.textContent=cur+fmtPeso(montoCobrable(c).total+mora.interes+totalAdelantos);
     } else {
       if(adelantoRowEl) adelantoRowEl.remove();
-      totalEl.textContent=cur+fmtPeso(c.monto+mora.interes);
+      totalEl.textContent=cur+fmtPeso(montoCobrable(c).total+mora.interes);
     }
   }
 }
@@ -8614,7 +8674,7 @@ function colabVerCuota(id){
   if(montoVal){
     montoVal.style.filter='none';
     montoVal.style.userSelect='auto';
-    montoVal.textContent=fmtPeso(c.monto);
+    montoVal.textContent=fmtPeso(montoCobrable(c).total);
   }
   // Mostrar botones de cobro
   el.innerHTML=`
@@ -8680,6 +8740,7 @@ function renderDetColab(id){
   const data=loadData();
   const c=data.find(x=>x.id===id);
   if(!c) return;
+  const _mcC=montoCobrable(c);
 
   const loteTag=`${getEtapa(c.mz).replace('Etapa ','E')}-${c.mz}-${c.lote}`;
   const saldoColor=c.saldo===0?'var(--text)':c.saldo>0?'var(--green)':'var(--red)';
@@ -8695,7 +8756,7 @@ function renderDetColab(id){
   const tieneMora = cuotasMoraCliente.length > 0;
 
   // ── Mora del mes en curso (interés por días) ──
-  const _mora = calcInteresAuto(c.monto);
+  const _mora = calcInteresAuto(_mcC.total);
   const mesEnCurso = mesActual();
 
   const obsAll=(c.obs||[]).slice().reverse();
@@ -8780,14 +8841,14 @@ function renderDetColab(id){
   } else if(tieneMora){
     // Cuota del mes en curso DESHABILITADA mientras haya mora pendiente
     pagoBtn=`<div style="margin-top:.75rem;background:var(--surface);border:2px dashed #cbd5e1;border-radius:var(--r);padding:14px;text-align:center;color:#94a3b8">
-      <div style="font-size:13px;font-weight:700">Cuota ${mesEnCurso} — ${cur}${fmtPeso(c.monto)}</div>
+      <div style="font-size:13px;font-weight:700">Cuota ${mesEnCurso} — ${cur}${fmtPeso(_mcC.total)}</div>
       <div style="font-size:12px;margin-top:4px">⛔ Pagá las cuotas anteriores primero</div>
     </div>`;
   } else if(_mora.interes>0){
     // Sin mora histórica pero sí interés del mes en curso
     const cid='mora-colab-'+id;
     pagoBtn='<div style="margin-top:.75rem">'
-      +'<button id="'+cid+'-btn" data-mid="'+id+'" data-cuota="'+c.monto+'" data-interes="'+_mora.interes+'" data-cid="'+cid+'" data-cur="'+cur+'" onclick="toggleVerPrecioColab(this)" style="width:100%;background:var(--acc);color:#071510;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">👁 Ver precio</button>'
+      +'<button id="'+cid+'-btn" data-mid="'+id+'" data-cuota="'+_mcC.total+'" data-interes="'+_mora.interes+'" data-cid="'+cid+'" data-cur="'+cur+'" onclick="toggleVerPrecioColab(this)" style="width:100%;background:var(--acc);color:#071510;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">👁 Ver precio</button>'
       +'<div id="'+cid+'-extra" style="display:none">'
       +'<button onclick="colabToggleAdelanto(\''+id+'\')" style="width:100%;margin-bottom:6px;padding:5px;font-size:12px;background:none;border:1.5px solid #7dd3fc;color:#0369a1;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantar cuotas</button>'
       +'<div id="adelanto-selector-'+id+'" style="display:none"></div>'
@@ -8795,12 +8856,12 @@ function renderDetColab(id){
       +'<div id="'+cid+'-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
       +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'
       +'<div style="display:flex;gap:6px;margin-bottom:8px">'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="auto" data-cid="'+cid+'" data-cuota="'+c.monto+'" data-autopct="'+_mora.pct+'" data-autoint="'+_mora.interes+'" onchange="updateMoraColab(this)"> ⚡ Auto ('+_mora.pct+'%)</label>'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateMoraColab(this)"> % Porcentaje</label>'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateMoraColab(this)"> $ Monto</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="auto" data-cid="'+cid+'" data-cuota="'+_mcC.total+'" data-autopct="'+_mora.pct+'" data-autoint="'+_mora.interes+'" onchange="updateMoraColab(this)"> ⚡ Auto ('+_mora.pct+'%)</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+_mcC.total+'" onchange="updateMoraColab(this)"> % Porcentaje</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+_mcC.total+'" onchange="updateMoraColab(this)"> $ Monto</label>'
       +'</div>'
-      +'<input id="'+cid+'-val" type="number" placeholder="Ingresá el valor..." data-cid="'+cid+'" data-cuota="'+c.monto+'" oninput="updateMoraColab(this)" style="width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
-      +'<button data-mid="'+id+'" data-cuota="'+c.monto+'" data-cid="'+cid+'" onclick="confirmarMoraManualColab(this)" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'
+      +'<input id="'+cid+'-val" type="number" placeholder="Ingresá el valor..." data-cid="'+cid+'" data-cuota="'+_mcC.total+'" oninput="updateMoraColab(this)" style="width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
+      +'<button data-mid="'+id+'" data-cuota="'+_mcC.total+'" data-cid="'+cid+'" onclick="confirmarMoraManualColab(this)" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'
       +'</div>'
       +'</div>'
       +'</div>';
@@ -8825,13 +8886,13 @@ function renderDetColab(id){
       ${(!c.pago&&!tieneMora&&_mora.interes>0)?`
         <div id="mora-colab-${id}-tapado" style="background:linear-gradient(135deg,#1e3a5f,#1e40af);border-radius:var(--r);padding:1.25rem;margin:.25rem 0;text-align:center;position:relative;overflow:hidden">
           <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:4px">Cuota ${mesEnCurso} + mora (${_mora.pct}%)</div>
-          <div style="font-size:36px;font-weight:800;color:#fff;filter:blur(8px);user-select:none">${cur}${fmtPeso(c.monto+_mora.interes)}</div>
+          <div style="font-size:36px;font-weight:800;color:#fff;filter:blur(8px);user-select:none">${cur}${fmtPeso(_mcC.total+_mora.interes)}</div>
           <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:4px">Apretar Ver precio para desbloquear</div>
         </div>
         <div id="mora-colab-${id}-desglose" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin:.25rem 0">
           <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 1rem;border-bottom:1px solid var(--border)">
             <span style="font-size:14px;color:var(--text2)">Cuota ${mesEnCurso}</span>
-            <span style="font-size:16px;font-weight:700">${cur}${fmtPeso(c.monto)}</span>
+            <span style="font-size:16px;font-weight:700">${cur}${fmtPeso(_mcC.total)}</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 1rem;border-bottom:1px solid var(--border);background:#fff5f5">
             <div>
@@ -8842,11 +8903,11 @@ function renderDetColab(id){
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 1rem;background:var(--green-bg)">
             <span style="font-size:15px;font-weight:700">Total</span>
-            <span id="mora-colab-${id}-total" style="font-size:22px;font-weight:800;color:var(--green)">${cur}${fmtPeso(c.monto+_mora.interes)}</span>
+            <span id="mora-colab-${id}-total" style="font-size:22px;font-weight:800;color:var(--green)">${cur}${fmtPeso(_mcC.total+_mora.interes)}</span>
           </div>
         </div>
       `:`<div id="colab-monto-box-${id}" style="background:${c.pago?'#dcfce7':'var(--brand-light)'};border-radius:var(--r);padding:.75rem 0;margin-bottom:.4rem;transition:background .3s;border:${c.pago?'2px solid #86efac':'none'}">
-          <div id="colab-monto-val-${id}" class="${montoClass}" style="margin-bottom:0;filter:${c.pago?'none':'blur(6px)'};user-select:${c.pago?'auto':'none'};transition:filter .3s;color:${c.pago?'#16a34a':'var(--brand)'}">${fmtPeso(c.monto)}</div>
+          <div id="colab-monto-val-${id}" class="${montoClass}" style="margin-bottom:0;filter:${c.pago?'none':'blur(6px)'};user-select:${c.pago?'auto':'none'};transition:filter .3s;color:${c.pago?'#16a34a':'var(--brand)'}">${fmtPeso(_mcC.total)}</div>
           <div id="colab-adelanto-desglose-${id}"></div>
         </div>
         <div class="det-monto-label">${c.pago?'Cuota '+mesEnCurso+' — Pagada':esPrimeraCuotaFutura(c)?'Cuota '+nombreMesPrimeraCuota(c):'Cuota '+mesEnCurso}</div>`}
@@ -8882,7 +8943,8 @@ function renderDetColab(id){
 function marcarPago(id, interesOverride){
   const data=loadData();const c=data.find(x=>x.id===id);if(!c)return;
   const ts=new Date().toISOString();
-  const mora=calcInteresAuto(c.monto);
+  const _mc=montoCobrable(c);
+  const mora=calcInteresAuto(_mc.total);
   // interesOverride: null=auto, 0=sin interes(admin), number=manual
   const interes = interesOverride!==undefined ? interesOverride : mora.interes;
   const tieneMora = interes > 0;
@@ -8911,17 +8973,13 @@ function marcarPago(id, interesOverride){
 
   if(tieneMora){
     // Cliente con mora: cuota + interes van a caja de mora
-    registrarPagoMora(id, c.monto, interes, ts);
+    registrarPagoMora(id, _mc.total, interes, ts);
   } else {
     // Cliente sin mora: cobro normal a caja del dia
-    if(esAgrimensor(id)){
-      registrarPagoEnCaja(id, c.monto, ts);
-    } else {
-      registrarPagoEnCaja(id, c.monto, ts);
-    }
+    registrarPagoEnCaja(id, _mc.total, ts);
   }
 
-  addHist('pago','Pago — '+c.mz+' Lote '+c.lote+' — '+c.titular+' — Cuota '+c.ca+'/'+c.ct+' — '+fmtPeso(c.monto)+(interes?' + interés '+fmtPeso(interes):''),id);
+  addHist('pago','Pago — '+c.mz+' Lote '+c.lote+' — '+c.titular+' — Cuota '+c.ca+'/'+c.ct+' — '+fmtPeso(_mc.base)+(_mc.adicional?' + escalón '+fmtPeso(_mc.adicional):'')+(interes?' + interés '+fmtPeso(interes):''),id);
   // Toast confirmación
   const _cf2=loadCierreFinal();
   const _mesNombreToast=_cf2&&_cf2.mesNombre?_cf2.mesNombre:MESES_NOMBRE[new Date().getMonth()]+' '+new Date().getFullYear();
