@@ -1066,7 +1066,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0305';
+  datos['_version']='v1.0306';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3592,23 +3592,23 @@ function renderInicio(){
   const _futuros=_act.filter(c=>esPrimeraCuotaFutura(c));
   const _triCnt={'Feb-May-Ago-Nov':0,'Ene-Abr-Jul-Oct':0,'Mar-Jun-Sep-Dic':0};
   _act.filter(c=>c.moneda!=='USD').forEach(c=>{if(_triCnt[c.tri]!==undefined)_triCnt[c.tri]++;});
-  const _stat=(n,l,color)=>`<div style="text-align:center;padding:6px 2px"><div style="font-size:20px;font-weight:800;color:${color||'var(--text)'}">${n}</div><div style="font-size:10px;color:var(--text2)">${l}</div></div>`;
+  const _stat=(n,l,color,tip)=>`<div title="${tip||''}" style="text-align:center;padding:6px 2px;cursor:help"><div style="font-size:20px;font-weight:800;color:${color||'var(--text)'}">${n}</div><div style="font-size:10px;color:var(--text2)">${l}</div></div>`;
   const resumenLotes=`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:1rem">
       <div style="font-weight:700;font-size:13px;color:var(--text2);margin-bottom:6px">📋 RESUMEN DE LOTES</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(85px,1fr));gap:4px;border-bottom:1px dashed var(--border);padding-bottom:6px;margin-bottom:6px">
-        ${_stat(_all.length,'Total')}
-        ${_stat(_act.length,'Activos','var(--green)')}
-        ${_stat(_fin.length,'Finalizados','#7ab5d0')}
-        ${_stat(_agr.length,'Agrimensores','#d97706')}
-        ${_stat(_prest.length,'Préstamos','#d97706')}
-        ${_stat(_futuros.length,'1ª cuota futura','var(--text3)')}
+        ${_stat(_all.length,'Total','', 'Todos los lotes cargados en el sistema, sin importar su estado (activos + finalizados).')}
+        ${_stat(_act.length,'Activos','var(--green)','Lotes que están pagando cuotas actualmente. Son los que participan de cierres, mora e ICC.')}
+        ${_stat(_fin.length,'Finalizados','#7ab5d0','Lotes que ya pagaron todas sus cuotas. No se les cobra más.')}
+        ${_stat(_agr.length,'Agrimensores','#d97706','Lotes cuya cuota va a la caja de agrimensores (el interés de mora va a ingresos extras). Avanzan y generan mora como cualquier lote.')}
+        ${_stat(_prest.length,'Préstamos','#d97706','Lotes marcados como préstamo: no se cobran por la app y quedan afuera de los cierres mensuales, pero sí reciben incrementos ICC.')}
+        ${_stat(_futuros.length,'1ª cuota futura','var(--text3)','Lotes nuevos cuya primera cuota arranca en un mes futuro. Todavía no se les cobra ni generan mora.')}
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(85px,1fr));gap:4px">
-        ${_stat(_triCnt['Feb-May-Ago-Nov'],'Verde (Feb/May/Ago/Nov)','#4caf82')}
-        ${_stat(_triCnt['Ene-Abr-Jul-Oct'],'Azul (Ene/Abr/Jul/Oct)','#60a5fa')}
-        ${_stat(_triCnt['Mar-Jun-Sep-Dic'],'Rosa (Mar/Jun/Sep/Dic)','#f472b6')}
-        ${_stat(_usd.length,'USD (sin trimestre)','var(--text2)')}
+        ${_stat(_triCnt['Feb-May-Ago-Nov'],'Verde (Feb/May/Ago/Nov)','#4caf82','Lotes activos en pesos del grupo Verde: sus cuotas aumentan por ICC en Febrero, Mayo, Agosto y Noviembre.')}
+        ${_stat(_triCnt['Ene-Abr-Jul-Oct'],'Azul (Ene/Abr/Jul/Oct)','#60a5fa','Lotes activos en pesos del grupo Azul: sus cuotas aumentan por ICC en Enero, Abril, Julio y Octubre.')}
+        ${_stat(_triCnt['Mar-Jun-Sep-Dic'],'Rosa (Mar/Jun/Sep/Dic)','#f472b6','Lotes activos en pesos del grupo Rosa: sus cuotas aumentan por ICC en Marzo, Junio, Septiembre y Diciembre.')}
+        ${_stat(_usd.length,'USD (sin trimestre)','var(--text2)','Lotes activos en dólares: no tienen trimestre ni reciben incrementos ICC.')}
       </div>
     </div>`;
   el.innerHTML=`
