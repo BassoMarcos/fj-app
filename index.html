@@ -1066,7 +1066,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0303';
+  datos['_version']='v1.0304';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7782,13 +7782,30 @@ function renderIccStatus(){
     applyBox.style.opacity = '1';
     applyBox.style.pointerEvents = 'auto';
     const applyBtnActive = document.getElementById('icc-apply-btn');
-    applyBtnActive.disabled = false;
-    applyBtnActive.style.opacity = '1';
+    if(cierreFinalOkParaICC()){
+      applyBtnActive.disabled = false;
+      applyBtnActive.style.opacity = '1';
+      applyBtnActive.style.cursor='pointer';
+      applyBtnActive.title='';
+    } else {
+      applyBtnActive.disabled = true;
+      applyBtnActive.style.opacity = '0.4';
+      applyBtnActive.style.cursor='not-allowed';
+      applyBtnActive.title='🔒 Primero hacé el cierre final';
+    }
     document.getElementById('icc-box-title').textContent = `Aplicar incremento ICC de ${mesActual}`;
     document.getElementById('icc-box-desc').textContent = `Ingresá el % de ${mesActual} para completar el trimestre y actualizar los montos de ${info.aumentaEn} (planilla ${info.planillaNombre}).`;
     document.getElementById('icc-planilla').value = info.planillaVal;
     document.getElementById('icc-planilla-display').textContent = info.planillaNombre + ' — ' + info.planillaVal.replace(/-/g,'/');
   }
+}
+
+function cierreFinalOkParaICC(){
+  try{
+    const mesOp=getMesOperativoICC();
+    const cf=loadCierreFinal();
+    return !!(cf && Number(cf.mes)===mesOp.mesIdx && Number(cf.anio)===mesOp.anio);
+  }catch(e){ return false; }
 }
 
 function renderIccHist(){
@@ -7943,11 +7960,15 @@ function buscarICCIndec(){
     document.getElementById('icc-planilla').value=detInfo.planillaVal;
     document.getElementById('icc-planilla-display').textContent=detInfo.planillaNombre+' — '+detInfo.planillaVal.replace(/-/g,'/');
     const applyBtn=document.getElementById('icc-apply-btn');
-    applyBtn.disabled=false; applyBtn.style.opacity='1';
+    const _cfOk=cierreFinalOkParaICC();
+    if(_cfOk){ applyBtn.disabled=false; applyBtn.style.opacity='1'; applyBtn.style.cursor='pointer'; applyBtn.title=''; }
+    else { applyBtn.disabled=true; applyBtn.style.opacity='0.4'; applyBtn.style.cursor='not-allowed'; applyBtn.title='🔒 Primero hacé el cierre final'; }
     const triInfo=renderTrimestreMeses(mesActualIdx,pct);
     const totalStr=triInfo.total!==null?' · Trimestre total: <strong>'+triInfo.total.toFixed(2)+'%</strong>':'';
     if(triInfo.total) applyBtn.dataset.totalTri=triInfo.total.toFixed(2);
-    msg.innerHTML='<span style="color:var(--green)">✅ ICC de <strong>'+mesActualNombre+' '+anioActual+': '+pct+'%</strong>.'+totalStr+'<br><strong>Presioná "Aplicar incremento trimestral" para confirmar.</strong></span>';
+    msg.innerHTML=_cfOk
+      ?'<span style="color:var(--green)">✅ ICC de <strong>'+mesActualNombre+' '+anioActual+': '+pct+'%</strong>.'+totalStr+'<br><strong>Presioná "Aplicar incremento trimestral" para confirmar.</strong></span>'
+      :'<span style="color:var(--amber)">✅ ICC de <strong>'+mesActualNombre+' '+anioActual+': '+pct+'%</strong> guardado en Lista 1.'+totalStr+'<br>🔒 <strong>El botón Aplicar sigue bloqueado:</strong> primero hacé el cierre final de '+mesActualNombre+'.</span>';
   })
   .catch(err=>{
     msg.innerHTML='<span style="color:var(--red)">❌ '+err.message+'.<br>Podés ingresar el % manualmente o revisar <a href="https://www.indec.gob.ar/indec/web/Nivel4-Tema-3-5-33" target="_blank" style="color:var(--blue)">INDEC ICC</a>.</span>';
