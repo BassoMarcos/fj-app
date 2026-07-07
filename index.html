@@ -1109,7 +1109,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0310';
+  datos['_version']='v1.0311';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5569,7 +5569,7 @@ function renderAdminDet(id){
   const cuotasMoraCliente=loadCuotasMora().filter(cm=>cm.clienteId===id&&!cm.pagada).sort((a,b)=>(a.anio-b.anio)||(a.mes-b.mes));
   const tieneMora=cuotasMoraCliente.length>0;
   const _mc=montoCobrable(c);
-  const _mora=calcInteresAuto(_mc.total);
+  const _mora=esPrimeraCuotaFutura(c)?{interes:0,pct:0,dias:0}:calcInteresAuto(_mc.total);
 
   const obsAll=(c.obs||[]).slice().reverse();
   const OBS_LIMIT=3;
@@ -5701,7 +5701,7 @@ function renderAdminDet(id){
           <div style="font-size:13px;font-weight:700;color:#d97706">⏳ Esperando incremento ICC</div>
           <div style="font-size:12px;color:var(--amber);margin-top:2px">Aplicá el ICC de ${mesEnCurso} para habilitar este lote</div>
         </div>
-      `:(!c.pago&&!tieneMora&&(_mora.interes>0||_mc.escalonActivo))?`
+      `:(!c.pago&&!tieneMora&&!esPrimeraCuotaFutura(c)&&(_mora.interes>0||_mc.escalonActivo))?`
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin:.25rem 0">
           <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 1rem;border-bottom:1px solid var(--border)">
             <span style="font-size:14px;color:var(--text2)">Cuota ${mesEnCurso}${_mc.escalonActivo?' (pura)':''}</span>
@@ -7103,7 +7103,7 @@ function adminMarcarConMora(id, esAuto){
   const c=loadData().find(x=>x.id===id);if(!c)return;
   let interes;
   if(esAuto){
-    interes=calcInteresAuto(montoCobrable(c).total).interes;
+    interes=esPrimeraCuotaFutura(c)?0:calcInteresAuto(montoCobrable(c).total).interes;
   } else {
     const val=document.getElementById('interes-manual-'+id)?.value;
     interes=parseFloat(val)||0;
@@ -7407,6 +7407,7 @@ function renderAdminTable(){
           const _iccAplic=_aum?loadICC().some(i=>i.planilla===c.tri&&i.aumentaEn===_aum):true;
           if(_pln&&c.tri===_pln&&!_iccAplic) return '<span style="color:#d97706;font-size:12px;font-weight:700">⏳ Sin ICC</span>';
           if(c.pago) return fmtPeso(montoCobrable(c).total);
+          if(esPrimeraCuotaFutura(c)) return fmtPeso(montoCobrable(c).total);
           const m=calcInteresAuto(montoCobrable(c).total);
           return m.interes>0?'<span style="color:var(--red)">'+fmtPeso(montoCobrable(c).total+m.interes)+'</span>':fmtPeso(montoCobrable(c).total);
         })()}</span>
@@ -8630,7 +8631,7 @@ function agrCobrarDesdeLista(id){
   if(!c||c.pago) return;
   const cur=c.moneda==='USD'?'USD ':'$';
   const _mc=montoCobrable(c);
-  const mora=calcInteresAuto(_mc.total);
+  const mora=esPrimeraCuotaFutura(c)?{interes:0,pct:0,dias:0}:calcInteresAuto(_mc.total);
   const total=_mc.total+(mora.interes||0);
   let msg='<div style="font-size:13px;color:var(--text2);margin-bottom:8px">'+formatLoteTag(c.mz,c.lote)+' — '+c.titular+'</div>'
     +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">'
@@ -8789,7 +8790,7 @@ function renderDetColab(id){
   const tieneMora = cuotasMoraCliente.length > 0;
 
   // ── Mora del mes en curso (interés por días) ──
-  const _mora = calcInteresAuto(_mcC.total);
+  const _mora = esPrimeraCuotaFutura(c)?{interes:0,pct:0,dias:0}:calcInteresAuto(_mcC.total);
   const mesEnCurso = mesActual();
 
   const obsAll=(c.obs||[]).slice().reverse();
@@ -8977,7 +8978,7 @@ function marcarPago(id, interesOverride){
   const data=loadData();const c=data.find(x=>x.id===id);if(!c)return;
   const ts=new Date().toISOString();
   const _mc=montoCobrable(c);
-  const mora=calcInteresAuto(_mc.total);
+  const mora=esPrimeraCuotaFutura(c)?{interes:0,pct:0,dias:0}:calcInteresAuto(_mc.total);
   // interesOverride: null=auto, 0=sin interes(admin), number=manual
   const interes = interesOverride!==undefined ? interesOverride : mora.interes;
   const tieneMora = interes > 0;
