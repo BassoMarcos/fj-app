@@ -1109,7 +1109,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0311';
+  datos['_version']='v1.0312';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5960,7 +5960,7 @@ function confirmarAdmMora(btn){
 
   const valInput=document.getElementById(cid+'-val');
   const val=parseFloat(valInput?.value);
-  if(tipo!=='auto'&&(isNaN(val)||val<=0)){alert('Ingresa un valor valido');return;}
+  if(tipo!=='auto'&&(isNaN(val)||val<0)){alert('Ingresa un valor valido (0 = sin interés)');return;}
 
   const autoRadio=manual.querySelector('input[value="auto"]');
   const _autoInt=parseFloat(autoRadio?.dataset.autoint)||0;
