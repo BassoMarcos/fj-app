@@ -1006,11 +1006,12 @@ function registrarPagoEnCaja(id,monto,ts){
   const data=loadData();
   const c=data.find(x=>x.id===id);
   const moneda=c?c.moneda||'ARS':'ARS';
+  const transf=!!window._cobroTransferencia;
   if(esAgrimensor(id)){
     if(!(bal.agrimensores||[]).some(p=>p.id===id))
-      (bal.agrimensores=bal.agrimensores||[]).push({id,monto,ts,fecha,moneda});
+      (bal.agrimensores=bal.agrimensores||[]).push({id,monto,ts,fecha,moneda,transf});
   } else {
-    (bal.abierto=bal.abierto||[]).push({id,monto,ts,fecha,moneda});
+    (bal.abierto=bal.abierto||[]).push({id,monto,ts,fecha,moneda,transf});
   }
   saveBalances(bal);
 }
@@ -1109,7 +1110,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0313';
+  datos['_version']='v1.0314';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2675,6 +2676,32 @@ function actualizarEscalonInfo(){
   info.textContent='🪜 Escalón desde la cuota '+ca+' hasta la cuota '+hasta+' inclusive — última cuota escalonada: '+MESES[finIdx]+' '+finAnio;
 }
 
+function cobrarPorTransferencia(id){
+  const c=loadData().find(x=>x.id===id);
+  if(!c||c.pago) return;
+  confirmarConClave(()=>{
+    const cur=c.moneda==='USD'?'USD ':'$';
+    const _mc=montoCobrable(c);
+    const mora=esPrimeraCuotaFutura(c)?{interes:0,pct:0,dias:0}:calcInteresAuto(_mc.total);
+    const total=_mc.total+(mora.interes||0);
+    let msg='<div style="text-align:center;font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:8px">🏦 PAGO POR TRANSFERENCIA</div>'
+      +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">'
+      +'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:13px">Cuota'+(_mc.escalonActivo?' pura':'')+'</span><span style="font-weight:700">'+cur+fmtPeso(_mc.base)+'</span></div>'
+      +(_mc.escalonActivo?'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:#eff6ff"><span style="color:#0369a1;font-size:13px;font-weight:600">🪜 Escalonado</span><span style="font-weight:700;color:#0369a1">+'+cur+fmtPeso(_mc.adicional)+'</span></div>':'')
+      +((mora.interes)?'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--red-bg)"><span style="color:var(--red);font-size:13px;font-weight:600">⚠️ Mora ('+mora.dias+' días × 2% = '+mora.pct+'%)</span><span style="font-weight:700;color:var(--red)">+'+cur+fmtPeso(mora.interes)+'</span></div>':'')
+      +'<div style="display:flex;justify-content:space-between;padding:12px;background:#f3e8ff"><span style="font-weight:700">Total transferido</span><span style="font-size:18px;font-weight:800;color:#7c3aed">'+cur+fmtPeso(total)+'</span></div></div>'
+      +'<div style="font-size:11px;color:var(--text2);margin-top:6px;text-align:center">Este pago va a la Caja de Transferencias, no a la caja física.</div>';
+    mostrarConfirmAdmin('Confirmar transferencia',msg,()=>{
+      window._cobroTransferencia=true;
+      try{ marcarPago(id, mora.interes||0); }
+      finally{ window._cobroTransferencia=false; }
+      addHist('pago','🏦 Pago por TRANSFERENCIA — '+c.mz+' Lote '+c.lote+' — '+c.titular,id);
+      if(typeof renderAdminDet==='function') renderAdminDet(id);
+      if(typeof renderAdminTable==='function') renderAdminTable();
+    });
+  });
+}
+
 function desbloquearCuotaActual(){
   confirmarConClave(()=>{
     ['e-ca-visible','e-monto-visible','e-adic-monto','e-adic-cant'].forEach(eid=>{
@@ -4028,10 +4055,13 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
   const backBtn=`<button onclick="renderBalances()" style="background:none;border:none;color:var(--acc2);font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:1rem">‹ Volver</button>`;
 
   if(seccion==='caja'){
-    const abPesos=abierto.filter(p=>p.moneda!=='USD');
-    const abUSD=abierto.filter(p=>p.moneda==='USD');
+    const abPesos=abierto.filter(p=>p.moneda!=='USD'&&!p.transf);
+    const abUSD=abierto.filter(p=>p.moneda==='USD'&&!p.transf);
+    const abTransf=abierto.filter(p=>p.transf);
     const totalP=abPesos.reduce((s,p)=>s+(p.monto||0),0);
     const totalU=abUSD.reduce((s,p)=>s+(p.monto||0),0);
+    const totalTP=abTransf.filter(p=>p.moneda!=='USD').reduce((s,p)=>s+(p.monto||0),0);
+    const totalTU=abTransf.filter(p=>p.moneda==='USD').reduce((s,p)=>s+(p.monto||0),0);
     const renderPagos=(lista)=>lista.length?lista.slice().reverse().map(p=>{
       const c=data.find(x=>x.id===p.id)||{mz:'?',lote:'?',titular:p.id};
       return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
@@ -4045,6 +4075,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         <div style="display:flex;gap:6px;align-items:center">
           ${abPesos.length?`<button onclick="cerrarCajaDelDia('ARS')" style="background:#da9e22;color:#1d1c1a;border:none;padding:8px 14px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">Cerrar $ Pesos</button>`:''}
           ${abUSD.length?`<button onclick="cerrarCajaDelDia('USD')" style="background:#16a34a;color:#fff;border:none;padding:8px 14px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">Cerrar USD</button>`:''}
+          ${abTransf.length?`<button onclick="cerrarCajaDelDia('TRANSF')" style="background:#7c3aed;color:#fff;border:none;padding:8px 14px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">Cerrar Transferencias</button>`:''}
           ${abierto.length?`<button onclick="resetCajaAbierta()" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:6px 10px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑</button>`:''}
         </div>
       </div>
@@ -4071,14 +4102,36 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
           ${renderPagos(abUSD)}
           ${abUSD.length?`<div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px;padding-top:10px;color:var(--green)"><span>Total USD</span><span>USD ${fmtPeso(totalU)}</span></div>`:''}
         </div>
+      </div>
+
+      <!-- TRANSFERENCIAS -->
+      <div style="margin-top:1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:14px;font-weight:700;color:#7c3aed">🏦 TRANSFERENCIAS</div>
+          <div style="font-size:15px;font-weight:800;color:#7c3aed">${fmtPeso(totalTP)}${totalTU?' · USD '+fmtPeso(totalTU):''}</div>
+        </div>
+        <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:var(--r);padding:1rem">
+          ${abTransf.length?abTransf.slice().reverse().map(p=>{
+            const c=data.find(x=>x.id===p.id)||{mz:'?',lote:'?',titular:p.id};
+            return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #ddd6fe;font-size:13px">
+              <span>🏦 ${formatLoteTag(c.mz,c.lote)} — ${c.titular}</span>
+              <span style="font-weight:600;color:#7c3aed">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.monto||0)}</span>
+            </div>`;
+          }).join(''):'<div style="font-size:13px;color:var(--text2)">Sin transferencias</div>'}
+          ${abTransf.length?`<div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px;padding-top:10px;color:#7c3aed"><span>Total transferencias</span><span>${fmtPeso(totalTP)}${totalTU?' · USD '+fmtPeso(totalTU):''}</span></div>`:''}
+          <div style="font-size:11px;color:var(--text2);margin-top:8px">💡 Esta plata no está en la caja física — hay que reponerla.</div>
+        </div>
       </div>`;
   }
 
   if(seccion==='cierres'){
-    const cierresPesos=cierres.filter(c=>c.moneda!=='USD');
+    const cierresPesos=cierres.filter(c=>c.moneda!=='USD'&&c.moneda!=='TRANSF');
     const cierresUSD=cierres.filter(c=>c.moneda==='USD');
+    const cierresTransf=cierres.filter(c=>c.moneda==='TRANSF');
     const sumPesos=cierresPesos.reduce((s,c)=>s+(c.total||0),0);
     const sumUSD=cierresUSD.reduce((s,c)=>s+(c.total||0),0);
+    const sumTransfP=cierresTransf.reduce((s,c)=>s+(c.totalPesos||0),0);
+    const sumTransfU=cierresTransf.reduce((s,c)=>s+(c.totalUSD||0),0);
 
     const cierreEstados=getCierreEstados();
     const renderCierreList=(lista,offset)=>lista.length?lista.slice().reverse().map((ci,i)=>{
@@ -4172,6 +4225,28 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
             <span style="font-size:12px;font-weight:700;color:var(--red)">USD ${pct(sumUSD,dp2)}</span>
           </div>
         </div>`:''}
+      </div>
+
+      <!-- CIERRES TRANSFERENCIAS -->
+      <div style="margin-top:1rem">
+        <div style="font-size:14px;font-weight:700;color:#7c3aed;margin-bottom:8px">🏦 CIERRES DE TRANSFERENCIAS</div>
+        <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:var(--r);padding:1rem">
+          ${cierresTransf.length?cierresTransf.slice().reverse().map(ci=>{
+            const hora=ci.ts?new Date(ci.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
+            return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #ddd6fe;font-size:13px">
+              <div>
+                <div style="font-weight:600">${ci.fecha||''} ${hora?`<span style="color:var(--text2);font-weight:400">${hora}</span>`:''}</div>
+                <div style="font-size:11px;color:var(--text2)">${(ci.pagos||[]).length} pago${(ci.pagos||[]).length!==1?'s':''}</div>
+              </div>
+              <div style="font-weight:700;color:#7c3aed">${fmtPeso(ci.totalPesos||0)}${ci.totalUSD?' · USD '+fmtPeso(ci.totalUSD):''}</div>
+            </div>`;
+          }).join('')
+          +`<div style="display:flex;justify-content:space-between;font-weight:800;font-size:15px;padding-top:10px;color:#7c3aed">
+            <span>Total transferencias</span><span>${fmtPeso(sumTransfP)}${sumTransfU?' · USD '+fmtPeso(sumTransfU):''}</span>
+          </div>`
+          :'<div style="font-size:13px;color:var(--text2)">Sin cierres de transferencias</div>'}
+          <div style="font-size:11px;color:var(--text2);margin-top:8px">💡 Plata no física — pendiente de reponer en caja.</div>
+        </div>
       </div>`;
   } else if(seccion==='mora'){
     const dp=getDistPct();const dp2=100-dp;
@@ -4634,21 +4709,26 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
 function cerrarCajaDelDia(moneda){
   const bal=loadBalances();
   const abierto=bal.abierto||[];
-  // Filter by moneda if specified
-  const aCerrar=moneda==='USD'?abierto.filter(p=>p.moneda==='USD'):moneda==='ARS'?abierto.filter(p=>p.moneda!=='USD'):abierto;
-  if(!aCerrar.length){alert('No hay pagos para cerrar en esa moneda.');return;}
-  const total=aCerrar.reduce((s,p)=>s+(p.monto||0),0);
-  const label=moneda==='USD'?`USD ${fmtPeso(total)}`:fmtPeso(total);
-  const tipoLabel=moneda==='USD'?'USD':'Pesos';
+  // Filter by moneda if specified (las transferencias tienen su propia caja)
+  const aCerrar=moneda==='TRANSF'?abierto.filter(p=>p.transf)
+    :moneda==='USD'?abierto.filter(p=>p.moneda==='USD'&&!p.transf)
+    :moneda==='ARS'?abierto.filter(p=>p.moneda!=='USD'&&!p.transf)
+    :abierto;
+  if(!aCerrar.length){alert('No hay pagos para cerrar en esa caja.');return;}
+  const totalPes=aCerrar.filter(p=>p.moneda!=='USD').reduce((s,p)=>s+(p.monto||0),0);
+  const totalUsd=aCerrar.filter(p=>p.moneda==='USD').reduce((s,p)=>s+(p.monto||0),0);
+  const total=moneda==='USD'?totalUsd:totalPes;
+  const label=moneda==='TRANSF'?(fmtPeso(totalPes)+(totalUsd?' + USD '+fmtPeso(totalUsd):'')):moneda==='USD'?`USD ${fmtPeso(total)}`:fmtPeso(total);
+  const tipoLabel=moneda==='TRANSF'?'Transferencias':moneda==='USD'?'USD':'Pesos';
   confirmarConClave(()=>{
     (bal.cierres=bal.cierres||[]).push({
       fecha:new Date().toLocaleDateString('es-AR'),
       ts:new Date().toISOString(),
       pagos:[...aCerrar],
-      total,
+      total:moneda==='TRANSF'?totalPes:total,
       moneda:moneda||'ARS',
-      totalPesos:moneda==='USD'?0:total,
-      totalUSD:moneda==='USD'?total:0
+      totalPesos:moneda==='USD'?0:totalPes,
+      totalUSD:moneda==='TRANSF'?totalUsd:(moneda==='USD'?total:0)
     });
     // Remove closed payments from abierto
     const ids=new Set(aCerrar.map(p=>p.id));
@@ -5659,6 +5739,7 @@ function renderAdminDet(id){
     const _moraCur=cur;
     pagoBtn='<div style="margin-top:.75rem">'
       +'<button id="'+cid+'-btn" data-mid="'+id+'" data-cuota="'+montoCobrable(c).total+'" data-base="'+montoCobrable(c).base+'" data-adicional="'+montoCobrable(c).adicional+'" data-interes="'+_mora.interes+'" data-cid="'+cid+'" data-cur="'+cur+'" onclick="admCobrarAutoById(this)" style="width:100%;background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">✓ Cobrar</button>'
+      +'<button onclick="cobrarPorTransferencia(\''+id+'\')" style="width:100%;margin-bottom:4px;padding:6px;font-size:12px;background:none;border:2px solid #a78bfa;color:#7c3aed;border-radius:var(--r);cursor:pointer;font-weight:700">🏦 Cobrar por transferencia</button>'
       +'<button onclick="admToggleAdelanto(\''+id+'\')" style="width:100%;margin-top:4px;margin-bottom:4px;padding:5px;font-size:12px;background:none;border:1.5px solid #7dd3fc;color:#0369a1;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantar cuotas</button>'
       +'<div id="adelanto-selector-'+id+'" style="display:none"></div>'
       +'<button data-cid="'+cid+'" onclick="admToggleInteresDif(this.dataset.cid)" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente</button>'
@@ -5681,6 +5762,7 @@ function renderAdminDet(id){
   } else {
     pagoBtn=`
     <button class="btn btn-primary" onclick="adminMarcarPago('${id}')" style="width:100%;margin-top:.5rem;padding:8px;font-size:14px;font-weight:700">✓ Cobrar</button>
+    <button onclick="cobrarPorTransferencia('${id}')" style="width:100%;margin-top:6px;padding:6px;font-size:12px;background:none;border:2px solid #a78bfa;color:#7c3aed;border-radius:var(--r);cursor:pointer;font-weight:700">🏦 Cobrar por transferencia</button>
     <button onclick="admToggleAdelanto('${id}')" style="width:100%;margin-top:6px;padding:5px;font-size:12px;background:none;border:1.5px solid #7dd3fc;color:#0369a1;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantar cuotas</button>
     <div id="adelanto-selector-${id}" style="display:none"></div>
 `;
@@ -6860,7 +6942,7 @@ function registrarPagoMora(id, cuota, interes, ts){
   if(!c) return;
   const fecha=new Date(ts||Date.now()).toLocaleDateString('es-AR');
   // Reusar lógica de routing agrimensor
-  registrarCobroCuotaMora(mora, {clienteId:id,monto:cuota,interes,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS'}, interes, ts||new Date().toISOString(), fecha);
+  registrarCobroCuotaMora(mora, {clienteId:id,monto:cuota,interes,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',transf:!!window._cobroTransferencia}, interes, ts||new Date().toISOString(), fecha);
   saveMora(mora);
   actualizarBadgeMora();
 }
