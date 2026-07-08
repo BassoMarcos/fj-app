@@ -1109,7 +1109,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0312';
+  datos['_version']='v1.0313';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5665,12 +5665,12 @@ function renderAdminDet(id){
       +'<div id="'+cid+'-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
       +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'
       +'<div style="display:flex;gap:6px;margin-bottom:8px">'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="auto" data-cid="'+cid+'" data-cuota="'+c.monto+'" data-autopct="'+_mora.pct+'" data-autoint="'+_mora.interes+'" onchange="updateAdmMora(this)"> ⚡ Auto ('+_mora.pct+'%)</label>'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateAdmMora(this)"> % Porcentaje</label>'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+c.monto+'" onchange="updateAdmMora(this)"> $ Monto</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="auto" data-cid="'+cid+'" data-cuota="'+montoCobrable(c).total+'" data-autopct="'+_mora.pct+'" data-autoint="'+_mora.interes+'" onchange="updateAdmMora(this)"> ⚡ Auto ('+_mora.pct+'%)</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+montoCobrable(c).total+'" onchange="updateAdmMora(this)"> % Porcentaje</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+montoCobrable(c).total+'" onchange="updateAdmMora(this)"> $ Monto</label>'
       +'</div>'
-      +'<input id="'+cid+'-val" type="number" placeholder="Ingresá el valor..." data-cid="'+cid+'" data-cuota="'+c.monto+'" oninput="updateAdmMora(this)" style="width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
-      +'<button data-mid="'+id+'" data-cuota="'+c.monto+'" data-cid="'+cid+'" onclick="confirmarAdmMora(this)" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'
+      +'<input id="'+cid+'-val" type="number" placeholder="Ingresá el valor..." data-cid="'+cid+'" data-cuota="'+montoCobrable(c).total+'" oninput="updateAdmMora(this)" style="width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
+      +'<button data-mid="'+id+'" data-cuota="'+montoCobrable(c).total+'" data-cid="'+cid+'" onclick="confirmarAdmMora(this)" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'
       +'</div>'
       +'</div>';
   } else if(esPrimeraCuotaFutura(c)){
@@ -5717,13 +5717,13 @@ function renderAdminDet(id){
           ${_mora.interes>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 1rem;border-bottom:1px solid var(--border);background:var(--red-bg)">
             <div>
               <div style="font-size:14px;font-weight:600;color:var(--red)">⚠️ Mora</div>
-              <div style="font-size:12px;color:var(--red)">${_mora.dias} días × 2% = ${_mora.pct}%</div>
+              <div id="det-mora-sub-${id}" style="font-size:12px;color:var(--red)">${_mora.dias} días × 2% = ${_mora.pct}%</div>
             </div>
-            <span style="font-size:16px;font-weight:700;color:var(--red)">+${cur}${fmtPeso(_mora.interes)}</span>
+            <span id="det-mora-int-${id}" style="font-size:16px;font-weight:700;color:var(--red)">+${cur}${fmtPeso(_mora.interes)}</span>
           </div>`:''}
           <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 1rem;background:var(--green-bg)">
             <span style="font-size:15px;font-weight:700">Total</span>
-            <span style="font-size:22px;font-weight:800;color:var(--green)">${cur}${fmtPeso(_mc.total+_mora.interes)}</span>
+            <span id="det-total-${id}" style="font-size:22px;font-weight:800;color:var(--green)">${cur}${fmtPeso(_mc.total+_mora.interes)}</span>
           </div>
           <div id="det-adelanto-desglose-${id}"></div>
         </div>
@@ -5926,6 +5926,18 @@ function updateAdmMora(el){
   const totalEl=document.getElementById('mora-adm-'+mid+'-total');
   if(interesEl) interesEl.textContent='+'+fmtPeso(interes);
   if(totalEl) totalEl.textContent=fmtPeso(cuota+interes);
+  // Actualizar en vivo el desglose visual del detalle
+  const detInt=document.getElementById('det-mora-int-'+mid);
+  const detTot=document.getElementById('det-total-'+mid);
+  const detSub=document.getElementById('det-mora-sub-'+mid);
+  const _cur2=(loadData().find(x=>x.id===mid)||{}).moneda==='USD'?'USD ':'$';
+  if(detInt) detInt.textContent='+'+_cur2+fmtPeso(interes);
+  if(detTot) detTot.textContent=_cur2+fmtPeso(cuota+interes);
+  if(detSub){
+    if(tipo==='auto'){const ap=parseFloat(autoRadio?.dataset.autopct)||0;detSub.textContent=ap?ap+'% (auto)':'auto';}
+    else if(tipo==='pct') detSub.textContent=val+'% (manual)';
+    else detSub.textContent='monto manual';
+  }
   // Update cobrar btn dataset
   const cobrarBtn=document.getElementById(cid+'-btn');
   if(cobrarBtn) cobrarBtn.dataset.interes=interes;
