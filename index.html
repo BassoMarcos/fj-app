@@ -1110,7 +1110,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0318';
+  datos['_version']='v1.0319';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2715,7 +2715,7 @@ function abrirFormCobro(id, opts){
   const adelantos=[...(window._adelantoCuotas||[])];
   const totalAdel=adelantos.reduce((s,q)=>s+(q.monto||0),0);
   const totalCuota=_mc.total+(mora.interes||0)+totalAdel;
-  const cur=c.moneda==='USD'?'USD ':'$';
+  const cur=c.moneda==='USD'?'USD ':'';
   window._fcCtx={id,totalCuota,base:_mc.base,adicional:_mc.adicional,escalonActivo:_mc.escalonActivo,interes:mora.interes||0,moraPct:mora.pct,moraDias:mora.dias,adelantos,totalAdel,cur,transfer:!!opts.transfer,transferTipo:opts.transferTipo||'',ctx:opts.ctx||'admin',moneda:c.moneda||'ARS'};
   const esTotal=opts.transfer&&opts.transferTipo==='total';
   const esParcial=opts.transfer&&opts.transferTipo!=='total';
@@ -6212,7 +6212,7 @@ function updateAdmMora(el){
   const detInt=document.getElementById('det-mora-int-'+mid);
   const detTot=document.getElementById('det-total-'+mid);
   const detSub=document.getElementById('det-mora-sub-'+mid);
-  const _cur2=(loadData().find(x=>x.id===mid)||{}).moneda==='USD'?'USD ':'$';
+  const _cur2=(loadData().find(x=>x.id===mid)||{}).moneda==='USD'?'USD ':'';
   if(detInt) detInt.textContent='+'+_cur2+fmtPeso(interes);
   if(detTot) detTot.textContent=_cur2+fmtPeso(cuota+interes);
   if(detSub){
@@ -8917,7 +8917,7 @@ function agrCobrarDesdeLista(id){
   const data=loadData();
   const c=data.find(x=>x.id===id);
   if(!c||c.pago) return;
-  const cur=c.moneda==='USD'?'USD ':'$';
+  const cur=c.moneda==='USD'?'USD ':'';
   const _mc=montoCobrable(c);
   const mora=esPrimeraCuotaFutura(c)?{interes:0,pct:0,dias:0}:calcInteresAuto(_mc.total);
   const total=_mc.total+(mora.interes||0);
