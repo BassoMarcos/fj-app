@@ -1110,7 +1110,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0324';
+  datos['_version']='v1.0325';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7146,6 +7146,13 @@ function hacerCierreFinal(){
         if(!yaEnHist){
           c.hist.push({cuota:c.ca, monto:c.monto, mes:mesNombre, ts:ts});
         }
+      }
+      // Última cuota pagada → finalizar automáticamente
+      if(c.pago && c.ca>=c.ct){
+        c.est='finalizado';
+        c.pago=false; c.pagoTs=null;
+        addHist('edit','🏁 Lote finalizado en cierre: '+c.mz+' Lote '+c.lote+' — '+c.titular+' (última cuota '+c.ca+'/'+c.ct+' pagada)',c.id);
+        return;
       }
       // No avanzar ca si la primera cuota todavía no llegó
       if(!esPrimeraCuotaFutura(c)){
