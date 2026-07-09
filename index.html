@@ -1110,7 +1110,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0321';
+  datos['_version']='v1.0322';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7033,8 +7033,41 @@ function ejecutarCierreFinal(){
   });
 }
 
+function repararCierreJunio2026(){
+  try{
+    const cf=loadCierreFinal();
+    // Solo aplica al caso exacto: cierre grabado como Julio 2026 hecho a comienzos de julio
+    if(!cf||cf.mes!==6||cf.anio!==2026) return;
+    const mesNombre='Junio 2026';
+    saveCierreFinal({ts:cf.ts,fecha:cf.fecha,hora:cf.hora,mes:5,anio:2026,mesNombre});
+    saveMesActual({mes:5,anio:2026,mesNombre,ts:cf.ts});
+    // Cuotas que entraron en mora en ese cierre: eran de JUNIO
+    const cm=loadCuotasMora();
+    let n=0;
+    cm.forEach(m=>{
+      if(m.mes===6&&m.anio===2026&&!m.pagada){
+        m.mes=5;m.mesNombre=mesNombre;
+        m.dia10Ts=new Date(2026,5,10,23,59,59).toISOString();
+        n++;
+      }
+    });
+    saveCuotasMora(cm);
+    // Historial de cuotas pagadas en ese cierre: eran de JUNIO
+    const data=loadData();
+    let h=0;
+    data.forEach(c=>{(c.hist||[]).forEach(e=>{if(e.mes==='Julio 2026'){e.mes='Junio 2026';h++;}});});
+    if(h>0) saveData(data);
+    addHist('edit','🔧 Reparación: cierre final corregido de Julio a Junio 2026 ('+n+' moras y '+h+' pagos reetiquetados)');
+    alert('🔧 REPARADO: el cierre final que hiciste era de JUNIO 2026 (la app lo había grabado como Julio por error).\n\n• Cierre y mes del sistema corregidos\n• '+n+' cuotas en mora reetiquetadas a Junio\n• '+h+' pagos del historial corregidos\n\nAhora las cuotas a cobrar son de JULIO y el ICC se puede aplicar.');
+    if(typeof renderAdminTable==='function') try{renderAdminTable();}catch(e){}
+  }catch(e){console.warn('reparación cierre:',e);}
+}
+setTimeout(repararCierreJunio2026, 2500);
+
 function hacerCierreFinal(){
   confirmarConClave(()=>{
+    // Capturar el mes operativo antes de tocar nada
+    const _mesOperativoCapturado=mesActual();
     // Si ya hay cierre, lo reemplaza
     if(hayCierreFinal()){
       try{localStorage.removeItem(dKey('cierre_final'));}catch(e){}
@@ -7045,8 +7078,12 @@ function hacerCierreFinal(){
     const hoy=new Date();
     const fecha=hoy.toLocaleDateString('es-AR');
     const hora=hoy.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-    const anio=hoy.getFullYear();
-    const mes=hoy.getMonth(); // 0-11
+    // Cerrar el MES OPERATIVO (el que se está cobrando), no el calendario.
+    // Ej: si el cierre de junio se hace en julio, igual cierra JUNIO.
+    let mes=MESES.indexOf(_mesOperativoCapturado); // capturado antes de borrar el cierre anterior
+    if(mes<0) mes=hoy.getMonth();
+    let anio=hoy.getFullYear();
+    if(mes>hoy.getMonth()) anio--; // diciembre operativo cerrado en enero
 
     // Capturar clientes impagos y registrarlos como cuotas morosas
     const data=loadData();
