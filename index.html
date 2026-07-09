@@ -1110,7 +1110,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0323';
+  datos['_version']='v1.0324';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5241,7 +5241,9 @@ function resetTodoBalances(){
       data.forEach(c=>{if(ids.has(c.id)){c.pago=false;c.pagoTs=null;}});
       saveData(data);
     }
-    saveBalances({cierres:[],abierto:[],agrimensores:[]});
+    // Limpiar listas sin destruir otras claves del objeto de balances
+    bal.cierres=[];bal.abierto=[];bal.agrimensores=[];bal.transferencias=[];bal.cajaFisica=[];
+    saveBalances(bal);
     renderBalances();
     if(document.getElementById('atab-lista')&&document.getElementById('atab-lista').style.display!=='none') renderAdminTable();
     renderColab();
