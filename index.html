@@ -1110,7 +1110,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0325';
+  datos['_version']='v1.0326';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3894,9 +3894,37 @@ function renderInicio(){
         ${_stat(_usd.length,'USD (sin trimestre)','var(--text2)','Lotes activos en dólares: no tienen trimestre ni reciben incrementos ICC.')}
       </div>
       <div title="Suma de las cuotas del mes de todos los lotes cobrables: activos, sin agrimensores, sin préstamos y sin primera cuota futura. No incluye moras ni adelantos." style="display:flex;justify-content:space-around;gap:8px;border-top:1px dashed var(--border);padding-top:8px;margin-top:6px;cursor:help;flex-wrap:wrap">
-        <div style="text-align:center"><div style="font-size:11px;color:var(--text2);margin-bottom:2px">💰 A COBRAR ESTE MES (PESOS)</div><div style="font-size:19px;font-weight:800;color:var(--green)">$${fmtPeso(_totARS)}</div><div style="font-size:10px;color:var(--text3)">${_cobrARS.length} lotes</div></div>
+        <div style="text-align:center"><div style="font-size:11px;color:var(--text2);margin-bottom:2px">💰 A COBRAR ESTE MES (PESOS)</div><div style="font-size:19px;font-weight:800;color:var(--green)">${fmtPeso(_totARS)}</div><div style="font-size:10px;color:var(--text3)">${_cobrARS.length} lotes</div></div>
         <div style="text-align:center"><div style="font-size:11px;color:var(--text2);margin-bottom:2px">💵 A COBRAR ESTE MES (USD)</div><div style="font-size:19px;font-weight:800;color:var(--green)">USD ${fmtPeso(_totUSD)}</div><div style="font-size:10px;color:var(--text3)">${_cobrUSD.length} lotes</div></div>
       </div>
+      <button onclick="const d=document.getElementById('inicio-etapas');d.style.display=d.style.display==='none'?'block':'none';this.textContent=d.style.display==='none'?'▼ Ver por etapa y manzana':'▲ Ocultar detalle'" style="width:100%;margin-top:8px;padding:6px;background:none;border:1px dashed var(--border2);color:var(--text2);border-radius:var(--r);font-size:12px;cursor:pointer">▼ Ver por etapa y manzana</button>
+      <div id="inicio-etapas" style="display:none;margin-top:8px">${(()=>{
+        const grupos={};
+        _cobrables.forEach(c=>{
+          const et=getEtapa(c.mz), mz=String(c.mz).toUpperCase();
+          if(!grupos[et]) grupos[et]={mzs:{},totARS:0,totUSD:0,n:0};
+          if(!grupos[et].mzs[mz]) grupos[et].mzs[mz]={ars:0,usd:0,n:0};
+          const m=montoCobrable(c).total;
+          if(c.moneda==='USD'){grupos[et].mzs[mz].usd+=m;grupos[et].totUSD+=m;}
+          else {grupos[et].mzs[mz].ars+=m;grupos[et].totARS+=m;}
+          grupos[et].mzs[mz].n++;grupos[et].n++;
+        });
+        const ordenEt=['Etapa 1','Etapa 2','Etapa 3','Etapa 4','Otra'].filter(e=>grupos[e]);
+        return ordenEt.map(et=>{
+          const g=grupos[et];
+          const mzKeys=Object.keys(g.mzs).sort();
+          return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;overflow:hidden">
+            <div style="display:flex;justify-content:space-between;padding:8px 12px;background:var(--hov);font-weight:800;font-size:13px">
+              <span>${et} <span style="font-weight:400;color:var(--text2);font-size:11px">(${g.n} lotes)</span></span>
+              <span style="color:var(--green)">${g.totARS?fmtPeso(g.totARS):''}${g.totARS&&g.totUSD?' · ':''}${g.totUSD?'USD '+fmtPeso(g.totUSD):''}</span>
+            </div>
+            ${mzKeys.map(mz=>`<div style="display:flex;justify-content:space-between;padding:5px 12px 5px 24px;border-top:1px solid var(--border);font-size:12px">
+              <span style="color:var(--text2)">${mz} <span style="font-size:10px">(${g.mzs[mz].n})</span></span>
+              <span style="font-weight:600">${g.mzs[mz].ars?fmtPeso(g.mzs[mz].ars):''}${g.mzs[mz].ars&&g.mzs[mz].usd?' · ':''}${g.mzs[mz].usd?'USD '+fmtPeso(g.mzs[mz].usd):''}</span>
+            </div>`).join('')}
+          </div>`;
+        }).join('')||'<div style="font-size:12px;color:var(--text2)">Sin lotes cobrables</div>';
+      })()}</div>
     </div>`;
   el.innerHTML=`
     <div style="font-size:22px;font-weight:800;margin-bottom:4px">Bienvenido, Administrador</div>
