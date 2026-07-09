@@ -1110,7 +1110,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0319';
+  datos['_version']='v1.0320';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2744,11 +2744,11 @@ function abrirFormCobro(id, opts){
       +'<div style="font-size:12px;color:#7c3aed">'+cur+fmtPeso(totalCuota)+' cuota + '+cur+fmtPeso(imp)+' impuestos 21%</div>'
       +'</div>';})():'')
     +(esParcial?('<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:3px">🏦 PARTE DE CUOTA POR TRANSFERENCIA</div>'
-      +'<input type="number" id="fc-transf" min="0" placeholder="0" oninput="fcAutoCompletar(\'transf\');fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid #a78bfa;border-radius:8px;font-size:15px;font-weight:700;background:var(--bg)">'
+      +'<input type="number" id="fc-transf" min="0" placeholder="0" oninput="fcAutoCompletar(\'transf\');fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid #a78bfa;border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)">'
       +'<div id="fc-transf-info" style="display:none;font-size:12px;color:#7c3aed;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;padding:6px 8px;margin-top:4px"></div></div>'):'')
     +(esTotal?'':('<div style="display:flex;gap:8px;margin-bottom:8px">'
-    +'<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">ENTREGÓ EFECTIVO *</div><input type="number" id="fc-entrego" min="0" placeholder="Obligatorio" oninput="'+(esParcial?'fcAutoCompletar(\'entrego\');':'')+'fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid var(--border2);border-radius:8px;font-size:15px;font-weight:700;background:var(--bg)"></div>'
-    +'<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">VUELTO *</div><input type="number" id="fc-vuelto" min="0" placeholder="0 si no hubo" oninput="fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid var(--border2);border-radius:8px;font-size:15px;font-weight:700;background:var(--bg)"></div>'
+    +'<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">ENTREGÓ EFECTIVO *</div><input type="number" id="fc-entrego" min="0" placeholder="Obligatorio" oninput="'+(esParcial?'fcAutoCompletar(\'entrego\');':'')+'fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid var(--border2);border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)"></div>'
+    +'<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">VUELTO *</div><input type="number" id="fc-vuelto" min="0" placeholder="0 si no hubo" oninput="fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid var(--border2);border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)"></div>'
     +'</div>'))
     +'<div id="fc-live" style="border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700;text-align:center;background:var(--surface);border:1px dashed var(--border2);color:var(--text2);margin-bottom:10px">'+(esTotal?'✓ Listo para cobrar — todo por transferencia':'Completá los campos')+'</div>'
     +'<div style="display:flex;gap:8px">'
