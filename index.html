@@ -1110,7 +1110,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0314';
+  datos['_version']='v1.0315';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2677,29 +2677,8 @@ function actualizarEscalonInfo(){
 }
 
 function cobrarPorTransferencia(id){
-  const c=loadData().find(x=>x.id===id);
-  if(!c||c.pago) return;
-  confirmarConClave(()=>{
-    const cur=c.moneda==='USD'?'USD ':'$';
-    const _mc=montoCobrable(c);
-    const mora=esPrimeraCuotaFutura(c)?{interes:0,pct:0,dias:0}:calcInteresAuto(_mc.total);
-    const total=_mc.total+(mora.interes||0);
-    let msg='<div style="text-align:center;font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:8px">🏦 PAGO POR TRANSFERENCIA</div>'
-      +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">'
-      +'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:13px">Cuota'+(_mc.escalonActivo?' pura':'')+'</span><span style="font-weight:700">'+cur+fmtPeso(_mc.base)+'</span></div>'
-      +(_mc.escalonActivo?'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:#eff6ff"><span style="color:#0369a1;font-size:13px;font-weight:600">🪜 Escalonado</span><span style="font-weight:700;color:#0369a1">+'+cur+fmtPeso(_mc.adicional)+'</span></div>':'')
-      +((mora.interes)?'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--red-bg)"><span style="color:var(--red);font-size:13px;font-weight:600">⚠️ Mora ('+mora.dias+' días × 2% = '+mora.pct+'%)</span><span style="font-weight:700;color:var(--red)">+'+cur+fmtPeso(mora.interes)+'</span></div>':'')
-      +'<div style="display:flex;justify-content:space-between;padding:12px;background:#f3e8ff"><span style="font-weight:700">Total transferido</span><span style="font-size:18px;font-weight:800;color:#7c3aed">'+cur+fmtPeso(total)+'</span></div></div>'
-      +'<div style="font-size:11px;color:var(--text2);margin-top:6px;text-align:center">Este pago va a la Caja de Transferencias, no a la caja física.</div>';
-    mostrarConfirmAdmin('Confirmar transferencia',msg,()=>{
-      window._cobroTransferencia=true;
-      try{ marcarPago(id, mora.interes||0); }
-      finally{ window._cobroTransferencia=false; }
-      addHist('pago','🏦 Pago por TRANSFERENCIA — '+c.mz+' Lote '+c.lote+' — '+c.titular,id);
-      if(typeof renderAdminDet==='function') renderAdminDet(id);
-      if(typeof renderAdminTable==='function') renderAdminTable();
-    });
-  });
+  // Admin: directo. Colaborador: requiere clave admin (ver colabCobrarTransfer).
+  abrirFormCobro(id,{ctx:'admin',transfer:true});
 }
 
 function desbloquearCuotaActual(){
@@ -3972,6 +3951,18 @@ function renderBalances(seccion){
             </div>
           </div>
         </div>
+        <div style="background:var(--surface);border:1px solid #ddd6fe;border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('fisica')">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:16px;font-weight:700;margin-bottom:4px">💵 Caja Física</div>
+              <div style="font-size:13px;color:var(--text2)">${(bal.cajaFisica||[]).length} registro${(bal.cajaFisica||[]).length!==1?'s':''} — control de efectivo</div>
+            </div>
+            <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+              <div style="font-size:20px;font-weight:800;color:#7c3aed">${fmtPeso((bal.cajaFisica||[]).filter(p=>p.moneda!=='USD').reduce((s,p)=>s+(p.efectivo||0),0))}</div>
+              <div style="font-size:12px;color:var(--text2)">›</div>
+            </div>
+          </div>
+        </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('cierres')">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
@@ -4119,9 +4110,71 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
             </div>`;
           }).join(''):'<div style="font-size:13px;color:var(--text2)">Sin transferencias</div>'}
           ${abTransf.length?`<div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px;padding-top:10px;color:#7c3aed"><span>Total transferencias</span><span>${fmtPeso(totalTP)}${totalTU?' · USD '+fmtPeso(totalTU):''}</span></div>`:''}
-          <div style="font-size:11px;color:var(--text2);margin-top:8px">💡 Esta plata no está en la caja física — hay que reponerla.</div>
+          ${(bal.transferencias||[]).length?`
+          <div style="font-size:12px;font-weight:700;color:#7c3aed;margin-top:12px;border-top:1px dashed #ddd6fe;padding-top:10px">DETALLE (cuota + 21% impuestos)</div>
+          ${(bal.transferencias||[]).slice().reverse().map(t=>`
+            <div style="padding:7px 0;border-bottom:1px solid #ddd6fe;font-size:12px">
+              <div style="display:flex;justify-content:space-between">
+                <span style="font-weight:600">${formatLoteTag(t.mz,t.lote)} — ${t.titular||''} ${t.parcial?'<span style="background:#fef3c7;color:#b45309;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">PARCIAL</span>':'<span style="background:#ede9fe;color:#7c3aed;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">TOTAL</span>'}</span>
+                <span style="font-weight:800;color:#7c3aed">${t.moneda==='USD'?'USD ':''}${fmtPeso(t.totalTransferido||0)}</span>
+              </div>
+              <div style="font-size:11px;color:var(--text2)">${fmtPeso(t.cuotaParte||0)} cuota + ${fmtPeso(t.impuesto||0)} imp. 21% · ${t.fecha||''}${(t.rellenado||0)>0?' · ✓ rellenada '+fmtPeso(t.rellenado):''}</div>
+            </div>`).join('')}`:''}
+          <div style="font-size:11px;color:var(--text2);margin-top:8px">💡 Esta plata no está en la caja física — hay que reponerla. El 21% queda en el banco.</div>
         </div>
       </div>`;
+  }
+
+  if(seccion==='fisica'){
+    const cf=(bal.cajaFisica||[]);
+    const cfP=cf.filter(p=>p.moneda!=='USD');
+    const cfU=cf.filter(p=>p.moneda==='USD');
+    const totEfP=cfP.reduce((s,p)=>s+(p.efectivo||0),0);
+    const totEfU=cfU.reduce((s,p)=>s+(p.efectivo||0),0);
+    const totCuotaP=cfP.reduce((s,p)=>s+(p.cuotaLista||0),0);
+    const pendTransfP=cfP.reduce((s,p)=>s+Math.max(0,(p.transferido||0)-(p.rellenadoMonto||0)),0);
+    const row=(p)=>{
+      const dif=p.dif||0;
+      const marcar=Math.abs(dif)>1000;
+      const difLabel=dif===0?'':(dif>0?'SAF '+fmtPeso(dif):'SEC '+fmtPeso(-dif));
+      const motivo=[];
+      if(p.transferido) motivo.push('transf. '+fmtPeso(p.transferido)+((p.rellenadoMonto||0)>0?' (rellenada '+fmtPeso(p.rellenadoMonto)+')':''));
+      if(p.vuelto) motivo.push('vuelto '+fmtPeso(p.vuelto));
+      return `<div style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px;${marcar?'background:'+(dif>0?'var(--green-bg)':'var(--red-bg)')+';border-left:4px solid '+(dif>0?'var(--green)':'var(--red)')+';':''}">
+        <div style="display:flex;justify-content:space-between">
+          <span style="font-weight:600">${formatLoteTag(p.mz,p.lote)} — ${p.titular||''}</span>
+          <span style="font-weight:800">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.efectivo||0)} <span style="font-weight:400;color:var(--text2);font-size:11px">efectivo</span></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-top:2px">
+          <span>Cuota ${fmtPeso(p.cuotaLista||0)} · entregó ${fmtPeso(p.entrego||0)}${motivo.length?' · '+motivo.join(' · '):''}</span>
+          ${difLabel?`<span style="font-weight:800;color:${dif>0?'var(--green)':'var(--red)'}">${marcar?'⚠️ ':''}${difLabel}</span>`:'<span style="color:var(--green)">✓ justo</span>'}
+        </div>
+      </div>`;
+    };
+    el.innerHTML=backBtn+`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <div style="font-size:17px;font-weight:700">💵 Caja Física <span style="font-size:12px;font-weight:400;color:var(--text2)">(control de efectivo real)</span></div>
+        ${cf.length?`<button onclick="limpiarCajaFisica()" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar</button>`:''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center">
+          <div style="font-size:11px;color:var(--text2)">EFECTIVO FÍSICO</div>
+          <div style="font-size:18px;font-weight:800;color:#7c3aed">${fmtPeso(totEfP)}</div>
+          ${totEfU?`<div style="font-size:12px;font-weight:700;color:var(--green)">USD ${fmtPeso(totEfU)}</div>`:''}
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center" title="Suma de cuotas de lista de estos pagos — comparalo con la Caja del día">
+          <div style="font-size:11px;color:var(--text2)">CUOTAS DE LISTA</div>
+          <div style="font-size:18px;font-weight:800">${fmtPeso(totCuotaP)}</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center" title="Parte transferida aún no rellenada con ingresos">
+          <div style="font-size:11px;color:var(--text2)">TRANSF. SIN RELLENAR</div>
+          <div style="font-size:18px;font-weight:800;color:${pendTransfP?'#d97706':'var(--text3)'}">${fmtPeso(pendTransfP)}</div>
+        </div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
+        ${cf.length?cf.slice().reverse().map(row).join(''):'<div style="padding:1rem;font-size:13px;color:var(--text2)">Sin registros. Los cobros con el formulario de entregó/vuelto aparecen acá.</div>'}
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:8px">💡 Diferencias mayores a $1.000 quedan remarcadas. Al limpiar no queda registro (el SAF/SEC ya está en el saldo de cada cliente).</div>`;
   }
 
   if(seccion==='cierres'){
@@ -4704,6 +4757,16 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         </div>
       </div>`;
   }
+}
+
+function limpiarCajaFisica(){
+  confirmarConClave(()=>{
+    if(!confirm('¿Limpiar la Caja Física? No queda registro (los SAF/SEC ya están en los saldos).'))return;
+    const bal=loadBalances();
+    bal.cajaFisica=[];
+    saveBalances(bal);
+    renderBalances('fisica');
+  });
 }
 
 function cerrarCajaDelDia(moneda){
@@ -5921,37 +5984,8 @@ function admToggleAdelanto(id){
 function admCobrarAutoById(btn){
   const id=btn.dataset.mid;
   const interes=parseFloat(btn.dataset.interes)||0;
-  const cuota=parseFloat(btn.dataset.cuota)||0;
-  const cur=btn.dataset.cur||'';
-  const totalAdelantos=_adelantoCuotas.reduce((s,q)=>s+q.monto,0);
-  const totalFinal=cuota+interes+totalAdelantos;
-
-  const _base=parseFloat(btn.dataset.base)||cuota;
-  const _adic=parseFloat(btn.dataset.adicional)||0;
-  let msg='<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">'
-    +'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:13px">Cuota'+(_adic?' pura':'')+'</span><span style="font-weight:700">'+cur+fmtPeso(_base)+'</span></div>';
-  if(_adic) msg+='<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:#eff6ff"><span style="color:#0369a1;font-size:13px;font-weight:600">🪜 Escalonado</span><span style="font-weight:700;color:#0369a1">+'+cur+fmtPeso(_adic)+'</span></div>';
-  if(interes) msg+='<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--red-bg)"><span style="color:var(--red);font-size:13px;font-weight:600">⚠️ Mora</span><span style="font-weight:700;color:var(--red)">+'+cur+fmtPeso(interes)+'</span></div>';
-  if(totalAdelantos) msg+='<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:#eff6ff"><span style="color:#0369a1;font-size:13px;font-weight:600">⏭ Adelantos ('+_adelantoCuotas.map(q=>q.num).sort((a,b)=>a-b).join(', ')+')</span><span style="font-weight:700;color:#0369a1">+'+cur+fmtPeso(totalAdelantos)+'</span></div>';
-  msg+='<div style="display:flex;justify-content:space-between;padding:12px;background:var(--green-bg)"><span style="font-weight:700">Total</span><span style="font-size:18px;font-weight:800;color:var(--green)">'+cur+fmtPeso(totalFinal)+'</span></div></div>';
-
-  const adelantosCopy=[..._adelantoCuotas];
-  mostrarConfirmAdmin(
-    'Confirmar cobro',
-    msg,
-    ()=>{
-      marcarPago(id, interes);
-      if(adelantosCopy.length) registrarAdelanto(id, adelantosCopy);
-      _adelantoCuotas=[];
-      _adelantoVerMas=5;
-      // Close adelanto selector before re-render
-      const sel=document.getElementById('adelanto-selector-'+id);
-      if(sel) sel.style.display='none';
-      renderAdminDet(id);
-    }
-  );
+  abrirFormCobro(id,{ctx:'admin',interes});
 }
-
 function cerrarConfirmAdmin(){const m=document.getElementById("admin-confirm-modal");if(m)m.style.display="none";}
 function mostrarConfirmAdmin(titulo, msg, onOk){
   let modal=document.getElementById('admin-confirm-modal');
@@ -7378,13 +7412,7 @@ function guardarObsAdmin(id){
 
 
 function adminMarcarPago(id){
-  const adelantosCopy=[..._adelantoCuotas];
-  marcarPago(id);
-  if(adelantosCopy.length) registrarAdelanto(id, adelantosCopy);
-  _adelantoCuotas=[];
-  _adelantoVerMas=5;
-  renderAdminDet(id);
-  renderAdminTable();
+  abrirFormCobro(id,{ctx:'admin'});
 }
 function adminDesmarcarPago(id){desmarcarPago(id);renderAdminDet(id);}
 
@@ -8807,27 +8835,14 @@ function colabVerCuota(id){
   // Mostrar botones de cobro
   el.innerHTML=`
     <button class="btn btn-primary" onclick="colabCobrarYVerde('${id}',0)" style="width:100%;margin-top:.5rem;padding:10px;font-size:14px;font-weight:700">✓ Cobrar</button>
+    <button onclick="colabCobrarTransfer('${id}',0)" style="width:100%;margin-top:6px;padding:6px;font-size:12px;background:none;border:2px solid #a78bfa;color:#7c3aed;border-radius:var(--r);cursor:pointer;font-weight:700">🏦 Cobrar por transferencia</button>
     <button onclick="colabToggleAdelanto('${id}')" style="width:100%;margin-top:6px;padding:6px;font-size:12px;background:none;border:1.5px solid #7dd3fc;color:#0369a1;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantar cuotas</button>
     <div id="adelanto-selector-${id}" style="display:none"></div>`;
 }
 
 function colabCobrarYVerde(id, interes){
-  const c=loadData().find(x=>x.id===id);
-  if(!c) return;
-  const adelantosCopy=[..._adelantoCuotas];
-  marcarPago(id, interes);
-  if(adelantosCopy.length) registrarAdelanto(id, adelantosCopy);
-  _adelantoCuotas=[];
-  _adelantoVerMas=5;
-  // Cambio visual a verde sin re-render completo
-  const montoBox=document.getElementById('colab-monto-box-'+id);
-  const montoVal=document.getElementById('colab-monto-val-'+id);
-  const accion=document.getElementById('colab-accion-'+id);
-  if(montoBox){montoBox.style.background='#dcfce7';montoBox.style.border='2px solid #86efac';montoBox.style.padding='.75rem 0';}
-  if(montoVal){montoVal.style.filter='none';montoVal.style.color='#16a34a';}
-  if(accion) accion.innerHTML='<div style="text-align:center;padding:8px;color:var(--green);font-weight:700;font-size:14px">✅ Cuota cobrada</div>';
+  abrirFormCobro(id,{ctx:'colab',interes:interes});
 }
-
 function colabToggleAdelanto(id){
   let el=document.getElementById('adelanto-selector-'+id);
   // Si no existe el div, crearlo debajo del botón de adelantar
@@ -8854,14 +8869,10 @@ function colabToggleAdelanto(id){
 }
 
 function colabCobrar(id, interes){
-  const c=loadData().find(x=>x.id===id);
-  if(!c) return;
-  const adelantosCopy=[..._adelantoCuotas];
-  marcarPago(id, interes);
-  if(adelantosCopy.length) registrarAdelanto(id, adelantosCopy);
-  _adelantoCuotas=[];
-  _adelantoVerMas=5;
-  renderDetColab(id);
+  abrirFormCobro(id,{ctx:'colab',interes:interes});
+}
+function colabCobrarTransfer(id, interes){
+  confirmarConClave(()=>abrirFormCobro(id,{ctx:'colab',transfer:true,interes:interes}));
 }
 
 function renderDetColab(id){
