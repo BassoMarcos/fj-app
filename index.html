@@ -1110,7 +1110,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0320';
+  datos['_version']='v1.0321';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2744,11 +2744,11 @@ function abrirFormCobro(id, opts){
       +'<div style="font-size:12px;color:#7c3aed">'+cur+fmtPeso(totalCuota)+' cuota + '+cur+fmtPeso(imp)+' impuestos 21%</div>'
       +'</div>';})():'')
     +(esParcial?('<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:3px">🏦 PARTE DE CUOTA POR TRANSFERENCIA</div>'
-      +'<input type="number" id="fc-transf" min="0" placeholder="0" oninput="fcAutoCompletar(\'transf\');fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid #a78bfa;border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)">'
+      +'<input type="text" inputmode="numeric" id="fc-transf" placeholder="$0" oninput="fcFmt(this);fcAutoCompletar(\'transf\');fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid #a78bfa;border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)">'
       +'<div id="fc-transf-info" style="display:none;font-size:12px;color:#7c3aed;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;padding:6px 8px;margin-top:4px"></div></div>'):'')
     +(esTotal?'':('<div style="display:flex;gap:8px;margin-bottom:8px">'
-    +'<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">ENTREGÓ EFECTIVO *</div><input type="number" id="fc-entrego" min="0" placeholder="Obligatorio" oninput="'+(esParcial?'fcAutoCompletar(\'entrego\');':'')+'fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid var(--border2);border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)"></div>'
-    +'<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">VUELTO *</div><input type="number" id="fc-vuelto" min="0" placeholder="0 si no hubo" oninput="fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid var(--border2);border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)"></div>'
+    +'<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">ENTREGÓ EFECTIVO *</div><input type="text" inputmode="numeric" id="fc-entrego" placeholder="Obligatorio" oninput="fcFmt(this);'+(esParcial?'fcAutoCompletar(\'entrego\');':'')+'fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid var(--border2);border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)"></div>'
+    +'<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">VUELTO *</div><input type="text" inputmode="numeric" id="fc-vuelto" placeholder="0 si no hubo" oninput="fcFmt(this);fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid var(--border2);border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)"></div>'
     +'</div>'))
     +'<div id="fc-live" style="border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700;text-align:center;background:var(--surface);border:1px dashed var(--border2);color:var(--text2);margin-bottom:10px">'+(esTotal?'✓ Listo para cobrar — todo por transferencia':'Completá los campos')+'</div>'
     +'<div style="display:flex;gap:8px">'
@@ -2760,27 +2760,40 @@ function abrirFormCobro(id, opts){
   setTimeout(()=>{const f=document.getElementById(opts.transfer?'fc-transf':'fc-entrego');if(f)f.focus();},60);
 }
 function cerrarFormCobro(){const m=document.getElementById('form-cobro-modal');if(m)m.style.display='none';window._fcCtx=null;}
+function fcNum(v){ return parseFloat(String(v||'').replace(/[^\d]/g,''))||0; }
+function fcVacio(v){ return String(v||'').replace(/[^\d]/g,'')===''; }
+function fcFmt(el){
+  const x=window._fcCtx; if(!el) return;
+  const d=String(el.value||'').replace(/[^\d]/g,'');
+  const pref=(x&&x.cur==='USD ')?'USD ':'$';
+  el.value=d===''?'':pref+Number(d).toLocaleString('es-AR');
+}
+function fcSet(el,n){
+  const x=window._fcCtx; if(!el) return;
+  const pref=(x&&x.cur==='USD ')?'USD ':'$';
+  el.value=pref+Math.max(0,Math.round(n)).toLocaleString('es-AR');
+}
 function fcAutoCompletar(origen){
   const x=window._fcCtx; if(!x) return;
   const tEl=document.getElementById('fc-transf');
   const eEl=document.getElementById('fc-entrego');
   if(!tEl||!eEl) return;
   if(origen==='transf'){
-    const t=parseFloat(tEl.value)||0;
-    eEl.value=Math.max(0,x.totalCuota-t);
+    const t=fcNum(tEl.value);
+    fcSet(eEl,x.totalCuota-t);
   } else {
-    const e=parseFloat(eEl.value)||0;
-    tEl.value=Math.max(0,x.totalCuota-e);
+    const e=fcNum(eEl.value);
+    fcSet(tEl,x.totalCuota-e);
   }
   const vEl=document.getElementById('fc-vuelto');
-  if(vEl&&vEl.value==='') vEl.value=0;
+  if(vEl&&fcVacio(vEl.value)) fcSet(vEl,0);
 }
 function fcRecalc(){
   const x=window._fcCtx; if(!x) return;
   const g=(eid)=>{const el=document.getElementById(eid);return el?el.value:'';};
-  const t=x.transfer?(parseFloat(g('fc-transf'))||0):0;
+  const t=x.transfer?fcNum(g('fc-transf')):0;
   const eStr=g('fc-entrego'), vStr=g('fc-vuelto');
-  const e=parseFloat(eStr)||0, v=parseFloat(vStr)||0;
+  const e=fcNum(eStr), v=fcNum(vStr);
   const info=document.getElementById('fc-transf-info');
   if(info){
     if(t>0){
@@ -2791,7 +2804,7 @@ function fcRecalc(){
   }
   const live=document.getElementById('fc-live');
   const ok=document.getElementById('fc-ok');
-  const completo=(eStr!=='')&&(vStr!=='')&&(!x.transfer||t>0);
+  const completo=!fcVacio(eStr)&&!fcVacio(vStr)&&(!x.transfer||t>0);
   let valido=completo&&e>=0&&v>=0&&(!x.transfer||t<=x.totalCuota);
   if(x.transfer&&t>x.totalCuota){ if(live){live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent='La transferencia no puede superar el total de la cuota';} if(ok){ok.disabled=true;ok.style.opacity='.4';} return; }
   if(!completo){ if(live){live.style.background='var(--surface)';live.style.color='var(--text2)';live.textContent='Completá los campos'+(x.transfer?' (transferencia, entregó y vuelto)':' (entregó y vuelto, 0 si no hubo)');} if(ok){ok.disabled=true;ok.style.opacity='.4';} return; }
@@ -2808,9 +2821,9 @@ function fcConfirmar(){
   const x=window._fcCtx; if(!x) return;
   const esTotal=x.transfer&&x.transferTipo==='total';
   const g=(eid)=>{const el=document.getElementById(eid);return el?el.value:'';};
-  const t=esTotal?x.totalCuota:(x.transfer?(parseFloat(g('fc-transf'))||0):0);
-  const e=esTotal?0:(parseFloat(g('fc-entrego'))||0), v=esTotal?0:(parseFloat(g('fc-vuelto'))||0);
-  if(!esTotal&&(g('fc-entrego')===''||g('fc-vuelto')==='')){alert('Entregó y vuelto son obligatorios (poné 0 si no hubo).');return;}
+  const t=esTotal?x.totalCuota:(x.transfer?fcNum(g('fc-transf')):0);
+  const e=esTotal?0:fcNum(g('fc-entrego')), v=esTotal?0:fcNum(g('fc-vuelto'));
+  if(!esTotal&&(fcVacio(g('fc-entrego'))||fcVacio(g('fc-vuelto')))){alert('Entregó y vuelto son obligatorios (poné 0 si no hubo).');return;}
   if(!esTotal&&x.transfer&&t<=0){alert('Ingresá el monto de la transferencia.');return;}
   const id=x.id;
   const c=loadData().find(cl=>cl.id===id); if(!c) return;
