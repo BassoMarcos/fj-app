@@ -1110,7 +1110,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0315';
+  datos['_version']='v1.0316';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2679,6 +2679,122 @@ function actualizarEscalonInfo(){
 function cobrarPorTransferencia(id){
   // Admin: directo. Colaborador: requiere clave admin (ver colabCobrarTransfer).
   abrirFormCobro(id,{ctx:'admin',transfer:true});
+}
+
+// ═══════════ FORMULARIO DE COBRO (entregó/vuelto/transferencia 21%) ═══════════
+window._fcCtx=null;
+function abrirFormCobro(id, opts){
+  opts=opts||{};
+  const c=loadData().find(x=>x.id===id);
+  if(!c||c.pago) return;
+  const _mc=montoCobrable(c);
+  const mora=(opts.interes!==undefined)?{interes:opts.interes||0,pct:0,dias:0}:(esPrimeraCuotaFutura(c)?{interes:0,pct:0,dias:0}:calcInteresAuto(_mc.total));
+  const adelantos=[...(window._adelantoCuotas||[])];
+  const totalAdel=adelantos.reduce((s,q)=>s+(q.monto||0),0);
+  const totalCuota=_mc.total+(mora.interes||0)+totalAdel;
+  const cur=c.moneda==='USD'?'USD ':'$';
+  window._fcCtx={id,totalCuota,base:_mc.base,adicional:_mc.adicional,escalonActivo:_mc.escalonActivo,interes:mora.interes||0,moraPct:mora.pct,moraDias:mora.dias,adelantos,totalAdel,cur,transfer:!!opts.transfer,ctx:opts.ctx||'admin',moneda:c.moneda||'ARS'};
+  let m=document.getElementById('form-cobro-modal');
+  if(!m){
+    m=document.createElement('div');
+    m.id='form-cobro-modal';
+    m.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:16px';
+    document.body.appendChild(m);
+  }
+  const fila=(l,v,color)=>'<div style="display:flex;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--border);font-size:13px"><span style="color:'+(color||'var(--text2)')+'">'+l+'</span><span style="font-weight:700;color:'+(color||'var(--text)')+'">'+v+'</span></div>';
+  let desg=fila('Cuota'+( _mc.escalonActivo?' pura':''),cur+fmtPeso(_mc.base));
+  if(_mc.escalonActivo) desg+=fila('🪜 Escalonado','+'+cur+fmtPeso(_mc.adicional),'#0369a1');
+  if(mora.interes) desg+=fila('⚠️ Mora'+(mora.pct?' ('+mora.dias+' días × 2% = '+mora.pct+'%)':''),'+'+cur+fmtPeso(mora.interes),'var(--red)');
+  if(totalAdel) desg+=fila('⏭ Adelantos x'+adelantos.length,'+'+cur+fmtPeso(totalAdel),'#0369a1');
+  m.innerHTML='<div style="background:var(--card);border-radius:14px;max-width:420px;width:100%;max-height:92vh;overflow-y:auto;padding:1.25rem" onclick="event.stopPropagation()">'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:2px">'+(opts.transfer?'🏦 Cobro con transferencia':'✓ Cobrar cuota')+'</div>'
+    +'<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+formatLoteTag(c.mz,c.lote)+' — '+c.titular+'</div>'
+    +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px">'
+    +desg
+    +'<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--green-bg)"><span style="font-weight:800">Total cuota</span><span style="font-size:17px;font-weight:800;color:var(--green)">'+cur+fmtPeso(totalCuota)+'</span></div>'
+    +'</div>'
+    +(opts.transfer?('<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:3px">🏦 PARTE DE CUOTA POR TRANSFERENCIA</div>'
+      +'<input type="number" id="fc-transf" min="0" placeholder="0" oninput="fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid #a78bfa;border-radius:8px;font-size:15px;font-weight:700;background:var(--bg)">'
+      +'<div id="fc-transf-info" style="display:none;font-size:12px;color:#7c3aed;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;padding:6px 8px;margin-top:4px"></div></div>'):'')
+    +'<div style="display:flex;gap:8px;margin-bottom:8px">'
+    +'<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">ENTREGÓ EFECTIVO *</div><input type="number" id="fc-entrego" min="0" placeholder="Obligatorio" oninput="fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid var(--border2);border-radius:8px;font-size:15px;font-weight:700;background:var(--bg)"></div>'
+    +'<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">VUELTO *</div><input type="number" id="fc-vuelto" min="0" placeholder="0 si no hubo" oninput="fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid var(--border2);border-radius:8px;font-size:15px;font-weight:700;background:var(--bg)"></div>'
+    +'</div>'
+    +'<div id="fc-live" style="border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700;text-align:center;background:var(--surface);border:1px dashed var(--border2);color:var(--text2);margin-bottom:10px">Completá los campos</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="cerrarFormCobro()" style="flex:1;padding:10px;border:1px solid var(--border2);background:var(--surface);border-radius:8px;font-weight:700;cursor:pointer">Cancelar</button>'
+    +'<button id="fc-ok" onclick="fcConfirmar()" disabled style="flex:2;padding:10px;border:none;background:#16a34a;color:#fff;border-radius:8px;font-weight:800;cursor:pointer;opacity:.4">✓ Confirmar cobro</button>'
+    +'</div></div>';
+  m.style.display='flex';
+  m.onclick=cerrarFormCobro;
+  setTimeout(()=>{const f=document.getElementById(opts.transfer?'fc-transf':'fc-entrego');if(f)f.focus();},60);
+}
+function cerrarFormCobro(){const m=document.getElementById('form-cobro-modal');if(m)m.style.display='none';window._fcCtx=null;}
+function fcRecalc(){
+  const x=window._fcCtx; if(!x) return;
+  const g=(eid)=>{const el=document.getElementById(eid);return el?el.value:'';};
+  const t=x.transfer?(parseFloat(g('fc-transf'))||0):0;
+  const eStr=g('fc-entrego'), vStr=g('fc-vuelto');
+  const e=parseFloat(eStr)||0, v=parseFloat(vStr)||0;
+  const info=document.getElementById('fc-transf-info');
+  if(info){
+    if(t>0){
+      const debe=Math.round(t*1.21), imp=debe-t;
+      info.style.display='block';
+      info.innerHTML='Debe transferir: <strong>'+x.cur+fmtPeso(debe)+'</strong> ('+x.cur+fmtPeso(t)+' cuota + '+x.cur+fmtPeso(imp)+' impuestos 21%)';
+    } else info.style.display='none';
+  }
+  const live=document.getElementById('fc-live');
+  const ok=document.getElementById('fc-ok');
+  const completo=(eStr!=='')&&(vStr!=='')&&(!x.transfer||t>0);
+  let valido=completo&&e>=0&&v>=0&&(!x.transfer||t<=x.totalCuota);
+  if(x.transfer&&t>x.totalCuota){ if(live){live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent='La transferencia no puede superar el total de la cuota';} if(ok){ok.disabled=true;ok.style.opacity='.4';} return; }
+  if(!completo){ if(live){live.style.background='var(--surface)';live.style.color='var(--text2)';live.textContent='Completá los campos'+(x.transfer?' (transferencia, entregó y vuelto)':' (entregó y vuelto, 0 si no hubo)');} if(ok){ok.disabled=true;ok.style.opacity='.4';} return; }
+  const neto=t+e-v;
+  const dif=neto-x.totalCuota;
+  if(live){
+    if(dif===0){live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='✓ Justo — pagó '+x.cur+fmtPeso(neto);}
+    else if(dif>0){live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='SAF (a favor): '+x.cur+fmtPeso(dif)+' — pagó '+x.cur+fmtPeso(neto);}
+    else {live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent='SEC (en contra): '+x.cur+fmtPeso(-dif)+' — pagó '+x.cur+fmtPeso(neto);}
+  }
+  if(ok){ok.disabled=!valido;ok.style.opacity=valido?'1':'.4';}
+}
+function fcConfirmar(){
+  const x=window._fcCtx; if(!x) return;
+  const g=(eid)=>{const el=document.getElementById(eid);return el?el.value:'';};
+  const t=x.transfer?(parseFloat(g('fc-transf'))||0):0;
+  const e=parseFloat(g('fc-entrego'))||0, v=parseFloat(g('fc-vuelto'))||0;
+  if(g('fc-entrego')===''||g('fc-vuelto')===''){alert('Entregó y vuelto son obligatorios (poné 0 si no hubo).');return;}
+  if(x.transfer&&t<=0){alert('Ingresá el monto de la transferencia.');return;}
+  const id=x.id;
+  const c=loadData().find(cl=>cl.id===id); if(!c) return;
+  const ts=new Date().toISOString(), fecha=new Date().toLocaleDateString('es-AR');
+  const neto=t+e-v, dif=neto-x.totalCuota;
+  const fullTransf=x.transfer&&t>=x.totalCuota;
+  window._cobroTransferencia=fullTransf;
+  try{ marcarPago(id, x.interes||0); } finally { window._cobroTransferencia=false; }
+  if(x.adelantos.length) registrarAdelanto(id, x.adelantos);
+  window._adelantoCuotas=[]; window._adelantoVerMas=5;
+  if(t>0){
+    const bal=loadBalances();
+    const imp=Math.round(t*1.21)-t;
+    (bal.transferencias=bal.transferencias||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaParte:t,impuesto:imp,totalTransferido:t+imp,parcial:!fullTransf,rellenado:0,ts,fecha});
+    saveBalances(bal);
+    addHist('pago','🏦 Transferencia '+(fullTransf?'TOTAL':'PARCIAL')+' — '+c.mz+' Lote '+c.lote+' — cuota '+fmtPeso(t)+' + imp. 21% '+fmtPeso(imp),id);
+  }
+  {
+    const bal=loadBalances();
+    (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:x.totalCuota,transferido:t,entrego:e,vuelto:v,efectivo:e-v,dif,ts,fecha});
+    saveBalances(bal);
+  }
+  if(dif!==0){
+    const data=loadData();const c2=data.find(cl=>cl.id===id);
+    if(c2){c2.saldo=(Number(c2.saldo)||0)+dif;saveData(data);}
+    addHist('pago',(dif>0?'SAF ':'SEC ')+fmtPeso(Math.abs(dif))+' — '+c.mz+' Lote '+c.lote+' (cargado al saldo)',id);
+  }
+  cerrarFormCobro();
+  if(x.ctx==='colab'){ if(typeof renderDetColab==='function') renderDetColab(id); }
+  else { if(typeof renderAdminDet==='function') renderAdminDet(id); if(typeof renderAdminTable==='function') renderAdminTable(); }
 }
 
 function desbloquearCuotaActual(){
