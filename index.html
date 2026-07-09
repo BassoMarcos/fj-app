@@ -1110,7 +1110,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0322';
+  datos['_version']='v1.0323';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5154,7 +5154,6 @@ function toggleMoraCajaEtapas(){
 function resetMora(){
   confirmarConClave(()=>{
     saveMora([]);
-    saveCierreFinal(null);
     renderBalances('mora');
     alert('✓ Caja de mora limpiada');
   });
@@ -6761,8 +6760,9 @@ function borrarCierreFinalYReaplicar(){
     const hoy=new Date();
     const fecha=hoy.toLocaleDateString('es-AR');
     const hora=hoy.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-    const anio=hoy.getFullYear();
-    const mes=hoy.getMonth();
+    // Mes OPERATIVO, no calendario
+    let mes=MESES.indexOf(mesActual()); if(mes<0) mes=hoy.getMonth();
+    let anio=hoy.getFullYear(); if(mes>hoy.getMonth()) anio--;
     const mesNombre=MESES_NOMBRE[mes]+' '+anio;
 
     const data=loadData(); // ahora lee desde BASE limpio
@@ -7035,8 +7035,18 @@ function ejecutarCierreFinal(){
 
 function repararCierreJunio2026(){
   try{
-    const cf=loadCierreFinal();
-    // Solo aplica al caso exacto: cierre grabado como Julio 2026 hecho a comienzos de julio
+    let cf=loadCierreFinal();
+    // Caso B: el cierre se borró (limpiar mora) pero el mes del sistema quedó registrado → restaurar
+    if(!cf){
+      const ma=loadMesActual();
+      if(ma&&ma.mes!==undefined&&ma.anio){
+        cf={ts:ma.ts||new Date().toISOString(),fecha:new Date(ma.ts||Date.now()).toLocaleDateString('es-AR'),hora:'',mes:ma.mes,anio:ma.anio,mesNombre:ma.mesNombre||(MESES_NOMBRE[ma.mes]+' '+ma.anio)};
+        saveCierreFinal(cf);
+        addHist('edit','🔧 Reparación: cierre final restaurado ('+cf.mesNombre+') — se había borrado al limpiar la caja de mora');
+        alert('🔧 REPARADO: el registro del cierre final se había borrado al limpiar la caja de mora. Lo restauré: '+cf.mesNombre+'.');
+      }
+    }
+    // Caso A: cierre grabado como Julio 2026 hecho a comienzos de julio
     if(!cf||cf.mes!==6||cf.anio!==2026) return;
     const mesNombre='Junio 2026';
     saveCierreFinal({ts:cf.ts,fecha:cf.fecha,hora:cf.hora,mes:5,anio:2026,mesNombre});
