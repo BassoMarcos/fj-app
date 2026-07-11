@@ -878,7 +878,7 @@ function toggleMoraDesactivada(){const v=getMoraDesactivada();localStorage.setIt
 function loadExtras(){try{return JSON.parse(localStorage.getItem('fj_extras')||'[]');}catch(e){return [];}}
 function saveExtras(v){localStorage.setItem('fj_extras',JSON.stringify(v));sheetsSet('Extras',v);if(window._firebaseReady)window._fbSet('extras',v).catch(e=>console.warn('FB extras error:',e));}
 
-function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[]};}}
+function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[],transferencias:Array.isArray(b.transferencias)?b.transferencias:[],cajaFisica:Array.isArray(b.cajaFisica)?b.cajaFisica:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[],transferencias:[],cajaFisica:[]};}}
 function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[{json:'STR:'+JSON.stringify(d)}]);}
 function _parseAdelantoCuotas(c){
   if(Array.isArray(c)) return c;
@@ -1110,7 +1110,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0326';
+  datos['_version']='v1.0327';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2633,7 +2633,7 @@ function openAddModal(){
 }
 
 // ============== BALANCES ==============
-function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[]};}}
+function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[],transferencias:Array.isArray(b.transferencias)?b.transferencias:[],cajaFisica:Array.isArray(b.cajaFisica)?b.cajaFisica:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[],transferencias:[],cajaFisica:[]};}}
 function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[{json:'STR:'+JSON.stringify(d)}]);if(window._firebaseReady)window._fbSet('balances',d).catch(e=>console.warn('FB bal error:',e));}
 let _claveAccion=null;
 let _claveEsColab=false;
@@ -2701,6 +2701,11 @@ function elegirTipoTransferencia(id,ctx,interes){
 function fcElegir(tipo){
   const p=window._fcPend; if(!p) return;
   window._fcPend=null;
+  if(p.ctx==='colab'&&tipo==='total'){
+    // Colaborador: transferencia TOTAL requiere clave de admin
+    confirmarConClave(()=>abrirFormCobro(p.id,{ctx:p.ctx,transfer:true,transferTipo:'total',interes:p.interes}));
+    return;
+  }
   abrirFormCobro(p.id,{ctx:p.ctx,transfer:true,transferTipo:tipo,interes:p.interes});
 }
 
@@ -2712,7 +2717,7 @@ function abrirFormCobro(id, opts){
   if(!c||c.pago) return;
   const _mc=montoCobrable(c);
   const mora=(opts.interes!==undefined)?{interes:opts.interes||0,pct:0,dias:0}:(esPrimeraCuotaFutura(c)?{interes:0,pct:0,dias:0}:calcInteresAuto(_mc.total));
-  const adelantos=[...(window._adelantoCuotas||[])];
+  const adelantos=(typeof _adelantoCuotas!=='undefined'&&Array.isArray(_adelantoCuotas))?[..._adelantoCuotas]:[];
   const totalAdel=adelantos.reduce((s,q)=>s+(q.monto||0),0);
   const totalCuota=_mc.total+(mora.interes||0)+totalAdel;
   const cur=c.moneda==='USD'?'USD ':'';
@@ -2833,7 +2838,7 @@ function fcConfirmar(){
   window._cobroTransferencia=fullTransf;
   try{ marcarPago(id, x.interes||0); } finally { window._cobroTransferencia=false; }
   if(x.adelantos.length) registrarAdelanto(id, x.adelantos);
-  window._adelantoCuotas=[]; window._adelantoVerMas=5;
+  try{_adelantoCuotas=[];_adelantoVerMas=5;}catch(e){}
   if(t>0){
     const bal=loadBalances();
     const imp=Math.round(t*1.21)-t;
@@ -9137,7 +9142,8 @@ function colabCobrar(id, interes){
   abrirFormCobro(id,{ctx:'colab',interes:interes});
 }
 function colabCobrarTransfer(id, interes){
-  confirmarConClave(()=>elegirTipoTransferencia(id,'colab',interes));
+  // El selector se muestra sin clave; la clave se pide solo para transferencia TOTAL
+  elegirTipoTransferencia(id,'colab',interes);
 }
 
 function renderDetColab(id){
