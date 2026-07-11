@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0329';
+  datos['_version']='v1.0330';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7660,6 +7660,17 @@ function desmarcarPagoAdmin(id){
     const adelantos=loadAdelantos();
     const adelantosRemovidos=adelantos.filter(a=>a.id===id&&a.estado==='pendiente').length;
     saveAdelantos(adelantos.filter(a=>!(a.id===id&&a.estado==='pendiente')));
+
+    // Revertir el último registro de transferencia y de caja física de este cobro
+    const _idxT=(bal.transferencias||[]).map(p=>p.id).lastIndexOf(id);
+    if(_idxT>=0) bal.transferencias.splice(_idxT,1);
+    const _idxF=(bal.cajaFisica||[]).map(p=>p.id).lastIndexOf(id);
+    if(_idxF>=0){
+      const _ent=bal.cajaFisica[_idxF];
+      // Revertir el SAF/SEC que se había cargado al saldo
+      if(_ent&&_ent.dif){ c.saldo=(Number(c.saldo)||0)-_ent.dif; }
+      bal.cajaFisica.splice(_idxF,1);
+    }
 
     saveData(data);
     saveBalances(bal);
