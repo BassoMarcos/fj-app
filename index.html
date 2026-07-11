@@ -754,7 +754,7 @@ tr:hover td{background:var(--bg)}
         <button type="button" id="e-ca-unlock" onclick="desbloquearCuotaActual()"
           style="padding:7px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;background:var(--surface);cursor:pointer">🔒 Habilitar edición</button>
       </div>
-      <div id="e-escalon-info" style="display:none;font-size:11px;color:#0369a1;margin-top:4px;background:#eff6ff;border-radius:6px;padding:5px 8px"></div>
+      <div id="e-escalon-info" style="display:none;font-size:11px;color:#5eb0ef;margin-top:4px;background:rgba(56,152,236,.10);border-radius:6px;padding:5px 8px"></div>
       <div id="e-ca-warn" style="display:none;font-size:11px;color:var(--red);margin-top:4px">⚠️ Estos campos modifican el plan del cliente. El escalón se suma a la cuota durante la cantidad de cuotas indicada (contando desde la cuota actual); el ICC solo aumenta la cuota pura. Usalo solo para correcciones.</div>
     </div>
 
@@ -1110,7 +1110,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0327';
+  datos['_version']='v1.0328';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2692,7 +2692,7 @@ function elegirTipoTransferencia(id,ctx,interes){
   m.innerHTML='<div style="background:var(--card);border-radius:14px;max-width:380px;width:100%;padding:1.25rem" onclick="event.stopPropagation()">'
     +'<div style="font-size:16px;font-weight:800;margin-bottom:12px;text-align:center">🏦 ¿Cómo paga la transferencia?</div>'
     +'<button onclick="fcElegir(\'total\')" style="width:100%;padding:12px;border:2px solid #a78bfa;background:#7c3aed;color:#fff;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;margin-bottom:8px">Cobro TOTAL por transferencia<br><span style="font-weight:400;font-size:11px;opacity:.85">Toda la cuota transferida (sin efectivo)</span></button>'
-    +'<button onclick="fcElegir(\'parcial\')" style="width:100%;padding:12px;border:2px solid #a78bfa;background:none;color:#7c3aed;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;margin-bottom:8px">Cobro PARCIAL<br><span style="font-weight:400;font-size:11px;opacity:.85">Una parte transferida + el resto en efectivo</span></button>'
+    +'<button onclick="fcElegir(\'parcial\')" style="width:100%;padding:12px;border:2px solid #a78bfa;background:none;color:#a78bfa;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;margin-bottom:8px">Cobro PARCIAL<br><span style="font-weight:400;font-size:11px;opacity:.85">Una parte transferida + el resto en efectivo</span></button>'
     +'<button onclick="cerrarFormCobro()" style="width:100%;padding:9px;border:1px solid var(--border2);background:var(--surface);border-radius:8px;font-weight:700;cursor:pointer">Cancelar</button>'
     +'</div>';
   m.style.display='flex';
@@ -2744,13 +2744,13 @@ function abrirFormCobro(id, opts){
     +'<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--green-bg)"><span style="font-weight:800">Total cuota</span><span style="font-size:17px;font-weight:800;color:var(--green)">'+cur+fmtPeso(totalCuota)+'</span></div>'
     +'</div>'
     +(esTotal?(()=>{const debe=Math.round(totalCuota*1.21),imp=debe-totalCuota;return '<div style="background:#f5f3ff;border:2px solid #a78bfa;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center">'
-      +'<div style="font-size:11px;font-weight:700;color:#7c3aed">DEBE TRANSFERIR</div>'
-      +'<div style="font-size:24px;font-weight:800;color:#7c3aed">'+cur+fmtPeso(debe)+'</div>'
-      +'<div style="font-size:12px;color:#7c3aed">'+cur+fmtPeso(totalCuota)+' cuota + '+cur+fmtPeso(imp)+' impuestos 21%</div>'
+      +'<div style="font-size:11px;font-weight:700;color:#a78bfa">DEBE TRANSFERIR</div>'
+      +'<div style="font-size:24px;font-weight:800;color:#a78bfa">'+cur+fmtPeso(debe)+'</div>'
+      +'<div style="font-size:12px;color:#a78bfa">'+cur+fmtPeso(totalCuota)+' cuota + '+cur+fmtPeso(imp)+' impuestos 21%</div>'
       +'</div>';})():'')
-    +(esParcial?('<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:3px">🏦 PARTE DE CUOTA POR TRANSFERENCIA</div>'
+    +(esParcial?('<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:3px">🏦 PARTE DE CUOTA POR TRANSFERENCIA</div>'
       +'<input type="text" inputmode="numeric" id="fc-transf" placeholder="$0" oninput="fcFmt(this);fcAutoCompletar(\'transf\');fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid #a78bfa;border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)">'
-      +'<div id="fc-transf-info" style="display:none;font-size:12px;color:#7c3aed;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;padding:6px 8px;margin-top:4px"></div></div>'):'')
+      +'<div id="fc-transf-info" style="display:none;font-size:12px;color:#a78bfa;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.35);border-radius:6px;padding:6px 8px;margin-top:4px"></div></div>'):'')
     +(esTotal?'':('<div style="display:flex;gap:8px;margin-bottom:8px">'
     +'<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">ENTREGÓ EFECTIVO *</div><input type="text" inputmode="numeric" id="fc-entrego" placeholder="Obligatorio" oninput="fcFmt(this);'+(esParcial?'fcAutoCompletar(\'entrego\');':'')+'fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid var(--border2);border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)"></div>'
     +'<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">VUELTO *</div><input type="text" inputmode="numeric" id="fc-vuelto" placeholder="0 si no hubo" oninput="fcFmt(this);fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid var(--border2);border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)"></div>'
@@ -4166,7 +4166,7 @@ function renderBalances(seccion){
               <div style="font-size:13px;color:var(--text2)">${(bal.cajaFisica||[]).length} registro${(bal.cajaFisica||[]).length!==1?'s':''} — control de efectivo</div>
             </div>
             <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-              <div style="font-size:20px;font-weight:800;color:#7c3aed">${fmtPeso((bal.cajaFisica||[]).filter(p=>p.moneda!=='USD').reduce((s,p)=>s+(p.efectivo||0),0))}</div>
+              <div style="font-size:20px;font-weight:800;color:#a78bfa">${fmtPeso((bal.cajaFisica||[]).filter(p=>p.moneda!=='USD').reduce((s,p)=>s+(p.efectivo||0),0))}</div>
               <div style="font-size:12px;color:var(--text2)">›</div>
             </div>
           </div>
@@ -4197,7 +4197,7 @@ function renderBalances(seccion){
               </div>
             </div>
             <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-              <div style="font-size:20px;font-weight:800;color:#0369a1">${fmtPeso(totalAprobados)}</div>
+              <div style="font-size:20px;font-weight:800;color:#5eb0ef">${fmtPeso(totalAprobados)}</div>
               <div style="display:flex;align-items:center;gap:8px">
 ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" style="background:var(--blue-bg);border:1px solid #93c5fd;color:var(--blue);padding:3px 8px;border-radius:var(--r);font-size:11px;cursor:pointer">🗑 Limpiar</button>`:''}
                 <span style="font-size:12px;color:var(--text2)">›</span>
@@ -4306,25 +4306,25 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       <!-- TRANSFERENCIAS -->
       <div style="margin-top:1rem">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <div style="font-size:14px;font-weight:700;color:#7c3aed">🏦 TRANSFERENCIAS</div>
-          <div style="font-size:15px;font-weight:800;color:#7c3aed">${fmtPeso(totalTP)}${totalTU?' · USD '+fmtPeso(totalTU):''}</div>
+          <div style="font-size:14px;font-weight:700;color:#a78bfa">🏦 TRANSFERENCIAS</div>
+          <div style="font-size:15px;font-weight:800;color:#a78bfa">${fmtPeso(totalTP)}${totalTU?' · USD '+fmtPeso(totalTU):''}</div>
         </div>
-        <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:var(--r);padding:1rem">
+        <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.35);border-radius:var(--r);padding:1rem">
           ${abTransf.length?abTransf.slice().reverse().map(p=>{
             const c=data.find(x=>x.id===p.id)||{mz:'?',lote:'?',titular:p.id};
-            return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #ddd6fe;font-size:13px">
+            return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(124,58,237,.25);font-size:13px">
               <span>🏦 ${formatLoteTag(c.mz,c.lote)} — ${c.titular}</span>
-              <span style="font-weight:600;color:#7c3aed">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.monto||0)}</span>
+              <span style="font-weight:600;color:#a78bfa">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.monto||0)}</span>
             </div>`;
           }).join(''):'<div style="font-size:13px;color:var(--text2)">Sin transferencias</div>'}
-          ${abTransf.length?`<div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px;padding-top:10px;color:#7c3aed"><span>Total transferencias</span><span>${fmtPeso(totalTP)}${totalTU?' · USD '+fmtPeso(totalTU):''}</span></div>`:''}
+          ${abTransf.length?`<div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px;padding-top:10px;color:#a78bfa"><span>Total transferencias</span><span>${fmtPeso(totalTP)}${totalTU?' · USD '+fmtPeso(totalTU):''}</span></div>`:''}
           ${(bal.transferencias||[]).length?`
-          <div style="font-size:12px;font-weight:700;color:#7c3aed;margin-top:12px;border-top:1px dashed #ddd6fe;padding-top:10px">DETALLE (cuota + 21% impuestos)</div>
+          <div style="font-size:12px;font-weight:700;color:#a78bfa;margin-top:12px;border-top:1px dashed rgba(124,58,237,.25);padding-top:10px">DETALLE (cuota + 21% impuestos)</div>
           ${(bal.transferencias||[]).slice().reverse().map(t=>`
-            <div style="padding:7px 0;border-bottom:1px solid #ddd6fe;font-size:12px">
+            <div style="padding:7px 0;border-bottom:1px solid rgba(124,58,237,.25);font-size:12px">
               <div style="display:flex;justify-content:space-between">
-                <span style="font-weight:600">${formatLoteTag(t.mz,t.lote)} — ${t.titular||''} ${t.parcial?'<span style="background:#fef3c7;color:#b45309;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">PARCIAL</span>':'<span style="background:#ede9fe;color:#7c3aed;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">TOTAL</span>'}</span>
-                <span style="font-weight:800;color:#7c3aed">${t.moneda==='USD'?'USD ':''}${fmtPeso(t.totalTransferido||0)}</span>
+                <span style="font-weight:600">${formatLoteTag(t.mz,t.lote)} — ${t.titular||''} ${t.parcial?'<span style="background:#fef3c7;color:#b45309;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">PARCIAL</span>':'<span style="background:#ede9fe;color:#a78bfa;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">TOTAL</span>'}</span>
+                <span style="font-weight:800;color:#a78bfa">${t.moneda==='USD'?'USD ':''}${fmtPeso(t.totalTransferido||0)}</span>
               </div>
               <div style="font-size:11px;color:var(--text2)">${fmtPeso(t.cuotaParte||0)} cuota + ${fmtPeso(t.impuesto||0)} imp. 21% · ${t.fecha||''}${(t.rellenado||0)>0?' · ✓ rellenada '+fmtPeso(t.rellenado):''}</div>
             </div>`).join('')}`:''}
@@ -4367,7 +4367,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center">
           <div style="font-size:11px;color:var(--text2)">EFECTIVO FÍSICO</div>
-          <div style="font-size:18px;font-weight:800;color:#7c3aed">${fmtPeso(totEfP)}</div>
+          <div style="font-size:18px;font-weight:800;color:#a78bfa">${fmtPeso(totEfP)}</div>
           ${totEfU?`<div style="font-size:12px;font-weight:700;color:var(--green)">USD ${fmtPeso(totEfU)}</div>`:''}
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center" title="Suma de cuotas de lista de estos pagos — comparalo con la Caja del día">
@@ -4490,19 +4490,19 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
 
       <!-- CIERRES TRANSFERENCIAS -->
       <div style="margin-top:1rem">
-        <div style="font-size:14px;font-weight:700;color:#7c3aed;margin-bottom:8px">🏦 CIERRES DE TRANSFERENCIAS</div>
-        <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:var(--r);padding:1rem">
+        <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:8px">🏦 CIERRES DE TRANSFERENCIAS</div>
+        <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.35);border-radius:var(--r);padding:1rem">
           ${cierresTransf.length?cierresTransf.slice().reverse().map(ci=>{
             const hora=ci.ts?new Date(ci.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
-            return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #ddd6fe;font-size:13px">
+            return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(124,58,237,.25);font-size:13px">
               <div>
                 <div style="font-weight:600">${ci.fecha||''} ${hora?`<span style="color:var(--text2);font-weight:400">${hora}</span>`:''}</div>
                 <div style="font-size:11px;color:var(--text2)">${(ci.pagos||[]).length} pago${(ci.pagos||[]).length!==1?'s':''}</div>
               </div>
-              <div style="font-weight:700;color:#7c3aed">${fmtPeso(ci.totalPesos||0)}${ci.totalUSD?' · USD '+fmtPeso(ci.totalUSD):''}</div>
+              <div style="font-weight:700;color:#a78bfa">${fmtPeso(ci.totalPesos||0)}${ci.totalUSD?' · USD '+fmtPeso(ci.totalUSD):''}</div>
             </div>`;
           }).join('')
-          +`<div style="display:flex;justify-content:space-between;font-weight:800;font-size:15px;padding-top:10px;color:#7c3aed">
+          +`<div style="display:flex;justify-content:space-between;font-weight:800;font-size:15px;padding-top:10px;color:#a78bfa">
             <span>Total transferencias</span><span>${fmtPeso(sumTransfP)}${sumTransfU?' · USD '+fmtPeso(sumTransfU):''}</span>
           </div>`
           :'<div style="font-size:13px;color:var(--text2)">Sin cierres de transferencias</div>'}
@@ -4939,7 +4939,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
               <div>
                 <div style="font-weight:700;font-size:14px">${formatLoteTag(a.mz,a.lote)} — ${a.titular}${(()=>{const dc=data.find(x=>x.id===a.id);return dc&&dc.agrimensor?'<span style="font-size:11px;background:var(--card);color:var(--acc2);border:1px solid #fed7aa;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px">⚖️ Agrimensor</span>':'';})()} </div>
                 <div style="font-size:12px;color:var(--text2)">${a.fecha} · ${a.cuotas.length} cuota${a.cuotas.length>1?'s':''}</div>
-                <div style="font-size:12px;color:#0369a1;margin-top:2px">Cuotas: ${a.cuotas.map(q=>q.num).sort((x,y)=>y-x).join(', ')}</div>
+                <div style="font-size:12px;color:#5eb0ef;margin-top:2px">Cuotas: ${a.cuotas.map(q=>q.num).sort((x,y)=>y-x).join(', ')}</div>
               </div>
               <div style="font-weight:800;font-size:16px">${fmtPeso(a.total)}</div>
             </div>
@@ -6012,8 +6012,8 @@ function renderAdminDet(id){
     pagoBtn='<div style="margin-top:.75rem">'
       +'<button id="'+cid+'-btn" data-mid="'+id+'" data-cuota="'+montoCobrable(c).total+'" data-base="'+montoCobrable(c).base+'" data-adicional="'+montoCobrable(c).adicional+'" data-interes="'+_mora.interes+'" data-cid="'+cid+'" data-cur="'+cur+'" onclick="admCobrarAutoById(this)" style="width:100%;background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">✓ Cobrar</button>'
       +'<div style="display:flex;gap:4px;margin-bottom:6px">'
-      +'<button onclick="cobrarPorTransferencia(\''+id+'\')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:2px solid #a78bfa;color:#7c3aed;border-radius:var(--r);cursor:pointer;font-weight:700">🏦 Transferencia</button>'
-      +'<button onclick="admToggleAdelanto(\''+id+'\')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:1.5px solid #7dd3fc;color:#0369a1;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantos</button>'
+      +'<button onclick="cobrarPorTransferencia(\''+id+'\')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:2px solid #a78bfa;color:#a78bfa;border-radius:var(--r);cursor:pointer;font-weight:700">🏦 Transferencia</button>'
+      +'<button onclick="admToggleAdelanto(\''+id+'\')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:1.5px solid #7dd3fc;color:#5eb0ef;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantos</button>'
       +'<button data-cid="'+cid+'" onclick="admToggleInteresDif(this.dataset.cid)" style="flex:1;padding:7px 2px;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);font-size:11px;font-weight:700;cursor:pointer">⚠️ Interés dif.</button>'
       +'</div>'
       +'<div id="adelanto-selector-'+id+'" style="display:none"></div>'
@@ -6037,8 +6037,8 @@ function renderAdminDet(id){
     pagoBtn=`
     <button class="btn btn-primary" onclick="adminMarcarPago('${id}')" style="width:100%;margin-top:.5rem;padding:8px;font-size:14px;font-weight:700">✓ Cobrar</button>
     <div style="display:flex;gap:4px;margin-top:6px">
-      <button onclick="cobrarPorTransferencia('${id}')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:2px solid #a78bfa;color:#7c3aed;border-radius:var(--r);cursor:pointer;font-weight:700">🏦 Transferencia</button>
-      <button onclick="admToggleAdelanto('${id}')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:1.5px solid #7dd3fc;color:#0369a1;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantos</button>
+      <button onclick="cobrarPorTransferencia('${id}')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:2px solid #a78bfa;color:#a78bfa;border-radius:var(--r);cursor:pointer;font-weight:700">🏦 Transferencia</button>
+      <button onclick="admToggleAdelanto('${id}')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:1.5px solid #7dd3fc;color:#5eb0ef;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantos</button>
     </div>
     <div id="adelanto-selector-${id}" style="display:none"></div>
 `;
@@ -6065,12 +6065,12 @@ function renderAdminDet(id){
             <span style="font-size:14px;color:var(--text2)">Cuota ${mesEnCurso}${_mc.escalonActivo?' (pura)':''}</span>
             <span style="font-size:16px;font-weight:700">${cur}${fmtPeso(_mc.base)}</span>
           </div>
-          ${_mc.escalonActivo?`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 1rem;border-bottom:1px solid var(--border);background:#eff6ff">
+          ${_mc.escalonActivo?`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 1rem;border-bottom:1px solid var(--border);background:rgba(56,152,236,.10)">
             <div>
-              <div style="font-size:14px;font-weight:600;color:#0369a1">🪜 Escalonado</div>
-              <div style="font-size:12px;color:#0369a1">hasta la cuota ${_mc.hasta}</div>
+              <div style="font-size:14px;font-weight:600;color:#5eb0ef">🪜 Escalonado</div>
+              <div style="font-size:12px;color:#5eb0ef">hasta la cuota ${_mc.hasta}</div>
             </div>
-            <span style="font-size:16px;font-weight:700;color:#0369a1">+${cur}${fmtPeso(_mc.adicional)}</span>
+            <span style="font-size:16px;font-weight:700;color:#5eb0ef">+${cur}${fmtPeso(_mc.adicional)}</span>
           </div>`:''}
           ${_mora.interes>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 1rem;border-bottom:1px solid var(--border);background:var(--red-bg)">
             <div>
@@ -6087,7 +6087,7 @@ function renderAdminDet(id){
         </div>
       `:`<div id="det-monto-box-${id}" style="background:${c.pago?'#dcfce7':'var(--brand-light)'};border-radius:var(--r);padding:.75rem 0;margin-bottom:.4rem;border:${c.pago?'2px solid #86efac':'none'}">
           <div id="det-monto-val-${id}" class="${montoClass}" style="margin-bottom:0;color:${c.pago?'#16a34a':'var(--brand)'}">${cur}${fmtPeso(_mc.total)}</div>
-          ${_mc.escalonActivo?`<div style="font-size:11px;color:#0369a1;margin-top:2px">🪜 ${cur}${fmtPeso(_mc.base)} pura + ${cur}${fmtPeso(_mc.adicional)} escalón (hasta cuota ${_mc.hasta})</div>`:''}
+          ${_mc.escalonActivo?`<div style="font-size:11px;color:#5eb0ef;margin-top:2px">🪜 ${cur}${fmtPeso(_mc.base)} pura + ${cur}${fmtPeso(_mc.adicional)} escalón (hasta cuota ${_mc.hasta})</div>`:''}
           <div id="det-adelanto-desglose-${id}"></div>
         </div>
         <div class="det-monto-label">${c.pago?'Cuota '+mesEnCurso+' — Pagada':esPrimeraCuotaFutura(c)?'Cuota '+nombreMesPrimeraCuota(c):'Cuota '+mesEnCurso}</div>`}
@@ -6469,7 +6469,7 @@ function cobrarTodoColab(clienteId){
     +'</div>'
     +'<div style="padding:16px">'
     +'<div style="background:#faf5ff;border:1.5px solid #e9d5ff;border-radius:var(--r);padding:12px;margin-bottom:10px">'
-    +'<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px">CUOTAS EN MORA</div>'
+    +'<div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:6px">CUOTAS EN MORA</div>'
     +filasHtml
     +'<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px;padding-top:6px;border-top:1px solid #e9d5ff">'
     +'<span style="color:var(--red)">Subtotal mora</span>'
@@ -6573,7 +6573,7 @@ function cobrarTodoAdmin(clienteId){
     +'<div style="padding:16px">'
     // Desglose mora
     +'<div style="background:#faf5ff;border:1.5px solid #e9d5ff;border-radius:var(--r);padding:12px;margin-bottom:10px">'
-    +'<div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px">CUOTAS EN MORA</div>'
+    +'<div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:6px">CUOTAS EN MORA</div>'
     +filasHtml
     +'<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px;padding-top:6px;border-top:1px solid #e9d5ff">'
     +'<span style="color:var(--red)">Subtotal mora</span>'
@@ -8914,7 +8914,7 @@ function renderAdelantoSelector(id){
 
   el.innerHTML = `
     <div style="background:var(--blue-bg);border:1px solid #bae6fd;border-radius:var(--r);padding:.75rem;margin-top:6px">
-      <div style="font-size:12px;font-weight:700;color:#0369a1;margin-bottom:8px">⏭ Seleccioná cuotas a adelantar</div>
+      <div style="font-size:12px;font-weight:700;color:#5eb0ef;margin-bottom:8px">⏭ Seleccioná cuotas a adelantar</div>
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
         <input type="number" id="adelanto-cant-input" min="1" max="${totalDisp}" placeholder="Cantidad"
           style="flex:1;padding:5px 8px;border:1.5px solid #7dd3fc;border-radius:var(--r);font-size:12px"
@@ -8936,7 +8936,7 @@ function renderAdelantoSelector(id){
               cursor:${enabled?'pointer':'not-allowed'}">${n}</button>`;
         }).join('')}
         ${hayMas?`<button onclick="_adelantoVerMas+=5;renderAdelantoSelector('${id}')"
-          style="padding:4px 10px;border-radius:var(--r);font-size:12px;border:2px dashed #7dd3fc;background:var(--blue-bg);color:#0369a1;cursor:pointer">+5...</button>`:''}
+          style="padding:4px 10px;border-radius:var(--r);font-size:12px;border:2px dashed #7dd3fc;background:var(--blue-bg);color:#5eb0ef;cursor:pointer">+5...</button>`:''}
       </div>
     </div>
   `;
@@ -9026,7 +9026,7 @@ function agrCobrarDesdeLista(id){
   let msg='<div style="font-size:13px;color:var(--text2);margin-bottom:8px">'+formatLoteTag(c.mz,c.lote)+' — '+c.titular+'</div>'
     +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">'
     +'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border)"><span style="color:var(--text2);font-size:13px">Cuota '+mesActual()+(_mc.escalonActivo?' (pura)':'')+'</span><span style="font-weight:700">'+cur+fmtPeso(_mc.base)+'</span></div>'
-    +(_mc.escalonActivo?'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:#eff6ff"><span style="color:#0369a1;font-size:13px;font-weight:600">🪜 Escalonado (hasta cuota '+_mc.hasta+')</span><span style="font-weight:700;color:#0369a1">+'+cur+fmtPeso(_mc.adicional)+'</span></div>':'');
+    +(_mc.escalonActivo?'<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:rgba(56,152,236,.10)"><span style="color:#5eb0ef;font-size:13px;font-weight:600">🪜 Escalonado (hasta cuota '+_mc.hasta+')</span><span style="font-weight:700;color:#5eb0ef">+'+cur+fmtPeso(_mc.adicional)+'</span></div>':'');
   if(mora.interes) msg+='<div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--red-bg)"><span style="color:var(--red);font-size:13px;font-weight:600">⚠️ Mora ('+mora.dias+' días × 2% = '+mora.pct+'%)</span><span style="font-weight:700;color:var(--red)">+'+cur+fmtPeso(mora.interes)+'</span></div>';
   msg+='<div style="display:flex;justify-content:space-between;padding:12px;background:var(--green-bg)"><span style="font-weight:700">Total</span><span style="font-size:18px;font-weight:800;color:var(--green)">'+cur+fmtPeso(total)+'</span></div></div>';
   mostrarConfirmAdmin('Confirmar cobro',msg,()=>{
@@ -9104,8 +9104,8 @@ function colabVerCuota(id){
   el.innerHTML=`
     <button class="btn btn-primary" onclick="colabCobrarYVerde('${id}',0)" style="width:100%;margin-top:.5rem;padding:10px;font-size:14px;font-weight:700">✓ Cobrar</button>
     <div style="display:flex;gap:4px;margin-top:6px">
-    <button onclick="colabCobrarTransfer('${id}',0)" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:2px solid #a78bfa;color:#7c3aed;border-radius:var(--r);cursor:pointer;font-weight:700">🏦 Transferencia</button>
-    <button onclick="colabToggleAdelanto('${id}')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:1.5px solid #7dd3fc;color:#0369a1;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantos</button>
+    <button onclick="colabCobrarTransfer('${id}',0)" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:2px solid #a78bfa;color:#a78bfa;border-radius:var(--r);cursor:pointer;font-weight:700">🏦 Transferencia</button>
+    <button onclick="colabToggleAdelanto('${id}')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:1.5px solid #7dd3fc;color:#5eb0ef;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantos</button>
     </div>
     <div id="adelanto-selector-${id}" style="display:none"></div>`;
 }
@@ -9260,7 +9260,7 @@ function renderDetColab(id){
     pagoBtn='<div style="margin-top:.75rem">'
       +'<button id="'+cid+'-btn" data-mid="'+id+'" data-cuota="'+_mcC.total+'" data-interes="'+_mora.interes+'" data-cid="'+cid+'" data-cur="'+cur+'" onclick="toggleVerPrecioColab(this)" style="width:100%;background:var(--acc);color:#071510;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">👁 Ver precio</button>'
       +'<div id="'+cid+'-extra" style="display:none">'
-      +'<button onclick="colabToggleAdelanto(\''+id+'\')" style="width:100%;margin-bottom:6px;padding:5px;font-size:12px;background:none;border:1.5px solid #7dd3fc;color:#0369a1;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantar cuotas</button>'
+      +'<button onclick="colabToggleAdelanto(\''+id+'\')" style="width:100%;margin-bottom:6px;padding:5px;font-size:12px;background:none;border:1.5px solid #7dd3fc;color:#5eb0ef;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantar cuotas</button>'
       +'<div id="adelanto-selector-'+id+'" style="display:none"></div>'
       +'<button data-cid="'+cid+'" onclick="toggleMoraManualColab(this.dataset.cid)" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">⚠️ Cobrar con interés diferente (requiere admin)</button>'
       +'<div id="'+cid+'-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
