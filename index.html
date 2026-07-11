@@ -836,10 +836,15 @@ function montoCobrable(c){
 function calcInteresAuto(monto, desdeTs){
   const hoy=new Date();
   if(getMoraDesactivada()) return {dias:0,pct:0,interes:0};
+  // Días de CALENDARIO de atraso: el día siguiente al vencimiento ya cuenta como 1 día.
+  // Ej: vence el 10 → el 11 es 1 día (2%), el 20 son 10 días (20%).
+  const diasCalendario=(desde)=>{
+    const a=new Date(desde.getFullYear(),desde.getMonth(),desde.getDate());
+    const b=new Date(hoy.getFullYear(),hoy.getMonth(),hoy.getDate());
+    return Math.max(0,Math.round((b-a)/(1000*60*60*24)));
+  };
   if(desdeTs){
-    const desde=new Date(desdeTs);
-    const diffMs=hoy-desde;
-    const dias=Math.max(0,Math.floor(diffMs/(1000*60*60*24)));
+    const dias=diasCalendario(new Date(desdeTs));
     if(dias<=0) return {dias:0,pct:0,interes:0};
     const pct=dias*2;
     const interes=Math.round(monto*pct/100);
@@ -852,10 +857,8 @@ function calcInteresAuto(monto, desdeTs){
   if(cf&&Number(cf.mes)===mo.mesIdx&&Number(cf.anio)===mo.anio){
     return {dias:0,pct:0,interes:0};
   }
-  // Contar días desde el día 10 del mes operativo hasta hoy
-  const dia10Op=new Date(mo.anio, mo.mesIdx, 10, 23, 59, 59);
-  const diffMs=hoy-dia10Op;
-  const dias=Math.max(0,Math.floor(diffMs/(1000*60*60*24)));
+  // Días de calendario después del día 10 del mes operativo
+  const dias=diasCalendario(new Date(mo.anio, mo.mesIdx, 10));
   if(dias<=0) return {dias:0,pct:0,interes:0};
   const pct=dias*2;
   const interes=Math.round(monto*pct/100);
@@ -1110,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0328';
+  datos['_version']='v1.0329';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
