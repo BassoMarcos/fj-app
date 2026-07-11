@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0330';
+  datos['_version']='v1.0331';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2746,7 +2746,7 @@ function abrirFormCobro(id, opts){
     +desg
     +'<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--green-bg)"><span style="font-weight:800">Total cuota</span><span style="font-size:17px;font-weight:800;color:var(--green)">'+cur+fmtPeso(totalCuota)+'</span></div>'
     +'</div>'
-    +(esTotal?(()=>{const debe=Math.round(totalCuota*1.21),imp=debe-totalCuota;return '<div style="background:#f5f3ff;border:2px solid #a78bfa;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center">'
+    +(esTotal?(()=>{const debe=Math.round(totalCuota*1.21),imp=debe-totalCuota;return '<div style="background:rgba(124,58,237,.10);border:2px solid #a78bfa;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center">'
       +'<div style="font-size:11px;font-weight:700;color:#a78bfa">DEBE TRANSFERIR</div>'
       +'<div style="font-size:24px;font-weight:800;color:#a78bfa">'+cur+fmtPeso(debe)+'</div>'
       +'<div style="font-size:12px;color:#a78bfa">'+cur+fmtPeso(totalCuota)+' cuota + '+cur+fmtPeso(imp)+' impuestos 21%</div>'
@@ -4162,7 +4162,7 @@ function renderBalances(seccion){
             </div>
           </div>
         </div>
-        <div style="background:var(--surface);border:1px solid #ddd6fe;border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('fisica')">
+        <div style="background:var(--surface);border:1px solid rgba(124,58,237,.35);border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('fisica')">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
               <div style="font-size:16px;font-weight:700;margin-bottom:4px">💵 Caja Física</div>
@@ -4326,7 +4326,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
           ${(bal.transferencias||[]).slice().reverse().map(t=>`
             <div style="padding:7px 0;border-bottom:1px solid rgba(124,58,237,.25);font-size:12px">
               <div style="display:flex;justify-content:space-between">
-                <span style="font-weight:600">${formatLoteTag(t.mz,t.lote)} — ${t.titular||''} ${t.parcial?'<span style="background:#fef3c7;color:#b45309;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">PARCIAL</span>':'<span style="background:#ede9fe;color:#a78bfa;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">TOTAL</span>'}</span>
+                <span style="font-weight:600">${formatLoteTag(t.mz,t.lote)} — ${t.titular||''} ${t.parcial?'<span style="background:rgba(217,119,6,.15);color:#f0a742;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">PARCIAL</span>':'<span style="background:rgba(124,58,237,.15);color:#a78bfa;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">TOTAL</span>'}</span>
                 <span style="font-weight:800;color:#a78bfa">${t.moneda==='USD'?'USD ':''}${fmtPeso(t.totalTransferido||0)}</span>
               </div>
               <div style="font-size:11px;color:var(--text2)">${fmtPeso(t.cuotaParte||0)} cuota + ${fmtPeso(t.impuesto||0)} imp. 21% · ${t.fecha||''}${(t.rellenado||0)>0?' · ✓ rellenada '+fmtPeso(t.rellenado):''}</div>
