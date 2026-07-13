@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0331';
+  datos['_version']='v1.0332';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5444,275 +5444,150 @@ function renderStats(){
   const data=loadData();
   const bal=loadBalances();
   const cierres=bal.cierres||[];
-  const activos=data.filter(c=>c.est==='activo'&&!c.autopago&&!c.agrimensor&&!esPrimeraCuotaFutura(c));
-  const pagados=activos.filter(c=>c.pago).length;
-  const pendientes=activos.filter(c=>!c.pago).length;
-  const pct=activos.length?Math.round(pagados/activos.length*100):0;
+  const mesOp=mesActual();
+  const anioOp=(()=>{const cf=loadCierreFinal();return cf?((Number(cf.mes)===11)?Number(cf.anio)+1:Number(cf.anio)):new Date().getFullYear();})();
 
+  // ── Universos ──
+  const cobrables=data.filter(c=>c.est==='activo'&&!c.autopago&&!esAgrimensor(c.id)&&!esPrimeraCuotaFutura(c));
+  const agrim=data.filter(c=>c.est==='activo'&&esAgrimensor(c.id)&&!esPrimeraCuotaFutura(c));
+  const pagados=cobrables.filter(c=>c.pago);
+  const pendientes=cobrables.filter(c=>!c.pago);
+  const pct=cobrables.length?Math.round(pagados.length/cobrables.length*100):0;
+  const sum=(arr)=>arr.filter(c=>c.moneda!=='USD').reduce((s,c)=>s+montoCobrable(c).total,0);
+  const sumU=(arr)=>arr.filter(c=>c.moneda==='USD').reduce((s,c)=>s+montoCobrable(c).total,0);
+  const cobradoARS=sum(pagados), pendARS=sum(pendientes);
+  const cobradoUSD=sumU(pagados), pendUSD=sumU(pendientes);
+  const agrPag=agrim.filter(c=>c.pago).length;
+
+  const card=(inner,extra)=>'<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;'+(extra||'')+'">'+inner+'</div>';
+
+  let html='<div style="max-width:1000px;margin:0 auto">';
+
+  // ── Encabezado ──
+  html+='<div style="margin-bottom:1rem">';
+  html+='<div style="font-size:18px;font-weight:800">📅 '+mesOp.toUpperCase()+' '+anioOp+' — Cobranza del mes</div>';
+  html+='<div style="font-size:12px;color:var(--text2)">Sobre '+cobrables.length+' lotes cobrables (sin agrimensores, préstamos, finalizados ni 1ª cuota futura)</div>';
+  html+='</div>';
+
+  // ── Barra grande de progreso ──
+  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:12px">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">';
+  html+='<span style="font-size:26px;font-weight:800;color:'+(pct>=70?'var(--green)':pct>=40?'#d97706':'var(--red)')+'">'+pct+'% cobrado</span>';
+  html+='<span style="font-size:14px;color:var(--text2)"><b style="color:var(--green)">'+pagados.length+'</b> pagados · <b style="color:#d97706">'+pendientes.length+'</b> pendientes</span>';
+  html+='</div>';
+  html+='<div style="background:var(--border2);border-radius:99px;height:18px;overflow:hidden"><div style="background:linear-gradient(90deg,#16a34a,#4ade80);width:'+pct+'%;height:100%;border-radius:99px;transition:width .5s"></div></div>';
+  html+='</div>';
+
+  // ── Columnas: plata cobrada / pendiente / agrimensores ──
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:1.25rem">';
+  html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">💰 COBRADO (PESOS)</div><div style="font-size:22px;font-weight:800;color:var(--green)">'+fmtPeso(cobradoARS)+'</div>'+(cobradoUSD?'<div style="font-size:13px;font-weight:700;color:var(--green)">+ USD '+fmtPeso(cobradoUSD).replace('$','')+'</div>':''),'text-align:center');
+  html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">⏳ FALTA COBRAR</div><div style="font-size:22px;font-weight:800;color:#d97706">'+fmtPeso(pendARS)+'</div>'+(pendUSD?'<div style="font-size:13px;font-weight:700;color:#d97706">+ USD '+fmtPeso(pendUSD).replace('$','')+'</div>':''),'text-align:center');
+  html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">📐 AGRIMENSORES</div><div style="font-size:22px;font-weight:800">'+agrPag+'<span style="font-size:14px;color:var(--text2)">/'+agrim.length+'</span></div><div style="font-size:11px;color:var(--text2)">pagados este mes</div>','text-align:center');
+  html+='</div>';
+
+  // ── Por etapa: tarjetas en columnas, clickeables ──
   const etapas=['Etapa 1','Etapa 2','Etapa 3','Etapa 4'];
-  const etapaStats=etapas.map(e=>{
-    const cl=activos.filter(c=>getEtapa(c.mz)===e);
-    const pag=cl.filter(c=>c.pago).length;
-    return {etapa:e,total:cl.length,pagados:pag,pct:cl.length?Math.round(pag/cl.length*100):0};
-  }).filter(e=>e.total>0);
+  html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:8px">POR ETAPA <span style="font-weight:400;font-size:11px">(tocá una para ver por manzana)</span></div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:6px">';
+  etapas.forEach((e,i)=>{
+    const cl=cobrables.filter(c=>getEtapa(c.mz)===e);
+    if(!cl.length) return;
+    const pag=cl.filter(c=>c.pago);
+    const p=Math.round(pag.length/cl.length*100);
+    const $c=sum(pag), $p=sum(cl.filter(c=>!c.pago));
+    html+='<div onclick="statsToggleEtapa('+i+')" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;cursor:pointer">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-weight:800">'+e+'</span><span style="font-size:20px;font-weight:800;color:'+(p>=70?'var(--green)':p>=40?'#d97706':'var(--red)')+'">'+p+'%</span></div>';
+    html+='<div style="background:var(--border2);border-radius:99px;height:10px;overflow:hidden;margin-bottom:8px"><div style="background:#4f46e5;width:'+p+'%;height:100%;border-radius:99px"></div></div>';
+    html+='<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)"><span>'+pag.length+'/'+cl.length+' lotes</span><span style="color:var(--green);font-weight:700">'+fmtPeso($c)+'</span></div>';
+    html+='<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>pendiente</span><span style="color:#d97706;font-weight:700">'+fmtPeso($p)+'</span></div>';
+    html+='<div id="stats-etapa-'+i+'" style="display:none;margin-top:8px;border-top:1px dashed var(--border);padding-top:6px">';
+    // por manzana
+    const mzs={};
+    cl.forEach(c=>{const mz=String(c.mz).toUpperCase();if(!mzs[mz])mzs[mz]={t:0,p:0};mzs[mz].t++;if(c.pago)mzs[mz].p++;});
+    Object.keys(mzs).sort().forEach(mz=>{
+      const m=mzs[mz];const pp=Math.round(m.p/m.t*100);
+      html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px">';
+      html+='<span style="width:70px;color:var(--text2)">'+mz+'</span>';
+      html+='<div style="flex:1;background:var(--border2);border-radius:99px;height:6px;overflow:hidden"><div style="background:#4f46e5;width:'+pp+'%;height:100%"></div></div>';
+      html+='<span style="width:44px;text-align:right;font-weight:700">'+m.p+'/'+m.t+'</span></div>';
+    });
+    html+='</div></div>';
+  });
+  html+='</div>';
 
+  // ── Atención ──
+  const cuotasMoraHist=loadCuotasMora();
+  const morasImpagas=cuotasMoraHist.filter(m=>!m.pagada);
+  const transfPend=(bal.transferencias||[]).filter(t=>(t.rellenado||0)<(t.cuotaParte||0));
+  const alertas=[];
+  if(morasImpagas.length){
+    const totM=morasImpagas.reduce((s,m)=>s+(m.monto||0),0);
+    alertas.push('⚠️ <b>'+morasImpagas.length+' cuota'+(morasImpagas.length>1?'s':'')+' en mora</b> de meses anteriores sin cobrar — '+fmtPeso(totM)+' (+ intereses)');
+  }
+  const conMoraMes=pendientes.filter(c=>calcInteresAuto(montoCobrable(c).total).interes>0);
+  if(conMoraMes.length) alertas.push('🕐 <b>'+conMoraMes.length+' lote'+(conMoraMes.length>1?'s':'')+'</b> del mes en curso ya '+(conMoraMes.length>1?'acumulan':'acumula')+' interés por atraso');
+  if(transfPend.length){
+    const totT=transfPend.reduce((s,t)=>s+Math.max(0,(t.cuotaParte||0)-(t.rellenado||0)),0);
+    alertas.push('🏦 <b>'+transfPend.length+' transferencia'+(transfPend.length>1?'s':'')+'</b> sin rellenar — '+fmtPeso(totT)+' fuera de la caja física');
+  }
+  if(alertas.length){
+    html+='<div style="background:var(--surface);border:1.5px solid #d97706;border-radius:12px;padding:1rem;margin:1.25rem 0">';
+    html+='<div style="font-size:13px;font-weight:800;color:#d97706;margin-bottom:8px">⚠️ ATENCIÓN</div>';
+    alertas.forEach(a=>html+='<div style="font-size:13px;padding:4px 0;border-bottom:1px dashed var(--border)">'+a+'</div>');
+    html+='</div>';
+  }
+
+  // ── Recaudación histórica (cierres) ──
   const monthMap={};
   cierres.forEach(ci=>{
     if(!ci.ts) return;
     const d=new Date(ci.ts);
     const key=d.getFullYear()+'-'+(String(d.getMonth()+1).padStart(2,'0'));
-    const label=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]+' '+d.getFullYear();
+    const label=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]+' '+String(d.getFullYear()).slice(2);
     if(!monthMap[key]) monthMap[key]={label,pesos:0,usd:0,pagos:0};
     if(ci.moneda==='USD') monthMap[key].usd+=(ci.total||0);
+    else if(ci.moneda==='TRANSF'){monthMap[key].pesos+=(ci.totalPesos||0);monthMap[key].usd+=(ci.totalUSD||0);}
     else monthMap[key].pesos+=(ci.total||0);
     monthMap[key].pagos+=(ci.pagos||[]).length;
   });
   const months=Object.keys(monthMap).sort();
-  const maxPesos=Math.max(...months.map(k=>monthMap[k].pesos),1);
-
-  let html='';
-  html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1.25rem">';
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.875rem;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text2)">PAGADOS</div><div style="font-size:28px;font-weight:800;color:var(--green)">'+pagados+'</div><div style="font-size:11px;color:var(--text2)">de '+activos.length+'</div></div>';
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.875rem;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text2)">PENDIENTES</div><div style="font-size:28px;font-weight:800;color:#d97706">'+pendientes+'</div></div>';
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.875rem;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text2)">COBRANZA</div><div style="font-size:28px;font-weight:800;color:#4f46e5">'+pct+'%</div></div>';
-  html+='</div>';
-
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.25rem">';
-  html+='<div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text2)">POR ETAPA</div>';
-  etapaStats.forEach(e=>{
-    html+='<div style="margin-bottom:10px">';
-    html+='<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="font-weight:600">'+e.etapa+'</span><span style="color:var(--text2)">'+e.pagados+'/'+e.total+' — <b style="color:#4f46e5">'+e.pct+'%</b></span></div>';
-    html+='<div style="background:var(--border2);border-radius:99px;height:8px;overflow:hidden"><div style="background:#4f46e5;width:'+e.pct+'%;height:100%;border-radius:99px"></div></div>';
-    html+='</div>';
-  });
-  html+='</div>';
-
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem">';
-  html+='<div style="font-size:13px;font-weight:700;margin-bottom:1rem;color:var(--text2)">RECAUDACIÓN POR MES (PESOS)</div>';
+  html+='<div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;align-items:stretch">';
+  // gráfico pesos
+  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem">';
+  html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:10px">📊 RECAUDACIÓN POR MES (PESOS)</div>';
   if(months.length){
+    const maxP=Math.max(...months.map(k=>monthMap[k].pesos),1);
     html+='<div style="display:flex;gap:8px;align-items:flex-end;overflow-x:auto;padding-bottom:4px">';
     months.forEach(k=>{
       const m=monthMap[k];
-      const h=Math.round((m.pesos/maxPesos)*120);
-      html+='<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:50px">';
-      html+='<div style="font-size:10px;font-weight:600;color:var(--text2);text-align:center">'+fmtPeso(m.pesos).replace('$','')+'</div>';
-      html+='<div style="width:100%;background:var(--border2);border-radius:4px;height:120px;display:flex;align-items:flex-end"><div style="width:100%;background:#4f46e5;height:'+h+'px;border-radius:4px"></div></div>';
-      html+='<div style="font-size:10px;color:var(--text2);text-align:center">'+m.label+'</div>';
-      html+='<div style="font-size:10px;color:var(--text2)">'+m.pagos+' pago'+(m.pagos!==1?'s':'')+'</div>';
+      const h=Math.max(4,Math.round((m.pesos/maxP)*110));
+      html+='<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:52px">';
+      html+='<div style="font-size:9px;font-weight:700;color:var(--text2)">'+(m.pesos>=1e6?(m.pesos/1e6).toFixed(1)+'M':fmtPeso(m.pesos).replace('$',''))+'</div>';
+      html+='<div style="width:100%;height:110px;display:flex;align-items:flex-end"><div style="width:100%;background:linear-gradient(180deg,#6366f1,#4f46e5);height:'+h+'px;border-radius:6px 6px 2px 2px"></div></div>';
+      html+='<div style="font-size:10px;font-weight:700;color:var(--text2)">'+m.label+'</div>';
+      html+='<div style="font-size:9px;color:var(--text3)">'+m.pagos+' pagos</div>';
       html+='</div>';
     });
     html+='</div>';
-  } else {
-    html+='<div style="color:var(--text2);font-size:13px;padding:1rem;text-align:center">Sin cierres registrados aún — los datos aparecerán cuando cierres cajas</div>';
-  }
+  } else html+='<div style="color:var(--text2);font-size:13px;padding:1rem;text-align:center">Sin cierres registrados aún</div>';
+  html+='</div>';
+  // columna USD + resumen
+  html+='<div style="display:flex;flex-direction:column;gap:10px">';
+  const totUsdHist=months.reduce((s,k)=>s+monthMap[k].usd,0);
+  const totPesosHist=months.reduce((s,k)=>s+monthMap[k].pesos,0);
+  html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">💵 USD HISTÓRICO</div><div style="font-size:20px;font-weight:800;color:var(--green)">USD '+fmtPeso(totUsdHist).replace('$','')+'</div>','text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center');
+  html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">💰 PESOS HISTÓRICO</div><div style="font-size:20px;font-weight:800;color:var(--green)">'+fmtPeso(totPesosHist)+'</div><div style="font-size:10px;color:var(--text3)">'+months.length+' mes'+(months.length!==1?'es':'')+' con cierres</div>','text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center');
+  html+='</div>';
   html+='</div>';
 
-  // ── Evolución mensual mejorada ──
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-top:1.25rem">';
-  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
-  html+='<div style="font-size:13px;font-weight:700;color:var(--text2)">📊 EVOLUCIÓN MENSUAL</div>';
-  html+='<div style="display:flex;gap:6px">';
-  html+='<button id="stats-toggle-montos" onclick="statsToggleView(&quot;montos&quot;)" style="padding:3px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;background:#4f46e5;color:#fff;border:none">$ Montos</button>';
-  html+='<button id="stats-toggle-clientes" onclick="statsToggleView(&quot;clientes&quot;)" style="padding:3px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;background:var(--border);color:var(--text);border:none">👥 Clientes</button>';
-  html+='</div></div>';
-
-  // Construir datos de mora por mes desde cuotasMora
-  const cuotasMoraHist=loadCuotasMora();
-  const moraMap={};
-  cuotasMoraHist.forEach(cm=>{
-    const key=(cm.anio||new Date().getFullYear())+'-'+(String((cm.mes||0)+1).padStart(2,'0'));
-    if(!moraMap[key]) moraMap[key]={count:0,monto:0};
-    moraMap[key].count++;
-    moraMap[key].monto+=(cm.monto||0);
-  });
-
-  if(months.length){
-    const maxPesos2=Math.max(...months.map(k=>monthMap[k].pesos),1);
-    const maxPagos=Math.max(...months.map(k=>monthMap[k].pagos),1);
-    html+='<div id="stats-chart-montos" style="display:flex;gap:6px;align-items:flex-end;overflow-x:auto;padding-bottom:4px">';
-    months.forEach(k=>{
-      const m=monthMap[k];
-      const mora=moraMap[k]||{count:0,monto:0};
-      const hPesos=Math.round((m.pesos/maxPesos2)*110);
-      const hMora=mora.monto>0?Math.round((mora.monto/maxPesos2)*110):0;
-      html+='<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:55px">';
-      html+='<div style="font-size:9px;font-weight:600;color:var(--green);text-align:center">'+fmtPeso(m.pesos).replace('$','')+'</div>';
-      html+='<div style="width:100%;display:flex;gap:2px;align-items:flex-end;height:110px">';
-      html+='<div style="flex:1;background:var(--border);border-radius:4px 4px 0 0;height:110px;display:flex;align-items:flex-end"><div style="width:100%;background:#16a34a;height:'+hPesos+'px;border-radius:4px 4px 0 0"></div></div>';
-      html+=(hMora>0?'<div style="flex:1;background:var(--border);border-radius:4px 4px 0 0;height:110px;display:flex;align-items:flex-end"><div style="width:100%;background:#dc2626;height:'+hMora+'px;border-radius:4px 4px 0 0"></div></div>':'<div style="flex:1"></div>');
-      html+='</div>';
-      html+='<div style="font-size:9px;color:var(--text2);text-align:center">'+m.label+'</div>';
-      html+='</div>';
-    });
-    html+='</div>';
-    html+='<div id="stats-chart-clientes" style="display:none;flex-gap:6px;align-items:flex-end;overflow-x:auto;padding-bottom:4px">';
-    html+='<div style="display:flex;gap:6px;align-items:flex-end">';
-    months.forEach(k=>{
-      const m=monthMap[k];
-      const mora=moraMap[k]||{count:0,monto:0};
-      const hPag=Math.round((m.pagos/maxPagos)*110);
-      const hMoraC=mora.count>0?Math.round((mora.count/maxPagos)*110):0;
-      html+='<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:55px">';
-      html+='<div style="font-size:9px;font-weight:600;color:var(--green);text-align:center">'+m.pagos+' pag.</div>';
-      html+='<div style="width:100%;display:flex;gap:2px;align-items:flex-end;height:110px">';
-      html+='<div style="flex:1;background:var(--border);border-radius:4px 4px 0 0;height:110px;display:flex;align-items:flex-end"><div style="width:100%;background:#16a34a;height:'+hPag+'px;border-radius:4px 4px 0 0"></div></div>';
-      html+=(hMoraC>0?'<div style="flex:1;background:var(--border);border-radius:4px 4px 0 0;height:110px;display:flex;align-items:flex-end"><div style="width:100%;background:#dc2626;height:'+hMoraC+'px;border-radius:4px 4px 0 0"></div></div>':'<div style="flex:1"></div>');
-      html+='</div>';
-      html+='<div style="font-size:9px;color:var(--text2);text-align:center">'+m.label+'</div>';
-      html+='</div>';
-    });
-    html+='</div></div>';
-    html+='<div style="display:flex;gap:12px;margin-top:8px;font-size:11px">';
-    html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;background:#16a34a;border-radius:2px"></div><span style="color:var(--text2)">Cobrado</span></div>';
-    html+='<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;background:#dc2626;border-radius:2px"></div><span style="color:var(--text2)">Mora</span></div>';
-    html+='</div>';
-  } else {
-    html+='<div style="color:var(--text2);font-size:13px;padding:1rem;text-align:center">Sin cierres registrados aún</div>';
-  }
   html+='</div>';
+  el.innerHTML=html;
+}
 
-  // ── Reporte de morosidad ──
-  const cuotasMoraActivas=loadCuotasMora().filter(cm=>!cm.pagada);
-  if(cuotasMoraActivas.length){
-    // Agrupar por cliente
-    const clienteMoraMap={};
-    cuotasMoraActivas.forEach(cm=>{
-      if(!clienteMoraMap[cm.clienteId]) clienteMoraMap[cm.clienteId]={
-        id:cm.clienteId, mz:cm.mz, lote:cm.lote, titular:cm.titular,
-        moneda:cm.moneda||'ARS', cuotas:[], totalDeuda:0, totalInteres:0
-      };
-      const mor=calcInteresMoraDesde(cm.monto,cm.anio,cm.mes);
-      clienteMoraMap[cm.clienteId].cuotas.push(cm);
-      clienteMoraMap[cm.clienteId].totalDeuda+=(cm.monto||0);
-      clienteMoraMap[cm.clienteId].totalInteres+=mor.interes;
-    });
-    const _etapaOrder={'Etapa 1':1,'Etapa 2':2,'Etapa 3':3,'Etapa 4':4,'Otra':5};
-    const clientesMora=Object.values(clienteMoraMap).sort((a,b)=>{
-      const ea=_etapaOrder[getEtapa(a.mz)]||9;
-      const eb=_etapaOrder[getEtapa(b.mz)]||9;
-      if(ea!==eb) return ea-eb;
-      // Dentro de la etapa, ordenar por manzana y lote numéricamente
-      const mzA=parseInt((String(a.mz||'')).replace(/[^0-9]/g,''))||0;
-      const mzB=parseInt((String(b.mz||'')).replace(/[^0-9]/g,''))||0;
-      if(mzA!==mzB) return mzA-mzB;
-      const lA=parseInt((String(a.lote||'')).replace(/[^0-9]/g,''))||0;
-      const lB=parseInt((String(b.lote||'')).replace(/[^0-9]/g,''))||0;
-      return lA-lB;
-    });
-    const grandTotal=clientesMora.reduce((s,c)=>s+c.totalDeuda+c.totalInteres,0);
-
-    html+='<div style="background:var(--surface);border:1.5px solid #fca5a5;border-radius:var(--r);padding:1rem;margin-top:1.25rem">';
-    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
-    html+='<div style="font-size:13px;font-weight:700;color:var(--red)">⚠️ REPORTE DE MOROSIDAD</div>';
-    html+='<div style="font-size:12px;font-weight:700;color:var(--red)">'+clientesMora.length+' clientes · '+fmtPeso(grandTotal)+'</div>';
-    html+='</div>';
-    html+='<div style="max-height:320px;overflow-y:auto;margin-bottom:4px">';
-    clientesMora.forEach(cl=>{
-      const total=cl.totalDeuda+cl.totalInteres;
-      const meses=cl.cuotas.length;
-      html+='<div style="background:var(--red-bg);border:1px solid var(--red-border);border-radius:8px;padding:10px 12px;margin-bottom:8px">';
-      html+='<div style="display:flex;justify-content:space-between;align-items:center">';
-      html+='<div style="flex:1;min-width:0">';
-      html+='<div style="font-size:13px;font-weight:700"><span style="color:var(--acc2)">'+formatLoteTag(cl.mz,cl.lote)+'</span> <span style="color:var(--text)">'+cl.titular+'</span></div>';
-      html+='<div style="display:flex;gap:8px;margin-top:3px;font-size:11px;color:var(--red)">';
-      html+='<span>'+meses+' mes'+(meses>1?'es':'')+' en mora</span>';
-      html+='<span>·</span><span>Deuda: '+fmtPeso(cl.totalDeuda)+'</span>';
-      html+='<span>·</span><span>Interés: +'+fmtPeso(cl.totalInteres)+'</span>';
-      html+='</div></div>';
-      html+='<div style="text-align:right;flex-shrink:0;margin-left:8px">';
-      html+='<div style="font-size:16px;font-weight:900;color:var(--red)">'+fmtPeso(total)+'</div>';
-      html+='<button onclick="adminTab(\'lista\');setTimeout(()=>mostrarAdminDet(\''+cl.id+'\'),80)" style="font-size:11px;padding:3px 8px;background:#dc2626;color:#fff;border:none;border-radius:5px;cursor:pointer;margin-top:3px">Ver →</button>';
-      html+='</div></div></div>';
-    });
-    html+='</div>';
-    const grandTotalARS=clientesMora.filter(c=>c.moneda!=='USD').reduce((s,c)=>s+c.totalDeuda+c.totalInteres,0);
-    const grandTotalUSD=clientesMora.filter(c=>c.moneda==='USD').reduce((s,c)=>s+c.totalDeuda+c.totalInteres,0);
-    html+='<div style="border-top:2px solid #fca5a5;margin-top:4px;padding:10px 4px 0">';
-    html+='<div style="display:flex;justify-content:space-between;font-size:14px;font-weight:800">';
-    html+='<span>TOTAL MORA</span><div style="text-align:right">';
-    if(grandTotalARS>0) html+='<div style="color:var(--red)">'+fmtPeso(grandTotalARS)+'</div>';
-    if(grandTotalUSD>0) html+='<div style="color:var(--red)">USD '+fmtPeso(grandTotalUSD)+'</div>';
-    html+='</div></div></div>';
-    html+='</div>';
-  }
-
-  // Agrimensores block
-  const agrimensores=data.filter(c=>c.est==='activo'&&c.agrimensor);
-  if(agrimensores.length){
-    const agrPag=agrimensores.filter(c=>c.pago).length;
-    const agrPend=agrimensores.length-agrPag;
-    html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-top:1.25rem">';
-    html+='<div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text2)">AGRIMENSORES ('+agrimensores.length+')</div>';
-    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
-    html+='<div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:var(--r);padding:.75rem;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--green)">PAGADOS</div><div style="font-size:24px;font-weight:800;color:var(--green)">'+agrPag+'</div></div>';
-    html+='<div style="background:var(--card);border:1px solid var(--border2);border-radius:var(--r);padding:.75rem;text-align:center"><div style="font-size:11px;font-weight:700;color:#d97706">PENDIENTES</div><div style="font-size:24px;font-weight:800;color:#d97706">'+agrPend+'</div></div>';
-    html+='</div>';
-    if(agrPend>0){
-      html+='<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">Sin pagar:</div>';
-      const etapaOrder={'M1':1,'M2':2,'M3':3,'M4':4,'ETAPA 2':5,'ETAPA 3':6,'E4-M1':7,'E4-M3':8,'E4-M4':9,'E4-M5':10};
-      const agrPend2=agrimensores.filter(c=>!c.pago).sort((a,b)=>{
-        const ea=etapaOrder[a.mz]||99, eb=etapaOrder[b.mz]||99;
-        if(ea!==eb)return ea-eb;
-        const n=(s)=>{const ss=String(s||'');const m=ss.match(/^(\d+)(.*)/);return m?[+m[1],m[2]]:[999,ss];};
-        const[an,al]=n(a.lote);const[bn,bl]=n(b.lote);
-        return an!==bn?an-bn:al.localeCompare(bl);
-      });
-      let lastMzSt=null;
-      agrPend2.forEach(c=>{
-        if(c.mz!==lastMzSt){
-          html+='<div style="font-size:10px;font-weight:700;color:var(--acc2);text-transform:uppercase;padding:6px 0 2px;letter-spacing:.05em">'+c.mz+'</div>';
-          lastMzSt=c.mz;
-        }
-        const etapa=getEtapa(c.mz);
-        const sinMz=['Etapa 2','Etapa 3'].includes(etapa);
-        const mzClean=c.mz.replace(/^E\d+-/,'');
-        const loteTag=sinMz?etapa+' L.'+c.lote:mzClean+' L.'+c.lote;
-        html+='<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)">';
-        html+='<span style="font-weight:600">'+loteTag+'</span>';
-        html+='<span style="color:var(--text2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.titular+'</span>';
-        html+='</div>';
-      });
-    }
-    html+='</div>';
-  }
-
-  // ── Lotes que terminaron ────────────────────────────────────────────────
-  // Resumen lotes finalizados
-  const finalizadosTodos = data.filter(c=>c.est==='finalizado');
-  const finNormal = finalizadosTodos.filter(c=>!c.autopago).length;
-  const finPrestamo = finalizadosTodos.filter(c=>c.autopago).length;
-  const certsAll = loadLotesCerts();
-  const nCertPend = finalizadosTodos.filter(c=>!certsAll[c.id]?.certEntregado).length;
-  const nCertOk = finalizadosTodos.filter(c=>certsAll[c.id]?.certEntregado).length;
-  const nUrgAll = Object.values(certsAll).filter(v=>v.urgente).length;
-
-  html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-top:1.25rem">';
-  html += '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px">🏁 RESUMEN FINALIZADOS</div>';
-  html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:0">';
-  html += `<div style="text-align:center;padding:8px 4px"><div style="font-size:20px;font-weight:800">${finNormal}</div><div style="font-size:10px;color:var(--text2)">Terminaron</div></div>`;
-  html += `<div style="text-align:center;padding:8px 4px"><div style="font-size:20px;font-weight:800;color:#d97706">${finPrestamo}</div><div style="font-size:10px;color:var(--text2)">Préstamos</div></div>`;
-  html += `<div style="text-align:center;padding:8px 4px"><div style="font-size:20px;font-weight:800;color:#dc2626">${nUrgAll}</div><div style="font-size:10px;color:var(--text2)">Urgentes</div></div>`;
-  html += '</div>';
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">';
-  html += `<div style="text-align:center;padding:6px 4px"><div style="font-size:18px;font-weight:800;color:#f59e0b">${nCertPend}</div><div style="font-size:10px;color:var(--text2)">Sin cert. entregado</div></div>`;
-  html += `<div style="text-align:center;padding:6px 4px"><div style="font-size:18px;font-weight:800;color:#16a34a">${nCertOk}</div><div style="font-size:10px;color:var(--text2)">Cert. entregado</div></div>`;
-  html += '</div></div>';
-
-  // Botón acceso a lotes terminados
-  const nFin = data.filter(c=>c.est==='finalizado').length;
-  const nUrg = Object.values(loadLotesCerts()).filter(v=>v.urgente).length;
-  html += `<div style="margin-top:1.25rem">
-    <button onclick="adminTab('terminados')" style="width:100%;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:14px;font-weight:700">🏁 Lotes que terminaron</span>
-      <span style="display:flex;gap:8px;align-items:center">
-        ${nUrg?`<span style="background:#dc2626;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px">⚡ ${nUrg} urgente${nUrg>1?'s':''}</span>`:''}
-        <span style="background:var(--border);color:var(--text2);font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px">${nFin}</span>
-        <span style="color:var(--text2)">›</span>
-      </span>
-    </button>
-  </div>`;
-
-    el.innerHTML=html;
+function statsToggleEtapa(i){
+  event.stopPropagation();
+  const d=document.getElementById('stats-etapa-'+i);
+  if(d) d.style.display=d.style.display==='none'?'block':'none';
 }
 
 function renderLotesTerminados(origen){
