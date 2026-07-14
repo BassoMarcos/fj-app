@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0332';
+  datos['_version']='v1.0333';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5503,14 +5503,28 @@ function renderStats(){
     html+='<div id="stats-etapa-'+i+'" style="display:none;margin-top:8px;border-top:1px dashed var(--border);padding-top:6px">';
     // por manzana
     const mzs={};
-    cl.forEach(c=>{const mz=String(c.mz).toUpperCase();if(!mzs[mz])mzs[mz]={t:0,p:0};mzs[mz].t++;if(c.pago)mzs[mz].p++;});
+    cl.forEach(c=>{
+      const mz=String(c.mz).toUpperCase();
+      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[]};
+      mzs[mz].t++;
+      if(c.pago)mzs[mz].p++;
+      else mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,mora:calcInteresAuto(montoCobrable(c).total).interes>0});
+    });
     Object.keys(mzs).sort().forEach(mz=>{
       const m=mzs[mz];const pp=Math.round(m.p/m.t*100);
-      html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px">';
+      html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:11px">';
       html+='<span style="width:70px;color:var(--text2)">'+mz+'</span>';
       html+='<div style="flex:1;background:var(--border2);border-radius:99px;height:6px;overflow:hidden"><div style="background:#4f46e5;width:'+pp+'%;height:100%"></div></div>';
       html+='<span style="width:44px;text-align:right;font-weight:700">'+m.p+'/'+m.t+'</span></div>';
+      if(m.pend.length){
+        html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin:0 0 8px 76px">';
+        m.pend.forEach(p=>{
+          html+='<span onclick="event.stopPropagation();mostrarAdminDet(\''+p.id+'\')" style="background:'+(p.mora?'var(--red-bg)':'rgba(217,119,6,.12)')+';color:'+(p.mora?'var(--red)':'#d97706')+';border:1px solid '+(p.mora?'#fca5a5':'rgba(217,119,6,.4)')+';padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700;cursor:pointer">'+p.lote+(p.mora?' ⚠':'')+'</span>';
+        });
+        html+='</div>';
+      }
     });
+    html+='<div style="font-size:10px;color:var(--text3);margin-top:4px">Los lotes marcados son los que aún no pagaron '+mesOp+'. ⚠ = ya acumulan interés. Tocá uno para abrirlo.</div>';
     html+='</div></div>';
   });
   html+='</div>';
