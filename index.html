@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0335';
+  datos['_version']='v1.0336';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2854,11 +2854,25 @@ function fcConfirmar(){
     (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:x.totalCuota,transferido:t,entrego:e,vuelto:v,efectivo:e-v,dif,ts,fecha});
     saveBalances(bal);
   }
-  if(dif!==0){
+  // Confirmación final en UNA escritura: reasegurar pago marcado + SAF/SEC
+  // (evita que un eco de sincronización de Firebase pise el tilde de pagado)
+  {
     const data=loadData();const c2=data.find(cl=>cl.id===id);
-    if(c2){c2.saldo=(Number(c2.saldo)||0)+dif;saveData(data);}
-    addHist('pago',(dif>0?'SAF ':'SEC ')+fmtPeso(Math.abs(dif))+' — '+c.mz+' Lote '+c.lote+' (cargado al saldo)',id);
+    if(c2){
+      c2.pago=true; c2.pagoTs=ts;
+      if(dif!==0) c2.saldo=(Number(c2.saldo)||0)+dif;
+      saveData(data);
+      setPagoState(id,true,ts);
+    }
+    if(dif!==0) addHist('pago',(dif>0?'SAF ':'SEC ')+fmtPeso(Math.abs(dif))+' — '+c.mz+' Lote '+c.lote+' (cargado al saldo)',id);
   }
+  // Reaseguro tardío por si llega un eco viejo justo después
+  setTimeout(()=>{
+    try{
+      const d2=loadData();const c3=d2.find(cl=>cl.id===id);
+      if(c3&&!c3.pago){c3.pago=true;c3.pagoTs=ts;saveData(d2);setPagoState(id,true,ts);}
+    }catch(e){}
+  },4000);
   cerrarFormCobro();
   if(x.ctx==='colab'){ if(typeof renderDetColab==='function') renderDetColab(id); }
   else { if(typeof renderAdminDet==='function') renderAdminDet(id); if(typeof renderAdminTable==='function') renderAdminTable(); }
