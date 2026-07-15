@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0333';
+  datos['_version']='v1.0334';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -4747,10 +4747,27 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
     const agrPend=agrAdelantos.filter(a=>a.estado==='pendiente');
     const agrApro=agrAdelantos.filter(a=>a.estado==='aprobado');
 
-    const renderPagos=(list)=>list.length?list.slice().reverse().map(p=>{
+    const ordenAgr=window._agrOrden||'fecha';
+    const etapaOrder={'M1':1,'M2':2,'M3':3,'M4':4,'ETAPA 2':5,'ETAPA 3':6,'E4-M1':7,'E4-M3':8,'E4-M4':9,'E4-M5':10};
+    const ordenar=(list)=>{
+      const arr=list.slice();
+      if(ordenAgr==='lote'){
+        arr.sort((a,b)=>{
+          const ca=data.find(x=>x.id===a.id)||{},cb=data.find(x=>x.id===b.id)||{};
+          const ea=etapaOrder[ca.mz]||99, eb=etapaOrder[cb.mz]||99;
+          if(ea!==eb)return ea-eb;
+          const n=(s)=>{const m=String(s||'').match(/^(\d+)(.*)/);return m?[+m[1],m[2]]:[999,String(s||'')];};
+          const[an,al]=n(ca.lote);const[bn,bl]=n(cb.lote);
+          return an!==bn?an-bn:al.localeCompare(bl);
+        });
+      } else arr.reverse(); // fecha: más reciente arriba
+      return arr;
+    };
+    const renderPagos=(list)=>list.length?ordenar(list).map(p=>{
       const c=data.find(x=>x.id===p.id)||{mz:'?',lote:'?',titular:p.id};
+      const hora=p.ts?new Date(p.ts).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
       return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
-        <span>${formatLoteTag(c.mz,c.lote)} — ${c.titular}</span>
+        <span>${formatLoteTag(c.mz,c.lote)} — ${c.titular}${hora?' <span style="font-size:10px;color:var(--text3)">'+hora+'</span>':''}</span>
         <span style="font-weight:600">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.monto||0)}</span>
       </div>`;
     }).join(''):'<div style="font-size:13px;color:var(--text2)">Sin pagos</div>';
@@ -4758,7 +4775,11 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
     el.innerHTML=backBtn+`
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
         <div style="font-size:17px;font-weight:700">⚖️ Agrimensores</div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <select onchange="window._agrOrden=this.value;renderBalances('agrimensores')" style="background:var(--card);border:1px solid #fed7aa;color:var(--acc2);padding:6px 8px;border-radius:var(--r);font-size:12px;cursor:pointer">
+            <option value="fecha" ${(window._agrOrden||'fecha')==='fecha'?'selected':''}>Orden: fecha de pago</option>
+            <option value="lote" ${window._agrOrden==='lote'?'selected':''}>Orden: por lote</option>
+          </select>
           <button onclick="resetAgrimensores()" style="background:var(--card);border:1px solid #fed7aa;color:var(--acc2);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar</button>
           <button onclick="renderBalances('agr-lista')" style="background:var(--card);border:1px solid #fed7aa;color:var(--acc2);padding:6px 14px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer">📋 Ver lista</button>
           <button onclick="renderBalances('agr-gestionar')" style="background:var(--card);border:1px solid #fed7aa;color:var(--acc2);padding:6px 14px;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer">⚙️ Gestionar lotes</button>
@@ -8849,7 +8870,7 @@ function renderAgrLista(){
   const el=document.getElementById('agr-tabla');
   if(!el)return;
   const data=loadData();
-  let agr=data.filter(c=>c.agrimensor);
+  let agr=data.filter(c=>esAgrimensor(c.id)||c.agrimensor);
   const q=(document.getElementById('agr-search')?.value||'').toLowerCase();
   if(q) agr=agr.filter(c=>String(c.titular||'').toLowerCase().includes(q)||String(c.lote||'').toLowerCase().includes(q)||String(c.mz||'').toLowerCase().includes(q));
 
