@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0336';
+  datos['_version']='v1.0337';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -4343,7 +4343,10 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
                 <span style="font-weight:600">${formatLoteTag(t.mz,t.lote)} — ${t.titular||''} ${t.parcial?'<span style="background:rgba(217,119,6,.15);color:#f0a742;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">PARCIAL</span>':'<span style="background:rgba(124,58,237,.15);color:#a78bfa;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">TOTAL</span>'}</span>
                 <span style="font-weight:800;color:#a78bfa">${t.moneda==='USD'?'USD ':''}${fmtPeso(t.totalTransferido||0)}</span>
               </div>
-              <div style="font-size:11px;color:var(--text2)">${fmtPeso(t.cuotaParte||0)} cuota + ${fmtPeso(t.impuesto||0)} imp. 21% · ${t.fecha||''}${(t.rellenado||0)>0?' · ✓ rellenada '+fmtPeso(t.rellenado):''}</div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div style="font-size:11px;color:var(--text2)">${fmtPeso(t.cuotaParte||0)} cuota + ${fmtPeso(t.impuesto||0)} imp. 21% · ${t.fecha||''}${(t.rellenado||0)>0?' · 💧 rellenada '+fmtPeso(t.rellenado)+((t.rellenado||0)>=(t.cuotaParte||0)?' ✓':''):''}</div>
+                ${((t.rellenado||0)<(t.cuotaParte||0))?`<button onclick="rellenarTransferencia('${t.ts}')" style="background:none;border:1.5px solid #a78bfa;color:#a78bfa;padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;cursor:pointer">💧 Rellenar</button>`:''}
+              </div>
             </div>`).join('')}`:''}
           <div style="font-size:11px;color:var(--text2);margin-top:8px">💡 Esta plata no está en la caja física — hay que reponerla. El 21% queda en el banco.</div>
         </div>
@@ -4558,7 +4561,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
 
     let moraHtml=backBtn;
     moraHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">';
-    moraHtml+='<div style="font-size:17px;font-weight:700">⚠️ Caja de Mora</div>';
+    moraHtml+='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:17px;font-weight:700">⚠️ Caja de Mora</div><button onclick="traspasoMora30()" style="background:none;border:1.5px solid #4f46e5;color:#818cf8;padding:6px 12px;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">➡️ Pasar '+dp2+'% a Ingresos</button></div>';
     moraHtml+='<div style="display:flex;gap:8px;align-items:center">';
     moraHtml+=cf?'<span style="font-size:11px;color:var(--text2)">Cierre final: '+cf.fecha+' '+cf.hora+'</span>':'<span style="font-size:11px;color:var(--amber)">Sin cierre final</span>';
     moraHtml+='<button onclick="toggleMoraCajaEtapas()" id="btn-mora-etapas" style="background:'+(window._moraCajaEtapas?'var(--brand)':'none')+';border:1.5px solid var(--border);border-radius:var(--r);padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;color:'+(window._moraCajaEtapas?'#fff':'var(--text2)')+'">⇄ Etapas</button>';
@@ -5003,6 +5006,72 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         </div>
       </div>`;
   }
+}
+
+function rellenarTransferencia(ts){
+  const bal=loadBalances();
+  const t=(bal.transferencias||[]).find(x=>x.ts===ts);
+  if(!t){alert('No se encontró la transferencia.');return;}
+  const pendiente=Math.max(0,(t.cuotaParte||0)-(t.rellenado||0));
+  if(pendiente<=0){alert('Esta transferencia ya está rellenada por completo.');return;}
+  // Plata disponible en Ingresos (ingresos - gastos)
+  const extras=loadExtras();
+  const disponible=extras.reduce((s,e)=>s+(e.tipo==='ingreso'?e.monto:-e.monto),0);
+  if(disponible<=0){alert('❌ No hay plata disponible en Ingresos ('+fmtPeso(disponible)+').\n\nPrimero ingresá plata (por ejemplo con "Pasar 30% de mora a Ingresos" en la caja de mora).');return;}
+  const maxRelleno=Math.min(pendiente,disponible);
+  const val=prompt('💧 RELLENAR TRANSFERENCIA — '+formatLoteTag(t.mz,t.lote)+' ('+(t.titular||'')+')\n\nPendiente de rellenar: '+fmtPeso(pendiente)+'\nDisponible en Ingresos: '+fmtPeso(disponible)+'\n\nIngresá el monto a rellenar (máx '+fmtPeso(maxRelleno)+'):', String(maxRelleno));
+  if(val===null) return;
+  const m=Math.round(parseFloat(String(val).replace(/[^\d]/g,''))||0);
+  if(m<=0){alert('Monto inválido.');return;}
+  if(m>pendiente){alert('El monto supera lo pendiente ('+fmtPeso(pendiente)+').');return;}
+  if(m>disponible){alert('❌ No alcanza la plata de Ingresos (disponible: '+fmtPeso(disponible)+').');return;}
+  confirmarConClave(()=>{
+    const bal2=loadBalances();
+    const t2=(bal2.transferencias||[]).find(x=>x.ts===ts);
+    if(!t2) return;
+    t2.rellenado=(t2.rellenado||0)+m;
+    // Completar la Caja Física: sumar el efectivo del relleno al registro de ese cobro
+    const idx=(bal2.cajaFisica||[]).map(p=>p.id).lastIndexOf(t2.id);
+    if(idx>=0){
+      const ent=bal2.cajaFisica[idx];
+      ent.efectivo=(ent.efectivo||0)+m;
+      ent.rellenadoMonto=(ent.rellenadoMonto||0)+m;
+    } else {
+      (bal2.cajaFisica=bal2.cajaFisica||[]).push({id:t2.id,mz:t2.mz,lote:t2.lote,titular:t2.titular,moneda:t2.moneda||'ARS',cuotaLista:t2.cuotaParte,transferido:t2.cuotaParte,entrego:0,vuelto:0,efectivo:m,rellenadoMonto:m,dif:0,ts:new Date().toISOString(),fecha:new Date().toLocaleDateString('es-AR')});
+    }
+    saveBalances(bal2);
+    // Egreso en Ingresos
+    const ex=loadExtras();
+    ex.push({id:Date.now().toString(),tipo:'gasto',desc:'💧 Relleno transferencia '+formatLoteTag(t2.mz,t2.lote)+' — '+(t2.titular||''),monto:m,fecha:new Date().toLocaleDateString('es-AR'),ts:new Date().toISOString()});
+    saveExtras(ex);
+    addHist('pago','💧 Relleno de transferencia '+formatLoteTag(t2.mz,t2.lote)+' por '+fmtPeso(m)+' desde Ingresos',t2.id);
+    alert('✓ Rellenado '+fmtPeso(m)+'. La Caja Física quedó completada y salió de Ingresos.');
+    renderBalances('caja');
+  });
+}
+
+function traspasoMora30(){
+  const dp2=100-getDistPct();
+  const mora=loadMora();
+  const totalCuotaP=mora.filter(p=>p.moneda!=='USD').reduce((s,p)=>s+(p.cuota||0)+(p.cuotaAgrimensor||0),0);
+  const tope=Math.round(totalCuotaP*dp2/100);
+  const extras=loadExtras();
+  const yaPasado=extras.filter(e=>e.origen==='mora30'&&e.tipo==='ingreso').reduce((s,e)=>s+e.monto,0);
+  const disp=Math.max(0,tope-yaPasado);
+  if(disp<=0){alert('No hay plata disponible del '+dp2+'% de la caja de mora.\n(Tope actual: '+fmtPeso(tope)+' — ya pasado: '+fmtPeso(yaPasado)+')');return;}
+  const val=prompt('➡️ PASAR PLATA DEL '+dp2+'% DE MORA A INGRESOS\n\nDisponible: '+fmtPeso(disp)+'\n('+dp2+'% de las cuotas morosas cobradas: '+fmtPeso(tope)+' — ya pasado antes: '+fmtPeso(yaPasado)+')\n\nIngresá el monto:', String(disp));
+  if(val===null) return;
+  const m=Math.round(parseFloat(String(val).replace(/[^\d]/g,''))||0);
+  if(m<=0){alert('Monto inválido.');return;}
+  if(m>disp){alert('Supera lo disponible ('+fmtPeso(disp)+').');return;}
+  confirmarConClave(()=>{
+    const ex=loadExtras();
+    ex.push({id:Date.now().toString(),tipo:'ingreso',origen:'mora30',desc:'➡️ Desde '+dp2+'% caja de mora',monto:m,fecha:new Date().toLocaleDateString('es-AR'),ts:new Date().toISOString()});
+    saveExtras(ex);
+    addHist('pago','➡️ Traspaso de '+fmtPeso(m)+' del '+dp2+'% de la caja de mora a Ingresos');
+    alert('✓ '+fmtPeso(m)+' pasados a Ingresos.');
+    renderBalances('mora');
+  });
 }
 
 function limpiarCajaFisica(){
