@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0337';
+  datos['_version']='v1.0338';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5613,6 +5613,13 @@ function renderStats(){
       mzs[mz].t++;
       if(c.pago)mzs[mz].p++;
       else mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,mora:calcInteresAuto(montoCobrable(c).total).interes>0});
+    });
+    Object.values(mzs).forEach(m=>{
+      m.pend.sort((a,b)=>{
+        const n=(s)=>{const mm=String(s).match(/^(\d+)(.*)/);return mm?[+mm[1],mm[2]]:[999,String(s)];};
+        const[an,al]=n(a.lote);const[bn,bl]=n(b.lote);
+        return an!==bn?an-bn:al.localeCompare(bl);
+      });
     });
     Object.keys(mzs).sort().forEach(mz=>{
       const m=mzs[mz];const pp=Math.round(m.p/m.t*100);
