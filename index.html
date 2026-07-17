@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0342';
+  datos['_version']='v1.0343';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -4139,17 +4139,18 @@ function _doRevertirFusion(fid){
   });
 }
 
-function fusionarCierre(srcIdx){
+function fusionarCierre(srcTs){
   const bal=loadBalances();
   const cierres=bal.cierres||[];
-  const src=cierres[srcIdx];
-  if(!src)return;
+  const src=cierres.find(c=>c.ts===srcTs);
+  if(!src){alert('No se encontró el cierre.');return;}
   // Build options excluding src
   const monSrc=src.moneda||'ARS';
-  const opts=cierres.map((c,i)=>{
-    if(i===srcIdx)return null;
+  const opts=cierres.map((c)=>{
+    if(c.ts===srcTs)return null;
     if((c.moneda||'ARS')!==monSrc)return null; // solo misma moneda
-    return `<option value="${i}">${c.fecha||new Date(c.ts).toLocaleDateString('es-AR')} — ${(c.pagos||[]).length} pagos — ${c.moneda==='USD'?'USD ':'$'}${(c.total||0).toLocaleString('es-AR')}</option>`;
+    const hora=c.ts?new Date(c.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
+    return `<option value="${c.ts}">${c.fecha||new Date(c.ts).toLocaleDateString('es-AR')} ${hora} — ${(c.pagos||[]).length} pagos — ${c.moneda==='USD'?'USD ':'$'}${(c.total||0).toLocaleString('es-AR')}</option>`;
   }).filter(Boolean).join('');
   if(!opts){alert('No hay otros cierres de la misma moneda ('+monSrc+') para fusionar.\n\nNo se pueden fusionar cierres de monedas distintas.');return;}
   const modal=document.createElement('div');
@@ -4160,18 +4161,20 @@ function fusionarCierre(srcIdx){
     <select id="fus-sel" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;margin-bottom:1rem">${opts}</select>
     <div style="display:flex;gap:8px">
       <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;padding:8px;background:var(--hov);border:1px solid #d1d5db;border-radius:8px;font-size:13px;cursor:pointer">Cancelar</button>
-      <button onclick="_doFusionar(${srcIdx},+document.getElementById('fus-sel').value);this.closest('div[style*=fixed]').remove()" style="flex:1;padding:8px;background:#2d6a50;color:#d0f0e0;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Fusionar</button>
+      <button onclick="_doFusionar('${srcTs}',document.getElementById('fus-sel').value);this.closest('div[style*=fixed]').remove()" style="flex:1;padding:8px;background:#2d6a50;color:#d0f0e0;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Fusionar</button>
     </div>
   </div>`;
   document.body.appendChild(modal);
 }
-function _doFusionar(srcIdx,dstIdx){
-  if(srcIdx===dstIdx)return;
+function _doFusionar(srcTs,dstTs){
+  if(srcTs===dstTs)return;
   const bal=loadBalances();
   const cierres=bal.cierres||[];
+  const srcIdx=cierres.findIndex(c=>c.ts===srcTs);
+  const dstIdx=cierres.findIndex(c=>c.ts===dstTs);
   const src=cierres[srcIdx];
   const dst=cierres[dstIdx];
-  if(!src||!dst)return;
+  if(!src||!dst){alert('No se encontraron los cierres.');return;}
   if((src.moneda||'ARS')!==(dst.moneda||'ARS')){alert('❌ No se pueden fusionar cierres de monedas distintas.');return;}
   const cur=(src.moneda==='USD')?'USD ':'$';
   const ok=confirm('⇄ CONFIRMAR FUSIÓN\n\n'
@@ -4526,7 +4529,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
             <span style="font-size:10px;font-weight:700;color:var(--red)">${dp2}%</span>
             <span style="font-size:11px;font-weight:600;color:var(--red)">${isUSD?'USD ':''} ${fmtPeso(pB)}</span>
           </div>
-          <div style="margin-left:auto;display:flex;gap:4px">${btnA}${btnB}<button onclick="fusionarCierre(${globalIdx})" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">⇄ Fusionar</button></div>
+          <div style="margin-left:auto;display:flex;gap:4px">${btnA}${btnB}<button onclick="fusionarCierre('${ci.ts}')" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">⇄ Fusionar</button></div>
         </div>
       </div>`;
     }).join(''):'<div style="font-size:13px;color:var(--text2);padding:8px 0">Sin cierres</div>';
