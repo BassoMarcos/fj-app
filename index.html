@@ -881,7 +881,7 @@ function toggleMoraDesactivada(){const v=getMoraDesactivada();localStorage.setIt
 function loadExtras(){try{return JSON.parse(localStorage.getItem('fj_extras')||'[]');}catch(e){return [];}}
 function saveExtras(v){localStorage.setItem('fj_extras',JSON.stringify(v));sheetsSet('Extras',v);if(window._firebaseReady)window._fbSet('extras',v).catch(e=>console.warn('FB extras error:',e));}
 
-function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[],transferencias:Array.isArray(b.transferencias)?b.transferencias:[],cajaFisica:Array.isArray(b.cajaFisica)?b.cajaFisica:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[],transferencias:[],cajaFisica:[]};}}
+function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[],transferencias:Array.isArray(b.transferencias)?b.transferencias:[],cajaFisica:Array.isArray(b.cajaFisica)?b.cajaFisica:[],fusiones:Array.isArray(b.fusiones)?b.fusiones:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[],transferencias:[],cajaFisica:[],fusiones:[]};}}
 function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[{json:'STR:'+JSON.stringify(d)}]);}
 function _parseAdelantoCuotas(c){
   if(Array.isArray(c)) return c;
@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0340';
+  datos['_version']='v1.0341';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2636,7 +2636,7 @@ function openAddModal(){
 }
 
 // ============== BALANCES ==============
-function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[],transferencias:Array.isArray(b.transferencias)?b.transferencias:[],cajaFisica:Array.isArray(b.cajaFisica)?b.cajaFisica:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[],transferencias:[],cajaFisica:[]};}}
+function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[],transferencias:Array.isArray(b.transferencias)?b.transferencias:[],cajaFisica:Array.isArray(b.cajaFisica)?b.cajaFisica:[],fusiones:Array.isArray(b.fusiones)?b.fusiones:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[],transferencias:[],cajaFisica:[],fusiones:[]};}}
 function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[{json:'STR:'+JSON.stringify(d)}]);if(window._firebaseReady)window._fbSet('balances',d).catch(e=>console.warn('FB bal error:',e));}
 let _claveAccion=null;
 let _claveEsColab=false;
@@ -4080,6 +4080,65 @@ function resetPagos(){
 function fmtFechaAdel(f){if(!f)return'';try{const d=new Date(f);if(isNaN(d))return f;return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});}catch(e){return f;}}
 function getCierreEstados(){try{return JSON.parse(localStorage.getItem('fj_cierre_estados')||'{}');}catch(e){return{};}}
 function setCierreEstado(idx,tipo,val){const e=getCierreEstados();if(!e[idx])e[idx]={};e[idx][tipo]=val;localStorage.setItem('fj_cierre_estados',JSON.stringify(e));renderBalances('cierres');}
+function revertirFusion(){
+  const bal=loadBalances();
+  const fus=bal.fusiones||[];
+  if(!fus.length){alert('No hay fusiones registradas para revertir.\n(Solo se pueden deshacer fusiones hechas a partir de esta versión.)');return;}
+  const opts=fus.slice().reverse().map(f=>{
+    const cur=f.moneda==='USD'?'USD ':'$';
+    return `<option value="${f.id}">${new Date(f.ts).toLocaleDateString('es-AR')} — ${f.src.fecha||''} (${(f.src.pagos||[]).length} pagos, ${cur}${(f.src.total||0).toLocaleString('es-AR')}) → ${f.dstFecha||''}</option>`;
+  }).join('');
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML=`<div style="background:var(--card);border-radius:12px;padding:1.5rem;width:min(460px,90vw)">
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px">↩ Revertir fusión</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:1rem">Elegí qué fusión deshacer. El cierre original se separa de nuevo con sus pagos y totales.</div>
+    <select id="revfus-sel" style="width:100%;padding:8px;border:1px solid var(--border2);border-radius:8px;font-size:13px;margin-bottom:1rem;background:var(--bg);color:var(--text)">${opts}</select>
+    <div style="display:flex;gap:8px">
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;padding:8px;background:var(--hov);border:1px solid var(--border2);border-radius:8px;font-size:13px;cursor:pointer">Cancelar</button>
+      <button onclick="_doRevertirFusion(document.getElementById('revfus-sel').value);this.closest('div[style*=fixed]').remove()" style="flex:1;padding:8px;background:#b45309;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Revertir</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+function _doRevertirFusion(fid){
+  confirmarConClave(()=>{
+    const bal=loadBalances();
+    const fi=(bal.fusiones||[]).findIndex(f=>f.id===fid);
+    if(fi<0){alert('No se encontró esa fusión.');return;}
+    const f=bal.fusiones[fi];
+    const dstIdx=(bal.cierres||[]).findIndex(c=>c.ts===f.dstTs);
+    if(dstIdx<0){alert('No se encontró el cierre destino (¿fue eliminado o vuelto a fusionar?). No se puede revertir.');return;}
+    const dst=bal.cierres[dstIdx];
+    // Quitar del destino los pagos que vinieron del origen (una ocurrencia por cada uno)
+    const srcP=(f.src.pagos||[]).slice();
+    const resto=[];
+    (dst.pagos||[]).forEach(p=>{
+      const k=srcP.findIndex(q=>q.id===p.id&&q.ts===p.ts&&q.monto===p.monto);
+      if(k>=0){srcP.splice(k,1);} else resto.push(p);
+    });
+    if(srcP.length){alert('⚠️ No pude identificar todos los pagos de la fusión ('+srcP.length+' no encontrados). No se revierte para no romper nada.');return;}
+    dst.pagos=resto;
+    dst.total=(dst.total||0)-(f.src.total||0);
+    dst.totalPesos=(dst.totalPesos||0)-(f.src.totalPesos||0);
+    dst.totalUSD=(dst.totalUSD||0)-(f.src.totalUSD||0);
+    // Reinsertar el cierre original después del destino
+    const insertAt=dstIdx+1;
+    bal.cierres.splice(insertAt,0,JSON.parse(JSON.stringify(f.src)));
+    // Correr los estados 70/30 de los cierres posteriores
+    try{
+      const est=JSON.parse(localStorage.getItem('fj_cierre_estados')||'{}');
+      const nE={};Object.keys(est).forEach(k=>{const ki=+k;nE[ki>=insertAt?ki+1:ki]=est[k];});
+      localStorage.setItem('fj_cierre_estados',JSON.stringify(nE));
+    }catch(e){}
+    bal.fusiones.splice(fi,1);
+    saveBalances(bal);
+    addHist('edit','↩ Fusión de cierres revertida: '+ (f.src.fecha||'') +' separado de '+(f.dstFecha||''));
+    alert('✅ Fusión revertida. El cierre de '+(f.src.fecha||'')+' volvió a estar separado.');
+    renderBalances('cierres');
+  });
+}
+
 function fusionarCierre(srcIdx){
   const bal=loadBalances();
   const cierres=bal.cierres||[];
@@ -4122,6 +4181,13 @@ function _doFusionar(srcIdx,dstIdx){
     +'Resultado: 1 cierre de '+((src.pagos||[]).length+(dst.pagos||[]).length)+' pagos — '+cur+((src.total||0)+(dst.total||0)).toLocaleString('es-AR')+'\n\n'
     +'⚠️ Esta acción no se puede deshacer fácilmente. ¿Confirmás?');
   if(!ok)return;
+  // Registrar la fusión para poder deshacerla
+  (bal.fusiones=bal.fusiones||[]).push({
+    id:Date.now().toString(),
+    ts:new Date().toISOString(),
+    src:JSON.parse(JSON.stringify(src)),
+    dstTs:dst.ts, dstFecha:dst.fecha, moneda:src.moneda||'ARS'
+  });
   // Merge pagos
   dst.pagos=(dst.pagos||[]).concat(src.pagos||[]);
   dst.total=(dst.total||0)+(src.total||0);
@@ -4473,7 +4539,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
         <div style="font-size:17px;font-weight:700">✅ Historial de cierres</div>
         <div style="display:flex;gap:8px;align-items:center">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            ${hayCierreFinal()?`<span style="background:#1a3a4a;color:#7ab5d0;border:1px solid #3a6a8a;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700">✓ Cierre realizado — ${loadCierreFinal().mesNombre}</span><button onclick="revertirCierre()" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px">↩ Revertir</button>`:''}
+            ${hayCierreFinal()?`<span style="background:#1a3a4a;color:#7ab5d0;border:1px solid #3a6a8a;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700">✓ Cierre realizado — ${loadCierreFinal().mesNombre}</span><button onclick="revertirCierreFinalSeguro()" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px">↩ Revertir cierre final</button><button onclick="revertirFusion()" style="background:none;border:1px solid #d97706;color:#d97706;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px">↩ Revertir fusión</button>`:''}
             <button onclick="mostrarResumenCierre()" style="background:var(--acc);color:#071510;border:none;padding:6px 14px;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">🔒 Cierre final</button>
           </div>
           ${cierres.length?`<button onclick="resetCierres()" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar</button>`:''}
@@ -6897,6 +6963,22 @@ function loadSnapshot(){
     const s=_lsGet(dKey('snapshot_cierre'));
     return s ? JSON.parse(s) : null;
   }catch(e){ return null; }
+}
+
+function revertirCierreFinalSeguro(){
+  const cf=loadCierreFinal();
+  const mesTxt=cf&&cf.mesNombre?cf.mesNombre:'';
+  const avisos=[
+    '⚠️ ADVERTENCIA 1 de 5\n\nEstás por REVERTIR EL CIERRE FINAL de '+mesTxt+'.\n\nEsto deshace TODO el cierre: las cuotas vuelven al mes anterior y las moras generadas desaparecen.\n\n¿Seguís?',
+    '⚠️ ADVERTENCIA 2 de 5\n\nSe restaura una FOTO tomada justo antes del cierre.\n\nTODO lo que hiciste DESPUÉS del cierre se PIERDE: cobros, transferencias, SAF/SEC, adelantos, ediciones.\n\n¿Seguís?',
+    '⚠️ ADVERTENCIA 3 de 5\n\nSi ya cobraste cuotas del mes nuevo, esos cobros van a DESAPARECER de la app (la plata física que recibiste NO va a estar registrada).\n\n¿Seguís?',
+    '⚠️ ADVERTENCIA 4 de 5\n\nEsta acción NO SE PUEDE DESHACER. No hay vuelta atrás del revertido.\n\nSolo tiene sentido si el cierre se hizo HOY y todavía no cobraste nada.\n\n¿Seguís?',
+    '🛑 ÚLTIMA ADVERTENCIA (5 de 5)\n\n¿Estás COMPLETAMENTE seguro de revertir el cierre final de '+mesTxt+' y volver al estado anterior?\n\nSi tenés dudas, apretá Cancelar y consultalo primero.'
+  ];
+  for(let i=0;i<avisos.length;i++){
+    if(!confirm(avisos[i])) return;
+  }
+  revertirCierre(); // pide la clave de admin adentro
 }
 
 function revertirCierre(){
