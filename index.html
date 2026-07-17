@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0339';
+  datos['_version']='v1.0340';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -4086,8 +4086,13 @@ function fusionarCierre(srcIdx){
   const src=cierres[srcIdx];
   if(!src)return;
   // Build options excluding src
-  const opts=cierres.map((c,i)=>i===srcIdx?null:`<option value="${i}">${c.fecha||new Date(c.ts).toLocaleDateString('es-AR')} — ${(c.pagos||[]).length} pagos — ${c.moneda==='USD'?'USD ':''} $${(c.total||0).toLocaleString('es-AR')}</option>`).filter(Boolean).join('');
-  if(!opts){alert('No hay otros cierres disponibles para fusionar.');return;}
+  const monSrc=src.moneda||'ARS';
+  const opts=cierres.map((c,i)=>{
+    if(i===srcIdx)return null;
+    if((c.moneda||'ARS')!==monSrc)return null; // solo misma moneda
+    return `<option value="${i}">${c.fecha||new Date(c.ts).toLocaleDateString('es-AR')} — ${(c.pagos||[]).length} pagos — ${c.moneda==='USD'?'USD ':'$'}${(c.total||0).toLocaleString('es-AR')}</option>`;
+  }).filter(Boolean).join('');
+  if(!opts){alert('No hay otros cierres de la misma moneda ('+monSrc+') para fusionar.\n\nNo se pueden fusionar cierres de monedas distintas.');return;}
   const modal=document.createElement('div');
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
   modal.innerHTML=`<div style="background:var(--card);border-radius:12px;padding:1.5rem;width:min(420px,90vw);box-shadow:0 8px 32px rgba(0,0,0,.2)">
@@ -4108,9 +4113,20 @@ function _doFusionar(srcIdx,dstIdx){
   const src=cierres[srcIdx];
   const dst=cierres[dstIdx];
   if(!src||!dst)return;
+  if((src.moneda||'ARS')!==(dst.moneda||'ARS')){alert('❌ No se pueden fusionar cierres de monedas distintas.');return;}
+  const cur=(src.moneda==='USD')?'USD ':'$';
+  const ok=confirm('⇄ CONFIRMAR FUSIÓN\n\n'
+    +'Se van a unir:\n'
+    +'• '+(src.fecha||'')+' — '+(src.pagos||[]).length+' pagos — '+cur+(src.total||0).toLocaleString('es-AR')+'\n'
+    +'• '+(dst.fecha||'')+' — '+(dst.pagos||[]).length+' pagos — '+cur+(dst.total||0).toLocaleString('es-AR')+'\n\n'
+    +'Resultado: 1 cierre de '+((src.pagos||[]).length+(dst.pagos||[]).length)+' pagos — '+cur+((src.total||0)+(dst.total||0)).toLocaleString('es-AR')+'\n\n'
+    +'⚠️ Esta acción no se puede deshacer fácilmente. ¿Confirmás?');
+  if(!ok)return;
   // Merge pagos
   dst.pagos=(dst.pagos||[]).concat(src.pagos||[]);
   dst.total=(dst.total||0)+(src.total||0);
+  dst.totalPesos=(dst.totalPesos||0)+(src.totalPesos||0);
+  dst.totalUSD=(dst.totalUSD||0)+(src.totalUSD||0);
   // Remove src
   cierres.splice(srcIdx,1);
   // Also clean up estados
