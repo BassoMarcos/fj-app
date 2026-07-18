@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0343';
+  datos['_version']='v1.0344';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -4139,6 +4139,11 @@ function _doRevertirFusion(fid){
   });
 }
 
+function toggleCierrePagos(ts){
+  const d=document.getElementById('cierre-pagos-'+ts);
+  if(d) d.style.display=d.style.display==='none'?'block':'none';
+}
+
 function fusionarCierre(srcTs){
   const bal=loadBalances();
   const cierres=bal.cierres||[];
@@ -4529,7 +4534,17 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
             <span style="font-size:10px;font-weight:700;color:var(--red)">${dp2}%</span>
             <span style="font-size:11px;font-weight:600;color:var(--red)">${isUSD?'USD ':''} ${fmtPeso(pB)}</span>
           </div>
-          <div style="margin-left:auto;display:flex;gap:4px">${btnA}${btnB}<button onclick="fusionarCierre('${ci.ts}')" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">⇄ Fusionar</button></div>
+          <div style="margin-left:auto;display:flex;gap:4px"><button onclick="toggleCierrePagos('${ci.ts}')" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">👁 Ver pagos</button>${btnA}${btnB}<button onclick="fusionarCierre('${ci.ts}')" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">⇄ Fusionar</button></div>
+        </div>
+        <div id="cierre-pagos-${ci.ts}" style="display:none;margin-top:6px;background:var(--hov);border-radius:8px;padding:8px 10px">
+          ${(ci.pagos||[]).slice().sort((a,b)=>String(a.ts||'').localeCompare(String(b.ts||''))).map(p=>{
+            const c=loadData().find(x=>x.id===p.id)||{mz:'?',lote:'?',titular:p.id};
+            const fh=p.ts?new Date(p.ts).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' '+new Date(p.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
+            return `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed var(--border);font-size:12px">
+              <span>${formatLoteTag(c.mz,c.lote)} — ${(c.titular||'').slice(0,30)} <span style="font-size:10px;color:var(--text3)">${fh}</span>${p.transf?' <span style="color:#a78bfa;font-size:10px;font-weight:700">🏦</span>':''}</span>
+              <span style="font-weight:700">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.monto||0)}</span>
+            </div>`;
+          }).join('')||'<div style="font-size:12px;color:var(--text2)">Sin pagos</div>'}
         </div>
       </div>`;
     }).join(''):'<div style="font-size:13px;color:var(--text2);padding:8px 0">Sin cierres</div>';
