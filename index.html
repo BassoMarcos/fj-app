@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0346';
+  datos['_version']='v1.0347';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6244,7 +6244,7 @@ function renderAdminDet(id){
 
       <!-- 4. Info del cliente -->
       <div class="det-row"><span class="det-label">Cuota N°</span><span class="det-val">${esPrimeraCuotaFutura(c)?'— de '+c.ct:c.ca+' de '+c.ct}</span></div>
-      <div class="det-row"><span class="det-label">Trimestre</span><span class="det-val">${c.tri}</span></div>
+      <div class="det-row"><span class="det-label">Trimestre</span><span class="det-val">${c.moneda==='USD'?'— (USD, sin ICC)':c.tri}</span></div>
       <div class="det-row"><span class="det-label">Saldo</span><span class="det-val" style="color:${saldoColor}">${saldoTxt}</span></div>
       <div class="det-row"><span class="det-label">Próximo incremento</span><span class="det-val">${getProximoIncrementoHtml(c.tri)}</span></div>
       <div class="det-row"><span class="det-label">Teléfono</span><span class="det-val">${c.tel||'<span style="color:var(--text3)">Sin número</span>'}</span></div>
@@ -7945,8 +7945,8 @@ function renderAdminTable(){
     const saldoColor=c.saldo===0?'#94a3b8':c.saldo>0?'#4caf82':'#e05050';
     const saldoLabel=c.saldo===0?'—':c.saldo>0?'+'+fmtPeso(c.saldo):'-'+fmtPeso(Math.abs(c.saldo));
     const hist3=(c.hist||[]).slice(-3).reverse();
-    const triColor=c.tri==='Mar-Jun-Sep-Dic'?'#f472b6':c.tri==='Feb-May-Ago-Nov'?'#4caf82':'#60a5fa';
-    const triLabel=c.tri==='Mar-Jun-Sep-Dic'?'Rosa':c.tri==='Feb-May-Ago-Nov'?'Verde':'Azul';
+    const triColor=c.moneda==='USD'?'var(--text3)':c.tri==='Mar-Jun-Sep-Dic'?'#f472b6':c.tri==='Feb-May-Ago-Nov'?'#4caf82':'#60a5fa';
+    const triLabel=c.moneda==='USD'?'USD':c.tri==='Mar-Jun-Sep-Dic'?'Rosa':c.tri==='Feb-May-Ago-Nov'?'Verde':'Azul';
     const pagoColor=c.autopago?'#16a34a':c.est==='finalizado'?'#9ca3af':c.pago?'#4caf82':'#e09040';
     const _esFutura=esPrimeraCuotaFutura(c);
     const pagoTxt=c.autopago?'Terminó':c.est==='finalizado'?'Terminó':c.pago?'✓ Pagado':_esFutura?'🗓 1ª '+nombreMesPrimeraCuota(c):'Pendiente';
@@ -8781,8 +8781,8 @@ function renderColab(){
     const saldoColor=c.saldo===0?'#94a3b8':c.saldo>0?'#4caf82':'#e05050';
     const saldoLabel=c.saldo===0?'—':c.saldo>0?'+'+fmtPeso(c.saldo):'-'+fmtPeso(Math.abs(c.saldo));
     const hist3=(c.hist||[]).slice(-3).reverse();
-    const triColor=c.tri==='Mar-Jun-Sep-Dic'?'#f472b6':c.tri==='Feb-May-Ago-Nov'?'#4caf82':'#60a5fa';
-    const triLabel=c.tri==='Mar-Jun-Sep-Dic'?'Rosa':c.tri==='Feb-May-Ago-Nov'?'Verde':'Azul';
+    const triColor=c.moneda==='USD'?'var(--text3)':c.tri==='Mar-Jun-Sep-Dic'?'#f472b6':c.tri==='Feb-May-Ago-Nov'?'#4caf82':'#60a5fa';
+    const triLabel=c.moneda==='USD'?'USD':c.tri==='Mar-Jun-Sep-Dic'?'Rosa':c.tri==='Feb-May-Ago-Nov'?'Verde':'Azul';
     const pagoColor=c.autopago?'#16a34a':c.est==='finalizado'?'#9ca3af':c.pago?'#4caf82':'#e09040';
     const _esFutura=esPrimeraCuotaFutura(c);
     const pagoTxt=c.autopago?'Terminó':c.est==='finalizado'?'Terminó':c.pago?'✓ Pagado':_esFutura?'🗓 1ª '+nombreMesPrimeraCuota(c):'Pendiente';
@@ -9500,7 +9500,7 @@ function renderDetColab(id){
       ${moraHtml}
 
       <div class="det-row"><span class="det-label">Cuota N°</span><span class="det-val">${esPrimeraCuotaFutura(c)?'— de '+c.ct:c.ca+' de '+c.ct}</span></div>
-      <div class="det-row"><span class="det-label">Trimestre</span><span class="det-val">${c.tri}</span></div>
+      <div class="det-row"><span class="det-label">Trimestre</span><span class="det-val">${c.moneda==='USD'?'— (USD, sin ICC)':c.tri}</span></div>
       <div class="det-row"><span class="det-label">Saldo</span><span class="det-val" style="color:${saldoColor}">${saldoTxt}</span></div>
       <div style="margin-top:1rem"><div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Últimas 3 cuotas</div><div class="hist-cuotas">${histHtml}</div></div>
       ${pagoBtn}
