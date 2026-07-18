@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0345';
+  datos['_version']='v1.0346';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -8587,11 +8587,12 @@ function aplicarICC(){
   const totalTri=parseFloat(tri1.entradas.reduce((s,e)=>s+(Number(e.pct)||0),0).toFixed(2));
 
   const data=loadData();
-  const cnt=data.filter(c=>c.tri===planilla&&(c.est==='activo'||(c.est==='finalizado'&&c.autopago))).length;
+  const cnt=data.filter(c=>c.moneda!=='USD'&&c.tri===planilla&&(c.est==='activo'||(c.est==='finalizado'&&c.autopago))).length;
   if(cnt===0){alert('No hay clientes activos con planilla '+planilla+'.');return;}
   // Ejecutar el incremento sobre la misma lectura de datos (sin doble loadData)
   let aplicados=0;
   data.forEach(c=>{
+    if(c.moneda==='USD') return; // los lotes en dólares NO reciben ICC
     if(c.tri===planilla&&(c.est==='activo'||(c.est==='finalizado'&&c.autopago))){
       c.monto=Math.round(c.monto*(1+totalTri/100));
       aplicados++;
