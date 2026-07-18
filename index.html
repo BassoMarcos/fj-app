@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0348';
+  datos['_version']='v1.0349';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7943,7 +7943,8 @@ function renderAdminTable(){
   el.innerHTML=data.map(c=>{
     const isUSD=c.moneda==='USD';
     const isAgr=c.agrimensor===true;
-    const rowBg=c.est==='finalizado'?'background:var(--hov);':isAgr?'background:#3a3a3a;':isUSD?'background:#1e2a1e;':'';
+    const rowBgColor=c.est==='finalizado'?'var(--hov)':isAgr?'#3a3a3a':isUSD?'#1e2a1e':'';
+    const rowBg=rowBgColor?('background:'+rowBgColor+';'):'';
     const saldoColor=c.saldo===0?'#94a3b8':c.saldo>0?'#4caf82':'#e05050';
     const saldoLabel=c.saldo===0?'—':c.saldo>0?'+'+fmtPeso(c.saldo):'-'+fmtPeso(Math.abs(c.saldo));
     const hist3=(c.hist||[]).slice(-3).reverse();
@@ -7958,7 +7959,7 @@ function renderAdminTable(){
 
     const loteStr=formatLoteTag(c.mz,c.lote);
     const waLink=c.tel?`<a href="https://wa.me/54${c.tel.replace(/\D/g,'')}" target="_blank" onclick="event.stopPropagation();window.open(this.href,'_blank');return false;" style="display:inline-flex;align-items:center;justify-content:center;background:transparent;color:#fff;width:100%;height:100%;text-decoration:none;" onclick="event.stopPropagation();window.open(this.href,'_blank');return false;"><svg width="15" height="15" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.122.554 4.118 1.524 5.855L0 24l6.29-1.508A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.366l-.359-.214-3.733.894.944-3.632-.235-.374A9.818 9.818 0 1112 21.818z"/></svg></a>`:'';
-    return `<div data-usd="${isUSD}" style="border-bottom:1px solid var(--border2);${rowBg};display:flex;align-items:stretch;border-radius:var(--r);margin:4px 8px;border:1px solid #2a4a38" onmouseover="this.style.background='#1f3529'" onmouseout="this.style.background=''">
+    return `<div data-usd="${isUSD}" data-bg="${rowBgColor}" style="border-bottom:1px solid var(--border2);${rowBg};display:flex;align-items:stretch;border-radius:var(--r);margin:4px 8px;border:1px solid #2a4a38" onmouseover="this.style.background='#1f3529'" onmouseout="this.style.background=this.dataset.bg||''">
       <div onclick="mostrarAdminDet('${c.id}')" style="flex:1;min-width:0;cursor:pointer;padding:10px 12px">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:3px">
         <span style="font-size:15px;font-weight:800;color:var(--acc2);font-weight:800;flex-shrink:0;min-width:90px">${loteStr}</span>
