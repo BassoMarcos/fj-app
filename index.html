@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0347';
+  datos['_version']='v1.0348';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -4262,7 +4262,8 @@ function renderBalances(seccion){
   const pendientes=adelantos.filter(a=>a.estado==='pendiente');
   const aprobados=adelantos.filter(a=>a.estado==='aprobado');
   const totalAbierto=abierto.reduce((s,p)=>s+(p.monto||0),0);
-  const totalCierres=cierres.reduce((s,c)=>s+(c.total||0),0);
+  const totalCierres=cierres.filter(c=>c.moneda!=='USD').reduce((s,c)=>s+(c.moneda==='TRANSF'?(c.totalPesos||0):(c.total||0)),0);
+  const totalCierresUSD=cierres.reduce((s,c)=>s+(c.moneda==='USD'?(c.total||0):(c.totalUSD||0)),0);
   const totalAprobados=aprobados.reduce((s,a)=>s+a.total,0);
   const totalPendientes=pendientes.reduce((s,a)=>s+a.total,0);
 
@@ -4319,6 +4320,7 @@ function renderBalances(seccion){
             </div>
             <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
               <div style="font-size:20px;font-weight:800;color:var(--green)">${fmtPeso(totalCierres)}</div>
+              ${totalCierresUSD?`<div style="font-size:13px;font-weight:700;color:var(--green)">USD ${fmtPeso(totalCierresUSD).replace('$','')}</div>`:''}
               <div style="display:flex;align-items:center;gap:8px">
                 ${cierres.length?`<button onclick="event.stopPropagation();resetCierres()" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:3px 8px;border-radius:var(--r);font-size:11px;cursor:pointer">🗑 Limpiar</button>`:''}
                 <span style="font-size:12px;color:var(--text2)">›</span>
