@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0349';
+  datos['_version']='v1.0350';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5746,7 +5746,7 @@ function renderStats(){
       if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],agrPend:[]};
       mzs[mz].t++;
       if(c.pago)mzs[mz].p++;
-      else mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,mora:calcInteresAuto(montoCobrable(c).total).interes>0});
+      else mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,mora:calcInteresAuto(montoCobrable(c).total).interes>0,usd:c.moneda==='USD'});
     });
     // Agrimensores impagos de esta etapa (no cuentan en % ni en plata)
     agrim.filter(c=>getEtapa(c.mz)===e&&!c.pago).forEach(c=>{
@@ -5773,7 +5773,10 @@ function renderStats(){
       if(m.pend.length||(m.agrPend||[]).length){
         html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin:0 0 8px 76px">';
         m.pend.forEach(p=>{
-          html+='<span onclick="event.stopPropagation();mostrarAdminDet(\''+p.id+'\')" style="background:'+(p.mora?'var(--red-bg)':'rgba(217,119,6,.12)')+';color:'+(p.mora?'var(--red)':'#d97706')+';border:1px solid '+(p.mora?'#fca5a5':'rgba(217,119,6,.4)')+';padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700;cursor:pointer">'+p.lote+(p.mora?' ⚠':'')+'</span>';
+          const bg=p.usd?'rgba(76,175,130,.15)':(p.mora?'var(--red-bg)':'rgba(217,119,6,.12)');
+          const col=p.usd?'#4caf82':(p.mora?'var(--red)':'#d97706');
+          const bd=p.usd?'rgba(76,175,130,.5)':(p.mora?'#fca5a5':'rgba(217,119,6,.4)');
+          html+='<span onclick="event.stopPropagation();mostrarAdminDet(\''+p.id+'\')" style="background:'+bg+';color:'+col+';border:1px solid '+bd+';padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700;cursor:pointer">'+(p.usd?'💵 ':'')+p.lote+(p.mora?' ⚠':'')+'</span>';
         });
         (m.agrPend||[]).forEach(p=>{
           html+='<span onclick="event.stopPropagation();mostrarAdminDet(\''+p.id+'\')" style="background:#f97316;color:#fff;border:1px solid #f97316;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:800;cursor:pointer">⚖️ '+p.lote+'</span>';
@@ -5781,7 +5784,7 @@ function renderStats(){
         html+='</div>';
       }
     });
-    html+='<div style="font-size:10px;color:var(--text3);margin-top:4px">Los lotes marcados son los que aún no pagaron '+mesOp+'. ⚠ = ya acumulan interés. ⚖️ naranja = agrimensor (no suma en % ni plata). Tocá uno para abrirlo.</div>';
+    html+='<div style="font-size:10px;color:var(--text3);margin-top:4px">Los lotes marcados son los que aún no pagaron '+mesOp+'. ⚠ = ya acumulan interés. 💵 verde = dólares. ⚖️ naranja = agrimensor (no suma en % ni plata). Tocá uno para abrirlo.</div>';
     html+='</div></div>';
   });
   html+='</div>';
