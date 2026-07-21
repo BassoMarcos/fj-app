@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0354';
+  datos['_version']='v1.0355';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7277,7 +7277,9 @@ function repararCierreJunio2026(){
     if(typeof renderAdminTable==='function') try{renderAdminTable();}catch(e){}
   }catch(e){console.warn('reparación cierre:',e);}
 }
-setTimeout(repararCierreJunio2026, 2500);
+// v1.0355: auto-ejecución DESACTIVADA — era un parche de una sola vez para el bug de junio 2026.
+// Al quedar activa, renombraba cualquier cierre legítimo de Julio 2026 a Junio y re-etiquetaba sus moras.
+// setTimeout(repararCierreJunio2026, 2500);
 
 function hacerCierreFinal(){
   confirmarConClave(()=>{
