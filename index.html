@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0351';
+  datos['_version']='v1.0352';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7069,7 +7069,14 @@ function mostrarResumenCierre(){
   const pausados=activos.filter(c=>esPrimeraCuotaFutura(c));
   const operativos=activos.filter(c=>!esPrimeraCuotaFutura(c));
   const pagados=operativos.filter(c=>c.pago);
-  const vanAMora=operativos.filter(c=>!c.pago&&(c.monto||0)>0);
+  const vanAMora=operativos.filter(c=>!c.pago&&(c.monto||0)>0).sort((a,b)=>{
+    const eo={'M1':1,'M2':2,'M3':3,'M4':4,'ETAPA 2':5,'ETAPA 3':6,'E4-M1':7,'E4-M2':8,'E4-M3':9,'E4-M4':10,'E4-M5':11};
+    const ea=eo[String(a.mz||'').toUpperCase()]||99, eb=eo[String(b.mz||'').toUpperCase()]||99;
+    if(ea!==eb)return ea-eb;
+    const n=(x)=>{const m=String(x||'').match(/^(\d+)(.*)/);return m?[+m[1],m[2]]:[999,String(x||'')];};
+    const[an,al]=n(a.lote);const[bn,bl]=n(b.lote);
+    return an!==bn?an-bn:al.localeCompare(bl);
+  });
   const totalCobrado=pagados.reduce((s,c)=>s+(c.monto||0),0);
   const totalMora=vanAMora.reduce((s,c)=>s+(c.monto||0),0);
   const pct=operativos.length?Math.round(pagados.length/operativos.length*100):0;
@@ -7086,7 +7093,7 @@ function mostrarResumenCierre(){
   const listaMoraHtml=vanAMora.map(c=>`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-bottom:1px solid #fecaca;font-size:13px">
       <span><b style="color:var(--acc2)">${formatLoteTag(c.mz,c.lote)}</b> <span style="color:var(--text)">${c.titular||''}</span></span>
-      <span style="font-weight:700;color:var(--red)">${c.moneda==='USD'?'USD ':'\$'}${fmtPeso(montoCobrable(c).total)}</span>
+      <span style="font-weight:700;color:var(--red)">${c.moneda==='USD'?'USD ':''}${fmtPeso(montoCobrable(c).total)}</span>
     </div>`).join('');
 
   // Crear modal
@@ -7141,7 +7148,7 @@ function mostrarResumenCierre(){
         <div style="background:var(--red-bg);border:1.5px solid #fca5a5;border-radius:8px;overflow:hidden;max-height:220px;overflow-y:auto">
           ${listaMoraHtml}
           <div style="display:flex;justify-content:space-between;padding:8px 10px;font-size:13px;font-weight:800;background:var(--red-bg)">
-            <span>Total mora</span><span style="color:var(--red)">\$${fmtPeso(totalMora)}</span>
+            <span>Total mora</span><span style="color:var(--red)">${fmtPeso(totalMora)}</span>
           </div>
         </div>
       </div>`:'<div style="margin:0 16px 16px;padding:12px;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:8px;text-align:center;font-size:13px;color:var(--green);font-weight:600">🎉 ¡Todos pagaron este mes!</div>'}
