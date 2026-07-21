@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0353';
+  datos['_version']='v1.0354';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6995,14 +6995,15 @@ function borrarCierreFinalYReaplicar(){
 // ══════════ SNAPSHOT / REVERT ══════════
 function saveSnapshot(){
   try{
+    // v1.0354: claves corregidas — antes leía de lugares equivocados y la foto quedaba incompleta
     const snap={
       data: _lsGet(dKey('data')),
-      mora: _lsGet(dKey('mora')),
-      cuotasMora: _lsGet(dKey('cuotas_mora')),
-      pagoStore: _lsGet(dKey('pago_store')),
+      mora: localStorage.getItem('fj_mora'),
+      cuotasMora: localStorage.getItem('fj_cuotas_mora'),
+      pagoStore: _lsGet(dKey('pagos')),
       balances: _lsGet(dKey('balances')),
-      cierreFinal: _lsGet(dKey('cierre_final')),
-      mesActual: _lsGet(dKey('mes_actual')),
+      cierreFinal: localStorage.getItem('fj_cierre_final'),
+      mesActual: localStorage.getItem('fj_mes_actual'),
       ts: new Date().toISOString()
     };
     _lsSet(dKey('snapshot_cierre'), JSON.stringify(snap));
@@ -7037,14 +7038,15 @@ function revertirCierre(){
     const snap=loadSnapshot();
     if(!snap){ alert('No hay snapshot disponible para revertir.'); return; }
     try{
-      if(snap.data) _lsSet(dKey('data'), snap.data);
-      if(snap.mora) _lsSet(dKey('mora'), snap.mora);
-      if(snap.cuotasMora) _lsSet(dKey('cuotas_mora'), snap.cuotasMora);
-      if(snap.pagoStore) _lsSet(dKey('pago_store'), snap.pagoStore);
-      if(snap.balances) _lsSet(dKey('balances'), snap.balances);
-      if(snap.cierreFinal) _lsSet(dKey('cierre_final'), snap.cierreFinal);
-      else { try{localStorage.removeItem(dKey('cierre_final'));}catch(e){} delete _memStore[dKey('cierre_final')]; }
-      if(snap.mesActual) _lsSet(dKey('mes_actual'), snap.mesActual);
+      // v1.0354: usa las funciones save* para que TODO se sincronice a Firebase (antes solo tocaba localStorage con claves equivocadas)
+      if(snap.data) saveData(JSON.parse(snap.data));
+      if(snap.mora) saveMora(JSON.parse(snap.mora));
+      if(snap.cuotasMora) saveCuotasMora(JSON.parse(snap.cuotasMora));
+      savePagoStore(snap.pagoStore?JSON.parse(snap.pagoStore):{});
+      if(snap.balances) saveBalances(JSON.parse(snap.balances));
+      if(snap.cierreFinal) saveCierreFinal(JSON.parse(snap.cierreFinal));
+      else { try{localStorage.removeItem('fj_cierre_final');}catch(e){} }
+      if(snap.mesActual) saveMesActual(JSON.parse(snap.mesActual));
       // Eliminar snapshot usado
       try{localStorage.removeItem(dKey('snapshot_cierre'));}catch(e){} delete _memStore[dKey('snapshot_cierre')];
       renderBalances('cierres');
@@ -7174,11 +7176,8 @@ function ejecutarCierreFinal(){
     // Guardar snapshot ANTES de ejecutar
     saveSnapshot();
 
-    if(hayCierreFinal()){
-      try{localStorage.removeItem(dKey('cierre_final'));}catch(e){}
-      delete _memStore[dKey('cierre_final')];
-      savePagoStore({});
-    }
+    // v1.0354: acá había un bloque que borraba pagoStore ANTES de leer quién pagó
+    // → el cierre veía a todos impagos y generaba mora masiva. ELIMINADO.
     const ts=new Date().toISOString();
     const hoy=new Date();
     const fecha=hoy.toLocaleDateString('es-AR');
@@ -7284,12 +7283,9 @@ function hacerCierreFinal(){
   confirmarConClave(()=>{
     // Capturar el mes operativo antes de tocar nada
     const _mesOperativoCapturado=mesActual();
-    // Si ya hay cierre, lo reemplaza
-    if(hayCierreFinal()){
-      try{localStorage.removeItem(dKey('cierre_final'));}catch(e){}
-      delete _memStore[dKey('cierre_final')];
-      savePagoStore({});
-    }
+    // v1.0354: acá había un bloque que borraba pagoStore ANTES de leer quién pagó
+    // → el cierre veía a todos impagos y generaba mora masiva. ELIMINADO.
+    // (el registro de cierre anterior se pisa igual con saveCierreFinal al final)
     const ts=new Date().toISOString();
     const hoy=new Date();
     const fecha=hoy.toLocaleDateString('es-AR');
