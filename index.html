@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0352';
+  datos['_version']='v1.0353';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7065,7 +7065,7 @@ function mostrarResumenCierre(){
   const data=loadData();
 
   // Calcular stats
-  const activos=data.filter(c=>c.est==='activo'&&!c.autopago&&!c.agrimensor);
+  const activos=data.filter(c=>c.est==='activo'&&!c.autopago);
   const pausados=activos.filter(c=>esPrimeraCuotaFutura(c));
   const operativos=activos.filter(c=>!esPrimeraCuotaFutura(c));
   const pagados=operativos.filter(c=>c.pago);
