@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0364';
+  datos['_version']='v1.0365';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -4840,6 +4840,7 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
           +'<div style="color:var(--text2);font-size:11px">Cuotas: <b>'+cur+fmtPeso(g.cuota)+'</b></div>'
           +'<div style="color:var(--red);font-size:11px">Interés: <b>'+cur+fmtPeso(g.interes)+'</b></div>'
           +'<div style="font-weight:700">'+cur+fmtPeso(g.cuota+g.interes)+'</div>'
+          +(g.items.some(p=>p.interes&&!p.interesEnExtras)?'<button data-id="'+g.id+'" onclick="event.stopPropagation();pasarInteresesGrupo(this.dataset.id)" style="background:none;border:1px solid #c7d2fe;color:#4f46e5;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-top:3px">→ Pasar intereses a Extras</button>':'')
           +'</div></div>'
           +'<div style="display:'+(abierto?'block':'none')+'">'+detalle+'</div>'
           +'</div>';
@@ -5583,6 +5584,32 @@ function resetMora(){
     saveMora([]);
     renderBalances('mora');
     alert('✓ Caja de mora limpiada');
+  });
+}
+
+function pasarInteresesGrupo(id){
+  confirmarConClave(()=>{
+    const mora=loadMora();
+    const items=mora.filter(x=>x.id===id&&x.interes&&!x.interesEnExtras);
+    if(!items.length){alert('No hay intereses pendientes de pasar para este lote');return;}
+    const total=items.reduce((s,p)=>s+(p.interes||0),0);
+    const p0=items[0];
+    const extras=loadExtras();
+    extras.push({
+      id:Date.now().toString(),
+      tipo:'ingreso',
+      desc:`Interés mora (${items.length} cuota${items.length>1?'s':''}) — ${formatLoteTag(p0.mz,p0.lote)} ${p0.titular}`,
+      monto:total,
+      fecha:new Date().toLocaleDateString('es-AR'),
+      ts:new Date().toISOString(),
+      moraId:id
+    });
+    saveExtras(extras);
+    items.forEach(p=>{p.interesEnExtras=true;});
+    saveMora(mora);
+    actualizarBadgeMora();
+    renderBalances('mora');
+    alert('✓ '+fmtPeso(total)+' de intereses ('+items.length+' cuota'+(items.length>1?'s':'')+') enviados a Gastos e Ingresos Extras');
   });
 }
 
