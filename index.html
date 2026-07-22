@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0363';
+  datos['_version']='v1.0364';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3470,6 +3470,12 @@ function toggleMoraMz(k){
   renderPanelMora();
 }
 
+function toggleMoraCajaGrupo(k){
+  if(!window._moraCajaAbierto) window._moraCajaAbierto={};
+  window._moraCajaAbierto[k]=!window._moraCajaAbierto[k];
+  renderBalances('mora');
+}
+
 function toggleMoraVista(){
   const actual=localStorage.getItem('fj_mora_vista')||'tarjetas';
   localStorage.setItem('fj_mora_vista',actual==='compacta'?'tarjetas':'compacta');
@@ -4794,20 +4800,49 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
     const totalInteresU=usd.reduce((s,p)=>s+(p.interes||0),0);
     const cf=loadCierreFinal();
 
+    // v1.0364: agrupado por lote — línea resumen desplegable con el detalle por cuota adentro
+    if(!window._moraCajaAbierto) window._moraCajaAbierto={};
     const renderMoraList=(lista,isUSD)=>{
       if(!lista.length) return '<div style="font-size:13px;color:var(--text2);padding:8px 0">Sin pagos</div>';
-      return lista.slice().reverse().map(p=>{
-        const cur=isUSD?'USD ':'';
-        const extraBtn=p.interes&&!p.interesEnExtras?'<button data-id="'+p.id+'" data-ts="'+p.ts+'" onclick="pasarInteresMora(this.dataset.id,this.dataset.ts)" style="background:none;border:1px solid #c7d2fe;color:#4f46e5;border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-top:2px">→ Extras</button>':'';
-        const desmarcaBtn='<button data-cid="'+p.id+'" data-ts="'+p.ts+'" onclick="desmararPagoMoraCaja(this.dataset.cid,this.dataset.ts)" style="background:none;border:1px solid #fca5a5;color:var(--red);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-top:2px;display:block">↩ Desmarcar</button>';
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px">'
-          +'<div><div style="font-weight:600">'+formatLoteTag(p.mz,p.lote)+' — '+p.titular+'</div>'
-          +'<div style="font-size:11px;color:var(--text2)">'+p.fecha+'</div></div>'
+      const cur=isUSD?'USD ':'';
+      // agrupar por cliente, orden por último cobro desc
+      const grupos={};
+      lista.forEach(p=>{
+        if(!grupos[p.id]) grupos[p.id]={id:p.id,mz:p.mz,lote:p.lote,titular:p.titular,items:[],cuota:0,interes:0,ultTs:''};
+        const g=grupos[p.id];
+        g.items.push(p);
+        g.cuota+=(p.cuotaAgrimensor||p.cuota||0);
+        g.interes+=(p.interes||0);
+        if(p.ts>g.ultTs) g.ultTs=p.ts;
+      });
+      const arr=Object.values(grupos).sort((a,b)=>b.ultTs.localeCompare(a.ultTs));
+      return arr.map(g=>{
+        const key=(isUSD?'U':'P')+g.id;
+        const abierto=!!window._moraCajaAbierto[key];
+        const fechas=[...new Set(g.items.map(p=>p.fecha))].join(' · ');
+        const detalle=g.items.slice().reverse().map(p=>{
+          const extraBtn=p.interes&&!p.interesEnExtras?'<button data-id="'+p.id+'" data-ts="'+p.ts+'" onclick="pasarInteresMora(this.dataset.id,this.dataset.ts)" style="background:none;border:1px solid #c7d2fe;color:#4f46e5;border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">→ Extras</button>':'';
+          const desmarcaBtn='<button data-cid="'+p.id+'" data-ts="'+p.ts+'" onclick="desmararPagoMoraCaja(this.dataset.cid,this.dataset.ts)" style="background:none;border:1px solid #fca5a5;color:var(--red);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">↩ Desmarcar</button>';
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 6px 14px;border-bottom:1px dashed var(--border);font-size:12px">'
+            +'<div><span style="font-weight:600">'+(p.mesNombre||('Cuota'+(p.numeroCuota?' '+p.numeroCuota:'')))+'</span> <span style="font-size:10px;color:var(--text2)">'+p.fecha+'</span></div>'
+            +'<div style="display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end">'
+            +(p.cuotaAgrimensor?'<span style="color:var(--acc2);font-size:11px">⚖️ '+cur+fmtPeso(p.cuotaAgrimensor)+'</span>':'<span style="font-size:11px">'+cur+fmtPeso(p.cuota||0)+'</span>')
+            +'<span style="color:var(--red);font-size:11px;margin-left:6px">+ '+cur+fmtPeso(p.interes||0)+'</span>'
+            +'<span style="font-weight:700;font-size:12px;margin-left:8px">'+cur+fmtPeso((p.cuotaAgrimensor||p.cuota||0)+(p.interes||0))+'</span>'
+            +extraBtn+desmarcaBtn+'</div></div>';
+        }).join('');
+        return '<div style="border-bottom:1px solid var(--border)">'
+          +'<div data-k="'+key+'" onclick="toggleMoraCajaGrupo(this.dataset.k)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:13px;cursor:pointer">'
+          +'<div><div style="font-weight:700">'+(abierto?'▼':'▶')+' '+formatLoteTag(g.mz,g.lote)+' — '+g.titular
+          +(g.items.length>1?' <span style="background:var(--red-bg);color:var(--red);border:1px solid #fca5a5;font-size:10px;font-weight:700;border-radius:6px;padding:1px 7px;margin-left:4px">'+g.items.length+' cuotas</span>':'')+'</div>'
+          +'<div style="font-size:11px;color:var(--text2)">'+fechas+'</div></div>'
           +'<div style="text-align:right">'
-          +(p.cuotaAgrimensor?'<div style="color:var(--acc2);font-size:11px">Cuota (⚖️ Agr.): <b>'+cur+fmtPeso(p.cuotaAgrimensor)+'</b></div>':'<div style="color:var(--text2);font-size:11px">Cuota: <b>'+cur+fmtPeso(p.cuota||0)+'</b></div>')
-          +'<div style="color:var(--red);font-size:11px">Interés: <b>'+cur+fmtPeso(p.interes||0)+'</b></div>'
-          +'<div style="font-weight:700">'+cur+fmtPeso((p.cuota||0)+(p.interes||0))+'</div>'
-          +extraBtn+desmarcaBtn+'</div></div>';
+          +'<div style="color:var(--text2);font-size:11px">Cuotas: <b>'+cur+fmtPeso(g.cuota)+'</b></div>'
+          +'<div style="color:var(--red);font-size:11px">Interés: <b>'+cur+fmtPeso(g.interes)+'</b></div>'
+          +'<div style="font-weight:700">'+cur+fmtPeso(g.cuota+g.interes)+'</div>'
+          +'</div></div>'
+          +'<div style="display:'+(abierto?'block':'none')+'">'+detalle+'</div>'
+          +'</div>';
       }).join('');
     };
 
