@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0372';
+  datos['_version']='v1.0373';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3479,6 +3479,11 @@ async function generarInformeMensual(soloTest){
   data.forEach(c=>(c.hist||[]).forEach(h=>{if(h.mes===mesCerrado){pagaronMes.push(c.id);cobradoMes+=h.monto||0;}}));
   const moraMes=cm.filter(m=>m.mesNombre===mesCerrado);
   const pctCobranza=(pagaronMes.length+moraMes.length)>0?Math.round(pagaronMes.length/(pagaronMes.length+moraMes.length)*100):0;
+  // Aclaraciones: finalizados en el mes (pagaron su última cuota) y activos sin cuota este mes
+  const finalizadosMes=data.filter(c=>c.est==='finalizado'&&(c.hist||[]).some(h=>h.mes===mesCerrado)).length;
+  const pagoSet=new Set(pagaronMes);
+  const moraSet=new Set(moraMes.map(m=>m.clienteId));
+  const sinCuotaMes=activos.filter(c=>!pagoSet.has(c.id)&&!moraSet.has(c.id)).length;
 
   // Mora cobrada luego del cierre final (capital)
   const corteCierre=cf.ts||new Date(Date.now()-30*24*3600*1000).toISOString();
@@ -3595,6 +3600,10 @@ async function generarInformeMensual(soloTest){
   y+=24;
   doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60);
   doc.text('Cobrado del mes (cuotas de '+mesCerrado+'): '+fmt(cobradoMes)+'    ·    Mora cobrada luego del cierre: '+fmt(moraCobradaMonto)+' ('+lotesMoraCobrada+' lote'+(lotesMoraCobrada!==1?'s':'')+', '+moraCobradas.length+' cuotas)',12,y);
+  y+=5;
+  doc.setFontSize(8.5); doc.setTextColor(120,120,120);
+  doc.text('Nota: "Pagaron la cuota" incluye '+finalizadosMes+' lote'+(finalizadosMes!==1?'s':'')+' que finalizó su plan este mes (ya no cuenta como activo). '+sinCuotaMes+' lote'+(sinCuotaMes!==1?'s':'')+' activo'+(sinCuotaMes!==1?'s':'')+' sin cuota este mes (primera cuota a futuro).',12,y);
+  doc.setFontSize(10); doc.setTextColor(60,60,60);
   y+=6;
   doc.addImage(tortaImg,'PNG',12,y,80,60);
   doc.addImage(barrasImg,'PNG',98,y,100,37.5);
