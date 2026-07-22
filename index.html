@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0370';
+  datos['_version']='v1.0371';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3291,7 +3291,7 @@ function renderPanelMora(){
         ${totalGeneralUSD>0?`<div style="font-size:18px;font-weight:800;color:var(--red)">USD ${fmtPeso(totalGeneralUSD)}</div>`:''}
       </div>
       <button onclick="renderPanelMora()" style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer">Actualizar</button>
-      <button onclick="abrirModalAgregarMora()" style="background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">➕ Agregar a mora</button>
+      <button onclick="generarInformeMensual()" style="background:var(--surface);border:1.5px solid var(--border2);color:var(--text);border-radius:var(--r);padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">📊 Informe mensual</button>\n      <button onclick="abrirModalAgregarMora()" style="background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">➕ Agregar a mora</button>
     </div>
   </div>`;
 
@@ -3457,6 +3457,194 @@ function _cargarScript(src){
     s.src=src; s.onload=res; s.onerror=()=>rej(new Error('No se pudo cargar '+src));
     document.head.appendChild(s);
   });
+}
+
+async function generarInformeMensual(soloTest){
+  try{
+    await _cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await _cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js');
+  }catch(e){alert('❌ No se pudo cargar el generador de PDF. Verificá tu conexión a internet.');return;}
+  const cf=loadCierreFinal();
+  if(!cf){alert('Todavía no hay un cierre final registrado');return;}
+  const mesCerrado=cf.mesNombre;
+  const hoy=new Date();
+  const fmt=n=>fmtPeso(Math.round(n));
+  const data=loadData();
+  const activos=data.filter(c=>c.est==='activo');
+  const cm=loadCuotasMora();
+  const impagas=cm.filter(m=>!m.pagada);
+
+  // Mes cerrado: pagaron vs mora
+  const pagaronMes=[]; let cobradoMes=0;
+  data.forEach(c=>(c.hist||[]).forEach(h=>{if(h.mes===mesCerrado){pagaronMes.push(c.id);cobradoMes+=h.monto||0;}}));
+  const moraMes=cm.filter(m=>m.mesNombre===mesCerrado);
+  const pctCobranza=(pagaronMes.length+moraMes.length)>0?Math.round(pagaronMes.length/(pagaronMes.length+moraMes.length)*100):0;
+
+  // Mora cobrada últimos 30 días (capital)
+  const corte30=new Date(Date.now()-30*24*3600*1000).toISOString();
+  const moraCobradas=cm.filter(m=>m.pagada&&m.pagoTs&&m.pagoTs>corte30);
+  const moraCobradaMonto=moraCobradas.reduce((s,m)=>s+(m.monto||0),0);
+
+  // Agrupar impagas: etapa → manzana → cliente
+  const _etOrd=e=>({'Etapa 1':1,'Etapa 2':2,'Etapa 3':3,'Etapa 4':4}[e]||9);
+  const porCliente={};
+  impagas.forEach(m=>{
+    if(!porCliente[m.clienteId]) porCliente[m.clienteId]={id:m.clienteId,mz:m.mz,lote:m.lote,titular:m.titular,moneda:m.moneda,cuotas:[],cp:0};
+    const g=porCliente[m.clienteId];
+    g.cuotas.push(m);
+    g.cp+=montoCobrable(m).total;
+  });
+  const clientesMora=Object.values(porCliente);
+  clientesMora.forEach(g=>g.cuotas.sort((a,b)=>(a.anio-b.anio)||(a.mes-b.mes)));
+  clientesMora.sort((a,b)=>{
+    const ea=_etOrd(getEtapa(a.mz)),eb=_etOrd(getEtapa(b.mz));
+    if(ea!==eb) return ea-eb;
+    const mzA=parseInt(String(a.mz||'').replace(/[^0-9]/g,''))||0,mzB=parseInt(String(b.mz||'').replace(/[^0-9]/g,''))||0;
+    if(mzA!==mzB) return mzA-mzB;
+    return (parseInt(String(a.lote||'').replace(/[^0-9]/g,''))||0)-(parseInt(String(b.lote||'').replace(/[^0-9]/g,''))||0);
+  });
+  const porEtapa=[]; const porMz=[];
+  clientesMora.forEach(g=>{
+    const et=getEtapa(g.mz)||'Otros';
+    let e=porEtapa.find(x=>x.et===et);
+    if(!e){e={et,lotes:0,cuotas:0,cpARS:0,cpUSD:0};porEtapa.push(e);}
+    e.lotes++; e.cuotas+=g.cuotas.length;
+    if(g.moneda==='USD') e.cpUSD+=g.cp; else e.cpARS+=g.cp;
+    const mk=et+'|'+g.mz;
+    let mz=porMz.find(x=>x.k===mk);
+    if(!mz){mz={k:mk,et,mz:g.mz,lotes:0,cuotas:0,cpARS:0,cpUSD:0};porMz.push(mz);}
+    mz.lotes++; mz.cuotas+=g.cuotas.length;
+    if(g.moneda==='USD') mz.cpUSD+=g.cp; else mz.cpARS+=g.cp;
+  });
+
+  // Gráfico torta: pagaron vs mora del mes
+  const cvT=document.createElement('canvas'); cvT.width=400; cvT.height=300;
+  const cx=cvT.getContext('2d');
+  cx.fillStyle='#ffffff'; cx.fillRect(0,0,400,300);
+  const tot=pagaronMes.length+moraMes.length||1;
+  const angP=pagaronMes.length/tot*2*Math.PI;
+  cx.beginPath(); cx.moveTo(150,150); cx.arc(150,150,110,-Math.PI/2,-Math.PI/2+angP); cx.closePath(); cx.fillStyle='#16a34a'; cx.fill();
+  cx.beginPath(); cx.moveTo(150,150); cx.arc(150,150,110,-Math.PI/2+angP,1.5*Math.PI); cx.closePath(); cx.fillStyle='#dc2626'; cx.fill();
+  cx.font='bold 15px Arial';
+  cx.fillStyle='#16a34a'; cx.fillRect(285,110,14,14); cx.fillStyle='#374151'; cx.fillText('Pagaron: '+pagaronMes.length,285,145);
+  cx.fillStyle='#dc2626'; cx.fillRect(285,160,14,14); cx.fillStyle='#374151'; cx.fillText('En mora: '+moraMes.length,285,195);
+  const tortaImg=cvT.toDataURL('image/png');
+
+  // Gráfico barras: deuda CP por etapa
+  const cvB=document.createElement('canvas'); cvB.width=800; cvB.height=300;
+  const bx=cvB.getContext('2d');
+  bx.fillStyle='#ffffff'; bx.fillRect(0,0,800,300);
+  const maxCP=Math.max(...porEtapa.map(e=>e.cpARS),1);
+  porEtapa.forEach((e,i)=>{
+    const x=80+i*180;
+    const h=Math.max(4,Math.round(e.cpARS/maxCP*200));
+    bx.fillStyle='#991b1b'; bx.fillRect(x,250-h,100,h);
+    bx.fillStyle='#374151'; bx.font='bold 15px Arial';
+    bx.fillText(e.et,x+10,272);
+    bx.font='13px Arial';
+    bx.fillText('$'+fmt(e.cpARS),x,240-h);
+    if(e.cpUSD) bx.fillText('+USD '+fmt(e.cpUSD),x,292);
+  });
+  const barrasImg=cvB.toDataURL('image/png');
+
+  // ── PDF ──
+  const { jsPDF }=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const W=210;
+  doc.setFillColor(24,24,27); doc.rect(0,0,W,26,'F');
+  doc.setTextColor(230,168,48); doc.setFont('helvetica','bold'); doc.setFontSize(15);
+  doc.text('F&J DESARROLLOS INMOBILIARIOS',12,11);
+  doc.setTextColor(255,255,255); doc.setFontSize(11); doc.setFont('helvetica','normal');
+  doc.text('Informe mensual de cobranza y mora — '+mesCerrado,12,19);
+  doc.setFontSize(9);
+  doc.text('Emitido: '+hoy.toLocaleDateString('es-AR'),W-12,11,{align:'right'});
+  doc.text('Cierre: '+(cf.fecha||''),W-12,17,{align:'right'});
+
+  // Resumen global
+  let y=34;
+  doc.setTextColor(20,20,20); doc.setFont('helvetica','bold'); doc.setFontSize(12);
+  doc.text('Resumen del mes cerrado ('+mesCerrado+')',12,y);
+  y+=4;
+  const kpis=[
+    ['Clientes activos', String(activos.length)],
+    ['Pagaron la cuota', String(pagaronMes.length)],
+    ['Entraron en mora', String(moraMes.length)],
+    ['Cobranza', pctCobranza+'%']
+  ];
+  kpis.forEach((k,i)=>{
+    const x=12+i*47.5;
+    doc.setFillColor(245,245,244); doc.roundedRect(x,y,44,18,2,2,'F');
+    doc.setFontSize(8); doc.setTextColor(90,90,90); doc.setFont('helvetica','normal');
+    doc.text(k[0],x+22,y+6,{align:'center'});
+    doc.setFontSize(14); doc.setTextColor(20,20,20); doc.setFont('helvetica','bold');
+    doc.text(k[1],x+22,y+14,{align:'center'});
+  });
+  y+=24;
+  doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60);
+  doc.text('Cobrado del mes (cuotas de '+mesCerrado+'): $ '+fmt(cobradoMes)+'    ·    Mora cobrada en los últimos 30 días: $ '+fmt(moraCobradaMonto)+' ('+moraCobradas.length+' cuotas)',12,y);
+  y+=6;
+  doc.addImage(tortaImg,'PNG',12,y,80,60);
+  doc.addImage(barrasImg,'PNG',98,y,100,37.5);
+  y+=64;
+
+  // Tabla por etapa
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(20,20,20);
+  doc.text('Deuda vigente por etapa (cuota pura)',12,y);
+  doc.autoTable({
+    startY:y+3,
+    head:[['Etapa','Lotes en mora','Cuotas adeudadas','Deuda CP ($)','Deuda CP (USD)']],
+    body:porEtapa.map(e=>[e.et,String(e.lotes),String(e.cuotas),'$ '+fmt(e.cpARS),e.cpUSD?'USD '+fmt(e.cpUSD):'—']),
+    styles:{fontSize:9,cellPadding:1.8},
+    headStyles:{fillColor:[68,64,60],textColor:255},
+    columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'},4:{halign:'right'}},
+    margin:{left:12,right:12}
+  });
+  let y2=doc.lastAutoTable.finalY+8;
+
+  // Tabla por manzana
+  if(y2>230){doc.addPage();y2=20;}
+  doc.setFont('helvetica','bold'); doc.setFontSize(12);
+  doc.text('Desglose por manzana',12,y2);
+  doc.autoTable({
+    startY:y2+3,
+    head:[['Etapa','Manzana','Lotes en mora','Cuotas','Deuda CP ($)','Deuda CP (USD)']],
+    body:porMz.map(m=>[m.et,m.mz,String(m.lotes),String(m.cuotas),'$ '+fmt(m.cpARS),m.cpUSD?'USD '+fmt(m.cpUSD):'—']),
+    styles:{fontSize:8.5,cellPadding:1.6},
+    headStyles:{fillColor:[68,64,60],textColor:255},
+    columnStyles:{2:{halign:'right'},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'}},
+    margin:{left:12,right:12}
+  });
+  let y3=doc.lastAutoTable.finalY+8;
+
+  // Lista de morosos simplificada
+  if(y3>220){doc.addPage();y3=20;}
+  doc.setFont('helvetica','bold'); doc.setFontSize(12);
+  doc.text('Lotes en mora ('+clientesMora.length+')',12,y3);
+  doc.autoTable({
+    startY:y3+3,
+    head:[['Lote','Titular','Cuotas','Debe desde','Días','Deuda CP']],
+    body:clientesMora.map(g=>{
+      const v=g.cuotas[0];
+      const mor=calcInteresMoraDesde(v.monto,v.anio,v.mes);
+      const cur=g.moneda==='USD'?'USD ':'$ ';
+      return [formatLoteTag(g.mz,g.lote),g.titular||'',String(g.cuotas.length),v.mesNombre,String(mor.dias),cur+fmt(g.cp)];
+    }),
+    styles:{fontSize:8,cellPadding:1.4},
+    headStyles:{fillColor:[153,27,27],textColor:255},
+    columnStyles:{2:{halign:'right'},4:{halign:'right'},5:{halign:'right',fontStyle:'bold'}},
+    margin:{left:12,right:12}
+  });
+
+  const pages=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pages;i++){
+    doc.setPage(i);
+    doc.setFontSize(8); doc.setTextColor(140,140,140); doc.setFont('helvetica','normal');
+    doc.text('FJ App — Los Eucaliptus · Informe mensual generado el '+hoy.toLocaleDateString('es-AR')+' · Montos de deuda en cuota pura (sin intereses)',12,292);
+    doc.text('Página '+i+' de '+pages,W-12,292,{align:'right'});
+  }
+
+  if(soloTest) return doc.output('datauristring').length;
+  doc.save('Informe_Mensual_'+mesCerrado.replace(/ /g,'_')+'.pdf');
 }
 
 async function generarInformeMora(clienteId, soloTest){
