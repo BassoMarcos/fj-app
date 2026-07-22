@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0362';
+  datos['_version']='v1.0363';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3517,7 +3517,7 @@ function abrirModalAgregarMora(){
   ov.id='modal-agregar-mora';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
   ov.innerHTML=
-    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'+
+    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">'+
     '<div style="background:#dc2626;padding:14px 18px;display:flex;justify-content:space-between;align-items:center">'+
     '<div style="color:#fff;font-size:16px;font-weight:800">➕ Revertir cobro a mora</div>'+
     '<button onclick="document.getElementById(\'modal-agregar-mora\').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>'+
@@ -6728,7 +6728,7 @@ function cobrarTodoColab(clienteId){
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   ov.onclick=function(e){if(e.target===ov)ov.remove();};
   ov.innerHTML=
-    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'
+    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">'
     +'<div style="background:#7c3aed;padding:14px 18px;display:flex;justify-content:space-between;align-items:center">'
     +'<div style="color:#fff;font-size:16px;font-weight:800">⚡ Cobrar todo</div>'
     +'<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>'
@@ -6831,7 +6831,7 @@ function cobrarTodoAdmin(clienteId){
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   ov.onclick=function(e){if(e.target===ov)ov.remove();};
   ov.innerHTML=
-    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'
+    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">'
     +'<div style="background:#7c3aed;padding:14px 18px;display:flex;justify-content:space-between;align-items:center">'
     +'<div style="color:#fff;font-size:16px;font-weight:800">⚡ Cobrar todo</div>'
     +'<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>'
@@ -6939,7 +6939,7 @@ function cobrarAdmMora(clienteId){
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   ov.onclick=function(e){if(e.target===ov)ov.remove();};
   ov.innerHTML=
-    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'+
+    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">'+
     '<div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">'+
     '<div style="font-size:16px;font-weight:800">💰 Cobrar mora</div>'+
     '<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
@@ -7625,7 +7625,7 @@ function cobrarConMoraColab(btn){
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   ov.onclick=function(e){if(e.target===ov)ov.remove();};
   ov.innerHTML=
-    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'+
+    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">'+
     '<div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">'+
     '<div style="font-size:16px;font-weight:800">💰 Confirmar cobro</div>'+
     '<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
@@ -7829,7 +7829,7 @@ function revertirCobroMesAnterior(clienteId){
   ).join('');
 
   ov.innerHTML=
-    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden">'+
+    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">'+
     '<div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">'+
     '<div style="font-size:15px;font-weight:800">↩ ¿Qué mes revertir?</div>'+
     '<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
