@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0371';
+  datos['_version']='v1.0372';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3480,10 +3480,11 @@ async function generarInformeMensual(soloTest){
   const moraMes=cm.filter(m=>m.mesNombre===mesCerrado);
   const pctCobranza=(pagaronMes.length+moraMes.length)>0?Math.round(pagaronMes.length/(pagaronMes.length+moraMes.length)*100):0;
 
-  // Mora cobrada últimos 30 días (capital)
-  const corte30=new Date(Date.now()-30*24*3600*1000).toISOString();
-  const moraCobradas=cm.filter(m=>m.pagada&&m.pagoTs&&m.pagoTs>corte30);
+  // Mora cobrada luego del cierre final (capital)
+  const corteCierre=cf.ts||new Date(Date.now()-30*24*3600*1000).toISOString();
+  const moraCobradas=cm.filter(m=>m.pagada&&m.pagoTs&&m.pagoTs>corteCierre);
   const moraCobradaMonto=moraCobradas.reduce((s,m)=>s+(m.monto||0),0);
+  const lotesMoraCobrada=new Set(moraCobradas.map(m=>m.clienteId)).size;
 
   // Agrupar impagas: etapa → manzana → cliente
   const _etOrd=e=>({'Etapa 1':1,'Etapa 2':2,'Etapa 3':3,'Etapa 4':4}[e]||9);
@@ -3517,17 +3518,29 @@ async function generarInformeMensual(soloTest){
     if(g.moneda==='USD') mz.cpUSD+=g.cp; else mz.cpARS+=g.cp;
   });
 
-  // Gráfico torta: pagaron vs mora del mes
+  // Gráfico de cobranza: barras horizontales con porcentajes
   const cvT=document.createElement('canvas'); cvT.width=400; cvT.height=300;
   const cx=cvT.getContext('2d');
   cx.fillStyle='#ffffff'; cx.fillRect(0,0,400,300);
   const tot=pagaronMes.length+moraMes.length||1;
-  const angP=pagaronMes.length/tot*2*Math.PI;
-  cx.beginPath(); cx.moveTo(150,150); cx.arc(150,150,110,-Math.PI/2,-Math.PI/2+angP); cx.closePath(); cx.fillStyle='#16a34a'; cx.fill();
-  cx.beginPath(); cx.moveTo(150,150); cx.arc(150,150,110,-Math.PI/2+angP,1.5*Math.PI); cx.closePath(); cx.fillStyle='#dc2626'; cx.fill();
-  cx.font='bold 15px Arial';
-  cx.fillStyle='#16a34a'; cx.fillRect(285,110,14,14); cx.fillStyle='#374151'; cx.fillText('Pagaron: '+pagaronMes.length,285,145);
-  cx.fillStyle='#dc2626'; cx.fillRect(285,160,14,14); cx.fillStyle='#374151'; cx.fillText('En mora: '+moraMes.length,285,195);
+  const pP=Math.round(pagaronMes.length/tot*100);
+  const pM=100-pP;
+  cx.fillStyle='#374151'; cx.font='bold 16px Arial';
+  cx.fillText('Cobranza del mes',20,35);
+  // barra pagaron
+  cx.font='14px Arial'; cx.fillStyle='#374151';
+  cx.fillText('Pagaron',20,85);
+  cx.fillStyle='#e5e7eb'; cx.fillRect(20,95,320,36);
+  cx.fillStyle='#16a34a'; cx.fillRect(20,95,Math.max(4,Math.round(320*pP/100)),36);
+  cx.fillStyle='#111827'; cx.font='bold 15px Arial';
+  cx.fillText(pagaronMes.length+' clientes — '+pP+'%',26,119);
+  // barra en mora
+  cx.font='14px Arial'; cx.fillStyle='#374151';
+  cx.fillText('En mora',20,175);
+  cx.fillStyle='#e5e7eb'; cx.fillRect(20,185,320,36);
+  cx.fillStyle='#dc2626'; cx.fillRect(20,185,Math.max(4,Math.round(320*pM/100)),36);
+  cx.fillStyle='#111827'; cx.font='bold 15px Arial';
+  cx.fillText(moraMes.length+' clientes — '+pM+'%',26,209);
   const tortaImg=cvT.toDataURL('image/png');
 
   // Gráfico barras: deuda CP por etapa
@@ -3542,7 +3555,7 @@ async function generarInformeMensual(soloTest){
     bx.fillStyle='#374151'; bx.font='bold 15px Arial';
     bx.fillText(e.et,x+10,272);
     bx.font='13px Arial';
-    bx.fillText('$'+fmt(e.cpARS),x,240-h);
+    bx.fillText(fmt(e.cpARS),x,240-h);
     if(e.cpUSD) bx.fillText('+USD '+fmt(e.cpUSD),x,292);
   });
   const barrasImg=cvB.toDataURL('image/png');
@@ -3581,7 +3594,7 @@ async function generarInformeMensual(soloTest){
   });
   y+=24;
   doc.setFontSize(10); doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60);
-  doc.text('Cobrado del mes (cuotas de '+mesCerrado+'): $ '+fmt(cobradoMes)+'    ·    Mora cobrada en los últimos 30 días: $ '+fmt(moraCobradaMonto)+' ('+moraCobradas.length+' cuotas)',12,y);
+  doc.text('Cobrado del mes (cuotas de '+mesCerrado+'): '+fmt(cobradoMes)+'    ·    Mora cobrada luego del cierre: '+fmt(moraCobradaMonto)+' ('+lotesMoraCobrada+' lote'+(lotesMoraCobrada!==1?'s':'')+', '+moraCobradas.length+' cuotas)',12,y);
   y+=6;
   doc.addImage(tortaImg,'PNG',12,y,80,60);
   doc.addImage(barrasImg,'PNG',98,y,100,37.5);
@@ -3593,7 +3606,7 @@ async function generarInformeMensual(soloTest){
   doc.autoTable({
     startY:y+3,
     head:[['Etapa','Lotes en mora','Cuotas adeudadas','Deuda CP ($)','Deuda CP (USD)']],
-    body:porEtapa.map(e=>[e.et,String(e.lotes),String(e.cuotas),'$ '+fmt(e.cpARS),e.cpUSD?'USD '+fmt(e.cpUSD):'—']),
+    body:porEtapa.map(e=>[e.et,String(e.lotes),String(e.cuotas),fmt(e.cpARS),e.cpUSD?'USD '+fmt(e.cpUSD):'—']),
     styles:{fontSize:9,cellPadding:1.8},
     headStyles:{fillColor:[68,64,60],textColor:255},
     columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'},4:{halign:'right'}},
@@ -3608,7 +3621,7 @@ async function generarInformeMensual(soloTest){
   doc.autoTable({
     startY:y2+3,
     head:[['Etapa','Manzana','Lotes en mora','Cuotas','Deuda CP ($)','Deuda CP (USD)']],
-    body:porMz.map(m=>[m.et,m.mz,String(m.lotes),String(m.cuotas),'$ '+fmt(m.cpARS),m.cpUSD?'USD '+fmt(m.cpUSD):'—']),
+    body:porMz.map(m=>[m.et,m.mz,String(m.lotes),String(m.cuotas),fmt(m.cpARS),m.cpUSD?'USD '+fmt(m.cpUSD):'—']),
     styles:{fontSize:8.5,cellPadding:1.6},
     headStyles:{fillColor:[68,64,60],textColor:255},
     columnStyles:{2:{halign:'right'},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'}},
@@ -3626,7 +3639,7 @@ async function generarInformeMensual(soloTest){
     body:clientesMora.map(g=>{
       const v=g.cuotas[0];
       const mor=calcInteresMoraDesde(v.monto,v.anio,v.mes);
-      const cur=g.moneda==='USD'?'USD ':'$ ';
+      const cur=g.moneda==='USD'?'USD ':'';
       return [formatLoteTag(g.mz,g.lote),g.titular||'',String(g.cuotas.length),v.mesNombre,String(mor.dias),cur+fmt(g.cp)];
     }),
     styles:{fontSize:8,cellPadding:1.4},
@@ -3658,7 +3671,7 @@ async function generarInformeMora(clienteId, soloTest){
   const cuotas=loadCuotasMora().filter(x=>!x.pagada&&x.clienteId===clienteId).sort((a,b)=>(a.anio-b.anio)||(a.mes-b.mes));
   if(!cuotas.length){alert('Este cliente no tiene cuotas en mora');return;}
   const esUSD=c.moneda==='USD';
-  const cur=esUSD?'USD ':'$ ';
+  const cur=esUSD?'USD ':'';
   const hoy=new Date();
   const fmt=n=>fmtPeso(Math.round(n));
   const loteTag=formatLoteTag(c.mz,c.lote);
