@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0377';
+  datos['_version']='v1.0378';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3643,6 +3643,7 @@ async function generarInformeMensual(soloTest){
     body:porEtapa.map(e=>[e.et,String(e.lotes),String(e.cuotas),e.cpARS?fmt(e.cpARS):'—',e.cpUSD?'USD '+fmt(e.cpUSD):'—']),
     styles:{fontSize:9,cellPadding:1.8},
     headStyles:{fillColor:[68,64,60],textColor:255},
+    didParseCell:function(d){if(d.section==='head'&&d.column.index>=1)d.cell.styles.halign='right';},
     columnStyles:{0:{fontStyle:'bold',halign:'left'},1:{halign:'right'},2:{halign:'right'},3:{halign:'right'},4:{halign:'right'}},
     margin:{left:12,right:12}
   });
@@ -3658,6 +3659,7 @@ async function generarInformeMensual(soloTest){
     body:porMz.map(m=>[m.et,m.mz,String(m.lotes),String(m.cuotas),m.cpARS?fmt(m.cpARS):'—',m.cpUSD?'USD '+fmt(m.cpUSD):'—']),
     styles:{fontSize:8.5,cellPadding:1.6},
     headStyles:{fillColor:[68,64,60],textColor:255},
+    didParseCell:function(d){if(d.section==='head'&&d.column.index>=2)d.cell.styles.halign='right';},
     columnStyles:{0:{halign:'left'},1:{fontStyle:'bold',halign:'left'},2:{halign:'right'},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'}},
     margin:{left:12,right:12}
   });
@@ -3678,6 +3680,7 @@ async function generarInformeMensual(soloTest){
     }),
     styles:{fontSize:8,cellPadding:1.4},
     headStyles:{fillColor:[153,27,27],textColor:255},
+    didParseCell:function(d){if(d.section==='head'&&[2,4,5].indexOf(d.column.index)>=0)d.cell.styles.halign='right';},
     columnStyles:{0:{fontStyle:'bold',halign:'left'},1:{halign:'left'},2:{halign:'right'},3:{halign:'left'},4:{halign:'right'},5:{halign:'right',fontStyle:'bold'}},
     margin:{left:12,right:12}
   });
@@ -3798,6 +3801,7 @@ async function generarInformeMora(clienteId, soloTest){
     styles:{fontSize:8,cellPadding:1.6},
     headStyles:{fillColor:[153,27,27],textColor:255,fontStyle:'bold'},
     footStyles:{fillColor:[254,226,226],textColor:[120,20,20],fontStyle:'bold'},
+    didParseCell:function(d){if(d.section==='head'&&[2,4,5,6,7].indexOf(d.column.index)>=0)d.cell.styles.halign='right';},
     columnStyles:{2:{halign:'right'},4:{halign:'right'},5:{halign:'right'},6:{halign:'right'},7:{halign:'right',fontStyle:'bold'}},
     margin:{left:12,right:12}
   });
