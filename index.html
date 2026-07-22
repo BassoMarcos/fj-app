@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0374';
+  datos['_version']='v1.0375';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3478,7 +3478,12 @@ async function generarInformeMensual(soloTest){
   const pagaronMes=[]; let cobradoMes=0;
   data.forEach(c=>(c.hist||[]).forEach(h=>{if(h.mes===mesCerrado){pagaronMes.push(c.id);cobradoMes+=h.monto||0;}}));
   const moraMes=cm.filter(m=>m.mesNombre===mesCerrado);
-  const pctCobranza=(pagaronMes.length+moraMes.length)>0?Math.round(pagaronMes.length/(pagaronMes.length+moraMes.length)*100):0;
+  // v1.0375: todo al día de hoy — quien pagó su cuota del mes después del cierre cuenta como pagada
+  const moraMesPag=moraMes.filter(m=>m.pagada);
+  const moraMesImp=moraMes.filter(m=>!m.pagada);
+  const pagaronHoy=pagaronMes.length+moraMesPag.length;
+  const cobradoTarde=moraMesPag.reduce((s,m)=>s+(m.monto||0),0);
+  const pctCobranza=(pagaronHoy+moraMesImp.length)>0?Math.round(pagaronHoy/(pagaronHoy+moraMesImp.length)*100):0;
   // Aclaraciones: finalizados en el mes (pagaron su última cuota) y activos sin cuota este mes
   const finalizadosMes=data.filter(c=>c.est==='finalizado'&&(c.hist||[]).some(h=>h.mes===mesCerrado)).length;
   const pagoSet=new Set(pagaronMes);
@@ -3527,25 +3532,25 @@ async function generarInformeMensual(soloTest){
   const cvT=document.createElement('canvas'); cvT.width=400; cvT.height=300;
   const cx=cvT.getContext('2d');
   cx.fillStyle='#ffffff'; cx.fillRect(0,0,400,300);
-  const tot=pagaronMes.length+moraMes.length||1;
-  const pP=Math.round(pagaronMes.length/tot*100);
+  const tot=pagaronMes.length+moraMesPag.length+moraMesImp.length||1;
+  const pP=Math.round((pagaronMes.length+moraMesPag.length)/tot*100);
   const pM=100-pP;
   cx.fillStyle='#374151'; cx.font='bold 16px Arial';
-  cx.fillText('Cobranza del mes',20,35);
+  cx.fillText('Cobranza del mes (al día de hoy)',20,35);
   // barra pagaron
   cx.font='14px Arial'; cx.fillStyle='#374151';
   cx.fillText('Pagaron',20,85);
   cx.fillStyle='#e5e7eb'; cx.fillRect(20,95,320,36);
   cx.fillStyle='#16a34a'; cx.fillRect(20,95,Math.max(4,Math.round(320*pP/100)),36);
   cx.fillStyle='#111827'; cx.font='bold 15px Arial';
-  cx.fillText(pagaronMes.length+' clientes — '+pP+'%',26,119);
+  cx.fillText((pagaronMes.length+moraMesPag.length)+' clientes — '+pP+'%',26,119);
   // barra en mora
   cx.font='14px Arial'; cx.fillStyle='#374151';
   cx.fillText('En mora',20,175);
   cx.fillStyle='#e5e7eb'; cx.fillRect(20,185,320,36);
   cx.fillStyle='#dc2626'; cx.fillRect(20,185,Math.max(4,Math.round(320*pM/100)),36);
   cx.fillStyle='#111827'; cx.font='bold 15px Arial';
-  cx.fillText(moraMes.length+' clientes — '+pM+'%',26,209);
+  cx.fillText(moraMesImp.length+' clientes — '+pM+'%',26,209);
   const tortaImg=cvT.toDataURL('image/png');
 
   // Gráfico barras: deuda CP por etapa
@@ -3582,13 +3587,13 @@ async function generarInformeMensual(soloTest){
   // ─── 1. RESUMEN DEL MES CERRADO ───
   let y=34;
   doc.setTextColor(20,20,20); doc.setFont('helvetica','bold'); doc.setFontSize(12);
-  doc.text('1. Resumen del mes cerrado ('+mesCerrado+' — cierre del '+(cf.fecha||'')+')',12,y);
+  doc.text('1. Resumen del mes '+mesCerrado+' — actualizado al '+hoyStr,12,y);
   y+=4;
   const kpis=[
     ['Clientes activos', String(activos.length)],
-    ['Pagaron la cuota', String(pagaronMes.length)],
-    ['Entraron en mora', String(moraMes.length)],
-    ['Cobranza', pctCobranza+'%']
+    ['Pagaron el mes (a hoy)', String(pagaronHoy)],
+    ['Deben el mes (a hoy)', String(moraMesImp.length)],
+    ['Cobranza a hoy', pctCobranza+'%']
   ];
   kpis.forEach((k,i)=>{
     const x=12+i*47.5;
@@ -3607,11 +3612,11 @@ async function generarInformeMensual(soloTest){
   doc.setFontSize(9); doc.setTextColor(60,60,60); doc.setFont('helvetica','bold');
   doc.text('Cómo se componen los números:',16,y+6);
   doc.setFont('helvetica','normal');
-  doc.text('· De los '+activos.length+' clientes activos: '+activosPagaron+' pagaron su cuota, '+moraMes.length+' entraron en mora y '+sinCuotaMes+' no tenían cuota este mes (primera cuota a futuro). '+activosPagaron+' + '+moraMes.length+' + '+sinCuotaMes+' = '+(activosPagaron+moraMes.length+sinCuotaMes)+'.',16,y+12);
-  doc.text('· Además, '+finalizadosMes+' lote'+(finalizadosMes!==1?'s':'')+' pagó su última cuota y finalizó su plan (ya no es activo) — por eso "Pagaron la cuota" = '+activosPagaron+' + '+finalizadosMes+' = '+pagaronMes.length+'.',16,y+18);
+  doc.text('· Al cierre ('+(cf.fecha||'')+'): '+activosPagaron+' activos pagaron, '+moraMes.length+' entraron en mora y '+sinCuotaMes+' no tenían cuota este mes ('+activosPagaron+'+'+moraMes.length+'+'+sinCuotaMes+' = '+(activosPagaron+moraMes.length+sinCuotaMes)+' activos). '+finalizadosMes+' lote'+(finalizadosMes!==1?'s':'')+' pagó su última cuota y finalizó su plan.',16,y+12);
+  doc.text('· Desde el cierre, '+moraMesPag.length+' lote'+(moraMesPag.length!==1?'s':'')+' pagó la cuota de '+mesCerrado+' que debía — por eso hoy la pagaron '+pagaronHoy+' ('+pagaronMes.length+'+'+moraMesPag.length+') y la deben '+moraMesImp.length+'.',16,y+18);
   y+=27;
   doc.setFontSize(10); doc.setTextColor(60,60,60);
-  doc.text('Cobrado del mes (cuotas de '+mesCerrado+'): '+fmt(cobradoMes),12,y);
+  doc.text('Cobrado por cuotas de '+mesCerrado+' (a hoy): '+fmt(cobradoMes+cobradoTarde)+(cobradoTarde?'  (incluye '+fmt(cobradoTarde)+' cobrados después del cierre)':''),12,y);
   y+=4;
   doc.addImage(tortaImg,'PNG',12,y,80,60);
   y+=66;
