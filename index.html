@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0361';
+  datos['_version']='v1.0362';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3243,7 +3243,8 @@ function renderPanelMora(){
 
   // Total general por moneda
   let totalGeneralARS=0, totalGeneralUSD=0;
-  cuotasMora.forEach(c=>{const mor=calcInteresMoraDesde(c.monto,c.anio,c.mes);if(c.moneda==='USD') totalGeneralUSD+=c.monto+mor.interes; else totalGeneralARS+=c.monto+mor.interes;});
+  // v1.0362: solo cuota pura (sin intereses)
+  cuotasMora.forEach(c=>{const cp=montoCobrable(c).total;if(c.moneda==='USD') totalGeneralUSD+=cp; else totalGeneralARS+=cp;});
   const totalGeneral=totalGeneralARS+totalGeneralUSD;
 
   // Pendientes de aprobación
@@ -3284,7 +3285,7 @@ function renderPanelMora(){
         <div style="font-size:24px;font-weight:800;color:var(--red)">${clientes.length}</div>
       </div>
       <div style="background:var(--red-bg);border:1px solid #fca5a5;border-radius:var(--r);padding:10px 16px;text-align:center">
-        <div style="font-size:11px;color:var(--red);font-weight:700">TOTAL ADEUDADO</div>
+        <div style="font-size:11px;color:var(--red);font-weight:700">TOTAL ADEUDADO · CUOTA PURA</div>
         ${totalGeneralARS>0?`<div style="font-size:18px;font-weight:800;color:var(--red)">${fmtPeso(totalGeneralARS)}</div>`:''}
         ${totalGeneralUSD>0?`<div style="font-size:18px;font-weight:800;color:var(--red)">USD ${fmtPeso(totalGeneralUSD)}</div>`:''}
       </div>
@@ -3854,7 +3855,9 @@ function cobrarMoraSeleccionadas(clienteId){
 }
 
 function actualizarBadgeMora(){
-  const pendientes=loadCuotasMora().filter(c=>!c.pagada).length+loadPendientesAprobacion().length;
+  // v1.0362: la burbuja cuenta LOTES en mora, no cuotas
+  const _cmImp=loadCuotasMora().filter(c=>!c.pagada);
+  const pendientes=new Set(_cmImp.map(c=>c.clienteId)).size+loadPendientesAprobacion().length;
   const noVistos=getMoraNoVistos();
   const btn=document.getElementById('tab-btn-mora');
   if(!btn) return;
