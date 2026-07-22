@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0358';
+  datos['_version']='v1.0359';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3225,15 +3225,21 @@ function renderPanelMora(){
     return (parseInt(String(a.lote||'').replace(/[^0-9]/g,''))||0)-(parseInt(String(b.lote||'').replace(/[^0-9]/g,''))||0)
       || String(a.lote||'').localeCompare(String(b.lote||''));
   });
-  // Bloques por etapa con subtotales
+  // Bloques desplegables: etapa → manzana → lotes (v1.0359)
   const grupos=[];
   clientes.forEach(cl=>{
     const et=getEtapa(cl.mz)||'Otros';
     let g=grupos.find(x=>x.etapa===et);
-    if(!g){g={etapa:et,items:[],subARS:0,subUSD:0};grupos.push(g);}
-    g.items.push(cl);
-    if(cl.moneda==='USD') g.subUSD+=cl.total; else g.subARS+=cl.total;
+    if(!g){g={etapa:et,manzanas:[],subARS:0,subUSD:0,n:0};grupos.push(g);}
+    let mzG=g.manzanas.find(x=>x.mz===cl.mz);
+    if(!mzG){mzG={mz:cl.mz,items:[],subARS:0,subUSD:0};g.manzanas.push(mzG);}
+    mzG.items.push(cl);
+    g.n++;
+    if(cl.moneda==='USD'){g.subUSD+=cl.total;mzG.subUSD+=cl.total;}else{g.subARS+=cl.total;mzG.subARS+=cl.total;}
   });
+  if(!window._moraEtCer) window._moraEtCer={};
+  if(!window._moraMzAb) window._moraMzAb={};
+  const _sub=(a,u)=>`${a?fmtPeso(a):''}${a&&u?' · ':''}${u?'USD '+fmtPeso(u):''}`;
 
   // Total general por moneda
   let totalGeneralARS=0, totalGeneralUSD=0;
@@ -3358,7 +3364,7 @@ function renderPanelMora(){
   };
 
   if(vistaCompacta){
-    // ── VISTA COMPACTA: una fila por cliente ──
+    // ── VISTA COMPACTA: etapa ▸ manzana ▸ lotes ──
     html+=`<div style="background:var(--surface);border:1.5px solid #fca5a5;border-radius:var(--rlg);overflow:hidden"><div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;min-width:640px">
       <tr style="color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:.03em;background:var(--red-bg)">
@@ -3370,48 +3376,68 @@ function renderPanelMora(){
         <th style="padding:8px 10px;text-align:right">Total c/interés</th>
       </tr>`;
     grupos.forEach(g=>{
-      html+=`<tr><td colspan="6" style="padding:8px 10px;background:#1e40af;color:#fff;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em">${g.etapa} · ${g.items.length} lote${g.items.length>1?'s':''}${g.subARS?' · '+fmtPeso(g.subARS):''}${g.subUSD?' · USD '+fmtPeso(g.subUSD):''}</td></tr>`;
-      g.items.forEach(cl=>{
-      const cur2=cl.moneda==='USD'?'USD ':'';
-      const abierta=window._moraCardAbierta===cl.clienteId;
-      const searchStr=(cl.mz+' '+cl.lote+' '+cl.titular).toLowerCase();
-      html+=`<tr class="mora-card" data-cid="${cl.clienteId}" data-search="${searchStr}" onclick="toggleMoraCard('${cl.clienteId}')" style="cursor:pointer;border-top:1px solid var(--border)">
-        <td style="padding:7px 10px;font-size:12px;font-weight:800;white-space:nowrap">${formatLoteTag(cl.mz,cl.lote)}${cl.moneda==='USD'?' <span style="color:var(--green);font-size:10px;font-weight:700">USD</span>':''}</td>
-        <td style="padding:7px 10px;font-size:12px;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cl.titular}</td>
-        <td style="padding:7px 10px;font-size:12px;text-align:right;font-weight:700">${cl.cuotas.length}</td>
-        <td style="padding:7px 10px;font-size:11px;text-align:right;white-space:nowrap">${cl.masVieja} <span style="color:var(--red);font-weight:700">(${cl.diasMax}d)</span></td>
-        <td style="padding:7px 10px;font-size:12px;text-align:right">${cur2}${fmtPeso(cl.totalCP)}</td>
-        <td style="padding:7px 10px;font-size:13px;text-align:right;font-weight:800;color:var(--red)">${cur2}${fmtPeso(cl.total)}</td>
-      </tr>
-      <tr id="mora-card-det-${cl.clienteId}" data-cid="${cl.clienteId}" style="display:${abierta?'table-row':'none'}">
-        <td colspan="6" style="padding:8px 14px;background:var(--hov)">${detalleHtml(cl)}</td>
+      const etAb=!window._moraEtCer[g.etapa];
+      html+=`<tr onclick="toggleMoraEtapa(this.dataset.et)" data-et="${g.etapa}" style="cursor:pointer;background:var(--red-bg);border-top:2px solid #fca5a5">
+        <td colspan="4" style="padding:9px 10px;font-size:12px;font-weight:800;color:var(--red)">${etAb?'▼':'▶'} ${g.etapa} <span style="font-weight:600;font-size:11px">· ${g.n} lote${g.n>1?'s':''}</span></td>
+        <td colspan="2" style="padding:9px 10px;font-size:12px;font-weight:800;color:var(--red);text-align:right">${_sub(g.subARS,g.subUSD)}</td>
       </tr>`;
+      g.manzanas.forEach(mzG=>{
+        const mzKey=g.etapa+'|'+mzG.mz;
+        const mzAb=!!window._moraMzAb[mzKey];
+        html+=`<tr onclick="toggleMoraMz(this.dataset.k)" data-k="${mzKey}" class="mora-hdr-mz" data-vis="${etAb?1:0}" style="display:${etAb?'table-row':'none'};cursor:pointer;background:var(--hov);border-top:1px solid var(--border)">
+          <td colspan="4" style="padding:7px 10px 7px 22px;font-size:12px;font-weight:700">${mzAb?'▼':'▶'} ${mzG.mz} <span style="font-weight:500;font-size:11px;color:var(--text2)">· ${mzG.items.length} lote${mzG.items.length>1?'s':''}</span></td>
+          <td colspan="2" style="padding:7px 10px;font-size:12px;font-weight:700;text-align:right;color:var(--red)">${_sub(mzG.subARS,mzG.subUSD)}</td>
+        </tr>`;
+        const loteVis=etAb&&mzAb;
+        mzG.items.forEach(cl=>{
+          const cur2=cl.moneda==='USD'?'USD ':'';
+          const abierta=window._moraCardAbierta===cl.clienteId&&loteVis;
+          const searchStr=(cl.mz+' '+cl.lote+' '+cl.titular).toLowerCase();
+          html+=`<tr class="mora-card" data-cid="${cl.clienteId}" data-search="${searchStr}" data-vis="${loteVis?1:0}" onclick="toggleMoraCard('${cl.clienteId}')" style="display:${loteVis?'table-row':'none'};cursor:pointer;border-top:1px solid var(--border)">
+            <td style="padding:7px 10px 7px 34px;font-size:12px;font-weight:800;white-space:nowrap">${formatLoteTag(cl.mz,cl.lote)}${cl.moneda==='USD'?' <span style="color:var(--green);font-size:10px;font-weight:700">USD</span>':''}</td>
+            <td style="padding:7px 10px;font-size:12px;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cl.titular}</td>
+            <td style="padding:7px 10px;font-size:12px;text-align:right;font-weight:700">${cl.cuotas.length}</td>
+            <td style="padding:7px 10px;font-size:11px;text-align:right;white-space:nowrap">${cl.masVieja} <span style="color:var(--red);font-weight:700">(${cl.diasMax}d)</span></td>
+            <td style="padding:7px 10px;font-size:12px;text-align:right">${cur2}${fmtPeso(cl.totalCP)}</td>
+            <td style="padding:7px 10px;font-size:13px;text-align:right;font-weight:800;color:var(--red)">${cur2}${fmtPeso(cl.total)}</td>
+          </tr>
+          <tr id="mora-card-det-${cl.clienteId}" data-cid="${cl.clienteId}" style="display:${abierta?'table-row':'none'}">
+            <td colspan="6" style="padding:8px 14px;background:var(--hov)">${detalleHtml(cl)}</td>
+          </tr>`;
+        });
       });
     });
     html+='</table></div></div>';
   } else {
-    // ── VISTA TARJETAS ──
+    // ── VISTA TARJETAS: etapa ▸ manzana ▸ tarjetas ──
     grupos.forEach(g=>{
-      html+=`<div style="margin:14px 0 8px;padding:6px 12px;background:#1e40af;color:#fff;border-radius:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px"><span>${g.etapa} · ${g.items.length} lote${g.items.length>1?'s':''}</span><span>${g.subARS?fmtPeso(g.subARS):''}${g.subARS&&g.subUSD?' · ':''}${g.subUSD?'USD '+fmtPeso(g.subUSD):''}</span></div>`;
-      g.items.forEach(cl=>{
-      const cur2=cl.moneda==='USD'?'USD ':'';
-      const abierta=window._moraCardAbierta===cl.clienteId;
-      const searchStr=(cl.mz+' '+cl.lote+' '+cl.titular).toLowerCase();
-      html+=`<div class="mora-card" data-cid="${cl.clienteId}" data-search="${searchStr}" style="background:var(--surface);border:1.5px solid #fca5a5;border-radius:var(--rlg);margin-bottom:10px;overflow:hidden">
-        <div onclick="toggleMoraCard('${cl.clienteId}')" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer">
-          <span id="mora-card-flecha-${cl.clienteId}" style="font-size:14px;color:var(--text2);transition:transform .15s;display:inline-block;transform:rotate(${abierta?90:0}deg)">▶</span>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:14px;font-weight:800">${formatLoteTag(cl.mz,cl.lote)} <span style="font-size:12px;font-weight:400;color:var(--text2)">· ${cl.titular}</span>${cl.moneda==='USD'?' <span style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-size:10px;font-weight:700;padding:1px 7px;border-radius:6px">USD</span>':''}</div>
-            <div style="font-size:11px;color:var(--text2)">${cl.cuotas.length} cuota${cl.cuotas.length>1?'s':''} en mora · la más vieja: ${cl.masVieja} <span style="color:var(--red);font-weight:700">(${cl.diasMax} días)</span></div>
-          </div>
-          <div style="text-align:right;flex-shrink:0">
-            <div style="font-size:11px;color:var(--text2)">CP: <b>${cur2}${fmtPeso(cl.totalCP)}</b></div>
-            <div style="font-size:17px;font-weight:800;color:var(--red)">${cur2}${fmtPeso(cl.total)}</div>
-            <div style="font-size:10px;color:var(--text2)">con interés a hoy</div>
-          </div>
-        </div>
-        <div id="mora-card-det-${cl.clienteId}" data-cid="${cl.clienteId}" style="display:${abierta?'block':'none'};border-top:1px solid #fca5a5;padding:8px 14px 12px">${detalleHtml(cl)}</div>
-      </div>`;
+      const etAb=!window._moraEtCer[g.etapa];
+      html+=`<div onclick="toggleMoraEtapa(this.dataset.et)" data-et="${g.etapa}" style="cursor:pointer;margin:14px 0 8px;padding:9px 14px;background:var(--red-bg);border:1.5px solid #fca5a5;color:var(--red);border-radius:8px;font-size:13px;font-weight:800;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px"><span>${etAb?'▼':'▶'} ${g.etapa} · ${g.n} lote${g.n>1?'s':''}</span><span>${_sub(g.subARS,g.subUSD)}</span></div>`;
+      g.manzanas.forEach(mzG=>{
+        const mzKey=g.etapa+'|'+mzG.mz;
+        const mzAb=!!window._moraMzAb[mzKey];
+        html+=`<div onclick="toggleMoraMz(this.dataset.k)" data-k="${mzKey}" class="mora-hdr-mz" data-vis="${etAb?1:0}" style="display:${etAb?'flex':'none'};cursor:pointer;margin:6px 0 6px 12px;padding:7px 12px;background:var(--hov);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px"><span>${mzAb?'▼':'▶'} ${mzG.mz} · ${mzG.items.length} lote${mzG.items.length>1?'s':''}</span><span style="color:var(--red)">${_sub(mzG.subARS,mzG.subUSD)}</span></div>`;
+        const loteVis=etAb&&mzAb;
+        mzG.items.forEach(cl=>{
+          const cur2=cl.moneda==='USD'?'USD ':'';
+          const abierta=window._moraCardAbierta===cl.clienteId&&loteVis;
+          const searchStr=(cl.mz+' '+cl.lote+' '+cl.titular).toLowerCase();
+          html+=`<div class="mora-card" data-cid="${cl.clienteId}" data-search="${searchStr}" data-vis="${loteVis?1:0}" style="display:${loteVis?'block':'none'};background:var(--surface);border:1.5px solid #fca5a5;border-radius:var(--rlg);margin:0 0 8px 24px;overflow:hidden">
+            <div onclick="toggleMoraCard('${cl.clienteId}')" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer">
+              <span id="mora-card-flecha-${cl.clienteId}" style="font-size:14px;color:var(--text2);transition:transform .15s;display:inline-block;transform:rotate(${abierta?90:0}deg)">▶</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:14px;font-weight:800">${formatLoteTag(cl.mz,cl.lote)} <span style="font-size:12px;font-weight:400;color:var(--text2)">· ${cl.titular}</span>${cl.moneda==='USD'?' <span style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-size:10px;font-weight:700;padding:1px 7px;border-radius:6px">USD</span>':''}</div>
+                <div style="font-size:11px;color:var(--text2)">${cl.cuotas.length} cuota${cl.cuotas.length>1?'s':''} en mora · la más vieja: ${cl.masVieja} <span style="color:var(--red);font-weight:700">(${cl.diasMax} días)</span></div>
+              </div>
+              <div style="text-align:right;flex-shrink:0">
+                <div style="font-size:11px;color:var(--text2)">CP: <b>${cur2}${fmtPeso(cl.totalCP)}</b></div>
+                <div style="font-size:17px;font-weight:800;color:var(--red)">${cur2}${fmtPeso(cl.total)}</div>
+                <div style="font-size:10px;color:var(--text2)">con interés a hoy</div>
+              </div>
+            </div>
+            <div id="mora-card-det-${cl.clienteId}" data-cid="${cl.clienteId}" style="display:${abierta?'block':'none'};border-top:1px solid #fca5a5;padding:8px 14px 12px">${detalleHtml(cl)}</div>
+          </div>`;
+        });
       });
     });
   }
@@ -3431,6 +3457,18 @@ function toggleMoraCard(clienteId){
   window._moraCardAbierta=abrir?clienteId:null;
 }
 
+function toggleMoraEtapa(et){
+  if(!window._moraEtCer) window._moraEtCer={};
+  window._moraEtCer[et]=!window._moraEtCer[et];
+  renderPanelMora();
+}
+
+function toggleMoraMz(k){
+  if(!window._moraMzAb) window._moraMzAb={};
+  window._moraMzAb[k]=!window._moraMzAb[k];
+  renderPanelMora();
+}
+
 function toggleMoraVista(){
   const actual=localStorage.getItem('fj_mora_vista')||'tarjetas';
   localStorage.setItem('fj_mora_vista',actual==='compacta'?'tarjetas':'compacta');
@@ -3440,14 +3478,21 @@ function toggleMoraVista(){
 function filtrarMoraCards(q){
   q=(q||'').toLowerCase().trim();
   document.querySelectorAll('.mora-card').forEach(card=>{
-    const visible=!q||card.dataset.search.includes(q);
-    card.style.display=visible?'':'none';
-    // Fila/panel de detalle asociado: ocultar si el cliente no matchea; si matchea, respetar su estado abierto/cerrado
+    const esTr=card.tagName==='TR';
+    let visible;
+    if(q) visible=card.dataset.search.includes(q);           // búsqueda: ignora bloques cerrados
+    else visible=card.dataset.vis==='1';                      // sin búsqueda: respeta etapa/manzana
+    card.style.display=visible?(esTr?'table-row':'block'):'none';
     const det=document.getElementById('mora-card-det-'+card.dataset.cid);
     if(det){
       if(!visible) det.style.display='none';
       else det.style.display=window._moraCardAbierta===card.dataset.cid?(det.tagName==='TR'?'table-row':'block'):'none';
     }
+  });
+  // Encabezados de manzana: ocultarlos durante la búsqueda, restaurar al limpiar
+  document.querySelectorAll('.mora-hdr-mz').forEach(h=>{
+    const esTr=h.tagName==='TR';
+    h.style.display=q?'none':(h.dataset.vis==='1'?(esTr?'table-row':'flex'):'none');
   });
 }
 
