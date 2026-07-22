@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0369';
+  datos['_version']='v1.0370';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3362,6 +3362,10 @@ function renderPanelMora(){
       <button id="adm-mora-cobrar-btn-${cl.clienteId}" onclick="cobrarAdmMora('${cl.clienteId}')"
         style="width:100%;margin-top:8px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;opacity:0.4;pointer-events:none">
         💰 Cobrar seleccionadas
+      </button>
+      <button onclick="generarInformeMora('${cl.clienteId}')"
+        style="width:100%;margin-top:6px;background:none;border:1.5px solid var(--border2);color:var(--text);border-radius:var(--r);padding:7px;font-size:12px;font-weight:700;cursor:pointer">
+        📄 Descargar informe para Legales (PDF)
       </button>`;
   };
 
@@ -3444,6 +3448,143 @@ function renderPanelMora(){
   // ── Formulario agregar mora manual ──
   const dataAll=loadData();
   el.innerHTML=pendientesHtml+html;
+}
+
+function _cargarScript(src){
+  return new Promise((res,rej)=>{
+    if(document.querySelector('script[src="'+src+'"]')) return res();
+    const s=document.createElement('script');
+    s.src=src; s.onload=res; s.onerror=()=>rej(new Error('No se pudo cargar '+src));
+    document.head.appendChild(s);
+  });
+}
+
+async function generarInformeMora(clienteId, soloTest){
+  try{
+    await _cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await _cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js');
+  }catch(e){alert('❌ No se pudo cargar el generador de PDF. Verificá tu conexión a internet.');return;}
+  const data=loadData();
+  const c=data.find(x=>x.id===clienteId);
+  if(!c){alert('Cliente no encontrado');return;}
+  const cuotas=loadCuotasMora().filter(x=>!x.pagada&&x.clienteId===clienteId).sort((a,b)=>(a.anio-b.anio)||(a.mes-b.mes));
+  if(!cuotas.length){alert('Este cliente no tiene cuotas en mora');return;}
+  const esUSD=c.moneda==='USD';
+  const cur=esUSD?'USD ':'$ ';
+  const hoy=new Date();
+  const fmt=n=>fmtPeso(Math.round(n));
+  const loteTag=formatLoteTag(c.mz,c.lote);
+
+  // Datos por cuota
+  let totCP=0,totInt=0;
+  const filas=cuotas.map(q=>{
+    const mor=calcInteresMoraDesde(q.monto,q.anio,q.mes);
+    const cp=montoCobrable(q).total;
+    totCP+=cp; totInt+=q.monto?mor.interes:0;
+    const venc=new Date(q.anio,q.mes,10).toLocaleDateString('es-AR');
+    return [q.mesNombre,(q.numeroCuota||'-')+'/'+(q.totalCuotas||c.ct||'-'),cur+fmt(cp),venc,mor.dias+' d',(mor.dias*2)+'%',cur+fmt(mor.interes),cur+fmt(q.monto+mor.interes)];
+  });
+  const morV=calcInteresMoraDesde(cuotas[0].monto,cuotas[0].anio,cuotas[0].mes);
+
+  // Último pago registrado
+  const hist=(c.hist||[]).slice().sort((a,b)=>String(a.ts||'').localeCompare(String(b.ts||'')));
+  const ult=hist[hist.length-1];
+  const ultPagoStr=ult?ult.mes+' (cuota '+ult.cuota+'), registrada el '+new Date(ult.ts).toLocaleDateString('es-AR'):'Sin pagos registrados en el historial';
+
+  // Gráfico: barras apiladas capital + interés por cuota
+  const cv=document.createElement('canvas'); cv.width=1000; cv.height=330;
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,1000,330);
+  const maxV=Math.max(...cuotas.map(q=>q.monto+calcInteresMoraDesde(q.monto,q.anio,q.mes).interes));
+  const n=cuotas.length;
+  const bw=Math.max(6,Math.floor(920/n)-4);
+  cuotas.forEach((q,i)=>{
+    const mor=calcInteresMoraDesde(q.monto,q.anio,q.mes);
+    const x=50+i*(bw+4);
+    const hCap=Math.max(2,Math.round(q.monto/maxV*250));
+    const hInt=Math.round(mor.interes/maxV*250);
+    ctx.fillStyle='#991b1b'; ctx.fillRect(x,300-hCap,bw,hCap);
+    ctx.fillStyle='#fca5a5'; ctx.fillRect(x,300-hCap-hInt,bw,hInt);
+  });
+  ctx.strokeStyle='#9ca3af'; ctx.beginPath(); ctx.moveTo(45,300); ctx.lineTo(980,300); ctx.stroke();
+  ctx.fillStyle='#374151'; ctx.font='16px Arial';
+  ctx.fillText(cuotas[0].mesNombre,50,320);
+  const lastLbl=cuotas[n-1].mesNombre;
+  ctx.fillText(lastLbl,Math.min(980-ctx.measureText(lastLbl).width,50+(n-1)*(bw+4)),320);
+  ctx.fillStyle='#991b1b'; ctx.fillRect(700,14,14,14); ctx.fillStyle='#374151'; ctx.fillText('Cuota pura',720,26);
+  ctx.fillStyle='#fca5a5'; ctx.fillRect(830,14,14,14); ctx.fillStyle='#374151'; ctx.fillText('Interés',850,26);
+  const chartImg=cv.toDataURL('image/png');
+
+  // ── PDF ──
+  const { jsPDF }=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const W=210;
+
+  // Encabezado
+  doc.setFillColor(24,24,27); doc.rect(0,0,W,26,'F');
+  doc.setTextColor(230,168,48); doc.setFont('helvetica','bold'); doc.setFontSize(15);
+  doc.text('F&J DESARROLLOS INMOBILIARIOS',12,11);
+  doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text('Los Eucaliptus — Informe de deuda para Legales',12,19);
+  doc.setFontSize(9);
+  doc.text('Emitido: '+hoy.toLocaleDateString('es-AR')+' '+hoy.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}),W-12,11,{align:'right'});
+
+  // Datos del cliente
+  let y=36;
+  doc.setTextColor(20,20,20); doc.setFont('helvetica','bold'); doc.setFontSize(13);
+  doc.text('Lote '+loteTag+' — '+(c.titular||''),12,y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(70,70,70);
+  y+=7;
+  doc.text('Etapa: '+(getEtapa(c.mz)||'-')+'    Manzana: '+(c.mz||'-')+'    Lote: '+(c.lote||'-')+'    Moneda: '+(esUSD?'USD':'Pesos'),12,y);
+  y+=6;
+  doc.text('Plan de pago: cuota actual '+(c.ca||'-')+' de '+(c.ct||'-')+'    Valor de cuota vigente: '+cur+fmt(c.monto||0),12,y);
+  y+=6;
+  doc.text('Último pago registrado: '+ultPagoStr,12,y);
+
+  // Resumen ejecutivo
+  y+=8;
+  doc.setFillColor(254,242,242); doc.setDrawColor(252,165,165);
+  doc.roundedRect(12,y,W-24,30,2,2,'FD');
+  doc.setTextColor(153,27,27); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('RESUMEN DE DEUDA',16,y+7);
+  doc.setFontSize(10);
+  doc.text('Cuotas adeudadas: '+cuotas.length+'   ·   Desde: '+cuotas[0].mesNombre+'   ·   Días de atraso (más antigua): '+morV.dias,16,y+14);
+  doc.text('Capital (cuota pura): '+cur+fmt(totCP)+'   ·   Intereses al '+hoy.toLocaleDateString('es-AR')+' (2%/día): '+cur+fmt(totInt),16,y+20);
+  doc.setFontSize(12);
+  doc.text('DEUDA TOTAL: '+cur+fmt(totCP+totInt),16,y+27);
+  y+=36;
+
+  // Tabla de detalle
+  doc.autoTable({
+    startY:y,
+    head:[['Mes','Cuota','Cuota pura','Vencimiento','Retraso','% interés','Interés','Total']],
+    body:filas,
+    foot:[['TOTAL','', cur+fmt(totCP),'','','',cur+fmt(totInt),cur+fmt(totCP+totInt)]],
+    styles:{fontSize:8,cellPadding:1.6},
+    headStyles:{fillColor:[153,27,27],textColor:255,fontStyle:'bold'},
+    footStyles:{fillColor:[254,226,226],textColor:[120,20,20],fontStyle:'bold'},
+    columnStyles:{2:{halign:'right'},4:{halign:'right'},5:{halign:'right'},6:{halign:'right'},7:{halign:'right',fontStyle:'bold'}},
+    margin:{left:12,right:12}
+  });
+
+  // Gráfico
+  let gy=doc.lastAutoTable.finalY+8;
+  if(gy>230){doc.addPage();gy=20;}
+  doc.setTextColor(20,20,20); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text('Evolución de la deuda por cuota',12,gy);
+  doc.addImage(chartImg,'PNG',12,gy+3,W-24,(W-24)*0.33);
+
+  // Pie de página en todas las hojas
+  const pages=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pages;i++){
+    doc.setPage(i);
+    doc.setFontSize(8); doc.setTextColor(140,140,140); doc.setFont('helvetica','normal');
+    doc.text('FJ App — Los Eucaliptus · Informe generado el '+hoy.toLocaleDateString('es-AR')+' · Intereses calculados al día de emisión (2% diario desde el día 10 de cada mes)',12,292);
+    doc.text('Página '+i+' de '+pages,W-12,292,{align:'right'});
+  }
+
+  if(soloTest) return doc.output('datauristring').length;
+  doc.save('Informe_'+loteTag.replace(/[^A-Za-z0-9-]/g,'_')+'_'+hoy.toLocaleDateString('es-AR').replace(/\//g,'-')+'.pdf');
 }
 
 function toggleMoraCard(clienteId){
