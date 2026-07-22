@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0365';
+  datos['_version']='v1.0366';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3294,13 +3294,13 @@ function renderPanelMora(){
     </div>
   </div>`;
 
-  // Vista: tarjetas o compacta (v1.0357)
-  const vistaCompacta=(localStorage.getItem('fj_mora_vista')||'tarjetas')==='compacta';
+  // Vista: compacta (bloques desplegables) o lista plana ultra densa (v1.0366)
+  const vistaCompacta=(localStorage.getItem('fj_mora_vista')||'compacta')!=='lista';
 
   // Buscador + toggle de vista
   html+=`<div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <input type="text" id="mora-buscar" oninput="filtrarMoraCards(this.value)" placeholder="🔍 Buscar lote o titular…" style="flex:1;min-width:180px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text)">
-    <button onclick="toggleMoraVista()" style="background:${vistaCompacta?'#1e40af':'var(--surface)'};color:${vistaCompacta?'#fff':'var(--text)'};border:1.5px solid ${vistaCompacta?'#1e40af':'var(--border)'};border-radius:var(--r);padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">${vistaCompacta?'☰ Ver tarjetas':'⊞ Vista compacta'}</button>
+    <button onclick="toggleMoraVista()" style="background:${vistaCompacta?'#1e40af':'var(--surface)'};color:${vistaCompacta?'#fff':'var(--text)'};border:1.5px solid ${vistaCompacta?'#1e40af':'var(--border)'};border-radius:var(--r);padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">${vistaCompacta?'☰ Ver lista':'⊞ Vista compacta'}</button>
     <span style="font-size:11px;color:var(--text2)">Intereses al ${hoy.toLocaleDateString('es-AR')}</span>
   </div>`;
 
@@ -3410,37 +3410,34 @@ function renderPanelMora(){
     });
     html+='</table></div></div>';
   } else {
-    // ── VISTA TARJETAS: etapa ▸ manzana ▸ tarjetas ──
-    grupos.forEach(g=>{
-      const etAb=!window._moraEtCer[g.etapa];
-      html+=`<div onclick="toggleMoraEtapa(this.dataset.et)" data-et="${g.etapa}" style="cursor:pointer;margin:14px 0 8px;padding:9px 14px;background:var(--red-bg);border:1.5px solid #fca5a5;color:var(--red);border-radius:8px;font-size:13px;font-weight:800;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px"><span>${etAb?'▼':'▶'} ${g.etapa} · ${g.n} lote${g.n>1?'s':''}</span><span>${_sub(g.subARS,g.subUSD)}</span></div>`;
-      g.manzanas.forEach(mzG=>{
-        const mzKey=g.etapa+'|'+mzG.mz;
-        const mzAb=!!window._moraMzAb[mzKey];
-        html+=`<div onclick="toggleMoraMz(this.dataset.k)" data-k="${mzKey}" class="mora-hdr-mz" data-vis="${etAb?1:0}" style="display:${etAb?'flex':'none'};cursor:pointer;margin:6px 0 6px 12px;padding:7px 12px;background:var(--hov);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px"><span>${mzAb?'▼':'▶'} ${mzG.mz} · ${mzG.items.length} lote${mzG.items.length>1?'s':''}</span><span style="color:var(--red)">${_sub(mzG.subARS,mzG.subUSD)}</span></div>`;
-        const loteVis=etAb&&mzAb;
-        mzG.items.forEach(cl=>{
-          const cur2=cl.moneda==='USD'?'USD ':'';
-          const abierta=window._moraCardAbierta===cl.clienteId&&loteVis;
-          const searchStr=(cl.mz+' '+cl.lote+' '+formatLoteTag(cl.mz,cl.lote)+' '+cl.titular).toLowerCase();
-          html+=`<div class="mora-card" data-cid="${cl.clienteId}" data-search="${searchStr}" data-vis="${loteVis?1:0}" style="display:${loteVis?'block':'none'};background:var(--surface);border:1.5px solid #fca5a5;border-radius:var(--rlg);margin:0 0 8px 24px;overflow:hidden">
-            <div onclick="toggleMoraCard('${cl.clienteId}')" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer">
-              <span id="mora-card-flecha-${cl.clienteId}" style="font-size:14px;color:var(--text2);transition:transform .15s;display:inline-block;transform:rotate(${abierta?90:0}deg)">▶</span>
-              <div style="flex:1;min-width:0">
-                <div style="font-size:14px;font-weight:800">${formatLoteTag(cl.mz,cl.lote)} <span style="font-size:12px;font-weight:400;color:var(--text2)">· ${cl.titular}</span>${cl.moneda==='USD'?' <span style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-size:10px;font-weight:700;padding:1px 7px;border-radius:6px">USD</span>':''}</div>
-                <div style="font-size:11px;color:var(--text2)">${cl.cuotas.length} cuota${cl.cuotas.length>1?'s':''} en mora · la más vieja: ${cl.masVieja} <span style="color:var(--red);font-weight:700">(${cl.diasMax} días)</span></div>
-              </div>
-              <div style="text-align:right;flex-shrink:0">
-                <div style="font-size:11px;color:var(--text2)">CP: <b>${cur2}${fmtPeso(cl.totalCP)}</b></div>
-                <div style="font-size:17px;font-weight:800;color:var(--red)">${cur2}${fmtPeso(cl.total)}</div>
-                <div style="font-size:10px;color:var(--text2)">con interés a hoy</div>
-              </div>
-            </div>
-            <div id="mora-card-det-${cl.clienteId}" data-cid="${cl.clienteId}" style="display:${abierta?'block':'none'};border-top:1px solid #fca5a5;padding:8px 14px 12px">${detalleHtml(cl)}</div>
-          </div>`;
-        });
-      });
+    // ── VISTA LISTA: plana, ultra densa, estilo planilla ──
+    html+=`<div style="background:var(--surface);border:1.5px solid #fca5a5;border-radius:var(--rlg);overflow:hidden"><div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;min-width:620px">
+      <tr style="color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--border)">
+        <th style="padding:5px 8px;text-align:left">Lote</th>
+        <th style="padding:5px 8px;text-align:left">Titular</th>
+        <th style="padding:5px 8px;text-align:right">Cuotas</th>
+        <th style="padding:5px 8px;text-align:right">Más vieja</th>
+        <th style="padding:5px 8px;text-align:right">CP</th>
+        <th style="padding:5px 8px;text-align:right">Total c/interés</th>
+      </tr>`;
+    clientes.forEach(cl=>{
+      const cur2=cl.moneda==='USD'?'USD ':'';
+      const abierta=window._moraCardAbierta===cl.clienteId;
+      const searchStr=(cl.mz+' '+cl.lote+' '+formatLoteTag(cl.mz,cl.lote)+' '+cl.titular).toLowerCase();
+      html+=`<tr class="mora-card" data-cid="${cl.clienteId}" data-search="${searchStr}" data-vis="1" onclick="toggleMoraCard('${cl.clienteId}')" style="cursor:pointer;border-top:1px solid var(--border)">
+        <td style="padding:4px 8px;font-size:11px;font-weight:800;white-space:nowrap">${formatLoteTag(cl.mz,cl.lote)}${cl.moneda==='USD'?' <span style="color:var(--green);font-size:9px;font-weight:700">USD</span>':''}</td>
+        <td style="padding:4px 8px;font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cl.titular}</td>
+        <td style="padding:4px 8px;font-size:11px;text-align:right;font-weight:700">${cl.cuotas.length}</td>
+        <td style="padding:4px 8px;font-size:10px;text-align:right;white-space:nowrap">${cl.masVieja} <span style="color:var(--red);font-weight:700">(${cl.diasMax}d)</span></td>
+        <td style="padding:4px 8px;font-size:11px;text-align:right">${cur2}${fmtPeso(cl.totalCP)}</td>
+        <td style="padding:4px 8px;font-size:12px;text-align:right;font-weight:800;color:var(--red)">${cur2}${fmtPeso(cl.total)}</td>
+      </tr>
+      <tr id="mora-card-det-${cl.clienteId}" data-cid="${cl.clienteId}" style="display:${abierta?'table-row':'none'}">
+        <td colspan="6" style="padding:8px 14px;background:var(--hov)">${detalleHtml(cl)}</td>
+      </tr>`;
     });
+    html+='</table></div></div>';
   }
 
   // ── Formulario agregar mora manual ──
@@ -3477,8 +3474,8 @@ function toggleMoraCajaGrupo(k){
 }
 
 function toggleMoraVista(){
-  const actual=localStorage.getItem('fj_mora_vista')||'tarjetas';
-  localStorage.setItem('fj_mora_vista',actual==='compacta'?'tarjetas':'compacta');
+  const actual=(localStorage.getItem('fj_mora_vista')||'compacta')!=='lista'?'compacta':'lista';
+  localStorage.setItem('fj_mora_vista',actual==='compacta'?'lista':'compacta');
   renderPanelMora();
 }
 
