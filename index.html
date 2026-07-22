@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0366';
+  datos['_version']='v1.0367';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3235,7 +3235,8 @@ function renderPanelMora(){
     if(!mzG){mzG={mz:cl.mz,items:[],subARS:0,subUSD:0};g.manzanas.push(mzG);}
     mzG.items.push(cl);
     g.n++;
-    if(cl.moneda==='USD'){g.subUSD+=cl.total;mzG.subUSD+=cl.total;}else{g.subARS+=cl.total;mzG.subARS+=cl.total;}
+    if(cl.moneda==='USD'){g.subUSD+=cl.total;mzG.subUSD+=cl.total;g.cpUSD=(g.cpUSD||0)+cl.totalCP;mzG.cpUSD=(mzG.cpUSD||0)+cl.totalCP;}
+    else{g.subARS+=cl.total;mzG.subARS+=cl.total;g.cpARS=(g.cpARS||0)+cl.totalCP;mzG.cpARS=(mzG.cpARS||0)+cl.totalCP;}
   });
   if(!window._moraEtCer) window._moraEtCer={};
   if(!window._moraMzAb) window._moraMzAb={};
@@ -3378,16 +3379,16 @@ function renderPanelMora(){
       </tr>`;
     grupos.forEach(g=>{
       const etAb=!window._moraEtCer[g.etapa];
-      html+=`<tr onclick="toggleMoraEtapa(this.dataset.et)" data-et="${g.etapa}" style="cursor:pointer;background:var(--red-bg);border-top:2px solid #fca5a5">
-        <td colspan="4" style="padding:9px 10px;font-size:12px;font-weight:800;color:var(--red)">${etAb?'▼':'▶'} ${g.etapa} <span style="font-weight:600;font-size:11px">· ${g.n} lote${g.n>1?'s':''}</span></td>
-        <td colspan="2" style="padding:9px 10px;font-size:12px;font-weight:800;color:var(--red);text-align:right">${_sub(g.subARS,g.subUSD)}</td>
+      html+=`<tr onclick="toggleMoraEtapa(this.dataset.et)" data-et="${g.etapa}" style="cursor:pointer;background:var(--hov);border-top:2px solid var(--border2)">
+        <td colspan="4" style="padding:8px 10px;font-size:12px;font-weight:800">${etAb?'▼':'▶'} ${g.etapa} <span style="font-weight:600;font-size:11px;color:var(--text2)">· ${g.n} lote${g.n>1?'s':''}</span></td>
+        <td colspan="2" style="padding:6px 10px;text-align:right"><div style="font-size:10px;color:var(--text2)">CP: <b>${_sub(g.cpARS,g.cpUSD)}</b></div><div style="font-size:12px;font-weight:800;color:var(--red)">${_sub(g.subARS,g.subUSD)}</div></td>
       </tr>`;
       g.manzanas.forEach(mzG=>{
         const mzKey=g.etapa+'|'+mzG.mz;
         const mzAb=!!window._moraMzAb[mzKey];
-        html+=`<tr onclick="toggleMoraMz(this.dataset.k)" data-k="${mzKey}" class="mora-hdr-mz" data-vis="${etAb?1:0}" style="display:${etAb?'table-row':'none'};cursor:pointer;background:var(--hov);border-top:1px solid var(--border)">
-          <td colspan="4" style="padding:7px 10px 7px 22px;font-size:12px;font-weight:700">${mzAb?'▼':'▶'} ${mzG.mz} <span style="font-weight:500;font-size:11px;color:var(--text2)">· ${mzG.items.length} lote${mzG.items.length>1?'s':''}</span></td>
-          <td colspan="2" style="padding:7px 10px;font-size:12px;font-weight:700;text-align:right;color:var(--red)">${_sub(mzG.subARS,mzG.subUSD)}</td>
+        html+=`<tr onclick="toggleMoraMz(this.dataset.k)" data-k="${mzKey}" class="mora-hdr-mz" data-vis="${etAb?1:0}" style="display:${etAb?'table-row':'none'};cursor:pointer;border-top:1px solid var(--border)">
+          <td colspan="4" style="padding:6px 10px 6px 22px;font-size:12px;font-weight:700">${mzAb?'▼':'▶'} ${mzG.mz} <span style="font-weight:500;font-size:11px;color:var(--text2)">· ${mzG.items.length} lote${mzG.items.length>1?'s':''}</span></td>
+          <td colspan="2" style="padding:5px 10px;text-align:right"><div style="font-size:10px;color:var(--text2)">CP: <b>${_sub(mzG.cpARS,mzG.cpUSD)}</b></div><div style="font-size:11px;font-weight:700;color:var(--red)">${_sub(mzG.subARS,mzG.subUSD)}</div></td>
         </tr>`;
         const loteVis=etAb&&mzAb;
         mzG.items.forEach(cl=>{
