@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0359';
+  datos['_version']='v1.0360';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3392,7 +3392,7 @@ function renderPanelMora(){
         mzG.items.forEach(cl=>{
           const cur2=cl.moneda==='USD'?'USD ':'';
           const abierta=window._moraCardAbierta===cl.clienteId&&loteVis;
-          const searchStr=(cl.mz+' '+cl.lote+' '+cl.titular).toLowerCase();
+          const searchStr=(cl.mz+' '+cl.lote+' '+formatLoteTag(cl.mz,cl.lote)+' '+cl.titular).toLowerCase();
           html+=`<tr class="mora-card" data-cid="${cl.clienteId}" data-search="${searchStr}" data-vis="${loteVis?1:0}" onclick="toggleMoraCard('${cl.clienteId}')" style="display:${loteVis?'table-row':'none'};cursor:pointer;border-top:1px solid var(--border)">
             <td style="padding:7px 10px 7px 34px;font-size:12px;font-weight:800;white-space:nowrap">${formatLoteTag(cl.mz,cl.lote)}${cl.moneda==='USD'?' <span style="color:var(--green);font-size:10px;font-weight:700">USD</span>':''}</td>
             <td style="padding:7px 10px;font-size:12px;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cl.titular}</td>
@@ -3421,7 +3421,7 @@ function renderPanelMora(){
         mzG.items.forEach(cl=>{
           const cur2=cl.moneda==='USD'?'USD ':'';
           const abierta=window._moraCardAbierta===cl.clienteId&&loteVis;
-          const searchStr=(cl.mz+' '+cl.lote+' '+cl.titular).toLowerCase();
+          const searchStr=(cl.mz+' '+cl.lote+' '+formatLoteTag(cl.mz,cl.lote)+' '+cl.titular).toLowerCase();
           html+=`<div class="mora-card" data-cid="${cl.clienteId}" data-search="${searchStr}" data-vis="${loteVis?1:0}" style="display:${loteVis?'block':'none'};background:var(--surface);border:1.5px solid #fca5a5;border-radius:var(--rlg);margin:0 0 8px 24px;overflow:hidden">
             <div onclick="toggleMoraCard('${cl.clienteId}')" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer">
               <span id="mora-card-flecha-${cl.clienteId}" style="font-size:14px;color:var(--text2);transition:transform .15s;display:inline-block;transform:rotate(${abierta?90:0}deg)">▶</span>
