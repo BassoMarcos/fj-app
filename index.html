@@ -1167,7 +1167,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0383';
+  datos['_version']='v1.0384';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3427,7 +3427,7 @@ function renderPanelMora(){
       </button>
       <button onclick="generarInformeMora('${cl.clienteId}')"
         style="width:100%;margin-top:6px;background:none;border:1.5px solid var(--border2);color:var(--text);border-radius:var(--r);padding:7px;font-size:12px;font-weight:700;cursor:pointer">
-        📄 Descargar informe para Legales (PDF)
+        📄 Ver informe para Legales (PDF)
       </button>`;
   };
 
@@ -3756,7 +3756,7 @@ async function generarInformeMensual(soloTest){
   }
 
   if(soloTest) return doc.output('datauristring').length;
-  doc.save('Informe_Mensual_'+mesCerrado.replace(/ /g,'_')+'.pdf');
+  _previewPDF(doc,'Informe_Mensual_'+mesCerrado.replace(/ /g,'_')+'.pdf');
 }
 
 async function generarInformeMora(clienteId, soloTest){
@@ -3894,7 +3894,25 @@ async function generarInformeMora(clienteId, soloTest){
   }
 
   if(soloTest) return doc.output('datauristring').length;
-  doc.save('Informe_'+loteTag.replace(/[^A-Za-z0-9-]/g,'_')+'_'+hoy.toLocaleDateString('es-AR').replace(/\//g,'-')+'.pdf');
+  _previewPDF(doc,'Informe_'+loteTag.replace(/[^A-Za-z0-9-]/g,'_')+'_'+hoy.toLocaleDateString('es-AR').replace(/\//g,'-')+'.pdf');
+}
+
+// v1.0384: vista previa del PDF antes de descargar (evita llenarse de archivos)
+function _previewPDF(doc,nombre){
+  const url=doc.output('bloburl');
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;flex-direction:column';
+  ov.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#1d1c1a;color:#fff;flex-wrap:wrap">'
+    +'<span style="font-size:13px;font-weight:700;flex:1;min-width:140px">👁️ Vista previa — '+nombre+'</span>'
+    +'<button id="pdf-dl" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">⬇ Descargar</button>'
+    +'<button id="pdf-print" style="background:transparent;color:#fff;border:1px solid #6b6866;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>'
+    +'<button id="pdf-close" style="background:transparent;color:#fff;border:1px solid #6b6866;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">✕ Cerrar</button>'
+    +'</div><iframe src="'+url+'" style="flex:1;width:100%;border:none;background:#fff"></iframe>';
+  document.body.appendChild(ov);
+  const cerrar=()=>{try{URL.revokeObjectURL(url);}catch(e){} ov.remove();};
+  ov.querySelector('#pdf-close').onclick=cerrar;
+  ov.querySelector('#pdf-dl').onclick=()=>{const a=document.createElement('a');a.href=url;a.download=nombre;a.click();};
+  ov.querySelector('#pdf-print').onclick=()=>{const f=ov.querySelector('iframe');try{f.contentWindow.print();}catch(e){window.open(url,'_blank');}};
 }
 
 function toggleMoraCard(clienteId){
