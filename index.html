@@ -1167,7 +1167,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0389';
+  datos['_version']='v1.0390';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3360,7 +3360,7 @@ function renderPanelMora(){
         ${totalGeneralARS>0?`<div style="font-size:18px;font-weight:800;color:var(--red)">${fmtPeso(totalGeneralARS)}</div>`:''}
         ${totalGeneralUSD>0?`<div style="font-size:18px;font-weight:800;color:var(--red)">USD ${fmtPeso(totalGeneralUSD)}</div>`:''}
       </div>
-      <button onclick="renderPanelMora()" style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer">Actualizar</button>
+      
       <button onclick="generarInformeMensual()" style="background:var(--surface);border:1.5px solid var(--border2);color:var(--text);border-radius:var(--r);padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">📊 Informe de mora</button>\n      <button onclick="abrirModalAgregarMora()" style="background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">➕ Agregar a mora</button>
     </div>
   </div>`;
@@ -3956,6 +3956,15 @@ function setMoraFiltroCat(k){
   window._moraFiltroCat = (window._moraFiltroCat===k) ? null : k;
   renderPanelMora();
 }
+
+// v1.0390: el panel de mora se refresca solo (los intereses corren por dia)
+setInterval(()=>{
+  const p=document.getElementById('atab-morapanel');
+  if(!p||p.style.display==='none') return;
+  if(document.hidden) return;
+  if(document.querySelector('#mora-buscar')===document.activeElement) return; // no interrumpir si esta escribiendo
+  try{ renderPanelMora(); }catch(e){}
+}, 60000);
 
 function toggleMoraEtapa(et){
   if(!window._moraEtCer) window._moraEtCer={};
