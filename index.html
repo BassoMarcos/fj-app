@@ -931,7 +931,7 @@ const MESES_NOMBRE=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Ag
 
 function getModo(){return localStorage.getItem('fj_modo')||'prueba';}
 function getMoraDesactivada(){return localStorage.getItem('fj_mora_desactivada')==='1';}
-function toggleMoraDesactivada(){const v=getMoraDesactivada();localStorage.setItem('fj_mora_desactivada',v?'0':'1');renderAdminTable();const det=document.getElementById('admin-detalle');if(det&&det.style.display!=='none'&&typeof adminDetId!=='undefined'&&adminDetId)renderAdminDet(adminDetId);}
+function toggleMoraDesactivada(){const v=getMoraDesactivada();const nv=v?'0':'1';localStorage.setItem('fj_mora_desactivada',nv);window._fbSet('moraDesactivada',nv).catch(e=>console.warn('FB moraDesact:',e));renderAdminTable();const det=document.getElementById('admin-detalle');if(det&&det.style.display!=='none'&&typeof adminDetId!=='undefined'&&adminDetId)renderAdminDet(adminDetId);}
 function loadExtras(){try{return JSON.parse(localStorage.getItem('fj_extras')||'[]');}catch(e){return [];}}
 function saveExtras(v){localStorage.setItem('fj_extras',JSON.stringify(v));sheetsSet('Extras',v);window._fbSet('extras',v).catch(e=>console.warn('FB extras error:',e));}
 
@@ -1167,7 +1167,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0381';
+  datos['_version']='v1.0382';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7811,7 +7811,64 @@ function mostrarResumenCierre(){
   document.body.appendChild(modal);
 }
 
+// v1.0382: respaldo automático diario en Firebase (rota 7 días).
+// Si algo se corrompe, siempre hay una foto reciente para restaurar.
+async function backupDiarioAuto(){
+  try{
+    if(!window._firebaseReady) return;
+    const hoy=new Date().toISOString().slice(0,10);
+    const ultimo=localStorage.getItem('fj_ultimo_backup');
+    if(ultimo===hoy) return;
+    const data=loadData();
+    if(!data.length) return;            // nunca respaldar vacío
+    const dia=new Date().getDay();      // 0-6, rota por día de semana
+    const snap={
+      fecha:hoy, ts:new Date().toISOString(),
+      clientes:data.length,
+      data:data,
+      cuotasMora:loadCuotasMora(),
+      balances:loadBalances(),
+      mora:loadMora(),
+      cierreFinal:loadCierreFinal(),
+      mesActual:loadMesActual(),
+      adelantos:loadAdelantos(),
+      extras:loadExtras()
+    };
+    await window._fbSet('backups/dia'+dia, snap);
+    localStorage.setItem('fj_ultimo_backup',hoy);
+    console.log('Backup diario OK ('+data.length+' clientes) → backups/dia'+dia);
+  }catch(e){ console.warn('Backup diario falló:',e); }
+}
+
+function verBackups(){
+  fetch('https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/backups.json')
+    .then(r=>r.json())
+    .then(b=>{
+      if(!b){alert('Todavía no hay respaldos guardados.');return;}
+      let msg='RESPALDOS AUTOMÁTICOS DISPONIBLES\n\n';
+      Object.entries(b).forEach(([k,v])=>{ msg+='• '+k+': '+(v&&v.fecha||'?')+' — '+(v&&v.clientes||0)+' clientes\n'; });
+      msg+='\nSe guarda uno por día y se conservan los últimos 7.';
+      alert(msg);
+    })
+    .catch(()=>alert('No se pudieron leer los respaldos.'));
+}
+
+function _syncBloqueaOperacion(nombre){
+  const n=Object.keys(window._syncQueue||{}).length;
+  if(n>0){
+    alert('\u23F3 NO SE PUEDE '+nombre+' TODAVIA\n\nHay '+n+' cambio(s) sin subir a la nube.\n\nEspera a que el indicador de arriba diga "Sincronizado" y volve a intentar.\n\nSi no se resuelve, revisa tu conexion a internet.');
+    if(window._syncFlush) window._syncFlush();
+    return true;
+  }
+  if(window._syncConflicto){
+    alert('\u26A0\uFE0F NO SE PUEDE '+nombre+'\n\nHay un conflicto de sincronizacion: otro dispositivo tiene datos mas viejos.\n\nCerra la app en los otros dispositivos, recarga esta pestana y volve a intentar.');
+    return true;
+  }
+  return false;
+}
+
 function ejecutarCierreFinal(){
+  if(_syncBloqueaOperacion('HACER EL CIERRE')) return;
   confirmarConClave(()=>{
     // Guardar snapshot ANTES de ejecutar
     saveSnapshot();
@@ -7922,6 +7979,7 @@ function repararCierreJunio2026(){
 // setTimeout(repararCierreJunio2026, 2500);
 
 function hacerCierreFinal(){
+  if(_syncBloqueaOperacion('HACER EL CIERRE')) return;
   confirmarConClave(()=>{
     // Capturar el mes operativo antes de tocar nada
     const _mesOperativoCapturado=mesActual();
@@ -9199,6 +9257,7 @@ function renderIccHist(){
   </div>`).join('');
 }
 function aplicarICC(){
+  if(_syncBloqueaOperacion('APLICAR EL ICC')) return;
   const pctMes=parseFloat(document.getElementById('icc-pct').value);
   if(isNaN(pctMes)||pctMes<=0){alert('Ingresá el porcentaje del mes actual');return;}
   const hoy=new Date();
@@ -10294,6 +10353,7 @@ async function init(){
       const fbPendAprob = await window._fbGet('pendientesAprobacion');
       const fbCierreEst = await window._fbGet('cierreEstados');
       const fbDistPct = await window._fbGet('distPct');
+      const fbMoraDesact = await window._fbGet('moraDesactivada');
       const fbAgrLotes = await window._fbGet('agrimensorLotes');
       const fbLotesLibres = await window._fbGet('lotesLibresE123');
       const fbLotesCerts = await window._fbGet('lotesCerts');
@@ -10317,6 +10377,7 @@ async function init(){
       if(fbPendAprob) localStorage.setItem('fj_pendientes_aprobacion', JSON.stringify(fbPendAprob));
       if(fbCierreEst) localStorage.setItem('fj_cierre_estados', JSON.stringify(fbCierreEst));
       if(fbDistPct) localStorage.setItem('fj_dist_pct', fbDistPct);
+      if(fbMoraDesact!==null&&fbMoraDesact!==undefined) localStorage.setItem('fj_mora_desactivada', String(fbMoraDesact));
       if(fbAgrLotes) _lsSet(dKey('agrimensorLotes'), JSON.stringify(fbAgrLotes));
       if(fbLotesLibres) _lsSet(dKey('lotesLibresE123'), JSON.stringify(fbLotesLibres));
       if(fbLotesCerts) _lsSet(dKey('lotesCerts'), JSON.stringify(fbLotesCerts));
@@ -10395,6 +10456,8 @@ async function init(){
       window._fbListen('pendientesAprobacion', (d) => { if(d) localStorage.setItem('fj_pendientes_aprobacion', JSON.stringify(d)); });
       window._fbListen('cierreEstados', (d) => { if(d) localStorage.setItem('fj_cierre_estados', JSON.stringify(d)); });
       window._fbListen('distPct', (d) => { if(d) localStorage.setItem('fj_dist_pct', d); });
+      setTimeout(backupDiarioAuto, 12000);
+      window._fbListen('moraDesactivada', (d) => { if(d!==null&&d!==undefined) localStorage.setItem('fj_mora_desactivada', String(d)); });
     }catch(e){
       console.warn('Firebase load failed:', e);
     }
