@@ -1167,7 +1167,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0390';
+  datos['_version']='v1.0392';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1557,6 +1557,7 @@ async function sincronizarTodo(){
         window._fbSet('hist', JSON.parse(_lsGet(dKey('hist'))||'[]')),
         window._fbSet('pendientesAprobacion', JSON.parse(localStorage.getItem('fj_pendientes_aprobacion')||'[]')),
         window._fbSet('cierreEstados', JSON.parse(localStorage.getItem('fj_cierre_estados')||'{}')),
+        window._fbSet('notasMora', JSON.parse(localStorage.getItem('fj_notas_mora')||'{}')),
         window._fbSet('distPct', parseInt(localStorage.getItem('fj_dist_pct')||'70'))
       ]);
       console.log('Firebase sync OK');
@@ -3368,6 +3369,20 @@ function renderPanelMora(){
   // Vista: compacta (bloques desplegables) o lista plana ultra densa (v1.0366)
   const vistaCompacta=(localStorage.getItem('fj_mora_vista')||'compacta')!=='lista';
 
+  // Alertas de cambio de categoría (v1.0391)
+  const empeoraron=(typeof chequearCambiosMora==='function')?chequearCambiosMora():[];
+  if(empeoraron.length){
+    html+=`<div style="background:rgba(234,88,12,.12);border:1.5px solid #ea580c;border-radius:var(--rlg);padding:10px 14px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:800;color:#ea580c;margin-bottom:5px">⚠️ ${empeoraron.length} lote${empeoraron.length>1?'s':''} empeoró su situación</div>
+      ${empeoraron.map(e=>`<div style="font-size:12px;display:flex;align-items:center;gap:8px;padding:3px 0;flex-wrap:wrap">
+        <b>${e.lote}</b> <span style="color:var(--text2)">${String(e.titular||'').slice(0,26)}</span>
+        <span style="color:var(--text2)">${e.de} → <b style="color:#ea580c">${e.a}</b></span>
+        <div style="flex:1"></div>
+        <button onclick="abrirWhatsMora('${e.id}')" style="background:#25d366;color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">💬 Reclamar</button>
+      </div>`).join('')}
+    </div>`;
+  }
+
   // Botonera de categorías de gravedad
   html+='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
   MORA_CATS.forEach(c=>{
@@ -3456,7 +3471,27 @@ function renderPanelMora(){
       <button onclick="generarInformeMora('${cl.clienteId}')"
         style="width:100%;margin-top:6px;background:none;border:1.5px solid var(--border2);color:var(--text);border-radius:var(--r);padding:7px;font-size:12px;font-weight:700;cursor:pointer">
         📄 Ver informe para Legales (PDF)
-      </button>`;
+      </button>
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+        <button onclick="abrirWhatsMora('${cl.clienteId}')" style="flex:1;min-width:140px;background:#25d366;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:12px;font-weight:700;cursor:pointer">💬 Reclamar por WhatsApp</button>
+        <button onclick="agregarNotaMora('${cl.clienteId}')" style="flex:1;min-width:120px;background:none;border:1.5px solid var(--border2);color:var(--text);border-radius:var(--r);padding:8px;font-size:12px;font-weight:700;cursor:pointer">📝 Agregar anotación</button>
+      </div>
+      ${notasHtml(cl.clienteId)}`;
+  };
+
+  const notasHtml=(id)=>{
+    const n=(loadNotasMora()[id]||[]).slice().sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
+    if(!n.length) return '';
+    return `<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
+      <div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px">Anotaciones (${n.length})</div>
+      ${n.map((x,i)=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px dashed var(--border)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;${x.auto?'color:var(--text2)':''}">${String(x.txt||'').replace(/</g,'&lt;')}</div>
+          <div style="font-size:10px;color:var(--text2)">${x.fecha} · ${x.hora}</div>
+        </div>
+        <button onclick="borrarNotaMora('${id}',${n.length-1-i})" title="Borrar" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:0 4px">✕</button>
+      </div>`).join('')}
+    </div>`;
   };
 
   if(vistaCompacta){
@@ -3965,6 +4000,121 @@ setInterval(()=>{
   if(document.querySelector('#mora-buscar')===document.activeElement) return; // no interrumpir si esta escribiendo
   try{ renderPanelMora(); }catch(e){}
 }, 60000);
+
+// ══════ v1.0391: GESTION DE MORA — WhatsApp, notas y alertas de cambio de estado ══════
+
+function loadNotasMora(){ try{ return JSON.parse(localStorage.getItem('fj_notas_mora')||'{}'); }catch(e){ return {}; } }
+function saveNotasMora(v){
+  localStorage.setItem('fj_notas_mora',JSON.stringify(v));
+  window._fbSet('notasMora',v).catch(e=>console.warn('FB notasMora:',e));
+}
+
+function agregarNotaMora(clienteId){
+  const txt=prompt('Anotacion para este lote (queda guardada con fecha y hora):');
+  if(!txt||!txt.trim()) return;
+  const n=loadNotasMora();
+  if(!n[clienteId]) n[clienteId]=[];
+  const ahora=new Date();
+  n[clienteId].push({txt:txt.trim(), ts:ahora.toISOString(), fecha:ahora.toLocaleDateString('es-AR'), hora:ahora.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})});
+  saveNotasMora(n);
+  renderPanelMora();
+}
+
+function borrarNotaMora(clienteId,idx){
+  if(!confirm('Borrar esta anotacion?')) return;
+  const n=loadNotasMora();
+  if(n[clienteId]){ n[clienteId].splice(idx,1); if(!n[clienteId].length) delete n[clienteId]; saveNotasMora(n); renderPanelMora(); }
+}
+
+// Mensaje automatico segun la situacion del deudor
+function mensajeMoraWA(cl){
+  const nom=String(cl.titular||'').split(/[\/,]/)[0].trim().split(' ').slice(0,2).join(' ');
+  const lote=formatLoteTag(cl.mz,cl.lote);
+  const n=cl.cuotas.length;
+  const cur=cl.moneda==='USD'?'USD ':'$';
+  const cp=cur+fmtPeso(cl.totalCP).replace('$','');
+  const tot=cur+fmtPeso(cl.total).replace('$','');
+  const meses=cl.cuotas.map(q=>q.mesNombre).join(', ');
+  let cuerpo;
+  if(n===1){
+    cuerpo='Te escribimos de F&J Desarrollos Inmobiliarios por el lote '+lote+'.\n\n'
+      +'Nos figura pendiente la cuota de '+meses+' por '+cp+'. Con los intereses al dia de hoy el total es de '+tot+'.\n\n'
+      +'Si ya la abonaste, avisanos y lo verificamos. Cualquier consulta estamos a disposicion.';
+  } else if(n<=3){
+    cuerpo='Te escribimos de F&J Desarrollos Inmobiliarios por el lote '+lote+'.\n\n'
+      +'Nos figuran '+n+' cuotas pendientes ('+meses+') por '+cp+' de capital. Con los intereses al dia de hoy el total asciende a '+tot+'.\n\n'
+      +'Nos gustaria coordinar la regularizacion. Avisanos como te queda mas comodo y lo vemos.';
+  } else if(n<=6){
+    cuerpo='Te escribimos de F&J Desarrollos Inmobiliarios por el lote '+lote+'.\n\n'
+      +'Registramos '+n+' cuotas impagas ('+meses+'), que suman '+cp+' de capital y '+tot+' con los intereses al dia de hoy.\n\n'
+      +'Necesitamos regularizar esta situacion. Te pedimos que te comuniques con nosotros para acordar una forma de pago.';
+  } else {
+    cuerpo='Te escribimos de F&J Desarrollos Inmobiliarios por el lote '+lote+'.\n\n'
+      +'Tu cuenta registra '+n+' cuotas impagas desde '+cl.masVieja+', por un total de '+tot+' con intereses al dia de hoy ('+cp+' de capital).\n\n'
+      +'Es importante que te comuniques a la brevedad para regularizar la situacion y evitar que el caso pase al area de Legales. Quedamos a la espera de tu respuesta.';
+  }
+  return 'Hola '+nom+'! '+cuerpo+'\n\nF&J Desarrollos Inmobiliarios - Los Eucaliptus';
+}
+
+function abrirWhatsMora(clienteId){
+  const cm=loadCuotasMora().filter(m=>!m.pagada&&m.clienteId===clienteId).sort((a,b)=>(a.anio-b.anio)||(a.mes-b.mes));
+  if(!cm.length){alert('Este lote no tiene cuotas en mora.');return;}
+  const c=loadData().find(x=>x.id===clienteId);
+  let cp=0,inte=0;
+  cm.forEach(q=>{ const mor=calcInteresMoraDesde(q.monto,q.anio,q.mes); cp+=montoCobrable(q).total; inte+=mor.interes; });
+  const cl={titular:cm[0].titular,mz:cm[0].mz,lote:cm[0].lote,moneda:cm[0].moneda||'ARS',cuotas:cm,totalCP:cp,total:cp+inte,masVieja:cm[0].mesNombre};
+  const msg=mensajeMoraWA(cl);
+  const tel=(c&&c.tel)?String(c.tel).replace(/\D/g,''):'';
+  const ta=document.createElement('div');
+  ta.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+  ta.innerHTML='<div style="background:var(--surface);border-radius:12px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;padding:16px">'
+    +'<div style="font-size:15px;font-weight:800;margin-bottom:4px">Mensaje para '+formatLoteTag(cm[0].mz,cm[0].lote)+'</div>'
+    +'<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+(tel?'Se enviara al '+tel:'⚠️ Este lote no tiene telefono cargado — podes copiar el texto')+'</div>'
+    +'<textarea id="wa-msg" style="width:100%;min-height:230px;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);box-sizing:border-box;resize:vertical">'+msg.replace(/</g,'&lt;')+'</textarea>'
+    +'<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'
+    +(tel?'<button id="wa-send" style="flex:1;min-width:130px;background:#25d366;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">Enviar por WhatsApp</button>':'')
+    +'<button id="wa-copy" style="flex:1;min-width:110px;background:transparent;border:1.5px solid var(--border2);color:var(--text);border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">Copiar texto</button>'
+    +'<button id="wa-cancel" style="background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:8px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer">Cerrar</button>'
+    +'</div></div>';
+  document.body.appendChild(ta);
+  const cerrar=()=>ta.remove();
+  ta.querySelector('#wa-cancel').onclick=cerrar;
+  ta.querySelector('#wa-copy').onclick=()=>{
+    const t=ta.querySelector('#wa-msg').value;
+    navigator.clipboard.writeText(t).then(()=>alert('Texto copiado'),()=>{});
+  };
+  const btn=ta.querySelector('#wa-send');
+  if(btn) btn.onclick=()=>{
+    const t=ta.querySelector('#wa-msg').value;
+    window.open('https://wa.me/54'+tel+'?text='+encodeURIComponent(t),'_blank');
+    const n=loadNotasMora(); if(!n[clienteId]) n[clienteId]=[];
+    const ahora=new Date();
+    n[clienteId].push({txt:'📤 Reclamo enviado por WhatsApp ('+cm.length+' cuota'+(cm.length>1?'s':'')+')',ts:ahora.toISOString(),fecha:ahora.toLocaleDateString('es-AR'),hora:ahora.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}),auto:true});
+    saveNotasMora(n);
+    cerrar(); renderPanelMora();
+  };
+}
+
+// ── Alertas de cambio de categoria ──
+function loadEstadosMora(){ try{ return JSON.parse(localStorage.getItem('fj_estados_mora')||'{}'); }catch(e){ return {}; } }
+function chequearCambiosMora(){
+  const prev=loadEstadosMora();
+  const cm=loadCuotasMora().filter(m=>!m.pagada);
+  const act={};
+  cm.forEach(m=>{ act[m.clienteId]=(act[m.clienteId]||0)+1; });
+  const empeoraron=[];
+  Object.entries(act).forEach(([id,n])=>{
+    const antes=prev[id]||0;
+    if(antes===0) return;
+    const cA=moraCat(antes), cN=moraCat(n);
+    if(cN.k!==cA.k && n>antes){
+      const m=cm.find(x=>x.clienteId===id);
+      empeoraron.push({id, lote:formatLoteTag(m.mz,m.lote), titular:m.titular, de:cA.n, a:cN.n, cuotas:n});
+    }
+  });
+  localStorage.setItem('fj_estados_mora',JSON.stringify(act));
+  return empeoraron;
+}
 
 function toggleMoraEtapa(et){
   if(!window._moraEtCer) window._moraEtCer={};
@@ -10422,6 +10572,7 @@ async function init(){
       const fbCierreEst = await window._fbGet('cierreEstados');
       const fbDistPct = await window._fbGet('distPct');
       const fbMoraDesact = await window._fbGet('moraDesactivada');
+      const fbNotasMora = await window._fbGet('notasMora');
       const fbAgrLotes = await window._fbGet('agrimensorLotes');
       const fbLotesLibres = await window._fbGet('lotesLibresE123');
       const fbLotesCerts = await window._fbGet('lotesCerts');
@@ -10446,6 +10597,7 @@ async function init(){
       if(fbCierreEst) localStorage.setItem('fj_cierre_estados', JSON.stringify(fbCierreEst));
       if(fbDistPct) localStorage.setItem('fj_dist_pct', fbDistPct);
       if(fbMoraDesact!==null&&fbMoraDesact!==undefined) localStorage.setItem('fj_mora_desactivada', String(fbMoraDesact));
+      if(fbNotasMora) localStorage.setItem('fj_notas_mora', JSON.stringify(fbNotasMora));
       if(fbAgrLotes) _lsSet(dKey('agrimensorLotes'), JSON.stringify(fbAgrLotes));
       if(fbLotesLibres) _lsSet(dKey('lotesLibresE123'), JSON.stringify(fbLotesLibres));
       if(fbLotesCerts) _lsSet(dKey('lotesCerts'), JSON.stringify(fbLotesCerts));
@@ -10526,6 +10678,7 @@ async function init(){
       window._fbListen('distPct', (d) => { if(d) localStorage.setItem('fj_dist_pct', d); });
       setTimeout(backupDiarioAuto, 12000);
       window._fbListen('moraDesactivada', (d) => { if(d!==null&&d!==undefined) localStorage.setItem('fj_mora_desactivada', String(d)); });
+      window._fbListen('notasMora', (d) => { if(d) localStorage.setItem('fj_notas_mora', JSON.stringify(d)); });
     }catch(e){
       console.warn('Firebase load failed:', e);
     }
