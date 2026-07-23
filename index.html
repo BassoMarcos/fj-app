@@ -1167,7 +1167,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0388';
+  datos['_version']='v1.0389';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3461,15 +3461,17 @@ function renderPanelMora(){
 
   if(vistaCompacta){
     // ── VISTA COMPACTA: etapa ▸ manzana ▸ lotes ──
+    // v1.0389: los títulos de columna sólo aparecen si hay lotes desplegados a la vista
+    const hayLotes=grupos.some(g=>!window._moraEtCer[g.etapa] && g.manzanas.some(m=>window._moraMzAb[g.etapa+'|'+m.mz]));
     html+=`<div style="background:var(--surface);border:1.5px solid #fca5a5;border-radius:var(--rlg);overflow:hidden"><div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;min-width:640px">
       <tr style="color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--border)">
         <th style="padding:8px 10px;text-align:left">Lote</th>
-        <th style="padding:8px 10px;text-align:left">Titular</th>
-        <th style="padding:8px 10px;text-align:right">Cuotas</th>
-        <th style="padding:8px 10px;text-align:right">Más vieja</th>
+        <th style="padding:8px 10px;text-align:left">${hayLotes?'Titular':''}</th>
+        <th style="padding:8px 10px;text-align:right">${hayLotes?'Cuotas':''}</th>
+        <th style="padding:8px 10px;text-align:right">${hayLotes?'Más vieja':''}</th>
         <th style="padding:8px 10px;text-align:right">CP</th>
-        <th style="padding:8px 10px;text-align:right">Total c/interés</th>
+        <th style="padding:8px 10px;text-align:right">${hayLotes?'Total c/interés':''}</th>
       </tr>`;
     grupos.forEach(g=>{
       const etAb=!window._moraEtCer[g.etapa];
