@@ -1167,7 +1167,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0385';
+  datos['_version']='v1.0387';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3287,6 +3287,14 @@ function renderPanelMora(){
     return (parseInt(String(a.lote||'').replace(/[^0-9]/g,''))||0)-(parseInt(String(b.lote||'').replace(/[^0-9]/g,''))||0)
       || String(a.lote||'').localeCompare(String(b.lote||''));
   });
+  // v1.0386: conteo por categoría y filtro activo
+  const catCount={c1:0,c2:0,c3:0,c4:0};
+  clientes.forEach(cl=>{ catCount[moraCat(cl.cuotas.length).k]++; });
+  const filtroCat=window._moraFiltroCat||null;
+  if(filtroCat){
+    for(let i=clientes.length-1;i>=0;i--){ if(moraCat(clientes[i].cuotas.length).k!==filtroCat) clientes.splice(i,1); }
+  }
+
   // Bloques desplegables: etapa → manzana → lotes (v1.0359)
   const grupos=[];
   clientes.forEach(cl=>{
@@ -3359,6 +3367,26 @@ function renderPanelMora(){
 
   // Vista: compacta (bloques desplegables) o lista plana ultra densa (v1.0366)
   const vistaCompacta=(localStorage.getItem('fj_mora_vista')||'compacta')!=='lista';
+
+  // Botonera de categorías de gravedad
+  html+='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
+  MORA_CATS.forEach(c=>{
+    const act=filtroCat===c.k;
+    html+=`<button onclick="setMoraFiltroCat('${c.k}')" style="flex:1;min-width:130px;background:${act?c.bg:c.bgSoft};color:${act?'#fff':c.txt};border:1.5px solid ${c.bg};border-radius:var(--r);padding:9px 10px;cursor:pointer;text-align:left">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;opacity:.9">${c.n}</div>
+      <div style="font-size:20px;font-weight:800;line-height:1.1">${catCount[c.k]}</div>
+      <div style="font-size:9px;opacity:.85">lote${catCount[c.k]===1?'':'s'}</div>
+    </button>`;
+  });
+  html+='</div>';
+  if(filtroCat){
+    const cc=MORA_CATS.find(x=>x.k===filtroCat);
+    html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:7px 12px;background:${cc.bgSoft};border:1px solid ${cc.bg};border-radius:var(--r)">
+      <span style="font-size:12px;font-weight:700;color:${cc.txt}">Mostrando solo: ${cc.n} (${clientes.length} lote${clientes.length===1?'':'s'})</span>
+      <div style="flex:1"></div>
+      <button onclick="setMoraFiltroCat('${filtroCat}')" style="background:none;border:1px solid ${cc.bg};color:${cc.txt};border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">✕ Quitar filtro</button>
+    </div>`;
+  }
 
   // Buscador + toggle de vista
   html+=`<div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -3462,7 +3490,7 @@ function renderPanelMora(){
           const abierta=window._moraCardAbierta===cl.clienteId&&loteVis;
           const searchStr=(cl.mz+' '+cl.lote+' '+formatLoteTag(cl.mz,cl.lote)+' '+cl.titular).toLowerCase();
           html+=`<tr class="mora-card" data-cid="${cl.clienteId}" data-search="${searchStr}" data-vis="${loteVis?1:0}" onclick="toggleMoraCard('${cl.clienteId}')" style="display:${loteVis?'table-row':'none'};cursor:pointer;border-top:1px solid var(--border)">
-            <td style="padding:7px 10px 7px 34px;font-size:12px;font-weight:800;white-space:nowrap">${formatLoteTag(cl.mz,cl.lote)}${cl.moneda==='USD'?' <span style="color:var(--green);font-size:10px;font-weight:700">USD</span>':''}</td>
+            <td style="padding:7px 10px 7px 34px;font-size:12px;font-weight:800;white-space:nowrap"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${moraCat(cl.cuotas.length).bg};margin-right:6px" title="${moraCat(cl.cuotas.length).n}"></span>${formatLoteTag(cl.mz,cl.lote)}${cl.moneda==='USD'?' <span style="color:var(--green);font-size:10px;font-weight:700">USD</span>':''}</td>
             <td style="padding:7px 10px;font-size:12px;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cl.titular}</td>
             <td style="padding:7px 10px;font-size:12px;text-align:right;font-weight:700">${cl.cuotas.length}</td>
             <td style="padding:7px 10px;font-size:11px;text-align:right;white-space:nowrap">${cl.masVieja} <span style="color:var(--red);font-weight:700">(${cl.diasMax}d)</span></td>
@@ -3493,7 +3521,7 @@ function renderPanelMora(){
       const abierta=window._moraCardAbierta===cl.clienteId;
       const searchStr=(cl.mz+' '+cl.lote+' '+formatLoteTag(cl.mz,cl.lote)+' '+cl.titular).toLowerCase();
       html+=`<tr class="mora-card" data-cid="${cl.clienteId}" data-search="${searchStr}" data-vis="1" onclick="toggleMoraCard('${cl.clienteId}')" style="cursor:pointer;border-top:1px solid var(--border)">
-        <td style="padding:4px 8px;font-size:11px;font-weight:800;white-space:nowrap">${formatLoteTag(cl.mz,cl.lote)}${cl.moneda==='USD'?' <span style="color:var(--green);font-size:9px;font-weight:700">USD</span>':''}</td>
+        <td style="padding:4px 8px;font-size:11px;font-weight:800;white-space:nowrap"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${moraCat(cl.cuotas.length).bg};margin-right:5px" title="${moraCat(cl.cuotas.length).n}"></span>${formatLoteTag(cl.mz,cl.lote)}${cl.moneda==='USD'?' <span style="color:var(--green);font-size:9px;font-weight:700">USD</span>':''}</td>
         <td style="padding:4px 8px;font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cl.titular}</td>
         <td style="padding:4px 8px;font-size:11px;text-align:right;font-weight:700">${cl.cuotas.length}</td>
         <td style="padding:4px 8px;font-size:10px;text-align:right;white-space:nowrap">${cl.masVieja} <span style="color:var(--red);font-weight:700">(${cl.diasMax}d)</span></td>
@@ -3662,9 +3690,32 @@ async function generarInformeMensual(soloTest){
   doc.addImage(imgAnt,'PNG',M,y,ANCHO,ANCHO*0.378);
   y+=ANCHO*0.378+8;
 
+  // ── 2b. SITUACION POR GRAVEDAD ──
+  if(y>225){doc.addPage();encabezado();y=34;}
+  y=titulo('3. Situacion de los deudores por cantidad de cuotas adeudadas',y);
+  const CATS=[{n:'1 cuota',min:1,max:1,rgb:[245,158,11]},{n:'2 a 3 cuotas',min:2,max:3,rgb:[234,88,12]},{n:'4 a 6 cuotas',min:4,max:6,rgb:[220,38,38]},{n:'7 o mas cuotas',min:7,max:9999,rgb:[127,29,29]}];
+  const porCat=CATS.map(c=>({...c,lotes:0,cuotas:0,cpA:0,cpU:0,intA:0}));
+  clientes.forEach(g=>{
+    const n=g.cuotas.length;
+    const c=porCat.find(x=>n>=x.min&&n<=x.max); if(!c) return;
+    c.lotes++; c.cuotas+=n;
+    if(g.moneda==='USD') c.cpU+=g.cp; else { c.cpA+=g.cp; c.intA+=g.int; }
+  });
+  y=tabla({startY:y,
+    head:[['Situacion','Lotes','Cuotas','Deuda CP ($)','Interes ($)','Deuda CP (USD)']],
+    body:porCat.map(c=>[c.n,String(c.lotes),String(c.cuotas),c.cpA?fmt(c.cpA):'-',c.intA?fmt(c.intA):'-',c.cpU?'USD '+fmt(c.cpU):'-']),
+    foot:[['TOTAL',String(clientes.length),String(impagas.length),fmt(T.cpA),fmt(T.intA),T.cpU?'USD '+fmt(T.cpU):'-']],
+    footStyles:{fillColor:[254,226,226],textColor:[120,20,20],fontStyle:'bold'},
+    columnStyles:{0:{cellWidth:38,fontStyle:'bold'},1:{cellWidth:18,halign:'right'},2:{cellWidth:20,halign:'right'},3:{cellWidth:'auto',halign:'right'},4:{cellWidth:30,halign:'right'},5:{cellWidth:30,halign:'right'}},
+    didParseCell:d=>{
+      if(d.section==='head'&&d.column.index>=1) d.cell.styles.halign='right';
+      if(d.section==='body'&&d.column.index===0){ const c=porCat[d.row.index]; if(c){ d.cell.styles.textColor=c.rgb; } }
+    }
+  })+7;
+
   // ── 3. POR ETAPA ──
   if(y>235){doc.addPage();encabezado();y=34;}
-  y=titulo('3. Deuda por etapa (cuota pura)',y);
+  y=titulo('4. Deuda por etapa (cuota pura)',y);
   y=tabla({startY:y,
     head:[['Etapa','Lotes','Cuotas','Deuda CP ($)','Deuda CP (USD)']],
     body:porEt.map(e=>[e.et,String(e.lotes),String(e.cuotas),e.cpA?fmt(e.cpA):'-',e.cpU?'USD '+fmt(e.cpU):'-']),
@@ -3674,7 +3725,7 @@ async function generarInformeMensual(soloTest){
 
   // ── 4. POR MANZANA ──
   if(y>225){doc.addPage();encabezado();y=34;}
-  y=titulo('4. Deuda por manzana',y);
+  y=titulo('5. Deuda por manzana',y);
   y=tabla({startY:y,
     head:[['Etapa','Manzana','Lotes','Cuotas','Deuda CP ($)','Deuda CP (USD)']],
     body:porMz.map(z=>[z.et,z.mz,String(z.lotes),String(z.cuotas),z.cpA?fmt(z.cpA):'-',z.cpU?'USD '+fmt(z.cpU):'-']),
@@ -3684,7 +3735,7 @@ async function generarInformeMensual(soloTest){
 
   // ── 5. MAYORES DEUDORES ──
   if(y>215){doc.addPage();encabezado();y=34;}
-  y=titulo('5. Mayores deudores (top 10 por deuda total con interes)',y);
+  y=titulo('6. Mayores deudores (top 10 por deuda total con interes)',y);
   const top=clientes.slice().sort((a,b)=>b.total-a.total).slice(0,10);
   y=tabla({startY:y,
     head:[['#','Lote','Titular','Cuotas','Dias','Deuda total']],
@@ -3695,17 +3746,20 @@ async function generarInformeMensual(soloTest){
 
   // ── 6. DETALLE COMPLETO ──
   doc.addPage(); encabezado(); y=34;
-  y=titulo('6. Detalle de todos los lotes en mora ('+clientes.length+')',y);
+  y=titulo('7. Detalle de todos los lotes en mora ('+clientes.length+')',y);
   const orden=clientes.slice().sort((a,b)=>_et(getEtapa(a.mz))-_et(getEtapa(b.mz))||String(a.mz).localeCompare(String(b.mz))||(parseInt(String(a.lote).replace(/\D/g,''))||0)-(parseInt(String(b.lote).replace(/\D/g,''))||0));
   tabla({startY:y,
-    head:[['Lote','Titular','Cuotas','Debe desde','Dias','Cuota pura','Interes','Total']],
-    body:orden.map(g=>{const c=g.moneda==='USD'?'USD ':'';return [formatLoteTag(g.mz,g.lote),String(g.titular||'').slice(0,30),String(g.cuotas.length),g.desde,String(g.dias),c+fmt(g.cp),c+fmt(g.int),c+fmt(g.total)];}),
-    foot:[['TOTAL','',String(impagas.length),'','',fmt(T.cpA),fmt(T.intA),fmt(T.cpA+T.intA)]],
+    head:[['Lote','Titular','Situacion','Cuotas','Debe desde','Dias','Cuota pura','Interes','Total']],
+    body:orden.map(g=>{const c=g.moneda==='USD'?'USD ':'';const n=g.cuotas.length;const ct=CATS.find(x=>n>=x.min&&n<=x.max);return [formatLoteTag(g.mz,g.lote),String(g.titular||'').slice(0,26),ct?ct.n:'-',String(n),g.desde,String(g.dias),c+fmt(g.cp),c+fmt(g.int),c+fmt(g.total)];}),
+    foot:[['TOTAL','','',String(impagas.length),'','',fmt(T.cpA),fmt(T.intA),fmt(T.cpA+T.intA)]],
     footStyles:{fillColor:[254,226,226],textColor:[120,20,20],fontStyle:'bold',fontSize:8},
     styles:{fontSize:7.5,cellPadding:1.5,overflow:'linebreak',lineColor:[229,231,235],lineWidth:0.1},
     headStyles:{fillColor:[153,27,27],textColor:255,fontStyle:'bold',fontSize:7.5},
-    columnStyles:{0:{cellWidth:20,fontStyle:'bold'},1:{cellWidth:'auto'},2:{cellWidth:13,halign:'right'},3:{cellWidth:24},4:{cellWidth:12,halign:'right'},5:{cellWidth:24,halign:'right'},6:{cellWidth:24,halign:'right'},7:{cellWidth:26,halign:'right',fontStyle:'bold'}},
-    didParseCell:d=>{ if(d.section==='head'&&[2,4,5,6,7].indexOf(d.column.index)>=0) d.cell.styles.halign='right'; }
+    columnStyles:{0:{cellWidth:18,fontStyle:'bold'},1:{cellWidth:'auto'},2:{cellWidth:22},3:{cellWidth:12,halign:'right'},4:{cellWidth:22},5:{cellWidth:11,halign:'right'},6:{cellWidth:22,halign:'right'},7:{cellWidth:22,halign:'right'},8:{cellWidth:24,halign:'right',fontStyle:'bold'}},
+    didParseCell:d=>{
+      if(d.section==='head'&&[3,5,6,7,8].indexOf(d.column.index)>=0) d.cell.styles.halign='right';
+      if(d.section==='body'&&d.column.index===2){ const g=orden[d.row.index]; if(g){ const n=g.cuotas.length; const ct=CATS.find(x=>n>=x.min&&n<=x.max); if(ct){ d.cell.styles.textColor=ct.rgb; d.cell.styles.fontStyle='bold'; } } }
+    }
   });
 
   // Pie
@@ -3886,6 +3940,19 @@ function toggleMoraCard(clienteId){
   det.style.display=abrir?(det.tagName==='TR'?'table-row':'block'):'none';
   if(fle) fle.style.transform='rotate('+(abrir?90:0)+'deg)';
   window._moraCardAbierta=abrir?clienteId:null;
+}
+
+// v1.0386: categorías de gravedad por cantidad de cuotas adeudadas
+const MORA_CATS=[
+  {k:'c1', n:'1 cuota',      min:1, max:1,     bg:'#f59e0b', bgSoft:'rgba(245,158,11,.15)', txt:'#f59e0b'},
+  {k:'c2', n:'2 a 3 cuotas', min:2, max:3,     bg:'#ea580c', bgSoft:'rgba(234,88,12,.15)',  txt:'#ea580c'},
+  {k:'c3', n:'4 a 6 cuotas', min:4, max:6,     bg:'#dc2626', bgSoft:'rgba(220,38,38,.15)',  txt:'#dc2626'},
+  {k:'c4', n:'7 o mas',      min:7, max:9999,  bg:'#7f1d1d', bgSoft:'rgba(127,29,29,.20)',  txt:'#b91c1c'}
+];
+function moraCat(n){ return MORA_CATS.find(c=>n>=c.min&&n<=c.max)||MORA_CATS[3]; }
+function setMoraFiltroCat(k){
+  window._moraFiltroCat = (window._moraFiltroCat===k) ? null : k;
+  renderPanelMora();
 }
 
 function toggleMoraEtapa(et){
