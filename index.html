@@ -1167,7 +1167,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0382';
+  datos['_version']='v1.0383';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3786,10 +3786,19 @@ async function generarInformeMora(clienteId, soloTest){
   });
   const morV=calcInteresMoraDesde(cuotas[0].monto,cuotas[0].anio,cuotas[0].mes);
 
-  // Último pago registrado
-  const hist=(c.hist||[]).slice().sort((a,b)=>String(a.ts||'').localeCompare(String(b.ts||'')));
+  // v1.0383: el informe se rige por las CUOTAS EN MORA, que son la fuente de verdad.
+  // Se descarta del historial cualquier registro de una cuota que figura adeudada
+  // (residuo de pruebas o cargas viejas) para no informar pagos inexistentes.
+  const adeudadas=new Set(cuotas.map(q=>q.numeroCuota));
+  const primeraAdeudada=Math.min(...cuotas.map(q=>q.numeroCuota));
+  const hist=(c.hist||[])
+    .filter(h=>!adeudadas.has(h.cuota) && h.cuota < primeraAdeudada)
+    .slice().sort((a,b)=>(a.cuota||0)-(b.cuota||0));
   const ult=hist[hist.length-1];
-  const ultPagoStr=ult?ult.mes+' (cuota '+ult.cuota+'), registrada el '+new Date(ult.ts).toLocaleDateString('es-AR'):'Sin pagos registrados en el historial';
+  const ultPagoStr=ult?ult.mes+' (cuota '+ult.cuota+'), registrada el '+new Date(ult.ts).toLocaleDateString('es-AR'):'Sin pagos registrados anteriores a la deuda';
+  // Cuota que le corresponde pagar este mes según el calendario de deuda
+  const ultimaAdeudada=Math.max(...cuotas.map(q=>q.numeroCuota));
+  const cuotaEnCurso=ultimaAdeudada+1;
 
   // Gráfico: barras apiladas capital + interés por cuota
   const cv=document.createElement('canvas'); cv.width=1000; cv.height=330;
@@ -3837,7 +3846,7 @@ async function generarInformeMora(clienteId, soloTest){
   y+=7;
   doc.text('Etapa: '+(getEtapa(c.mz)||'-')+'    Manzana: '+(c.mz||'-')+'    Lote: '+(c.lote||'-')+'    Moneda: '+(esUSD?'USD':'Pesos'),12,y);
   y+=6;
-  doc.text('Plan de pago: cuota actual '+(c.ca||'-')+' de '+(c.ct||'-')+'    Valor de cuota vigente: '+cur+fmt(c.monto||0),12,y);
+  doc.text('Plan de pago: '+cuotaEnCurso+' de '+(c.ct||'-')+' (cuota en curso)    Valor de cuota vigente: '+cur+fmt(c.monto||0),12,y);
   y+=6;
   doc.text('Último pago registrado: '+ultPagoStr,12,y);
 
