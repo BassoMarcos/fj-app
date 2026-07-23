@@ -860,7 +860,7 @@ function _lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}_memStore[k]=v;}
 
 function loadMora(){try{return JSON.parse(localStorage.getItem('fj_mora')||'[]');}catch(e){return [];}}
 function loadPendientesAprobacion(){try{return JSON.parse(localStorage.getItem('fj_pendientes_aprobacion')||'[]');}catch(e){return [];}}
-function savePendientesAprobacion(v){localStorage.setItem('fj_pendientes_aprobacion',JSON.stringify(v));sheetsSet('Pendientes',v);}
+function savePendientesAprobacion(v){localStorage.setItem('fj_pendientes_aprobacion',JSON.stringify(v));sheetsSet('Pendientes',v);window._fbSet('pendientesAprobacion',v).catch(e=>console.warn('FB pend error:',e));}
 function loadUltimaVistaMora(){return localStorage.getItem('fj_mora_vista')||'0';}
 function saveUltimaVistaMora(){localStorage.setItem('fj_mora_vista',new Date().toISOString());}
 function getMoraNoVistos(){
@@ -1167,7 +1167,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0380';
+  datos['_version']='v1.0381';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1316,6 +1316,9 @@ function saveHist(h){
   sheetsSet('Historial', h.slice(0,100).map(e=>({
     tipo:e.tipo||'', desc:e.desc||'', ts:e.ts||''
   })));
+  // v1.0381: el historial es la caja negra de la app — fue lo único que permitió
+  // recuperar los datos el 22/7/2026. Ahora también va a Firebase.
+  window._fbSet('hist', h).catch(e=>console.warn('FB hist error:',e));
 }
 function addHist(tipo,desc,cid){
   const h=loadHist();
@@ -1550,7 +1553,11 @@ async function sincronizarTodo(){
         window._fbSet('mora', JSON.parse(localStorage.getItem('fj_mora')||'[]')),
         window._fbSet('extras', JSON.parse(localStorage.getItem('fj_extras')||'[]')),
         window._fbSet('mesActual', JSON.parse(localStorage.getItem('fj_mes_actual')||'null')),
-        window._fbSet('cierreFinal', JSON.parse(localStorage.getItem('fj_cierre_final')||'null'))
+        window._fbSet('cierreFinal', JSON.parse(localStorage.getItem('fj_cierre_final')||'null')),
+        window._fbSet('hist', JSON.parse(_lsGet(dKey('hist'))||'[]')),
+        window._fbSet('pendientesAprobacion', JSON.parse(localStorage.getItem('fj_pendientes_aprobacion')||'[]')),
+        window._fbSet('cierreEstados', JSON.parse(localStorage.getItem('fj_cierre_estados')||'{}')),
+        window._fbSet('distPct', parseInt(localStorage.getItem('fj_dist_pct')||'70'))
       ]);
       console.log('Firebase sync OK');
     }
@@ -4654,7 +4661,9 @@ function resetPagos(){
 // ============== RENDER BALANCES ==============
 function fmtFechaAdel(f){if(!f)return'';try{const d=new Date(f);if(isNaN(d))return f;return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});}catch(e){return f;}}
 function getCierreEstados(){try{return JSON.parse(localStorage.getItem('fj_cierre_estados')||'{}');}catch(e){return{};}}
-function setCierreEstado(idx,tipo,val){const e=getCierreEstados();if(!e[idx])e[idx]={};e[idx][tipo]=val;localStorage.setItem('fj_cierre_estados',JSON.stringify(e));renderBalances('cierres');}
+// v1.0381: estos dos ajustes también se sincronizan
+function saveCierreEstados(e){localStorage.setItem('fj_cierre_estados',JSON.stringify(e));window._fbSet('cierreEstados',e).catch(x=>console.warn('FB cierreEstados:',x));}
+function setCierreEstado(idx,tipo,val){const e=getCierreEstados();if(!e[idx])e[idx]={};e[idx][tipo]=val;saveCierreEstados(e);renderBalances('cierres');}
 function revertirFusion(){
   const bal=loadBalances();
   const fus=bal.fusiones||[];
@@ -4704,7 +4713,7 @@ function _doRevertirFusion(fid){
     try{
       const est=JSON.parse(localStorage.getItem('fj_cierre_estados')||'{}');
       const nE={};Object.keys(est).forEach(k=>{const ki=+k;nE[ki>=insertAt?ki+1:ki]=est[k];});
-      localStorage.setItem('fj_cierre_estados',JSON.stringify(nE));
+      saveCierreEstados(nE);
     }catch(e){}
     bal.fusiones.splice(fi,1);
     saveBalances(bal);
@@ -4820,12 +4829,12 @@ function _doFusionar(srcTs,dstTs){
     const newK=ki>srcIdx?ki-1:ki;
     newEst[newK]=est[k];
   });
-  localStorage.setItem('fj_cierre_estados',JSON.stringify(newEst));
+  saveCierreEstados(newEst);
   saveBalances(bal);
   renderBalances('cierres');
 }
 function getDistPct(){const v=parseInt(localStorage.getItem('fj_dist_pct')||'70');return isNaN(v)||v<1||v>99?70:v;}
-function setDistPct(v){const n=parseInt(v);if(!isNaN(n)&&n>=1&&n<=99){localStorage.setItem('fj_dist_pct',n);renderBalances();}}
+function setDistPct(v){const n=parseInt(v);if(!isNaN(n)&&n>=1&&n<=99){localStorage.setItem('fj_dist_pct',n);window._fbSet('distPct',n).catch(x=>console.warn('FB distPct:',x));renderBalances();}}
 function renderBalances(seccion){
   window._balancesSeccion=seccion||null;
   const el=document.getElementById('a-balances-content');if(!el)return;
@@ -10281,6 +10290,10 @@ async function init(){
       const fbExtras = await window._fbGet('extras');
       const fbMesActual = await window._fbGet('mesActual');
       const fbCierreFinal = await window._fbGet('cierreFinal');
+      const fbHist = await window._fbGet('hist');
+      const fbPendAprob = await window._fbGet('pendientesAprobacion');
+      const fbCierreEst = await window._fbGet('cierreEstados');
+      const fbDistPct = await window._fbGet('distPct');
       const fbAgrLotes = await window._fbGet('agrimensorLotes');
       const fbLotesLibres = await window._fbGet('lotesLibresE123');
       const fbLotesCerts = await window._fbGet('lotesCerts');
@@ -10295,6 +10308,15 @@ async function init(){
       if(fbExtras) localStorage.setItem('fj_extras', JSON.stringify(fbExtras));
       if(fbMesActual) localStorage.setItem('fj_mes_actual', JSON.stringify(fbMesActual));
       if(fbCierreFinal) localStorage.setItem('fj_cierre_final', JSON.stringify(fbCierreFinal));
+      // hist: quedarse con el más largo (nunca perder registros)
+      if(fbHist){
+        let hLocal=[]; try{hLocal=JSON.parse(_lsGet(dKey('hist'))||'[]');}catch(e){}
+        if(fbHist.length>=hLocal.length) _lsSet(dKey('hist'), JSON.stringify(fbHist));
+        else window._fbSet('hist', hLocal).catch(()=>{});
+      }
+      if(fbPendAprob) localStorage.setItem('fj_pendientes_aprobacion', JSON.stringify(fbPendAprob));
+      if(fbCierreEst) localStorage.setItem('fj_cierre_estados', JSON.stringify(fbCierreEst));
+      if(fbDistPct) localStorage.setItem('fj_dist_pct', fbDistPct);
       if(fbAgrLotes) _lsSet(dKey('agrimensorLotes'), JSON.stringify(fbAgrLotes));
       if(fbLotesLibres) _lsSet(dKey('lotesLibresE123'), JSON.stringify(fbLotesLibres));
       if(fbLotesCerts) _lsSet(dKey('lotesCerts'), JSON.stringify(fbLotesCerts));
@@ -10369,6 +10391,10 @@ async function init(){
       window._fbListen('extras', (d) => { if(d) localStorage.setItem('fj_extras', JSON.stringify(d)); });
       window._fbListen('mesActual', (d) => { if(d) localStorage.setItem('fj_mes_actual', JSON.stringify(d)); });
       window._fbListen('cierreFinal', (d) => { if(d) localStorage.setItem('fj_cierre_final', JSON.stringify(d)); });
+      window._fbListen('hist', (d) => { if(d){ let l=[]; try{l=JSON.parse(_lsGet(dKey('hist'))||'[]');}catch(e){} if(d.length>=l.length) _lsSet(dKey('hist'), JSON.stringify(d)); } });
+      window._fbListen('pendientesAprobacion', (d) => { if(d) localStorage.setItem('fj_pendientes_aprobacion', JSON.stringify(d)); });
+      window._fbListen('cierreEstados', (d) => { if(d) localStorage.setItem('fj_cierre_estados', JSON.stringify(d)); });
+      window._fbListen('distPct', (d) => { if(d) localStorage.setItem('fj_dist_pct', d); });
     }catch(e){
       console.warn('Firebase load failed:', e);
     }
