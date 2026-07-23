@@ -816,7 +816,7 @@ function getMoraNoVistos(){
 }
 function saveMora(v){localStorage.setItem('fj_mora',JSON.stringify(v));sheetsSet('Mora',v);if(window._firebaseReady)window._fbSet('mora',v).catch(e=>console.warn('FB mora error:',e));}
 function loadCierreFinal(){try{return JSON.parse(localStorage.getItem('fj_cierre_final')||'null');}catch(e){return null;}}
-function saveCierreFinal(v){localStorage.setItem('fj_cierre_final',JSON.stringify(v));sheetsSet('CierreFinal',[v]);}
+function saveCierreFinal(v){localStorage.setItem('fj_cierre_final',JSON.stringify(v));sheetsSet('CierreFinal',[v]);if(window._firebaseReady)window._fbSet('cierreFinal',v).catch(e=>console.warn('FB cierre error:',e));}
 function hayCierreFinal(){return !!loadCierreFinal();}
 // Cuotas morosas: lista de cuotas impagas registradas al cierre
 function loadCuotasMora(){try{return JSON.parse(localStorage.getItem('fj_cuotas_mora')||'[]');}catch(e){return [];}}
@@ -1113,7 +1113,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0378';
+  datos['_version']='v1.0379';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1495,7 +1495,8 @@ async function sincronizarTodo(){
         window._fbSet('pagoStore', loadPagoStore()),
         window._fbSet('mora', JSON.parse(localStorage.getItem('fj_mora')||'[]')),
         window._fbSet('extras', JSON.parse(localStorage.getItem('fj_extras')||'[]')),
-        window._fbSet('mesActual', JSON.parse(localStorage.getItem('fj_mes_actual')||'null'))
+        window._fbSet('mesActual', JSON.parse(localStorage.getItem('fj_mes_actual')||'null')),
+        window._fbSet('cierreFinal', JSON.parse(localStorage.getItem('fj_cierre_final')||'null'))
       ]);
       console.log('Firebase sync OK');
     }
@@ -10207,6 +10208,7 @@ async function init(){
       const fbMoraReg = await window._fbGet('mora');
       const fbExtras = await window._fbGet('extras');
       const fbMesActual = await window._fbGet('mesActual');
+      const fbCierreFinal = await window._fbGet('cierreFinal');
       const fbAgrLotes = await window._fbGet('agrimensorLotes');
       const fbLotesLibres = await window._fbGet('lotesLibresE123');
       const fbLotesCerts = await window._fbGet('lotesCerts');
@@ -10220,6 +10222,7 @@ async function init(){
       if(fbMoraReg) localStorage.setItem('fj_mora', JSON.stringify(fbMoraReg));
       if(fbExtras) localStorage.setItem('fj_extras', JSON.stringify(fbExtras));
       if(fbMesActual) localStorage.setItem('fj_mes_actual', JSON.stringify(fbMesActual));
+      if(fbCierreFinal) localStorage.setItem('fj_cierre_final', JSON.stringify(fbCierreFinal));
       if(fbAgrLotes) _lsSet(dKey('agrimensorLotes'), JSON.stringify(fbAgrLotes));
       if(fbLotesLibres) _lsSet(dKey('lotesLibresE123'), JSON.stringify(fbLotesLibres));
       if(fbLotesCerts) _lsSet(dKey('lotesCerts'), JSON.stringify(fbLotesCerts));
@@ -10263,6 +10266,7 @@ async function init(){
       window._fbListen('mora', (d) => { if(d) localStorage.setItem('fj_mora', JSON.stringify(d)); });
       window._fbListen('extras', (d) => { if(d) localStorage.setItem('fj_extras', JSON.stringify(d)); });
       window._fbListen('mesActual', (d) => { if(d) localStorage.setItem('fj_mes_actual', JSON.stringify(d)); });
+      window._fbListen('cierreFinal', (d) => { if(d) localStorage.setItem('fj_cierre_final', JSON.stringify(d)); });
     }catch(e){
       console.warn('Firebase load failed:', e);
     }
