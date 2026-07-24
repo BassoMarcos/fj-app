@@ -542,29 +542,20 @@ tr:hover td{background:var(--bg)}
     </div>
     <div id="atab-datos" style="display:none">
       <div style="max-width:600px;margin:2rem auto;padding:0 1.5rem">
-        <div style="font-size:22px;font-weight:800;margin-bottom:6px">💾 Exportar e Importar Datos</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:2rem">Usá estas opciones para hacer una copia de seguridad o para pasar los datos a otro dispositivo.</div>
+        <div style="font-size:22px;font-weight:800;margin-bottom:6px">💾 Respaldos</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:2rem">Guardá una copia completa de la app cuando los números estén verificados, y volvé a cualquier copia si algo sale mal.</div>
 
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;margin-bottom:1rem">
-          <div style="font-size:16px;font-weight:700;margin-bottom:6px">📤 Exportar datos</div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Descarga un archivo con todos tus datos: clientes, pagos, mora, historial, balances y configuración.</div>
-          <button onclick="exportarDatos()" style="background:var(--acc);color:#071510;border:none;border-radius:var(--r);padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%">⬇ Descargar mis datos</button>
+        <div style="background:var(--surface);border:1.5px solid #16a34a;border-radius:var(--rlg);padding:1.5rem;margin-bottom:1rem">
+          <div style="font-size:16px;font-weight:700;margin-bottom:6px">✅ Guardar respaldo</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Muestra los totales por etapa para que los compares con tu planilla. Si están bien, guarda una copia completa de TODA la app (clientes, montos, cuotas, mora, cajas, adelantos, ICC, historial y configuración).</div>
+          <button onclick="abrirValidarEstado()" style="background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:12px 20px;font-size:14px;font-weight:800;cursor:pointer;width:100%">✅ Verificar totales y guardar respaldo</button>
         </div>
 
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem">
-          <div style="font-size:16px;font-weight:700;margin-bottom:6px">📥 Importar datos</div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Cargá un archivo exportado previamente para restaurar todos tus datos. <strong>Atención: reemplaza los datos actuales.</strong></div>
-          <input type="file" id="importar-input" accept=".json" onchange="importarDatos(this)" style="display:none">
-          <button onclick="document.getElementById('importar-input').click()" style="background:var(--surface);color:var(--text);border:1.5px solid var(--border);border-radius:var(--r);padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%">⬆ Seleccionar archivo de datos</button>
-          <div id="importar-msg" style="margin-top:8px;font-size:13px"></div>
+        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rlg);padding:1.5rem">
+          <div style="font-size:16px;font-weight:700;margin-bottom:6px">🕐 Recuperar datos</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Lista de todos los respaldos guardados con su fecha, hora y totales. Restaurar reemplaza los datos en todos los dispositivos: pide la clave dos veces.</div>
+          <button onclick="verPuntosRestauracion()" style="background:var(--surface);color:var(--text);border:1.5px solid var(--border2);border-radius:var(--r);padding:12px 20px;font-size:14px;font-weight:800;cursor:pointer;width:100%">🕐 Ver respaldos y recuperar</button>
         </div>
-
-        <div style="background:var(--surface);border:1px solid var(--green-border);border-radius:var(--r);padding:1.5rem;margin-top:1rem">
-          <div style="font-size:16px;font-weight:700;margin-bottom:6px">☁️ Sincronizar con servidor</div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Subí todos los datos actuales al servidor para que otros dispositivos los vean automáticamente.</div>
-          <button onclick="sincronizarTodo()" id="btn-sync-todo" style="background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;width:100%">☁️ Sincronizar todo ahora</button>
-          <div id="sync-msg" style="margin-top:8px;font-size:13px"></div>
-          <div id="importar-msg" style="margin-top:8px;font-size:13px"></div>
         </div>
       </div>
     </div>
@@ -1169,7 +1160,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0394';
+  datos['_version']='v1.0395';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -4754,8 +4745,7 @@ function renderInicio(){
     <div style="font-size:22px;font-weight:800;margin-bottom:4px">Bienvenido, Administrador</div>
     <div style="font-size:14px;color:var(--text2);margin-bottom:1rem">${new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
     ${resumenLotes}
-    <button onclick="resetearADatosIniciales()" style="width:100%;padding:12px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:.5rem">🔄 Resetear a datos iniciales (Mayo)</button>
-    <button onclick="syncFromSheets().then(()=>{location.reload();})" style="width:100%;padding:10px;background:#1a3a6b;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:1.5rem">☁️ Sincronizar desde Google Sheets</button>
+
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;margin-bottom:1rem">
       <div style="font-weight:700;font-size:13px;color:var(--text2);margin-bottom:8px">ESTADO DE PAGOS — ${mesActual().toUpperCase()} ${new Date().getFullYear()}</div>
       <div style="background:var(--border);border-radius:99px;height:10px;margin-bottom:8px">
@@ -10483,6 +10473,17 @@ function _totalesActuales(){
   };
 }
 
+// v1.0395: pide la clave DOS veces para operaciones de respaldo/restauración
+function pedirClaveDoble(titulo, cb){
+  const p1=prompt(titulo+'\n\nIngresá la clave de administrador (1 de 2):');
+  if(p1===null) return;
+  if(p1!=='fyj41252.0'){ alert('Clave incorrecta.'); return; }
+  const p2=prompt(titulo+'\n\nConfirmá la clave nuevamente (2 de 2):');
+  if(p2===null) return;
+  if(p2!=='fyj41252.0'){ alert('Clave incorrecta. Operación cancelada.'); return; }
+  cb();
+}
+
 async function abrirValidarEstado(){
   const t=_totalesActuales();
   const fmtL=n=>fmtPeso(n);
@@ -10517,12 +10518,14 @@ async function abrirValidarEstado(){
   ov.querySelector('#val-ok').onclick=async()=>{
     const nota=ov.querySelector('#val-nota').value.trim();
     const btn=ov.querySelector('#val-ok');
+    pedirClaveDoble('GUARDAR RESPALDO COMPLETO', async ()=>{
     btn.disabled=true; btn.textContent='Guardando…';
     try{
       await guardarPuntoRestauracion(nota,t);
       ov.remove();
       alert('✅ Punto de restauración guardado.\n\nSi algo se rompe, podés volver exactamente a este estado desde "Puntos de restauración".');
     }catch(e){ btn.disabled=false; btn.textContent='✅ Los números están bien — Guardar'; alert('No se pudo guardar: '+e.message); }
+    });
   };
 }
 
@@ -10573,7 +10576,7 @@ async function verPuntosRestauracion(){
 function restaurarPunto(punto){
   if(!punto||!punto.datos){ alert('Ese punto no tiene datos guardados.'); return; }
   const t=punto.totales||{};
-  confirmarConClave(async ()=>{
+  pedirClaveDoble('RECUPERAR DATOS — reemplaza todo', async ()=>{
     if(!confirm('⚠️ RESTAURAR ESTADO DEL '+punto.fecha+' '+punto.hora+'\n\n'+(punto.nota||'')+'\n\nTotal cobrable de esa foto: '+fmtPeso(t.totalCobrable||0)+'\nClientes: '+(t.clientes||0)+'\n\nSE PIERDE todo lo hecho DESPUÉS de ese momento: cobros, cierres, ediciones, ICC.\n\n¿Continuar?')) return;
     if(!confirm('Última confirmación.\n\nEsta acción reemplaza TODOS los datos de la app y de todos los dispositivos.\n\n¿Restaurar igual?')) return;
     const B='https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/';
