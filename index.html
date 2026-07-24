@@ -1147,7 +1147,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0399';
+  datos['_version']='v1.0400';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2972,7 +2972,7 @@ function _claveCancelar(){
 function adminTab(t){
   if(t==='datos') setTimeout(renderRespaldosPanel,50);
   // v1.0398: sin el respaldo "Mes desde 0 verificado" no se accede a las pantallas de cobro
-  if((t==='lista'||t==='morapanel'||t==='balances') && !hitoHecho('inicio')){
+  if((t==='lista'||t==='morapanel'||t==='balances') && !hitoHecho('inicio') && !modoConsultaActivo()){
     mostrarPantallaBloqueo(t);
     return;
   }
@@ -9471,6 +9471,7 @@ function renderIccHist(){
   </div>`).join('');
 }
 function aplicarICC(){
+  if(modoConsultaActivo()){ alert("👁️ Modo consulta: solo lectura. No se pueden hacer cambios."); return; }
   if(_syncBloqueaOperacion('APLICAR EL ICC')) return;
   const pctMes=parseFloat(document.getElementById('icc-pct').value);
   if(isNaN(pctMes)||pctMes<=0){alert('Ingresá el porcentaje del mes actual');return;}
@@ -10532,6 +10533,21 @@ function renderRespaldosPanel(){
       </div>`;
 }
 
+// v1.0400: Modo consulta — permite VER los datos con el cobro bloqueado, para comparar totales
+function modoConsultaActivo(){ return sessionStorage.getItem('fj_modo_consulta')==='1'; }
+function activarModoConsulta(){
+  pedirClaveDoble('MODO CONSULTA — solo lectura', ()=>{
+    sessionStorage.setItem('fj_modo_consulta','1');
+    alert('👁️ MODO CONSULTA ACTIVADO\n\nYa podés ver los lotes, precios y totales para comparar con tu planilla.\n\nEl COBRO SIGUE BLOQUEADO: no se puede marcar pagos, cerrar el mes ni modificar clientes.\n\nSe desactiva solo al cerrar la pestaña.');
+    try{ renderCicloEstado(); }catch(e){}
+    location.reload();
+  });
+}
+function salirModoConsulta(){
+  sessionStorage.removeItem('fj_modo_consulta');
+  location.reload();
+}
+
 function mostrarPantallaBloqueo(tab){
   const nombres={lista:'Lista de clientes',morapanel:'Panel de Mora',balances:'Balances'};
   const ov=document.createElement('div');
@@ -10541,18 +10557,22 @@ function mostrarPantallaBloqueo(tab){
     +'<div style="font-size:19px;font-weight:800;margin-bottom:10px">Cobro bloqueado</div>'
     +'<div style="font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:20px">Para entrar a <b>'+(nombres[tab]||tab)+'</b> primero hay que verificar que los totales coincidan con la planilla y guardar el respaldo <b>"Mes desde 0 verificado"</b>.<br><br>Así, si algo sale mal durante el mes, se puede volver a un punto seguro sin perder la cobranza.</div>'
     +'<button id="blq-ir" style="width:100%;background:#16a34a;color:#fff;border:none;border-radius:9px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">✅ Verificar totales y guardar respaldo</button>'
+    +'<button id="blq-consulta" style="width:100%;background:transparent;border:1.5px solid #1e40af;color:#60a5fa;border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:8px">👁️ Entrar en modo consulta (solo ver)</button>'
+    +'<div style="font-size:11px;color:var(--text2);margin-bottom:12px;line-height:1.5">Para revisar precios y totales cuando algo no cuadra. Pide la clave dos veces y no permite cobrar.</div>'
     +'<button id="blq-cerrar" style="width:100%;background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:9px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">Cerrar</button>'
     +'</div>';
   document.body.appendChild(ov);
   ov.querySelector('#blq-cerrar').onclick=()=>ov.remove();
   ov.querySelector('#blq-ir').onclick=()=>{ ov.remove(); abrirValidarEstado('inicio'); };
+  ov.querySelector('#blq-consulta').onclick=()=>{ ov.remove(); activarModoConsulta(); };
 }
 
 function renderCicloEstado(){
   const el=document.getElementById('ciclo-estado'); if(!el) return;
   const ini=hitoHecho('inicio'), pre=hitoHecho('precierre');
   el.style.display='inline-block';
-  if(!ini){ el.textContent='🔒 Falta respaldo inicial'; el.style.background='rgba(220,38,38,.15)'; el.style.color='#dc2626'; }
+  if(!ini && modoConsultaActivo()){ el.textContent='👁️ Modo consulta — no se puede cobrar'; el.style.background='rgba(30,64,175,.18)'; el.style.color='#60a5fa'; }
+  else if(!ini){ el.textContent='🔒 Falta respaldo inicial'; el.style.background='rgba(220,38,38,.15)'; el.style.color='#dc2626'; }
   else if(!pre){ el.textContent='💰 Cobrando'; el.style.background='rgba(22,163,74,.12)'; el.style.color='#16a34a'; }
   else { el.textContent='📋 Listo para cerrar'; el.style.background='rgba(245,158,11,.15)'; el.style.color='#f59e0b'; }
 }
@@ -10560,6 +10580,10 @@ setInterval(renderCicloEstado, 5000);
 setTimeout(renderCicloEstado, 3000);
 
 function mostrarEstadoCiclo(){
+  if(modoConsultaActivo()){
+    if(confirm('👁️ MODO CONSULTA ACTIVO\n\nEstás viendo los datos en solo lectura. El cobro está bloqueado.\n\n¿Salir del modo consulta?')){ salirModoConsulta(); }
+    return;
+  }
   const h=loadHitos()[_cicloKey()]||{};
   const f=x=>x?new Date(x.ts).toLocaleString('es-AR'):'pendiente';
   alert('CICLO '+_cicloKey()+'\n\n'
@@ -10570,6 +10594,7 @@ function mostrarEstadoCiclo(){
 
 function _bloqueaCobroSinRespaldo(){
   if(hitoHecho('inicio')) return false;
+  if(modoConsultaActivo()){ alert('👁️ MODO CONSULTA\n\nEstás viendo los datos en solo lectura para comparar totales.\n\nPara cobrar, guardá primero el respaldo inicial del mes.'); return true; }
   alert('🔒 COBRO BLOQUEADO\n\nAntes de empezar a cobrar hay que verificar los totales y guardar el respaldo "Mes desde 0 verificado".\n\nAndá a Datos → Respaldos, o tocá el botón ✅ de arriba.\n\n(Esto evita arrancar el mes con números mal y tener que rehacer todo después.)');
   return true;
 }
