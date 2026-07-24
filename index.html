@@ -1147,7 +1147,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0405';
+  datos['_version']='v1.0406';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6765,15 +6765,11 @@ function renderLotesTerminados(origen){
           <th style="padding:6px 8px;text-align:left">Fecha</th>
           <th style="padding:6px 8px;text-align:left">Lote</th>
           <th style="padding:6px 8px;text-align:left">Titular</th>
-          <th style="padding:6px 8px;text-align:right">Cuotas</th>
-          <th style="padding:6px 8px;text-align:right">Total pagado</th>
         </tr>
         ${fins.map(x=>`<tr style="border-top:1px solid var(--border)">
           <td style="padding:5px 8px;font-size:12px;white-space:nowrap">${fmtF(x.f)}${x.origenF!=='registrada'?' <span style="font-size:9px;color:var(--text2)" title="Deducida del último pago">≈</span>':''}</td>
           <td style="padding:5px 8px;font-size:12px;font-weight:800;white-space:nowrap">${formatLoteTag(x.mz,x.lote)}${x.prestamo?' <span style="font-size:9px;color:var(--acc2)">préstamo</span>':''}</td>
-          <td style="padding:5px 8px;font-size:12px;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${String(x.titular||'')}</td>
-          <td style="padding:5px 8px;font-size:12px;text-align:right">${x.cuotasPagas}${x.ct?'/'+x.ct:''}</td>
-          <td style="padding:5px 8px;font-size:12px;text-align:right;font-weight:700">${fmtPeso(x.totalPagado)}</td>
+          <td style="padding:5px 8px;font-size:12px">${String(x.titular||'')}</td>
         </tr>`).join('')}
       </table></div>
       <div style="font-size:10px;color:var(--text2);margin-top:8px">≈ fecha estimada por el último pago registrado. Podés completarla desde la ficha del lote.</div>
