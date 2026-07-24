@@ -441,6 +441,7 @@ tr:hover td{background:var(--bg)}
     <button id="admin-det-back-btn" onclick="cerrarAdminDet()" class="btn-back" style="display:none">← Lista</button>
     <div class="topbar-title" id="admin-topbar-title">F&amp;J — Administración</div>
     <div class="topbar-right">
+      <div id="ciclo-estado" onclick="mostrarEstadoCiclo()" title="Estado del ciclo mensual" style="display:none;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap"></div>
       <button onclick="abrirValidarEstado()" title="Validar totales y crear punto de restauración" style="background:rgba(22,163,74,0.12);border:1px solid #16a34a;color:#16a34a;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap">✅ Validar</button>
       <button onclick="verPuntosRestauracion()" title="Puntos de restauración guardados" style="background:transparent;border:1px solid var(--border2);color:var(--text2);padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap">🕐</button>
       <div id="sync-indicator" onclick="mostrarEstadoSync()" title="Estado de sincronización" style="background:rgba(22,163,74,0.12);color:#16a34a;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap"><span style="color:#16a34a">●</span> Sincronizado</div>
@@ -1160,7 +1161,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0395';
+  datos['_version']='v1.0397';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -8079,6 +8080,10 @@ function _syncBloqueaOperacion(nombre){
 
 function ejecutarCierreFinal(){
   if(_syncBloqueaOperacion('HACER EL CIERRE')) return;
+  if(!hitoHecho('precierre')){
+    if(confirm('🔒 FALTA EL RESPALDO "PRE CIERRE FINAL"\n\nAntes de cerrar el mes hay que guardar una copia con todos los pagos hechos hasta ahora.\n\nSi el cierre sale mal, volvés a esa copia sin perder la cobranza del mes.\n\n¿Guardar el respaldo ahora?')) abrirValidarEstado('precierre');
+    return;
+  }
   confirmarConClave(()=>{
     // Guardar snapshot ANTES de ejecutar
     saveSnapshot();
@@ -8190,6 +8195,10 @@ function repararCierreJunio2026(){
 
 function hacerCierreFinal(){
   if(_syncBloqueaOperacion('HACER EL CIERRE')) return;
+  if(!hitoHecho('precierre')){
+    if(confirm('🔒 FALTA EL RESPALDO "PRE CIERRE FINAL"\n\nAntes de cerrar el mes hay que guardar una copia con todos los pagos hechos hasta ahora.\n\n¿Guardar el respaldo ahora?')) abrirValidarEstado('precierre');
+    return;
+  }
   confirmarConClave(()=>{
     // Capturar el mes operativo antes de tocar nada
     const _mesOperativoCapturado=mesActual();
@@ -8478,6 +8487,7 @@ function admConfirmarMoraPanelColab(){
 }
 
 function cobrarMoraManualColab(id){
+  if(_bloqueaCobroSinRespaldo()) return;
   // Requires admin password
   const c=loadData().find(x=>x.id===id);if(!c)return;
   const mora=calcInteresAuto(montoCobrable(c).total);
@@ -10473,6 +10483,43 @@ function _totalesActuales(){
   };
 }
 
+// ══════ v1.0396: RESPALDOS OBLIGATORIOS DEL CICLO MENSUAL ══════
+// Dos hitos obligatorios: "Mes desde 0 verificado" (antes de cobrar) y "Pre cierre final" (antes del cierre).
+function _cicloKey(){ const m=loadMesActual()||{}; return (m.anio||'?')+'-'+String((m.mes||0)+1).padStart(2,'0'); }
+function loadHitos(){ try{ return JSON.parse(localStorage.getItem('fj_hitos_respaldo')||'{}'); }catch(e){ return {}; } }
+function saveHitos(v){ localStorage.setItem('fj_hitos_respaldo',JSON.stringify(v)); window._fbSet('hitosRespaldo',v).catch(()=>{}); }
+function hitoHecho(tipo){ const h=loadHitos()[_cicloKey()]||{}; return !!h[tipo]; }
+function marcarHito(tipo,id){ const h=loadHitos(); const k=_cicloKey(); if(!h[k])h[k]={}; h[k][tipo]={id,ts:new Date().toISOString()}; saveHitos(h); }
+
+// Bloquea el cobro hasta que exista el respaldo "Mes desde 0 verificado" del ciclo actual
+function renderCicloEstado(){
+  const el=document.getElementById('ciclo-estado'); if(!el) return;
+  const ini=hitoHecho('inicio'), pre=hitoHecho('precierre');
+  el.style.display='inline-block';
+  if(!ini){ el.textContent='🔒 Falta respaldo inicial'; el.style.background='rgba(220,38,38,.15)'; el.style.color='#dc2626'; }
+  else if(!pre){ el.textContent='💰 Cobrando'; el.style.background='rgba(22,163,74,.12)'; el.style.color='#16a34a'; }
+  else { el.textContent='📋 Listo para cerrar'; el.style.background='rgba(245,158,11,.15)'; el.style.color='#f59e0b'; }
+}
+setInterval(renderCicloEstado, 5000);
+setTimeout(renderCicloEstado, 3000);
+
+function mostrarEstadoCiclo(){
+  const h=loadHitos()[_cicloKey()]||{};
+  const f=x=>x?new Date(x.ts).toLocaleString('es-AR'):'pendiente';
+  alert('CICLO '+_cicloKey()+'\n\n'
+    +(h.inicio?'✅':'🔒')+' Mes desde 0 verificado: '+f(h.inicio)+'\n'
+    +(h.precierre?'✅':'⬜')+' Pre cierre final: '+f(h.precierre)+'\n\n'
+    +(!h.inicio?'El cobro está BLOQUEADO hasta guardar el respaldo inicial.':(!h.precierre?'Podés cobrar. Antes del cierre final vas a necesitar el respaldo "Pre cierre final".':'Todo listo: podés ejecutar el cierre final.')));
+}
+
+function _bloqueaCobroSinRespaldo(){
+  if(hitoHecho('inicio')) return false;
+  alert('🔒 COBRO BLOQUEADO\n\nAntes de empezar a cobrar hay que verificar los totales y guardar el respaldo "Mes desde 0 verificado".\n\nAndá a Datos → Respaldos, o tocá el botón ✅ de arriba.\n\n(Esto evita arrancar el mes con números mal y tener que rehacer todo después.)');
+  return true;
+}
+
+function esNoCobrable_placeholder(){}
+
 // v1.0395: pide la clave DOS veces para operaciones de respaldo/restauración
 function pedirClaveDoble(titulo, cb){
   const p1=prompt(titulo+'\n\nIngresá la clave de administrador (1 de 2):');
@@ -10484,8 +10531,11 @@ function pedirClaveDoble(titulo, cb){
   cb();
 }
 
-async function abrirValidarEstado(){
+async function abrirValidarEstado(tipoForzado){
   const t=_totalesActuales();
+  const tipo = tipoForzado || (hitoHecho('inicio') ? 'libre' : 'inicio');
+  const TIT={inicio:'Mes desde 0 verificado', precierre:'Pre cierre final', libre:'Respaldo manual'};
+  const nombreTipo=TIT[tipo]||'Respaldo';
   const fmtL=n=>fmtPeso(n);
   const filas=Object.entries(t.porEtapa).sort().map(([k,v])=>
     `<tr><td style="padding:5px 8px;font-weight:700">${k}</td><td style="padding:5px 8px;text-align:right">${fmtL(v)}</td></tr>`).join('');
@@ -10494,8 +10544,8 @@ async function abrirValidarEstado(){
   const ov=document.createElement('div');
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
   ov.innerHTML=`<div style="background:var(--surface);border-radius:12px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;padding:18px">
-    <div style="font-size:16px;font-weight:800;margin-bottom:4px">✅ Validar estado y crear punto de restauración</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Compará estos totales con tu planilla. Si están bien, confirmá y se guarda una foto completa de la app.</div>
+    <div style="font-size:16px;font-weight:800;margin-bottom:4px">✅ ${nombreTipo}</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${tipo==='inicio'?'Verificá los totales contra tu planilla ANTES de empezar a cobrar el mes. Al guardar se habilita el cobro.':tipo==='precierre'?'Copia de seguridad con todos los pagos del mes, ANTES de ejecutar el cierre final. Si algo sale mal, volvés acá.':'Compará estos totales con tu planilla. Si están bien, se guarda una foto completa de la app.'}</div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:10px">
       <tr style="border-bottom:1.5px solid var(--border)"><th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--text2);text-transform:uppercase">Etapa</th><th style="padding:6px 8px;text-align:right;font-size:11px;color:var(--text2);text-transform:uppercase">Total cobrable</th></tr>
       ${filas}
@@ -10507,7 +10557,7 @@ async function abrirValidarEstado(){
       Clientes: <b>${t.clientes}</b> · Activos: <b>${t.activos}</b> · Lotes a cobrar: <b>${t.lotesCobrables}</b><br>
       Lotes en mora: <b>${t.lotesEnMora}</b> · Cuotas en mora: <b>${t.cuotasEnMora}</b> · Último cierre: <b>${t.cierreFinal}</b>
     </div>
-    <input id="val-nota" placeholder="Nota (ej: ICC agosto verificado con planilla)" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text);box-sizing:border-box;margin-bottom:10px">
+    <input id="val-nota" value="${nombreTipo} — ${new Date().toLocaleDateString('es-AR')}" placeholder="Nota" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text);box-sizing:border-box;margin-bottom:10px">
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button id="val-ok" style="flex:1;min-width:150px;background:#16a34a;color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">✅ Los números están bien — Guardar</button>
       <button id="val-cancel" style="background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:8px;padding:11px 16px;font-size:13px;font-weight:700;cursor:pointer">Cancelar</button>
@@ -10521,15 +10571,16 @@ async function abrirValidarEstado(){
     pedirClaveDoble('GUARDAR RESPALDO COMPLETO', async ()=>{
     btn.disabled=true; btn.textContent='Guardando…';
     try{
-      await guardarPuntoRestauracion(nota,t);
+      const idPunto=await guardarPuntoRestauracion(nota,t,tipo);
+      if(tipo==='inicio'||tipo==='precierre') marcarHito(tipo,idPunto);
       ov.remove();
-      alert('✅ Punto de restauración guardado.\n\nSi algo se rompe, podés volver exactamente a este estado desde "Puntos de restauración".');
+      alert(tipo==='inicio' ? '✅ Respaldo "Mes desde 0 verificado" guardado.\n\nYa podés empezar a cobrar.' : tipo==='precierre' ? '✅ Respaldo "Pre cierre final" guardado.\n\nYa podés ejecutar el cierre final.' : '✅ Respaldo guardado.');
     }catch(e){ btn.disabled=false; btn.textContent='✅ Los números están bien — Guardar'; alert('No se pudo guardar: '+e.message); }
     });
   };
 }
 
-async function guardarPuntoRestauracion(nota,totales){
+async function guardarPuntoRestauracion(nota,totales,tipo){
   const B='https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/';
   const snap={};
   for(const k of FB_CLAVES){
@@ -10538,9 +10589,15 @@ async function guardarPuntoRestauracion(nota,totales){
   const hoy=new Date();
   const id='v'+hoy.toISOString().slice(0,19).replace(/[-:T]/g,'');
   const punto={ id, ts:hoy.toISOString(), fecha:hoy.toLocaleDateString('es-AR'), hora:hoy.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}),
-    nota:nota||'(sin nota)', version:'v1.0394', totales, datos:snap };
+    nota:nota||'(sin nota)', tipo:tipo||'libre', ciclo:_cicloKey(), version:'v1.0396', totales, datos:snap };
   const r=await fetch(B+'puntosRestauracion/'+id+'.json',{method:'PUT',body:JSON.stringify(punto)});
   if(!r.ok) throw new Error('error al escribir en la nube');
+  // Rotación: conservar los últimos 12
+  try{
+    const all=await fetch(B+'puntosRestauracion.json?shallow=true').then(x=>x.json());
+    const ids=Object.keys(all||{}).sort();
+    if(ids.length>12){ for(const viejo of ids.slice(0,ids.length-12)){ await fetch(B+'puntosRestauracion/'+viejo+'.json',{method:'DELETE'}); } }
+  }catch(e){}
   addHist('edit','✅ Punto de restauración validado: '+(nota||'sin nota')+' — Total cobrable '+fmtPeso(totales.totalCobrable));
   return id;
 }
@@ -10603,6 +10660,7 @@ function esNoCobrable(id){
 }
 
 function marcarPago(id, interesOverride){
+  if(_bloqueaCobroSinRespaldo()) return;
   if(esNoCobrable(id)){ alert('Este lote es un préstamo: no se cobra por este medio y ya figura como pago.'); return; }
   const data=loadData();const c=data.find(x=>x.id===id);if(!c)return;
   const ts=new Date().toISOString();
