@@ -1147,7 +1147,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0400';
+  datos['_version']='v1.0401';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -10538,7 +10538,7 @@ function modoConsultaActivo(){ return sessionStorage.getItem('fj_modo_consulta')
 function activarModoConsulta(){
   pedirClaveDoble('MODO CONSULTA — solo lectura', ()=>{
     sessionStorage.setItem('fj_modo_consulta','1');
-    alert('👁️ MODO CONSULTA ACTIVADO\n\nYa podés ver los lotes, precios y totales para comparar con tu planilla.\n\nEl COBRO SIGUE BLOQUEADO: no se puede marcar pagos, cerrar el mes ni modificar clientes.\n\nSe desactiva solo al cerrar la pestaña.');
+    alert('👁️ MODO CONSULTA ACTIVADO\n\nPodés VER lotes, precios y totales, y también EDITAR clientes para corregir lo que esté mal.\n\nNO se puede: cobrar, marcar pagos, aplicar ICC ni cerrar el mes.\n\nSe desactiva solo al cerrar la pestaña.');
     try{ renderCicloEstado(); }catch(e){}
     location.reload();
   });
@@ -10558,7 +10558,7 @@ function mostrarPantallaBloqueo(tab){
     +'<div style="font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:20px">Para entrar a <b>'+(nombres[tab]||tab)+'</b> primero hay que verificar que los totales coincidan con la planilla y guardar el respaldo <b>"Mes desde 0 verificado"</b>.<br><br>Así, si algo sale mal durante el mes, se puede volver a un punto seguro sin perder la cobranza.</div>'
     +'<button id="blq-ir" style="width:100%;background:#16a34a;color:#fff;border:none;border-radius:9px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">✅ Verificar totales y guardar respaldo</button>'
     +'<button id="blq-consulta" style="width:100%;background:transparent;border:1.5px solid #1e40af;color:#60a5fa;border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:8px">👁️ Entrar en modo consulta (solo ver)</button>'
-    +'<div style="font-size:11px;color:var(--text2);margin-bottom:12px;line-height:1.5">Para revisar precios y totales cuando algo no cuadra. Pide la clave dos veces y no permite cobrar.</div>'
+    +'<div style="font-size:11px;color:var(--text2);margin-bottom:12px;line-height:1.5">Para revisar precios y totales cuando algo no cuadra. Permite editar clientes, pero no cobrar. Pide la clave dos veces.</div>'
     +'<button id="blq-cerrar" style="width:100%;background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:9px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">Cerrar</button>'
     +'</div>';
   document.body.appendChild(ov);
@@ -10571,7 +10571,7 @@ function renderCicloEstado(){
   const el=document.getElementById('ciclo-estado'); if(!el) return;
   const ini=hitoHecho('inicio'), pre=hitoHecho('precierre');
   el.style.display='inline-block';
-  if(!ini && modoConsultaActivo()){ el.textContent='👁️ Modo consulta — no se puede cobrar'; el.style.background='rgba(30,64,175,.18)'; el.style.color='#60a5fa'; }
+  if(!ini && modoConsultaActivo()){ el.textContent='👁️ Modo consulta — ver y editar, sin cobrar'; el.style.background='rgba(30,64,175,.18)'; el.style.color='#60a5fa'; }
   else if(!ini){ el.textContent='🔒 Falta respaldo inicial'; el.style.background='rgba(220,38,38,.15)'; el.style.color='#dc2626'; }
   else if(!pre){ el.textContent='💰 Cobrando'; el.style.background='rgba(22,163,74,.12)'; el.style.color='#16a34a'; }
   else { el.textContent='📋 Listo para cerrar'; el.style.background='rgba(245,158,11,.15)'; el.style.color='#f59e0b'; }
@@ -10581,7 +10581,7 @@ setTimeout(renderCicloEstado, 3000);
 
 function mostrarEstadoCiclo(){
   if(modoConsultaActivo()){
-    if(confirm('👁️ MODO CONSULTA ACTIVO\n\nEstás viendo los datos en solo lectura. El cobro está bloqueado.\n\n¿Salir del modo consulta?')){ salirModoConsulta(); }
+    if(confirm('👁️ MODO CONSULTA ACTIVO\n\nPodés ver y editar clientes, pero no cobrar ni cerrar el mes.\n\n¿Salir del modo consulta?')){ salirModoConsulta(); }
     return;
   }
   const h=loadHitos()[_cicloKey()]||{};
