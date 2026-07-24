@@ -441,6 +441,8 @@ tr:hover td{background:var(--bg)}
     <button id="admin-det-back-btn" onclick="cerrarAdminDet()" class="btn-back" style="display:none">← Lista</button>
     <div class="topbar-title" id="admin-topbar-title">F&amp;J — Administración</div>
     <div class="topbar-right">
+      <button onclick="abrirValidarEstado()" title="Validar totales y crear punto de restauración" style="background:rgba(22,163,74,0.12);border:1px solid #16a34a;color:#16a34a;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap">✅ Validar</button>
+      <button onclick="verPuntosRestauracion()" title="Puntos de restauración guardados" style="background:transparent;border:1px solid var(--border2);color:var(--text2);padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap">🕐</button>
       <div id="sync-indicator" onclick="mostrarEstadoSync()" title="Estado de sincronización" style="background:rgba(22,163,74,0.12);color:#16a34a;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap"><span style="color:#16a34a">●</span> Sincronizado</div>
       <div class="role-pill">Administrador</div>
       <button onclick="toggleThemePanel()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);padding:4px 10px;border-radius:6px;font-size:13px;cursor:pointer;margin-right:4px" title="Cambiar tema">🎨</button>
@@ -1167,7 +1169,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0393';
+  datos['_version']='v1.0394';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -10452,6 +10454,144 @@ function renderDetColab(id){
 
 // v1.0393: lotes NO COBRABLES (préstamos y similares).
 // No se pueden marcar/desmarcar como pago, siempre figuran como pagos y no suman a los totales.
+// ══════ v1.0394: PUNTOS DE RESTAURACIÓN VALIDADOS ══════
+// Guarda una foto COMPLETA de la app cuando el usuario verifica que los números están bien.
+const FB_CLAVES=['data','cuotasMora','pagoStore','mora','balances','extras','adelantos','icc','iccMensual',
+  'cierreFinal','mesActual','agrimensorLotes','lotesCerts','hist','pendientesAprobacion','notasMora',
+  'cierreEstados','distPct','moraDesactivada','lotesLibresE123'];
+
+function _totalesActuales(){
+  const d=loadData();
+  const AGRI=(typeof loadAgrimensorLotes==='function')?loadAgrimensorLotes():[];
+  const esAgri=id=>AGRI.indexOf(id)>=0;
+  const cob=d.filter(c=>c.est==='activo'&&c.moneda!=='USD'&&!esAgri(c.id)&&!c.autopago&&(c.monto>0)
+    &&!(typeof esPrimeraCuotaFutura==='function'&&esPrimeraCuotaFutura(c)));
+  const et={},mz={};
+  cob.forEach(c=>{
+    const e=/^M[1-4]$/.test(String(c.mz))?'Etapa 1':(String(c.mz).indexOf('E4')===0?'Etapa 4':String(c.mz));
+    et[e]=(et[e]||0)+(c.monto||0);
+    mz[c.mz]=(mz[c.mz]||0)+(c.monto||0);
+  });
+  const cm=loadCuotasMora().filter(m=>!m.pagada);
+  return {
+    totalCobrable:Math.round(Object.values(et).reduce((a,b)=>a+b,0)),
+    porEtapa:Object.fromEntries(Object.entries(et).map(([k,v])=>[k,Math.round(v)])),
+    porManzana:Object.fromEntries(Object.entries(mz).map(([k,v])=>[k,Math.round(v)])),
+    clientes:d.length, activos:d.filter(c=>c.est==='activo').length, lotesCobrables:cob.length,
+    lotesEnMora:new Set(cm.map(m=>m.clienteId)).size, cuotasEnMora:cm.length,
+    cierreFinal:(loadCierreFinal()||{}).mesNombre||'-'
+  };
+}
+
+async function abrirValidarEstado(){
+  const t=_totalesActuales();
+  const fmtL=n=>fmtPeso(n);
+  const filas=Object.entries(t.porEtapa).sort().map(([k,v])=>
+    `<tr><td style="padding:5px 8px;font-weight:700">${k}</td><td style="padding:5px 8px;text-align:right">${fmtL(v)}</td></tr>`).join('');
+  const filasMz=Object.entries(t.porManzana).sort().map(([k,v])=>
+    `<tr><td style="padding:3px 8px 3px 20px;font-size:11px;color:var(--text2)">${k}</td><td style="padding:3px 8px;text-align:right;font-size:11px;color:var(--text2)">${fmtL(v)}</td></tr>`).join('');
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML=`<div style="background:var(--surface);border-radius:12px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;padding:18px">
+    <div style="font-size:16px;font-weight:800;margin-bottom:4px">✅ Validar estado y crear punto de restauración</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Compará estos totales con tu planilla. Si están bien, confirmá y se guarda una foto completa de la app.</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:10px">
+      <tr style="border-bottom:1.5px solid var(--border)"><th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--text2);text-transform:uppercase">Etapa</th><th style="padding:6px 8px;text-align:right;font-size:11px;color:var(--text2);text-transform:uppercase">Total cobrable</th></tr>
+      ${filas}
+      <tr style="border-top:1.5px solid var(--border);background:var(--hov)"><td style="padding:7px 8px;font-weight:800">TOTAL</td><td style="padding:7px 8px;text-align:right;font-weight:800">${fmtL(t.totalCobrable)}</td></tr>
+    </table>
+    <details style="margin-bottom:10px"><summary style="cursor:pointer;font-size:12px;color:var(--text2)">Ver detalle por manzana</summary>
+      <table style="width:100%;border-collapse:collapse;margin-top:6px">${filasMz}</table></details>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.7">
+      Clientes: <b>${t.clientes}</b> · Activos: <b>${t.activos}</b> · Lotes a cobrar: <b>${t.lotesCobrables}</b><br>
+      Lotes en mora: <b>${t.lotesEnMora}</b> · Cuotas en mora: <b>${t.cuotasEnMora}</b> · Último cierre: <b>${t.cierreFinal}</b>
+    </div>
+    <input id="val-nota" placeholder="Nota (ej: ICC agosto verificado con planilla)" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text);box-sizing:border-box;margin-bottom:10px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="val-ok" style="flex:1;min-width:150px;background:#16a34a;color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:800;cursor:pointer">✅ Los números están bien — Guardar</button>
+      <button id="val-cancel" style="background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:8px;padding:11px 16px;font-size:13px;font-weight:700;cursor:pointer">Cancelar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#val-cancel').onclick=()=>ov.remove();
+  ov.querySelector('#val-ok').onclick=async()=>{
+    const nota=ov.querySelector('#val-nota').value.trim();
+    const btn=ov.querySelector('#val-ok');
+    btn.disabled=true; btn.textContent='Guardando…';
+    try{
+      await guardarPuntoRestauracion(nota,t);
+      ov.remove();
+      alert('✅ Punto de restauración guardado.\n\nSi algo se rompe, podés volver exactamente a este estado desde "Puntos de restauración".');
+    }catch(e){ btn.disabled=false; btn.textContent='✅ Los números están bien — Guardar'; alert('No se pudo guardar: '+e.message); }
+  };
+}
+
+async function guardarPuntoRestauracion(nota,totales){
+  const B='https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/';
+  const snap={};
+  for(const k of FB_CLAVES){
+    try{ const v=await fetch(B+k+'.json').then(r=>r.json()); if(v!==null&&v!==undefined) snap[k]=v; }catch(e){}
+  }
+  const hoy=new Date();
+  const id='v'+hoy.toISOString().slice(0,19).replace(/[-:T]/g,'');
+  const punto={ id, ts:hoy.toISOString(), fecha:hoy.toLocaleDateString('es-AR'), hora:hoy.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}),
+    nota:nota||'(sin nota)', version:'v1.0394', totales, datos:snap };
+  const r=await fetch(B+'puntosRestauracion/'+id+'.json',{method:'PUT',body:JSON.stringify(punto)});
+  if(!r.ok) throw new Error('error al escribir en la nube');
+  addHist('edit','✅ Punto de restauración validado: '+(nota||'sin nota')+' — Total cobrable '+fmtPeso(totales.totalCobrable));
+  return id;
+}
+
+async function verPuntosRestauracion(){
+  const B='https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/';
+  const p=await fetch(B+'puntosRestauracion.json').then(r=>r.json()).catch(()=>null);
+  if(!p||!Object.keys(p).length){ alert('Todavía no hay puntos de restauración guardados.\n\nCreá uno desde el botón "Validar estado" cuando verifiques que los números están bien.'); return; }
+  const lista=Object.values(p).sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML=`<div style="background:var(--surface);border-radius:12px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;padding:18px">
+    <div style="font-size:16px;font-weight:800;margin-bottom:12px">🕐 Puntos de restauración (${lista.length})</div>
+    ${lista.map(x=>`<div style="border:1.5px solid var(--border);border-radius:10px;padding:11px;margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:160px">
+          <div style="font-size:13px;font-weight:800">${x.fecha} · ${x.hora}</div>
+          <div style="font-size:12px;color:var(--text2)">${String(x.nota||'').replace(/</g,'&lt;')}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">Total cobrable: <b>${fmtPeso((x.totales||{}).totalCobrable||0)}</b> · ${(x.totales||{}).clientes||0} clientes · ${(x.totales||{}).lotesEnMora||0} en mora</div>
+        </div>
+        <button data-id="${x.id}" class="btn-restaurar" style="background:transparent;border:1.5px solid #dc2626;color:#dc2626;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">↩ Restaurar</button>
+      </div>
+    </div>`).join('')}
+    <button id="pr-cerrar" style="width:100%;background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:4px">Cerrar</button>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#pr-cerrar').onclick=()=>ov.remove();
+  ov.querySelectorAll('.btn-restaurar').forEach(b=>{
+    b.onclick=()=>{ const punto=lista.find(x=>x.id===b.dataset.id); ov.remove(); restaurarPunto(punto); };
+  });
+}
+
+function restaurarPunto(punto){
+  if(!punto||!punto.datos){ alert('Ese punto no tiene datos guardados.'); return; }
+  const t=punto.totales||{};
+  confirmarConClave(async ()=>{
+    if(!confirm('⚠️ RESTAURAR ESTADO DEL '+punto.fecha+' '+punto.hora+'\n\n'+(punto.nota||'')+'\n\nTotal cobrable de esa foto: '+fmtPeso(t.totalCobrable||0)+'\nClientes: '+(t.clientes||0)+'\n\nSE PIERDE todo lo hecho DESPUÉS de ese momento: cobros, cierres, ediciones, ICC.\n\n¿Continuar?')) return;
+    if(!confirm('Última confirmación.\n\nEsta acción reemplaza TODOS los datos de la app y de todos los dispositivos.\n\n¿Restaurar igual?')) return;
+    const B='https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/';
+    try{
+      // Respaldo del estado actual antes de pisar
+      const actual={};
+      for(const k of FB_CLAVES){ try{ const v=await fetch(B+k+'.json').then(r=>r.json()); if(v!==null) actual[k]=v; }catch(e){} }
+      await fetch(B+'backups/antes_de_restaurar.json',{method:'PUT',body:JSON.stringify({ts:new Date().toISOString(),datos:actual})});
+      // Restaurar
+      for(const [k,v] of Object.entries(punto.datos)){
+        await fetch(B+k+'.json',{method:'PUT',body:JSON.stringify(v)});
+      }
+      alert('✅ Estado restaurado.\n\nLa app se va a recargar. Recordá recargar también los otros dispositivos con Ctrl+Shift+R.');
+      location.reload();
+    }catch(e){ alert('Error al restaurar: '+e.message); }
+  });
+}
+
 function esNoCobrable(id){
   try{
     const c = (typeof id==='object') ? id : loadData().find(x=>x.id===id);
