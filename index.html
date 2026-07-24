@@ -442,8 +442,6 @@ tr:hover td{background:var(--bg)}
     <div class="topbar-title" id="admin-topbar-title">F&amp;J — Administración</div>
     <div class="topbar-right">
       <div id="ciclo-estado" onclick="mostrarEstadoCiclo()" title="Estado del ciclo mensual" style="display:none;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap"></div>
-      <button onclick="abrirValidarEstado()" title="Validar totales y crear punto de restauración" style="background:rgba(22,163,74,0.12);border:1px solid #16a34a;color:#16a34a;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap">✅ Validar</button>
-      <button onclick="verPuntosRestauracion()" title="Puntos de restauración guardados" style="background:transparent;border:1px solid var(--border2);color:var(--text2);padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap">🕐</button>
       <div id="sync-indicator" onclick="mostrarEstadoSync()" title="Estado de sincronización" style="background:rgba(22,163,74,0.12);color:#16a34a;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap"><span style="color:#16a34a">●</span> Sincronizado</div>
       <div class="role-pill">Administrador</div>
       <button onclick="toggleThemePanel()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);padding:4px 10px;border-radius:6px;font-size:13px;cursor:pointer;margin-right:4px" title="Cambiar tema">🎨</button>
@@ -544,20 +542,8 @@ tr:hover td{background:var(--bg)}
     <div id="atab-datos" style="display:none">
       <div style="max-width:600px;margin:2rem auto;padding:0 1.5rem">
         <div style="font-size:22px;font-weight:800;margin-bottom:6px">💾 Respaldos</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:2rem">Guardá una copia completa de la app cuando los números estén verificados, y volvé a cualquier copia si algo sale mal.</div>
-
-        <div style="background:var(--surface);border:1.5px solid #16a34a;border-radius:var(--rlg);padding:1.5rem;margin-bottom:1rem">
-          <div style="font-size:16px;font-weight:700;margin-bottom:6px">✅ Guardar respaldo</div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Muestra los totales por etapa para que los compares con tu planilla. Si están bien, guarda una copia completa de TODA la app (clientes, montos, cuotas, mora, cajas, adelantos, ICC, historial y configuración).</div>
-          <button onclick="abrirValidarEstado()" style="background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:12px 20px;font-size:14px;font-weight:800;cursor:pointer;width:100%">✅ Verificar totales y guardar respaldo</button>
-        </div>
-
-        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rlg);padding:1.5rem">
-          <div style="font-size:16px;font-weight:700;margin-bottom:6px">🕐 Recuperar datos</div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Lista de todos los respaldos guardados con su fecha, hora y totales. Restaurar reemplaza los datos en todos los dispositivos: pide la clave dos veces.</div>
-          <button onclick="verPuntosRestauracion()" style="background:var(--surface);color:var(--text);border:1.5px solid var(--border2);border-radius:var(--r);padding:12px 20px;font-size:14px;font-weight:800;cursor:pointer;width:100%">🕐 Ver respaldos y recuperar</button>
-        </div>
-        </div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:1.5rem">Cada mes se guardan dos copias obligatorias: una al empezar (después del ICC) y otra antes del cierre final.</div>
+        <div id="respaldos-panel"></div>
       </div>
     </div>
     <div id="atab-historial" style="display:none"><div style="max-width:1000px;margin:0 auto;padding:2rem 1.5rem">
@@ -1161,7 +1147,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0398';
+  datos['_version']='v1.0399';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2984,6 +2970,7 @@ function _claveCancelar(){
 
 // ============== ADMIN TABS ==============
 function adminTab(t){
+  if(t==='datos') setTimeout(renderRespaldosPanel,50);
   // v1.0398: sin el respaldo "Mes desde 0 verificado" no se accede a las pantallas de cobro
   if((t==='lista'||t==='morapanel'||t==='balances') && !hitoHecho('inicio')){
     mostrarPantallaBloqueo(t);
@@ -9541,7 +9528,9 @@ function aplicarICC(){
   saveICC(icc);
   addHist('icc','ICC '+mesEnCursoNombre+' '+pctMes+'% → '+info.aumentaEn+' — '+planilla+' — '+aplicados+' clientes',null);
   renderIccStatus();renderIccHist();renderAdminTable();
-  alert('✅ ICC '+mesEnCursoNombre+' '+pctMes+'% (trimestre '+totalTri+'%) aplicado a '+aplicados+' clientes planilla '+info.planillaNombre+'. Montos de '+info.aumentaEn+' actualizados.');
+  // v1.0399: aplicar ICC abre un ciclo nuevo → exige respaldo inicial otra vez
+  try{ const h=loadHitos(); h[_cicloKey()]={}; saveHitos(h); }catch(e){}
+  alert('✅ ICC '+mesEnCursoNombre+' '+pctMes+'% (trimestre '+totalTri+'%) aplicado a '+aplicados+' clientes planilla '+info.planillaNombre+'. Montos de '+info.aumentaEn+' actualizados.\n\n🔒 El cobro queda bloqueado hasta que verifiques los totales y guardes el respaldo inicial del mes.');
 }
 
 
@@ -10510,6 +10499,39 @@ function hitoHecho(tipo){ const h=loadHitos()[_cicloKey()]||{}; return !!h[tipo]
 function marcarHito(tipo,id){ const h=loadHitos(); const k=_cicloKey(); if(!h[k])h[k]={}; h[k][tipo]={id,ts:new Date().toISOString()}; saveHitos(h); }
 
 // Bloquea el cobro hasta que exista el respaldo "Mes desde 0 verificado" del ciclo actual
+function renderRespaldosPanel(){
+  const el=document.getElementById('respaldos-panel'); if(!el) return;
+  const h=loadHitos()[_cicloKey()]||{};
+  const f=x=>x?new Date(x.ts).toLocaleDateString('es-AR')+' '+new Date(x.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):null;
+  const card=(icono,titulo,desc,hecho,fecha,onclick,color,habilitado)=>`
+    <div style="background:var(--surface);border:1.5px solid ${hecho?'#16a34a':(habilitado?color:'var(--border)')};border-radius:var(--rlg);padding:1.25rem;margin-bottom:12px;opacity:${habilitado||hecho?1:.5}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:17px">${hecho?'✅':icono}</span>
+        <span style="font-size:15px;font-weight:800">${titulo}</span>
+        ${hecho?`<span style="font-size:11px;color:var(--green);font-weight:700">Hecho el ${fecha}</span>`:''}
+      </div>
+      <div style="font-size:12.5px;color:var(--text2);margin-bottom:12px;line-height:1.5">${desc}</div>
+      <button ${habilitado?'':'disabled'} onclick="${onclick}" style="width:100%;background:${habilitado?color:'var(--border)'};color:${habilitado?'#fff':'var(--text2)'};border:none;border-radius:var(--r);padding:11px;font-size:13.5px;font-weight:800;cursor:${habilitado?'pointer':'not-allowed'}">
+        ${hecho?'Volver a guardar':'Verificar totales y guardar'}
+      </button>
+    </div>`;
+  el.innerHTML =
+    card('1️⃣','Respaldo inicial del mes',
+      'Verificá que los totales coincidan con tu planilla después de aplicar el ICC. <b>Hasta guardarlo, el cobro está bloqueado</b> para vos y para el colaborador.',
+      !!h.inicio, f(h.inicio), "abrirValidarEstado('inicio')", '#16a34a', true)
+    + card('2️⃣','Respaldo pre cierre final',
+      'Copia con toda la cobranza del mes, antes de ejecutar el cierre. Si el cierre sale mal, volvés acá sin perder ningún pago. <b>Obligatorio antes de cerrar.</b>',
+      !!h.precierre, f(h.precierre), "abrirValidarEstado('precierre')", '#f59e0b', !!h.inicio)
+    + card('💾','Respaldo Extra',
+      'Copia adicional en cualquier momento, por las dudas.',
+      false, null, "abrirValidarEstado('extra')", '#1e40af', true)
+    + `<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rlg);padding:1.25rem;margin-top:20px">
+        <div style="font-size:15px;font-weight:800;margin-bottom:6px">🕐 Recuperar datos</div>
+        <div style="font-size:12.5px;color:var(--text2);margin-bottom:12px;line-height:1.5">Lista de todos los respaldos con su fecha, hora y totales. Restaurar reemplaza los datos en todos los dispositivos: pide la clave dos veces.</div>
+        <button onclick="verPuntosRestauracion()" style="width:100%;background:var(--surface);color:var(--text);border:1.5px solid var(--border2);border-radius:var(--r);padding:11px;font-size:13.5px;font-weight:800;cursor:pointer">Ver respaldos y recuperar</button>
+      </div>`;
+}
+
 function mostrarPantallaBloqueo(tab){
   const nombres={lista:'Lista de clientes',morapanel:'Panel de Mora',balances:'Balances'};
   const ov=document.createElement('div');
@@ -10568,7 +10590,7 @@ function pedirClaveDoble(titulo, cb){
 async function abrirValidarEstado(tipoForzado){
   const t=_totalesActuales();
   const tipo = tipoForzado || (hitoHecho('inicio') ? 'libre' : 'inicio');
-  const TIT={inicio:'Mes desde 0 verificado', precierre:'Pre cierre final', libre:'Respaldo manual'};
+  const TIT={inicio:'Mes desde 0 verificado', precierre:'Pre cierre final', extra:'Respaldo Extra', libre:'Respaldo Extra'};
   const nombreTipo=TIT[tipo]||'Respaldo';
   const fmtL=n=>fmtPeso(n);
   const filas=Object.entries(t.porEtapa).sort().map(([k,v])=>
@@ -10606,7 +10628,7 @@ async function abrirValidarEstado(tipoForzado){
     btn.disabled=true; btn.textContent='Guardando…';
     try{
       const idPunto=await guardarPuntoRestauracion(nota,t,tipo);
-      if(tipo==='inicio'||tipo==='precierre') marcarHito(tipo,idPunto);
+      if(tipo==='inicio'||tipo==='precierre'){ marcarHito(tipo,idPunto); try{renderRespaldosPanel();renderCicloEstado();}catch(e){} }
       ov.remove();
       alert(tipo==='inicio' ? '✅ Respaldo "Mes desde 0 verificado" guardado.\n\nYa podés empezar a cobrar.' : tipo==='precierre' ? '✅ Respaldo "Pre cierre final" guardado.\n\nYa podés ejecutar el cierre final.' : '✅ Respaldo guardado.');
     }catch(e){ btn.disabled=false; btn.textContent='✅ Los números están bien — Guardar'; alert('No se pudo guardar: '+e.message); }
