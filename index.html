@@ -1167,7 +1167,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0392';
+  datos['_version']='v1.0393';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -8715,6 +8715,7 @@ function revertirPagoClienteDesdeSnapshot(clienteId){
 }
 
 function desmarcarPagoAdmin(id){
+  if(esNoCobrable(id)){ alert('Este lote es un préstamo: siempre figura como pago y no se puede desmarcar.'); return; }
   const _doDesmarcar=()=>{
     const data=loadData();
     const c=data.find(x=>x.id===id);
@@ -10449,7 +10450,17 @@ function renderDetColab(id){
     </div>`;
 }
 
+// v1.0393: lotes NO COBRABLES (préstamos y similares).
+// No se pueden marcar/desmarcar como pago, siempre figuran como pagos y no suman a los totales.
+function esNoCobrable(id){
+  try{
+    const c = (typeof id==='object') ? id : loadData().find(x=>x.id===id);
+    return !!(c && c.autopago);
+  }catch(e){ return false; }
+}
+
 function marcarPago(id, interesOverride){
+  if(esNoCobrable(id)){ alert('Este lote es un préstamo: no se cobra por este medio y ya figura como pago.'); return; }
   const data=loadData();const c=data.find(x=>x.id===id);if(!c)return;
   const ts=new Date().toISOString();
   const _mc=montoCobrable(c);
@@ -10502,6 +10513,7 @@ function marcarPago(id, interesOverride){
   if(document.getElementById('atab-lista')&&document.getElementById('atab-lista').style.display!=='none') renderAdminTable();
 }
 function desmarcarPago(id){
+  if(esNoCobrable(id)){ alert('Este lote es un préstamo: siempre figura como pago y no se puede desmarcar.'); return; }
   const data=loadData();const c=data.find(x=>x.id===id);if(!c)return;
   setPagoState(id,false);
   c.pago=false;c.pagoTs=null;
