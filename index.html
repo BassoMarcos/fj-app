@@ -1147,7 +1147,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0404';
+  datos['_version']='v1.0405';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6704,6 +6704,15 @@ function statsToggleEtapa(i){
   if(d) d.style.display=d.style.display==='none'?'block':'none';
 }
 
+function toggleHistFin(){
+  const b=document.getElementById('histfin-body'), f=document.getElementById('histfin-flecha');
+  if(!b) return;
+  const abrir = b.style.display==='none';
+  b.style.display = abrir?'block':'none';
+  if(f) f.style.transform='rotate('+(abrir?90:0)+'deg)';
+  localStorage.setItem('fj_histfin_abierto', abrir?'1':'0');
+}
+
 function renderLotesTerminados(origen){
   window._ltOrigen = origen || 'terminados';
 
@@ -6743,11 +6752,14 @@ function renderLotesTerminados(origen){
     const hoy=new Date(); const mesAct=String(hoy.getFullYear())+'-'+String(hoy.getMonth()+1).padStart(2,'0');
     const esteMes=fins.filter(x=>x.f&&x.f.slice(0,7)===mesAct).length;
     const esteAnio=fins.filter(x=>x.f&&x.f.slice(0,4)===String(hoy.getFullYear())).length;
+    const _abierto = localStorage.getItem('fj_histfin_abierto')==='1';
     _histFinHtml=`<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rlg);padding:1rem;margin-bottom:1.25rem">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div onclick="toggleHistFin()" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer;${_abierto?'margin-bottom:10px':''}">
+        <span id="histfin-flecha" style="font-size:13px;color:var(--text2);display:inline-block;transform:rotate(${_abierto?90:0}deg)">▶</span>
         <span style="font-size:15px;font-weight:800">🏁 Historial de finalizaciones</span>
         <span style="font-size:11px;color:var(--text2)">${fins.length} lotes · ${esteAnio} este año · ${esteMes} este mes</span>
       </div>
+      <div id="histfin-body" style="display:${_abierto?'block':'none'}">
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:520px">
         <tr style="color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--border)">
           <th style="padding:6px 8px;text-align:left">Fecha</th>
@@ -6765,6 +6777,7 @@ function renderLotesTerminados(origen){
         </tr>`).join('')}
       </table></div>
       <div style="font-size:10px;color:var(--text2);margin-top:8px">≈ fecha estimada por el último pago registrado. Podés completarla desde la ficha del lote.</div>
+      </div>
     </div>`;
   }
 
