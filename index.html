@@ -1147,7 +1147,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0401';
+  datos['_version']='v1.0403';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7822,6 +7822,8 @@ function borrarCierreFinalYReaplicar(){
         if(!yaEnHist) c.hist.push({cuota:c.ca, monto:montoCobrable(c).total, mes:mesNombre, ts:ts});
       }
       if(c.ca < c.ct) c.ca=c.ca+1;
+      // v1.0402: si ya cubrió todas las cuotas, finalizar y dejar de contar
+      if(c.ct>0 && c.ca>=c.ct && c.est==='activo' && !c.autopago){ c.est='finalizado'; c.monto=0; c.saldo=0; _finalizadosEnCierre.push(c.id); }
       c.pago=false; c.pagoTs=null;
       avanzados++;
     });
@@ -7831,7 +7833,9 @@ function borrarCierreFinalYReaplicar(){
     saveCierreFinal({ts,fecha,hora,mes,anio,mesNombre});
     renderBalances('cierres');
     if(document.getElementById('atab-lista')&&document.getElementById('atab-lista').style.display!=='none') renderAdminTable();
-    alert('Cierre re-aplicado: '+mesNombre+'. '+avanzados+' clientes avanzaron. '+nuevasMora+' cuotas a mora.');
+    const _fin=(window._finalizadosEnCierre||[]);
+    alert('Cierre re-aplicado: '+mesNombre+'. '+avanzados+' clientes avanzaron. '+nuevasMora+' cuotas a mora.'
+      + (_fin.length?'\n\n🏁 '+_fin.length+' lote(s) FINALIZARON su plan y ya no cuentan como activos:\n'+_fin.join(', '):''));
   }, 'Re-aplicar cierre final de '+MESES_NOMBRE[new Date().getMonth()]+' desde BASE.');
 }
 
@@ -8072,6 +8076,7 @@ function _syncBloqueaOperacion(nombre){
 }
 
 function ejecutarCierreFinal(){
+  window._finalizadosEnCierre=[]; var _finalizadosEnCierre=window._finalizadosEnCierre;
   if(_syncBloqueaOperacion('HACER EL CIERRE')) return;
   if(!hitoHecho('precierre')){
     if(confirm('🔒 FALTA EL RESPALDO "PRE CIERRE FINAL"\n\nAntes de cerrar el mes hay que guardar una copia con todos los pagos hechos hasta ahora.\n\nSi el cierre sale mal, volvés a esa copia sin perder la cobranza del mes.\n\n¿Guardar el respaldo ahora?')) abrirValidarEstado('precierre');
@@ -8124,6 +8129,7 @@ function ejecutarCierreFinal(){
       }
       if(!esPrimeraCuotaFutura(c)){
         if(c.ca<c.ct) c.ca=c.ca+1;
+        if(c.ct>0 && c.ca>=c.ct && c.est==='activo' && !c.autopago){ c.est='finalizado'; c.monto=0; c.saldo=0; _finalizadosEnCierre.push(c.id); }
         avanzados++;
       }
       c.pago=false; c.pagoTs=null;
@@ -8187,6 +8193,7 @@ function repararCierreJunio2026(){
 // setTimeout(repararCierreJunio2026, 2500);
 
 function hacerCierreFinal(){
+  window._finalizadosEnCierre=[]; var _finalizadosEnCierre=window._finalizadosEnCierre;
   if(_syncBloqueaOperacion('HACER EL CIERRE')) return;
   if(!hitoHecho('precierre')){
     if(confirm('🔒 FALTA EL RESPALDO "PRE CIERRE FINAL"\n\nAntes de cerrar el mes hay que guardar una copia con todos los pagos hechos hasta ahora.\n\n¿Guardar el respaldo ahora?')) abrirValidarEstado('precierre');
@@ -10762,6 +10769,8 @@ function marcarPago(id, interesOverride){
     const c2=data2.find(x=>x.id===id);
     if(c2){
       c2.est='finalizado';
+      c2.monto=0;            // v1.0402: deja de sumar en los totales
+      c2.saldo=0;
       saveData(data2);
     }
     // Registrar fecha de finalización en lotesCerts
