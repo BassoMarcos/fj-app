@@ -1147,7 +1147,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0403';
+  datos['_version']='v1.0404';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6723,6 +6723,51 @@ function renderLotesTerminados(origen){
   const data=loadData();
   const certs=loadLotesCerts();
 
+  // v1.0404: mini historial de finalizaciones (más recientes primero)
+  let _histFinHtml='';
+  if(origen==='terminados'){
+    const MESES_=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const fins=data.filter(c=>c.est==='finalizado').map(c=>{
+      let f=(certs[c.id]||{}).fecha||null;   // fecha registrada
+      let origenF='registrada';
+      if(!f){                                 // si no hay, deducir del último pago
+        const h=(c.hist||[]).filter(x=>x.ts).sort((a,b)=>String(a.ts).localeCompare(String(b.ts)));
+        const u=h[h.length-1];
+        if(u&&u.ts){ f=String(u.ts).slice(0,10); origenF='último pago'; }
+      }
+      const h2=(c.hist||[]);
+      const totalPagado=h2.reduce((s,x)=>s+(x.monto||0),0);
+      return {id:c.id,mz:c.mz,lote:c.lote,titular:c.titular,ct:c.ct,f,origenF,cuotasPagas:h2.length,totalPagado,prestamo:!!c.autopago};
+    }).sort((a,b)=>String(b.f||'').localeCompare(String(a.f||'')));
+    const fmtF=s=>{ if(!s) return '—'; const p=s.split('-'); return p.length===3?(p[2]+'/'+p[1]+'/'+p[0]):s; };
+    const hoy=new Date(); const mesAct=String(hoy.getFullYear())+'-'+String(hoy.getMonth()+1).padStart(2,'0');
+    const esteMes=fins.filter(x=>x.f&&x.f.slice(0,7)===mesAct).length;
+    const esteAnio=fins.filter(x=>x.f&&x.f.slice(0,4)===String(hoy.getFullYear())).length;
+    _histFinHtml=`<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rlg);padding:1rem;margin-bottom:1.25rem">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <span style="font-size:15px;font-weight:800">🏁 Historial de finalizaciones</span>
+        <span style="font-size:11px;color:var(--text2)">${fins.length} lotes · ${esteAnio} este año · ${esteMes} este mes</span>
+      </div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:520px">
+        <tr style="color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--border)">
+          <th style="padding:6px 8px;text-align:left">Fecha</th>
+          <th style="padding:6px 8px;text-align:left">Lote</th>
+          <th style="padding:6px 8px;text-align:left">Titular</th>
+          <th style="padding:6px 8px;text-align:right">Cuotas</th>
+          <th style="padding:6px 8px;text-align:right">Total pagado</th>
+        </tr>
+        ${fins.map(x=>`<tr style="border-top:1px solid var(--border)">
+          <td style="padding:5px 8px;font-size:12px;white-space:nowrap">${fmtF(x.f)}${x.origenF!=='registrada'?' <span style="font-size:9px;color:var(--text2)" title="Deducida del último pago">≈</span>':''}</td>
+          <td style="padding:5px 8px;font-size:12px;font-weight:800;white-space:nowrap">${formatLoteTag(x.mz,x.lote)}${x.prestamo?' <span style="font-size:9px;color:var(--acc2)">préstamo</span>':''}</td>
+          <td style="padding:5px 8px;font-size:12px;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${String(x.titular||'')}</td>
+          <td style="padding:5px 8px;font-size:12px;text-align:right">${x.cuotasPagas}${x.ct?'/'+x.ct:''}</td>
+          <td style="padding:5px 8px;font-size:12px;text-align:right;font-weight:700">${fmtPeso(x.totalPagado)}</td>
+        </tr>`).join('')}
+      </table></div>
+      <div style="font-size:10px;color:var(--text2);margin-top:8px">≈ fecha estimada por el último pago registrado. Podés completarla desde la ficha del lote.</div>
+    </div>`;
+  }
+
   const normales = data.filter(c=>c.est==='finalizado'&&!c.autopago);
   const prestamos = data.filter(c=>c.est==='finalizado'&&c.autopago);
 
@@ -6838,7 +6883,7 @@ function renderLotesTerminados(origen){
     html+=`</div>`;
   });
 
-  el.innerHTML=html;
+  el.innerHTML = _histFinHtml + (html);
 
   // Restaurar grupos abiertos
   gruposAbiertos.forEach(key=>{
