@@ -295,6 +295,10 @@ tr:hover td{background:var(--bg)}
     window._syncState = 'ok';      // 'ok' | 'pending' | 'error'
     window._syncLastOk = null;
 
+    // v1.0408: refresco periódico para que el badge nunca quede "pegado" en Guardando
+    if(!window._syncRenderInterval){
+      window._syncRenderInterval = setInterval(()=>{ try{ window._syncRender && window._syncRender(); }catch(e){} }, 3000);
+    }
     window._syncRender = () => {
       const el = document.getElementById('sync-indicator');
       if (!el) return;
