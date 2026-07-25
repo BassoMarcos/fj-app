@@ -3845,7 +3845,8 @@ async function generarInformeEstadistica(soloTest){
 
   // Composición
   const _all=data,_act=data.filter(c=>c.est==='activo'),_fin=data.filter(c=>c.est==='finalizado');
-  const _agr=_act.filter(c=>esAgrimensor(c.id)),_pre=_all.filter(c=>c.autopago),_fut=_act.filter(c=>esPrimeraCuotaFutura(c));
+  const _empresa=_all.filter(c=>c.empresaPaga);
+  const _agr=_act.filter(c=>esAgrimensor(c.id)),_pre=_all.filter(c=>c.autopago&&!c.empresaPaga),_fut=_act.filter(c=>esPrimeraCuotaFutura(c));
   const _tri=t=>_act.filter(c=>c.tri===t&&c.moneda!=='USD'&&!c.autopago).length;
   const _usd=_act.filter(c=>c.moneda==='USD').length;
 
@@ -3946,7 +3947,7 @@ async function generarInformeEstadistica(soloTest){
   y=tabla({startY:y,
     head:[['Categoria','Cantidad']],
     body:[['Total de lotes',String(_all.length)],['Activos',String(_act.length)],['Finalizados',String(_fin.length)],
-      ['Agrimensores',String(_agr.length)],['Prestamos',String(_pre.length)],['1a cuota futura',String(_fut.length)],
+      ['Agrimensores',String(_agr.length)],['Prestamos',String(_pre.length)],['Pagos por la empresa',String(_empresa.length)],['1a cuota futura',String(_fut.length)],
       ['-- Grupo Verde (Feb-May-Ago-Nov)',String(_tri('Feb-May-Ago-Nov'))],['-- Grupo Azul (Ene-Abr-Jul-Oct)',String(_tri('Ene-Abr-Jul-Oct'))],
       ['-- Grupo Rosa (Mar-Jun-Sep-Dic)',String(_tri('Mar-Jun-Sep-Dic'))],['-- USD (sin ajuste)',String(_usd)]],
     columnStyles:{0:{cellWidth:'auto'},1:{cellWidth:40,halign:'right',fontStyle:'bold'}},
@@ -6798,7 +6799,8 @@ function renderStats(){
   // ── Composición de lotes (movido desde Inicio, v1.0410) ──
   {
     const _all=data, _act=data.filter(c=>c.est==='activo'), _fin=data.filter(c=>c.est==='finalizado');
-    const _agr=_act.filter(c=>esAgrimensor(c.id)), _prest=_all.filter(c=>c.autopago);
+    const _empresa=_all.filter(c=>c.empresaPaga);
+    const _agr=_act.filter(c=>esAgrimensor(c.id)), _prest=_all.filter(c=>c.autopago&&!c.empresaPaga);
     const _fut=_act.filter(c=>esPrimeraCuotaFutura(c));
     const _tri=t=>_act.filter(c=>c.tri===t&&c.moneda!=='USD'&&!c.autopago).length;
     const _usd=_act.filter(c=>c.moneda==='USD').length;
@@ -6811,6 +6813,7 @@ function renderStats(){
     html+=box(_fin.length,'Finalizados','#7ab5d0','Ya pagaron todas sus cuotas. No se les cobra más.');
     html+=box(_agr.length,'Agrimensores','#d97706','Su cuota va a la caja de agrimensores. Avanzan y generan mora como cualquier lote.');
     html+=box(_prest.length,'Préstamos','#d97706','No se cobran por la app y quedan fuera de los cierres, pero reciben ICC.');
+    html+=box(_empresa.length,'Pagos por la empresa','#d97706','Lotes que abona la empresa. No se cobran ni entran en los totales.');
     html+=box(_fut.length,'1ª cuota futura','var(--text3)','Su primera cuota arranca en un mes futuro. Todavía no se cobran ni generan mora.');
     html+='</div>';
     html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin:12px 0 8px">🎨 GRUPOS DE AJUSTE ICC (lotes activos en pesos)</div>';
