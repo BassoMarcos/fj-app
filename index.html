@@ -6538,7 +6538,7 @@ function renderStats(){
   // ── Composición de lotes (movido desde Inicio, v1.0410) ──
   {
     const _all=data, _act=data.filter(c=>c.est==='activo'), _fin=data.filter(c=>c.est==='finalizado');
-    const _agr=_act.filter(c=>esAgrimensor(c.id)), _prest=_act.filter(c=>c.autopago);
+    const _agr=_act.filter(c=>esAgrimensor(c.id)), _prest=_all.filter(c=>c.autopago);
     const _fut=_act.filter(c=>esPrimeraCuotaFutura(c));
     const _tri=t=>_act.filter(c=>c.tri===t&&c.moneda!=='USD'&&!c.autopago).length;
     const _usd=_act.filter(c=>c.moneda==='USD').length;
