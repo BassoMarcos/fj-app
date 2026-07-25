@@ -3888,9 +3888,9 @@ async function generarInformeEstadistica(soloTest){
   // ── 1. RESUMEN ──
   y=titulo('1. Resumen del mes',y);
   const kpis = esInicio
-    ? [['A cobrar (pesos)',fmt(totARS)],['A cobrar (USD)','USD '+fmt(totUSD)],['Lotes a cobrar',String(cobrables.length)],['En mora acum.',fmt(moraTot)]]
+    ? [['A cobrar (pesos)',fmt(totARS)],['A cobrar (USD)','USD '+fmt(totUSD)],['Lotes a cobrar',String(cobrables.length)]]
     : [['Cobrado',fmt(cobradoARS)],['Falta cobrar',fmt(pendARS)],['Avance',pct+'%'],['Pendientes',String(pendientes.length)]];
-  const kw=(ANCHO-9)/4;
+  const kw=(ANCHO-(kpis.length-1)*3)/kpis.length;
   kpis.forEach((k,i)=>{ const x=M+i*(kw+3);
     doc.setFillColor(250,250,249); doc.setDrawColor(229,231,235); doc.roundedRect(x,y,kw,17,2,2,'FD');
     doc.setFontSize(7.5); doc.setTextColor(100,100,100); doc.setFont('helvetica','normal');
