@@ -3804,6 +3804,173 @@ async function generarInformeMensual(soloTest){
   _previewPDF(doc,'Informe_Mora_'+hoyStr.replace(/\//g,'-')+'.pdf');
 }
 
+// ══════ v1.0418: INFORMES DE ESTADÍSTICA (inicio de mes / cierre de mes) ══════
+async function generarInformeEstadistica(soloTest){
+  try{
+    await _cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await _cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js');
+  }catch(e){alert('No se pudo cargar el generador de PDF. Verifica tu conexion.');return;}
+
+  const hoy=new Date();
+  const hoyStr=hoy.toLocaleDateString('es-AR');
+  const fmt=n=>fmtPeso(Math.round(n||0));
+  const data=loadData();
+  const cobrables=data.filter(c=>c.est==='activo' && !esAgrimensor(c.id) && !c.autopago && !esPrimeraCuotaFutura(c));
+  const pagados=cobrables.filter(c=>c.pago);
+  const pendientes=cobrables.filter(c=>!c.pago);
+  const esInicio = pagados.length===0;   // 0 cobrados → informe de inicio; si hay pagos → cierre
+
+  // Totales
+  const cobrARS=cobrables.filter(c=>c.moneda!=='USD'), cobrUSD=cobrables.filter(c=>c.moneda==='USD');
+  const totARS=cobrARS.reduce((s,c)=>s+montoCobrable(c).total,0);
+  const totUSD=cobrUSD.reduce((s,c)=>s+montoCobrable(c).total,0);
+  const cobradoARS=pagados.filter(c=>c.moneda!=='USD').reduce((s,c)=>s+montoCobrable(c).total,0);
+  const cobradoUSD=pagados.filter(c=>c.moneda==='USD').reduce((s,c)=>s+montoCobrable(c).total,0);
+  const pendARS=totARS-cobradoARS, pendUSD=totUSD-cobradoUSD;
+  const pct=cobrables.length?Math.round(pagados.length/cobrables.length*100):0;
+
+  const _et=e=>({'Etapa 1':1,'Etapa 2':2,'Etapa 3':3,'Etapa 4':4}[e]||9);
+
+  // Por etapa/manzana
+  const porMz={};
+  cobrables.forEach(c=>{
+    const et=getEtapa(c.mz)||'Otros', mz=String(c.mz).toUpperCase();
+    const k=et+'||'+mz;
+    if(!porMz[k]) porMz[k]={et,mz,lotes:0,pag:0,totA:0,totU:0,cobA:0,cobU:0};
+    const g=porMz[k], m=montoCobrable(c).total;
+    g.lotes++; if(c.pago)g.pag++;
+    if(c.moneda==='USD'){ g.totU+=m; if(c.pago)g.cobU+=m; } else { g.totA+=m; if(c.pago)g.cobA+=m; }
+  });
+  const filasMz=Object.values(porMz).sort((a,b)=>_et(a.et)-_et(b.et)||String(a.mz).localeCompare(String(b.mz)));
+
+  // Composición
+  const _all=data,_act=data.filter(c=>c.est==='activo'),_fin=data.filter(c=>c.est==='finalizado');
+  const _agr=_act.filter(c=>esAgrimensor(c.id)),_pre=_all.filter(c=>c.autopago),_fut=_act.filter(c=>esPrimeraCuotaFutura(c));
+  const _tri=t=>_act.filter(c=>c.tri===t&&c.moneda!=='USD'&&!c.autopago).length;
+  const _usd=_act.filter(c=>c.moneda==='USD').length;
+
+  // Pendientes ordenados (para informe de cierre)
+  const _num=s=>parseInt(String(s).replace(/\D/g,''))||0;
+  const pendOrden=pendientes.slice().sort((a,b)=>
+    _et(getEtapa(a.mz))-_et(getEtapa(b.mz)) || String(a.mz).localeCompare(String(b.mz)) || _num(a.lote)-_num(b.lote));
+
+  // Mora acumulada (contexto)
+  const moraImp=loadCuotasMora().filter(m=>!m.pagada);
+  const moraTot=moraImp.reduce((s,m)=>s+(m.monto||0),0);
+  const moraLotes=new Set(moraImp.map(m=>m.clienteId)).size;
+
+  // ══════ PDF ══════
+  const { jsPDF }=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const W=210,M=14,ANCHO=W-M*2;
+  const mesTxt=mesActual()+' '+hoy.getFullYear();
+  const titInf = esInicio ? 'Informe de inicio de mes' : 'Informe de cierre de mes';
+
+  const encabezado=()=>{
+    doc.setFillColor(24,24,27); doc.rect(0,0,W,24,'F');
+    doc.setTextColor(230,168,48); doc.setFont('helvetica','bold'); doc.setFontSize(14);
+    doc.text('F&J DESARROLLOS INMOBILIARIOS',M,10);
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.text('Los Eucaliptus - '+titInf+' - '+mesTxt,M,18);
+    doc.setFontSize(9); doc.text(hoyStr,W-M,10,{align:'right'});
+  };
+  const titulo=(t,y)=>{ doc.setFillColor(245,245,244); doc.rect(M,y-5,ANCHO,8,'F');
+    doc.setTextColor(20,20,20); doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(t,M+3,y); return y+8; };
+  const tabla=cfg=>{ doc.autoTable(Object.assign({
+      styles:{fontSize:8.5,cellPadding:2,overflow:'linebreak',lineColor:[229,231,235],lineWidth:0.1},
+      headStyles:{fillColor:[68,64,60],textColor:255,fontStyle:'bold',fontSize:8.5},
+      alternateRowStyles:{fillColor:[250,250,249]}, margin:{left:M,right:M}, tableWidth:ANCHO },cfg));
+    return doc.lastAutoTable.finalY; };
+
+  encabezado();
+  let y=34;
+
+  // ── 1. RESUMEN ──
+  y=titulo('1. Resumen del mes',y);
+  const kpis = esInicio
+    ? [['A cobrar (pesos)',fmt(totARS)],['A cobrar (USD)','USD '+fmt(totUSD)],['Lotes a cobrar',String(cobrables.length)],['En mora acum.',fmt(moraTot)]]
+    : [['Cobrado',fmt(cobradoARS)],['Falta cobrar',fmt(pendARS)],['Avance',pct+'%'],['Pendientes',String(pendientes.length)]];
+  const kw=(ANCHO-9)/4;
+  kpis.forEach((k,i)=>{ const x=M+i*(kw+3);
+    doc.setFillColor(250,250,249); doc.setDrawColor(229,231,235); doc.roundedRect(x,y,kw,17,2,2,'FD');
+    doc.setFontSize(7.5); doc.setTextColor(100,100,100); doc.setFont('helvetica','normal');
+    doc.text(k[0],x+kw/2,y+5.5,{align:'center'});
+    doc.setFontSize(12); doc.setTextColor(153,27,27); doc.setFont('helvetica','bold');
+    doc.text(k[1],x+kw/2,y+13,{align:'center'}); });
+  y+=23;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(70,70,70);
+  if(esInicio){
+    doc.text('Este informe refleja la cartera al inicio del mes, antes de cobrar. Es la base de cobranza de '+mesTxt+'.',M,y); y+=5;
+    if(totUSD) { doc.text('Cartera en dolares: '+cobrUSD.length+' lote(s) por USD '+fmt(totUSD)+'.',M,y); y+=5; }
+  } else {
+    doc.text('Cobrado hasta la fecha: '+fmt(cobradoARS)+(cobradoUSD?' + USD '+fmt(cobradoUSD):'')+'  ('+pagados.length+' de '+cobrables.length+' lotes).',M,y); y+=5;
+    doc.text('Falta cobrar: '+fmt(pendARS)+(pendUSD?' + USD '+fmt(pendUSD):'')+'. Estos lotes pasaran a mora si no se cobran antes del cierre.',M,y); y+=5;
+  }
+  y+=3;
+
+  // ── 2. POR ETAPA Y MANZANA ──
+  y=titulo('2. '+(esInicio?'A cobrar por etapa y manzana':'Cobranza por etapa y manzana'),y);
+  const head2 = esInicio
+    ? [['Etapa','Manzana','Lotes','A cobrar ($)','A cobrar (USD)']]
+    : [['Etapa','Manzana','Pagados','Cobrado ($)','Pendiente ($)']];
+  const body2 = filasMz.map(g=> esInicio
+    ? [g.et,g.mz,String(g.lotes),g.totA?fmt(g.totA):'-',g.totU?'USD '+fmt(g.totU):'-']
+    : [g.et,g.mz,g.pag+'/'+g.lotes,g.cobA?fmt(g.cobA):'-',(g.totA-g.cobA)?fmt(g.totA-g.cobA):'-']);
+  const foot2 = esInicio
+    ? [['TOTAL','',String(cobrables.length),fmt(totARS),totUSD?'USD '+fmt(totUSD):'-']]
+    : [['TOTAL','',pagados.length+'/'+cobrables.length,fmt(cobradoARS),fmt(pendARS)]];
+  y=tabla({startY:y, head:head2, body:body2, foot:foot2,
+    footStyles:{fillColor:[254,226,226],textColor:[120,20,20],fontStyle:'bold'},
+    columnStyles:{0:{cellWidth:26,fontStyle:'bold'},1:{cellWidth:30},2:{cellWidth:24,halign:'right'},3:{cellWidth:'auto',halign:'right'},4:{cellWidth:38,halign:'right'}},
+    didParseCell:d=>{ if(d.section==='head'&&d.column.index>=2) d.cell.styles.halign='right'; }
+  })+7;
+
+  // ── 3. (cierre) LOTES PENDIENTES ──
+  if(!esInicio && pendOrden.length){
+    if(y>235){doc.addPage();encabezado();y=34;}
+    y=titulo('3. Lotes pendientes de cobro ('+pendOrden.length+')',y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(70,70,70);
+    doc.text('Si no se cobran antes del cierre final, pasaran a la lista de mora.',M,y); y+=6;
+    const tags=pendOrden.map(c=>formatLoteTag(c.mz,c.lote));
+    const cols=5, filas=[];
+    for(let i=0;i<tags.length;i+=cols) filas.push(tags.slice(i,i+cols).concat(Array(cols).fill('')).slice(0,cols));
+    y=tabla({startY:y, body:filas, theme:'grid',
+      styles:{fontSize:9,cellPadding:2.5,halign:'center',lineColor:[229,231,235],lineWidth:0.1},
+      columnStyles:{0:{cellWidth:ANCHO/5},1:{cellWidth:ANCHO/5},2:{cellWidth:ANCHO/5},3:{cellWidth:ANCHO/5},4:{cellWidth:ANCHO/5}}
+    })+7;
+  }
+
+  // ── 4. COMPOSICIÓN ──
+  if(y>225){doc.addPage();encabezado();y=34;}
+  y=titulo((esInicio?'3':'4')+'. Composicion de la cartera',y);
+  y=tabla({startY:y,
+    head:[['Categoria','Cantidad']],
+    body:[['Total de lotes',String(_all.length)],['Activos',String(_act.length)],['Finalizados',String(_fin.length)],
+      ['Agrimensores',String(_agr.length)],['Prestamos',String(_pre.length)],['1a cuota futura',String(_fut.length)],
+      ['-- Grupo Verde (Feb-May-Ago-Nov)',String(_tri('Feb-May-Ago-Nov'))],['-- Grupo Azul (Ene-Abr-Jul-Oct)',String(_tri('Ene-Abr-Jul-Oct'))],
+      ['-- Grupo Rosa (Mar-Jun-Sep-Dic)',String(_tri('Mar-Jun-Sep-Dic'))],['-- USD (sin ajuste)',String(_usd)]],
+    columnStyles:{0:{cellWidth:'auto'},1:{cellWidth:40,halign:'right',fontStyle:'bold'}},
+    didParseCell:d=>{ if(d.section==='head'&&d.column.index===1) d.cell.styles.halign='right'; }
+  })+7;
+
+  // ── 5. MORA ──
+  if(y>250){doc.addPage();encabezado();y=34;}
+  y=titulo((esInicio?'4':'5')+'. Mora acumulada',y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(70,70,70);
+  doc.text(moraLotes+' lote(s) con cuotas en mora - '+moraImp.length+' cuotas impagas - Capital adeudado '+fmt(moraTot)+' (sin intereses).',M,y);
+
+  // Pie
+  const pages=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pages;i++){ doc.setPage(i);
+    doc.setDrawColor(229,231,235); doc.line(M,285,W-M,285);
+    doc.setFontSize(7.5); doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
+    doc.text('FJ App - Los Eucaliptus  |  '+titInf+' '+mesTxt+'  |  Emitido '+hoyStr,M,290);
+    doc.text('Pagina '+i+' de '+pages,W-M,290,{align:'right'}); }
+
+  if(soloTest) return doc.output('datauristring').length;
+  _previewPDF(doc,titInf.replace(/ /g,'_')+'_'+mesTxt.replace(/ /g,'_')+'.pdf');
+}
+
 async function generarInformeMora(clienteId, soloTest){
   try{
     await _cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
@@ -6495,6 +6662,19 @@ function renderStats(){
   html+='<div style="font-size:18px;font-weight:800">📅 '+mesOp.toUpperCase()+' '+anioOp+' — Cobranza del mes</div>';
   html+='<div style="font-size:12px;color:var(--text2)">Sobre '+cobrables.length+' lotes cobrables (sin agrimensores, préstamos, finalizados ni 1ª cuota futura)</div>';
   html+='</div>';
+
+  // ── Botón de informe (adaptativo: inicio de mes / cierre de mes) v1.0418 ──
+  {
+    const _cob=data.filter(c=>c.est==='activo'&&!esAgrimensor(c.id)&&!c.autopago&&!esPrimeraCuotaFutura(c));
+    const _pag=_cob.filter(c=>c.pago).length;
+    const esIni=_pag===0;
+    html+='<div style="margin-bottom:14px">';
+    html+='<button onclick="generarInformeEstadistica()" style="width:100%;background:'+(esIni?'#16a34a':'#1e40af')+';color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:800;cursor:pointer">'
+      +(esIni?'📋 Generar informe de INICIO DE MES (PDF)':'📊 Generar informe de CIERRE DE MES (PDF)')+'</button>';
+    html+='<div style="font-size:11px;color:var(--text2);text-align:center;margin-top:5px">'
+      +(esIni?'Foto de la cartera a cobrar este mes. Ideal para arrancar.':'Balance de lo cobrado y lotes pendientes. Ideal antes del cierre final.')+'</div>';
+    html+='</div>';
+  }
 
   // ── Barra grande de progreso ──
   html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:12px">';
