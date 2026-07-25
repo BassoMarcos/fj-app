@@ -4691,22 +4691,12 @@ function renderInicio(){
   const _stat=(n,l,color,tip)=>`<div title="${tip||''}" style="text-align:center;padding:6px 2px;cursor:help"><div style="font-size:20px;font-weight:800;color:${color||'var(--text)'}">${n}</div><div style="font-size:10px;color:var(--text2)">${l}</div></div>`;
   const resumenLotes=`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:1rem">
-      <div style="font-weight:700;font-size:13px;color:var(--text2);margin-bottom:6px">📋 RESUMEN DE LOTES</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(85px,1fr));gap:4px;border-bottom:1px dashed var(--border);padding-bottom:6px;margin-bottom:6px">
-        ${_stat(_all.length,'Total','', 'Todos los lotes cargados en el sistema, sin importar su estado (activos + finalizados).')}
-        ${_stat(_act.length,'Activos','var(--green)','Lotes que están pagando cuotas actualmente. Son los que participan de cierres, mora e ICC.')}
-        ${_stat(_fin.length,'Finalizados','#7ab5d0','Lotes que ya pagaron todas sus cuotas. No se les cobra más.')}
-        ${_stat(_agr.length,'Agrimensores','#d97706','Lotes cuya cuota va a la caja de agrimensores (el interés de mora va a ingresos extras). Avanzan y generan mora como cualquier lote.')}
-        ${_stat(_prest.length,'Préstamos','#d97706','Lotes marcados como préstamo: no se cobran por la app y quedan afuera de los cierres mensuales, pero sí reciben incrementos ICC.')}
-        ${_stat(_futuros.length,'1ª cuota futura','var(--text3)','Lotes nuevos cuya primera cuota arranca en un mes futuro. Todavía no se les cobra ni generan mora.')}
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;border-bottom:1px dashed var(--border);padding-bottom:8px;margin-bottom:8px">
+        ${_stat(_all.length,'Total','')}
+        ${_stat(_act.length,'Activos','var(--green)')}
+        ${_stat(_fin.length,'Finalizados','#7ab5d0')}
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(85px,1fr));gap:4px">
-        ${_stat(_triCnt['Feb-May-Ago-Nov'],'Verde (Feb/May/Ago/Nov)','#4caf82','Lotes activos en pesos del grupo Verde: sus cuotas aumentan por ICC en Febrero, Mayo, Agosto y Noviembre.')}
-        ${_stat(_triCnt['Ene-Abr-Jul-Oct'],'Azul (Ene/Abr/Jul/Oct)','#60a5fa','Lotes activos en pesos del grupo Azul: sus cuotas aumentan por ICC en Enero, Abril, Julio y Octubre.')}
-        ${_stat(_triCnt['Mar-Jun-Sep-Dic'],'Rosa (Mar/Jun/Sep/Dic)','#f472b6','Lotes activos en pesos del grupo Rosa: sus cuotas aumentan por ICC en Marzo, Junio, Septiembre y Diciembre.')}
-        ${_stat(_usd.length,'USD (sin trimestre)','var(--text2)','Lotes activos en dólares: no tienen trimestre ni reciben incrementos ICC.')}
-      </div>
-      <div title="Suma de las cuotas del mes de todos los lotes cobrables: activos, sin agrimensores, sin préstamos y sin primera cuota futura. No incluye moras ni adelantos." style="display:flex;justify-content:space-around;gap:8px;border-top:1px dashed var(--border);padding-top:8px;margin-top:6px;cursor:help;flex-wrap:wrap">
+      <div title="Suma de las cuotas del mes de todos los lotes cobrables: activos, sin agrimensores, sin préstamos y sin primera cuota futura." style="display:flex;justify-content:space-around;gap:8px;padding-top:2px;cursor:help;flex-wrap:wrap">
         <div style="text-align:center"><div style="font-size:11px;color:var(--text2);margin-bottom:2px">💰 A COBRAR ESTE MES (PESOS)</div><div style="font-size:19px;font-weight:800;color:var(--green)">${fmtPeso(_totARS)}</div><div style="font-size:10px;color:var(--text3)">${_cobrARS.length} lotes</div></div>
         <div style="text-align:center"><div style="font-size:11px;color:var(--text2);margin-bottom:2px">💵 A COBRAR ESTE MES (USD)</div><div style="font-size:19px;font-weight:800;color:var(--green)">USD ${fmtPeso(_totUSD)}</div><div style="font-size:10px;color:var(--text3)">${_cobrUSD.length} lotes</div></div>
       </div>
@@ -6544,6 +6534,33 @@ function renderStats(){
   html+='<div style="font-size:18px;font-weight:800">📅 '+mesOp.toUpperCase()+' '+anioOp+' — Cobranza del mes</div>';
   html+='<div style="font-size:12px;color:var(--text2)">Sobre '+cobrables.length+' lotes cobrables (sin agrimensores, préstamos, finalizados ni 1ª cuota futura)</div>';
   html+='</div>';
+
+  // ── Composición de lotes (movido desde Inicio, v1.0410) ──
+  {
+    const _all=data, _act=data.filter(c=>c.est==='activo'), _fin=data.filter(c=>c.est==='finalizado');
+    const _agr=_act.filter(c=>esAgrimensor(c.id)), _prest=_act.filter(c=>c.autopago);
+    const _fut=_act.filter(c=>esPrimeraCuotaFutura(c));
+    const _tri=t=>_act.filter(c=>c.tri===t&&c.moneda!=='USD'&&!c.autopago).length;
+    const _usd=_act.filter(c=>c.moneda==='USD').length;
+    const box=(n,l,c,tip)=>'<div title="'+(tip||'')+'" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;cursor:help"><div style="font-size:22px;font-weight:800;color:'+(c||'var(--text)')+'">'+n+'</div><div style="font-size:10.5px;color:var(--text2);line-height:1.3;margin-top:2px">'+l+'</div></div>';
+    html+='<div style="margin-bottom:1.25rem">';
+    html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:8px">📋 COMPOSICIÓN DE LOTES</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px;margin-bottom:8px">';
+    html+=box(_all.length,'Total','','Todos los lotes cargados, sin importar su estado.');
+    html+=box(_act.length,'Activos','var(--green)','Lotes pagando cuotas. Participan de cierres, mora e ICC.');
+    html+=box(_fin.length,'Finalizados','#7ab5d0','Ya pagaron todas sus cuotas. No se les cobra más.');
+    html+=box(_agr.length,'Agrimensores','#d97706','Su cuota va a la caja de agrimensores. Avanzan y generan mora como cualquier lote.');
+    html+=box(_prest.length,'Préstamos','#d97706','No se cobran por la app y quedan fuera de los cierres, pero reciben ICC.');
+    html+=box(_fut.length,'1ª cuota futura','var(--text3)','Su primera cuota arranca en un mes futuro. Todavía no se cobran ni generan mora.');
+    html+='</div>';
+    html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin:12px 0 8px">🎨 GRUPOS DE AJUSTE ICC (lotes activos en pesos)</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px">';
+    html+=box(_tri('Feb-May-Ago-Nov'),'Verde<br>Feb·May·Ago·Nov','#4caf82','Aumentan por ICC en Febrero, Mayo, Agosto y Noviembre.');
+    html+=box(_tri('Ene-Abr-Jul-Oct'),'Azul<br>Ene·Abr·Jul·Oct','#60a5fa','Aumentan por ICC en Enero, Abril, Julio y Octubre.');
+    html+=box(_tri('Mar-Jun-Sep-Dic'),'Rosa<br>Mar·Jun·Sep·Dic','#f472b6','Aumentan por ICC en Marzo, Junio, Septiembre y Diciembre.');
+    html+=box(_usd,'USD<br>sin ajuste','var(--text2)','Lotes en dólares: no tienen trimestre ni reciben ICC.');
+    html+='</div></div>';
+  }
 
   // ── Barra grande de progreso ──
   html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:12px">';
