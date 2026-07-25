@@ -1260,7 +1260,7 @@ function loadData(){
   }catch(e){}
   // Sin datos guardados — usar BASE
   const d=BASE.map(c=>({
-    id:c.id,mz:c.mz,lote:c.lote,titular:c.titular,
+    id:c.id,mz:c.mz,lote:c.lote,titular:c.titular,empresaPaga:c.empresaPaga||false,
     tri:c.tri,ca:c.ca,ct:c.ct,monto:c.monto,
     saldo:c.saldo,est:c.est,msg:c.msg,
     tel:c.tel||'',dni:c.dni||[],obs:c.obs||[],pago:false,
@@ -1277,6 +1277,7 @@ function saveData(d){
     saldo:c.saldo, est:c.est, msg:c.msg||'',
     moneda:c.moneda||'ARS', agrimensor:c.agrimensor||false,
     autopago:c.autopago||false,
+    empresaPaga:c.empresaPaga||false,
     tel:c.tel||'', dni:c.dni||[], obs:c.obs||[], hist:c.hist||[],
     primeraCuota:c.primeraCuota!==undefined?c.primeraCuota:null,
     primeraCuotaAnio:c.primeraCuotaAnio!==undefined?c.primeraCuotaAnio:null,
