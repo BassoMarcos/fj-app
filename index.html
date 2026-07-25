@@ -1147,7 +1147,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0406';
+  datos['_version']='v1.0407';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -10531,7 +10531,8 @@ const FB_CLAVES=['data','cuotasMora','pagoStore','mora','balances','extras','ade
 
 function _totalesActuales(){
   const d=loadData();
-  const AGRI=(typeof loadAgrimensorLotes==='function')?loadAgrimensorLotes():[];
+  let AGRI=(typeof loadAgrimensorLotes==='function')?loadAgrimensorLotes():[];
+  if(!Array.isArray(AGRI)) AGRI=Object.values(AGRI||{}).map(x=>typeof x==='string'?x:(x&&x.id)).filter(Boolean);
   const esAgri=id=>AGRI.indexOf(id)>=0;
   const cob=d.filter(c=>c.est==='activo'&&c.moneda!=='USD'&&!esAgri(c.id)&&!c.autopago&&(c.monto>0)
     &&!(typeof esPrimeraCuotaFutura==='function'&&esPrimeraCuotaFutura(c)));
