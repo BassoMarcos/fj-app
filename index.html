@@ -3355,7 +3355,10 @@ function renderPanelMora(){
         ${totalGeneralUSD>0?`<div style="font-size:18px;font-weight:800;color:var(--red)">USD ${fmtPeso(totalGeneralUSD)}</div>`:''}
       </div>
       
-      <button onclick="generarInformeMensual()" style="background:var(--surface);border:1.5px solid var(--border2);color:var(--text);border-radius:var(--r);padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">📊 Informe de mora</button>\n      <button onclick="abrirModalAgregarMora()" style="background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">➕ Agregar a mora</button>
+      <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+        <button onclick="generarInformeMensual()" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:var(--r);padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer">📊 Informe</button>
+        <button onclick="abrirModalAgregarMora()" style="background:none;border:1px solid #dc2626;color:#dc2626;border-radius:var(--r);padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer">➕ Agregar a mora</button>
+      </div>
     </div>
   </div>`;
 
