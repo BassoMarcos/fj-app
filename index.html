@@ -6496,33 +6496,6 @@ function renderStats(){
   html+='<div style="font-size:12px;color:var(--text2)">Sobre '+cobrables.length+' lotes cobrables (sin agrimensores, préstamos, finalizados ni 1ª cuota futura)</div>';
   html+='</div>';
 
-  // ── Composición de lotes (movido desde Inicio, v1.0410) ──
-  {
-    const _all=data, _act=data.filter(c=>c.est==='activo'), _fin=data.filter(c=>c.est==='finalizado');
-    const _agr=_act.filter(c=>esAgrimensor(c.id)), _prest=_all.filter(c=>c.autopago);
-    const _fut=_act.filter(c=>esPrimeraCuotaFutura(c));
-    const _tri=t=>_act.filter(c=>c.tri===t&&c.moneda!=='USD'&&!c.autopago).length;
-    const _usd=_act.filter(c=>c.moneda==='USD').length;
-    const box=(n,l,c,tip)=>'<div title="'+(tip||'')+'" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;cursor:help"><div style="font-size:22px;font-weight:800;color:'+(c||'var(--text)')+'">'+n+'</div><div style="font-size:10.5px;color:var(--text2);line-height:1.3;margin-top:2px">'+l+'</div></div>';
-    html+='<div style="margin-bottom:1.25rem">';
-    html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:8px">📋 COMPOSICIÓN DE LOTES</div>';
-    html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px;margin-bottom:8px">';
-    html+=box(_all.length,'Total','','Todos los lotes cargados, sin importar su estado.');
-    html+=box(_act.length,'Activos','var(--green)','Lotes pagando cuotas. Participan de cierres, mora e ICC.');
-    html+=box(_fin.length,'Finalizados','#7ab5d0','Ya pagaron todas sus cuotas. No se les cobra más.');
-    html+=box(_agr.length,'Agrimensores','#d97706','Su cuota va a la caja de agrimensores. Avanzan y generan mora como cualquier lote.');
-    html+=box(_prest.length,'Préstamos','#d97706','No se cobran por la app y quedan fuera de los cierres, pero reciben ICC.');
-    html+=box(_fut.length,'1ª cuota futura','var(--text3)','Su primera cuota arranca en un mes futuro. Todavía no se cobran ni generan mora.');
-    html+='</div>';
-    html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin:12px 0 8px">🎨 GRUPOS DE AJUSTE ICC (lotes activos en pesos)</div>';
-    html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px">';
-    html+=box(_tri('Feb-May-Ago-Nov'),'Verde<br>Feb·May·Ago·Nov','#4caf82','Aumentan por ICC en Febrero, Mayo, Agosto y Noviembre.');
-    html+=box(_tri('Ene-Abr-Jul-Oct'),'Azul<br>Ene·Abr·Jul·Oct','#60a5fa','Aumentan por ICC en Enero, Abril, Julio y Octubre.');
-    html+=box(_tri('Mar-Jun-Sep-Dic'),'Rosa<br>Mar·Jun·Sep·Dic','#f472b6','Aumentan por ICC en Marzo, Junio, Septiembre y Diciembre.');
-    html+=box(_usd,'USD<br>sin ajuste','var(--text2)','Lotes en dólares: no tienen trimestre ni reciben ICC.');
-    html+='</div></div>';
-  }
-
   // ── Barra grande de progreso ──
   html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:12px">';
   html+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">';
@@ -6539,6 +6512,8 @@ function renderStats(){
   html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">📐 AGRIMENSORES</div><div style="font-size:22px;font-weight:800">'+agrPag+'<span style="font-size:14px;color:var(--text2)">/'+agrim.length+'</span></div><div style="font-size:11px;color:var(--text2)">pagados este mes</div>','text-align:center');
   html+='</div>';
 
+
+  html+='</div>';
   // ── A cobrar este mes (total) + desglose por etapa y manzana (movido desde Inicio, v1.0413) ──
   {
     const _cobrARS=cobrables.filter(c=>c.moneda!=='USD');
@@ -6640,72 +6615,33 @@ function renderStats(){
   });
   html+='</div>';
 
-  // ── Atención ──
-  const cuotasMoraHist=loadCuotasMora();
-  const morasImpagas=cuotasMoraHist.filter(m=>!m.pagada);
-  const transfPend=(bal.transferencias||[]).filter(t=>(t.rellenado||0)<(t.cuotaParte||0));
-  const alertas=[];
-  if(morasImpagas.length){
-    const totM=morasImpagas.reduce((s,m)=>s+(m.monto||0),0);
-    alertas.push('⚠️ <b>'+morasImpagas.length+' cuota'+(morasImpagas.length>1?'s':'')+' en mora</b> de meses anteriores sin cobrar — '+fmtPeso(totM)+' (+ intereses)');
-  }
-  const conMoraMes=pendientes.filter(c=>calcInteresAuto(montoCobrable(c).total).interes>0);
-  if(conMoraMes.length) alertas.push('🕐 <b>'+conMoraMes.length+' lote'+(conMoraMes.length>1?'s':'')+'</b> del mes en curso ya '+(conMoraMes.length>1?'acumulan':'acumula')+' interés por atraso');
-  if(transfPend.length){
-    const totT=transfPend.reduce((s,t)=>s+Math.max(0,(t.cuotaParte||0)-(t.rellenado||0)),0);
-    alertas.push('🏦 <b>'+transfPend.length+' transferencia'+(transfPend.length>1?'s':'')+'</b> sin rellenar — '+fmtPeso(totT)+' fuera de la caja física');
-  }
-  if(alertas.length){
-    html+='<div style="background:var(--surface);border:1.5px solid #d97706;border-radius:12px;padding:1rem;margin:1.25rem 0">';
-    html+='<div style="font-size:13px;font-weight:800;color:#d97706;margin-bottom:8px">⚠️ ATENCIÓN</div>';
-    alertas.forEach(a=>html+='<div style="font-size:13px;padding:4px 0;border-bottom:1px dashed var(--border)">'+a+'</div>');
+  // ── Composición de lotes (movido desde Inicio, v1.0410) ──
+  {
+    const _all=data, _act=data.filter(c=>c.est==='activo'), _fin=data.filter(c=>c.est==='finalizado');
+    const _agr=_act.filter(c=>esAgrimensor(c.id)), _prest=_all.filter(c=>c.autopago);
+    const _fut=_act.filter(c=>esPrimeraCuotaFutura(c));
+    const _tri=t=>_act.filter(c=>c.tri===t&&c.moneda!=='USD'&&!c.autopago).length;
+    const _usd=_act.filter(c=>c.moneda==='USD').length;
+    const box=(n,l,c,tip)=>'<div title="'+(tip||'')+'" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;cursor:help"><div style="font-size:22px;font-weight:800;color:'+(c||'var(--text)')+'">'+n+'</div><div style="font-size:10.5px;color:var(--text2);line-height:1.3;margin-top:2px">'+l+'</div></div>';
+    html+='<div style="margin-bottom:1.25rem">';
+    html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:8px">📋 COMPOSICIÓN DE LOTES</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px;margin-bottom:8px">';
+    html+=box(_all.length,'Total','','Todos los lotes cargados, sin importar su estado.');
+    html+=box(_act.length,'Activos','var(--green)','Lotes pagando cuotas. Participan de cierres, mora e ICC.');
+    html+=box(_fin.length,'Finalizados','#7ab5d0','Ya pagaron todas sus cuotas. No se les cobra más.');
+    html+=box(_agr.length,'Agrimensores','#d97706','Su cuota va a la caja de agrimensores. Avanzan y generan mora como cualquier lote.');
+    html+=box(_prest.length,'Préstamos','#d97706','No se cobran por la app y quedan fuera de los cierres, pero reciben ICC.');
+    html+=box(_fut.length,'1ª cuota futura','var(--text3)','Su primera cuota arranca en un mes futuro. Todavía no se cobran ni generan mora.');
     html+='</div>';
+    html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin:12px 0 8px">🎨 GRUPOS DE AJUSTE ICC (lotes activos en pesos)</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px">';
+    html+=box(_tri('Feb-May-Ago-Nov'),'Verde<br>Feb·May·Ago·Nov','#4caf82','Aumentan por ICC en Febrero, Mayo, Agosto y Noviembre.');
+    html+=box(_tri('Ene-Abr-Jul-Oct'),'Azul<br>Ene·Abr·Jul·Oct','#60a5fa','Aumentan por ICC en Enero, Abril, Julio y Octubre.');
+    html+=box(_tri('Mar-Jun-Sep-Dic'),'Rosa<br>Mar·Jun·Sep·Dic','#f472b6','Aumentan por ICC en Marzo, Junio, Septiembre y Diciembre.');
+    html+=box(_usd,'USD<br>sin ajuste','var(--text2)','Lotes en dólares: no tienen trimestre ni reciben ICC.');
+    html+='</div></div>';
   }
 
-  // ── Recaudación histórica (cierres) ──
-  const monthMap={};
-  cierres.forEach(ci=>{
-    if(!ci.ts) return;
-    const d=new Date(ci.ts);
-    const key=d.getFullYear()+'-'+(String(d.getMonth()+1).padStart(2,'0'));
-    const label=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]+' '+String(d.getFullYear()).slice(2);
-    if(!monthMap[key]) monthMap[key]={label,pesos:0,usd:0,pagos:0};
-    if(ci.moneda==='USD') monthMap[key].usd+=(ci.total||0);
-    else if(ci.moneda==='TRANSF'){monthMap[key].pesos+=(ci.totalPesos||0);monthMap[key].usd+=(ci.totalUSD||0);}
-    else monthMap[key].pesos+=(ci.total||0);
-    monthMap[key].pagos+=(ci.pagos||[]).length;
-  });
-  const months=Object.keys(monthMap).sort();
-  html+='<div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;align-items:stretch">';
-  // gráfico pesos
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem">';
-  html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:10px">📊 RECAUDACIÓN POR MES (PESOS)</div>';
-  if(months.length){
-    const maxP=Math.max(...months.map(k=>monthMap[k].pesos),1);
-    html+='<div style="display:flex;gap:8px;align-items:flex-end;overflow-x:auto;padding-bottom:4px">';
-    months.forEach(k=>{
-      const m=monthMap[k];
-      const h=Math.max(4,Math.round((m.pesos/maxP)*110));
-      html+='<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:52px">';
-      html+='<div style="font-size:9px;font-weight:700;color:var(--text2)">'+(m.pesos>=1e6?(m.pesos/1e6).toFixed(1)+'M':fmtPeso(m.pesos).replace('$',''))+'</div>';
-      html+='<div style="width:100%;height:110px;display:flex;align-items:flex-end"><div style="width:100%;background:linear-gradient(180deg,#6366f1,#4f46e5);height:'+h+'px;border-radius:6px 6px 2px 2px"></div></div>';
-      html+='<div style="font-size:10px;font-weight:700;color:var(--text2)">'+m.label+'</div>';
-      html+='<div style="font-size:9px;color:var(--text3)">'+m.pagos+' pagos</div>';
-      html+='</div>';
-    });
-    html+='</div>';
-  } else html+='<div style="color:var(--text2);font-size:13px;padding:1rem;text-align:center">Sin cierres registrados aún</div>';
-  html+='</div>';
-  // columna USD + resumen
-  html+='<div style="display:flex;flex-direction:column;gap:10px">';
-  const totUsdHist=months.reduce((s,k)=>s+monthMap[k].usd,0);
-  const totPesosHist=months.reduce((s,k)=>s+monthMap[k].pesos,0);
-  html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">💵 USD HISTÓRICO</div><div style="font-size:20px;font-weight:800;color:var(--green)">USD '+fmtPeso(totUsdHist).replace('$','')+'</div>','text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center');
-  html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">💰 PESOS HISTÓRICO</div><div style="font-size:20px;font-weight:800;color:var(--green)">'+fmtPeso(totPesosHist)+'</div><div style="font-size:10px;color:var(--text3)">'+months.length+' mes'+(months.length!==1?'es':'')+' con cierres</div>','text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center');
-  html+='</div>';
-  html+='</div>';
-
-  html+='</div>';
   el.innerHTML=html;
 }
 
