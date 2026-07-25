@@ -4689,14 +4689,7 @@ function renderInicio(){
   const _totARS=_cobrARS.reduce((s,c)=>s+montoCobrable(c).total,0);
   const _totUSD=_cobrUSD.reduce((s,c)=>s+montoCobrable(c).total,0);
   const _stat=(n,l,color,tip)=>`<div title="${tip||''}" style="text-align:center;padding:6px 2px;cursor:help"><div style="font-size:20px;font-weight:800;color:${color||'var(--text)'}">${n}</div><div style="font-size:10px;color:var(--text2)">${l}</div></div>`;
-  const resumenLotes=`
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:1rem">
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;border-bottom:1px dashed var(--border);padding-bottom:8px;margin-bottom:8px">
-        ${_stat(_all.length,'Total','')}
-        ${_stat(_act.length,'Activos','var(--green)')}
-        ${_stat(_fin.length,'Finalizados','#7ab5d0')}
-      </div>
-    </div>`;
+  const resumenLotes='';
   el.innerHTML=`
     <div style="font-size:22px;font-weight:800;margin-bottom:4px">Bienvenido, Administrador</div>
     <div style="font-size:14px;color:var(--text2);margin-bottom:1rem">${new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
