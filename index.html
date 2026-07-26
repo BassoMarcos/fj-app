@@ -3765,11 +3765,11 @@ async function generarInformeMensual(soloTest){
 
   // ── 5. MAYORES DEUDORES ──
   if(y>215){doc.addPage();encabezado();y=34;}
-  y=titulo('6. Mayores deudores (top 10 por deuda total con interes)',y);
-  const top=clientes.slice().sort((a,b)=>b.total-a.total).slice(0,10);
+  y=titulo('6. Mayores deudores (top 10 por cuota pura adeudada)',y);
+  const top=clientes.slice().sort((a,b)=>b.cp-a.cp).slice(0,10);
   y=tabla({startY:y,
-    head:[['#','Lote','Titular','Cuotas','Dias','Deuda total']],
-    body:top.map((g,i)=>[String(i+1),formatLoteTag(g.mz,g.lote),String(g.titular||'').slice(0,38),String(g.cuotas.length),String(g.dias),(g.moneda==='USD'?'USD ':'')+fmt(g.total)]),
+    head:[['#','Lote','Titular','Cuotas','Dias','Cuota pura']],
+    body:top.map((g,i)=>[String(i+1),formatLoteTag(g.mz,g.lote),String(g.titular||'').slice(0,38),String(g.cuotas.length),String(g.dias),(g.moneda==='USD'?'USD ':'')+fmt(g.cp)]),
     columnStyles:{0:{cellWidth:8,halign:'right'},1:{cellWidth:24,fontStyle:'bold'},2:{cellWidth:'auto'},3:{cellWidth:18,halign:'right'},4:{cellWidth:16,halign:'right'},5:{cellWidth:32,halign:'right',fontStyle:'bold'}},
     didParseCell:d=>{ if(d.section==='head'&&[0,3,4,5].indexOf(d.column.index)>=0) d.cell.styles.halign='right'; }
   })+7;
