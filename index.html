@@ -4195,27 +4195,28 @@ function mensajeMoraWA(cl){
   const cp=cur+fmtPeso(cl.totalCP).replace('$','');
   const tot=cur+fmtPeso(cl.total).replace('$','');
   const meses=cl.cuotas.map(q=>q.mesNombre).join(', ');
-  // Descripcion de cuotas: si es una, "la cuota de X"; si son varias, "las cuotas de X, Y y Z"
-  const descCuotas = n===1 ? ('la cuota de '+meses) : ('las cuotas de '+meses);
+  const descCuotas = n===1 ? ('la cuota correspondiente a '+meses) : ('las cuotas correspondientes a '+meses);
   let cuerpo;
   if(n===1){
-    cuerpo='Te escribimos de F&J Desarrollos Inmobiliarios por el lote '+lote+'.\n\n'
-      +'Nos figura pendiente '+descCuotas+' por un total de '+tot+' (incluye intereses al dia de hoy).\n\n'
-      +'Si ya la abonaste, adjuntanos el comprobante y lo verificamos. Cualquier consulta estamos a disposicion.';
+    cuerpo='Nos comunicamos desde F&J Desarrollos Inmobiliarios en relacion al lote '+lote+'.\n\n'
+      +'Segun nuestros registros, se encuentra pendiente de pago '+descCuotas+', por un importe total de '+tot+' (intereses incluidos al dia de la fecha).\n\n'
+      +'En caso de haber realizado el pago, le solicitamos que nos remita el comprobante correspondiente para su verificacion. Ante cualquier consulta, quedamos a su disposicion.';
   } else if(n<=3){
-    cuerpo='Te escribimos de F&J Desarrollos Inmobiliarios por el lote '+lote+'.\n\n'
-      +'Nos figuran '+n+' cuotas pendientes ('+meses+') por un total de '+tot+' (incluye intereses al dia de hoy).\n\n'
-      +'Nos gustaria coordinar la regularizacion. Avisanos que dia podes acercarte para regularizar el pago y que la situacion no pase a estado critico. Si preferis coordinar una reunion, estamos a disposicion.';
+    cuerpo='Nos comunicamos desde F&J Desarrollos Inmobiliarios en relacion al lote '+lote+'.\n\n'
+      +'Segun nuestros registros, presenta '+n+' cuotas pendientes de pago ('+meses+'), por un importe total de '+tot+' (intereses incluidos al dia de la fecha).\n\n'
+      +'Le solicitamos regularizar esta situacion a la brevedad, a fin de evitar que su cuenta pase a un estado critico. Le pedimos que nos indique que dia podria acercarse a regularizar el pago. De requerir una reunion para analizar su caso, quedamos a su entera disposicion.';
   } else if(n<=6){
-    cuerpo='Te escribimos de F&J Desarrollos Inmobiliarios por el lote '+lote+'.\n\n'
-      +'Tu cuenta presenta '+n+' cuotas impagas ('+meses+'), que suman un total de '+tot+' con los intereses al dia de hoy. Esta es una situacion que requiere atencion inmediata.\n\n'
-      +'Necesitamos que coordines con URGENCIA una reunion para tratar tu caso antes de que pase al area de Legales. Queremos ser claros: esto tiene solucion, pero depende de que te comuniques ahora y nos sentemos a ver juntos como regularizarlo. No dejes pasar mas tiempo. Esperamos tu respuesta a la brevedad para acordar dia y hora.';
+    cuerpo='Nos comunicamos desde F&J Desarrollos Inmobiliarios en relacion al lote '+lote+'.\n\n'
+      +'Su cuenta registra '+n+' cuotas impagas ('+meses+'), que ascienden a un total de '+tot+' con los intereses calculados al dia de la fecha. Se trata de una situacion que requiere atencion inmediata.\n\n'
+      +'Le solicitamos coordinar con caracter URGENTE una reunion para tratar su caso, antes de que el mismo sea derivado al area de Legales. Queremos ser claros: la situacion tiene solucion, pero depende de que usted se comunique a la brevedad para acordar en conjunto una via de regularizacion.\n\n'
+      +'Le pedimos que no permita que transcurra mas tiempo y que nos responda a fin de coordinar dia y horario de reunion.';
   } else {
-    cuerpo='Te escribimos de F&J Desarrollos Inmobiliarios por el lote '+lote+'.\n\n'
-      +'Tu cuenta registra '+n+' cuotas adeudadas y tu situacion ya fue trasladada al area de Legales. En esta instancia el retroceso del caso es muy poco probable.\n\n'
-      +'Antes de continuar con el proceso, es indispensable que te presentes en nuestras oficinas con un turno previamente solicitado, para informarte como continua el tema. Te pedimos que coordines ese turno con caracter urgente. Quedamos a la espera de tu comunicacion.';
+    cuerpo='Nos comunicamos desde F&J Desarrollos Inmobiliarios en relacion al lote '+lote+'.\n\n'
+      +'Su cuenta registra '+n+' cuotas adeudadas, motivo por el cual su caso ha sido trasladado al area de Legales. En esta instancia, la posibilidad de revertir la situacion es sumamente limitada.\n\n'
+      +'No obstante, existe una ultima oportunidad de encontrar una solucion, para lo cual resulta indispensable que se presente en nuestras oficinas. Le solicitamos que gestione un turno previo con caracter urgente, a fin de informarle personalmente como continua el proceso y evaluar las alternativas disponibles.\n\n'
+      +'Quedamos a la espera de su pronta comunicacion.';
   }
-  return 'Hola, que tal '+nom+'! '+cuerpo+'\n\nF&J Desarrollos Inmobiliarios - Los Eucaliptus';
+  return 'Estimado/a:\n\n'+cuerpo+'\n\nAtentamente,\nF&J Desarrollos Inmobiliarios - Los Eucaliptus';
 }
 
 function abrirWhatsMora(clienteId){
