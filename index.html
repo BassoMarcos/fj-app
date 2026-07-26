@@ -3688,7 +3688,7 @@ async function generarInformeMensual(soloTest){
 
   // ── 1. RESUMEN ──
   y=titulo('1. Resumen general de la cartera morosa',y);
-  const kpis=[['Lotes en mora',String(clientes.length)],['Cuotas adeudadas',String(impagas.length)],['Deuda cuota pura',fmt(T.cpA)],['Deuda total c/interes',fmt(T.cpA+T.intA)]];
+  const kpis=[['Lotes en mora',String(clientes.length)],['Cuotas adeudadas',String(impagas.length)],['Deuda cuota pura (pesos)',fmt(T.cpA)],['Deuda cuota pura (USD)','USD '+fmt(T.cpU)]];
   const kw=(ANCHO-9)/4;
   kpis.forEach((k,i)=>{
     const x=M+i*(kw+3);
@@ -3701,9 +3701,8 @@ async function generarInformeMensual(soloTest){
   });
   y+=23;
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(70,70,70);
-  doc.text('Intereses acumulados al '+hoyStr+' (2% diario desde el dia 10): '+fmt(T.intA),M,y);
-  y+=5;
-  if(T.cpU||T.intU){ doc.text('Cartera en dolares: '+T.lotesU+' lote(s) - CP USD '+fmt(T.cpU)+' - Interes USD '+fmt(T.intU)+' - Total USD '+fmt(T.cpU+T.intU),M,y); y+=5; }
+
+  if(T.cpU){ doc.text('Cartera en dolares: '+T.lotesU+' lote(s) - Cuota pura USD '+fmt(T.cpU),M,y); y+=5; }
   y+=3;
 
   // ── 2. ANTIGÜEDAD ──
@@ -3732,11 +3731,11 @@ async function generarInformeMensual(soloTest){
     if(g.moneda==='USD') c.cpU+=g.cp; else { c.cpA+=g.cp; c.intA+=g.int; }
   });
   y=tabla({startY:y,
-    head:[['Situacion','Lotes','Cuotas','Deuda CP ($)','Interes ($)','Deuda CP (USD)']],
-    body:porCat.map(c=>[c.n,String(c.lotes),String(c.cuotas),c.cpA?fmt(c.cpA):'-',c.intA?fmt(c.intA):'-',c.cpU?'USD '+fmt(c.cpU):'-']),
-    foot:[['TOTAL',String(clientes.length),String(impagas.length),fmt(T.cpA),fmt(T.intA),T.cpU?'USD '+fmt(T.cpU):'-']],
+    head:[['Situacion','Lotes','Cuotas','Deuda CP ($)','Deuda CP (USD)']],
+    body:porCat.map(c=>[c.n,String(c.lotes),String(c.cuotas),c.cpA?fmt(c.cpA):'-',c.cpU?'USD '+fmt(c.cpU):'-']),
+    foot:[['TOTAL',String(clientes.length),String(impagas.length),fmt(T.cpA),T.cpU?'USD '+fmt(T.cpU):'-']],
     footStyles:{fillColor:[254,226,226],textColor:[120,20,20],fontStyle:'bold'},
-    columnStyles:{0:{cellWidth:38,fontStyle:'bold'},1:{cellWidth:18,halign:'right'},2:{cellWidth:20,halign:'right'},3:{cellWidth:'auto',halign:'right'},4:{cellWidth:30,halign:'right'},5:{cellWidth:30,halign:'right'}},
+    columnStyles:{0:{cellWidth:44,fontStyle:'bold'},1:{cellWidth:22,halign:'right'},2:{cellWidth:24,halign:'right'},3:{cellWidth:'auto',halign:'right'},4:{cellWidth:38,halign:'right'}},
     didParseCell:d=>{
       if(d.section==='head'&&d.column.index>=1) d.cell.styles.halign='right';
       if(d.section==='body'&&d.column.index===0){ const c=porCat[d.row.index]; if(c){ d.cell.styles.textColor=c.rgb; } }
