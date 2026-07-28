@@ -1157,7 +1157,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0434';
+  datos['_version']='v1.0435';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1873,6 +1873,11 @@ function showPage(p){
   if(p==='admin'){initAdminFilters();adminTab('lista');}
   if(p==='colab'){initCobFilters();renderColab();
     actualizarBadgeMora();}
+  // v1.0435: aplicar el tema guardado también en la vista del colaborador
+  try{
+    const savedT=localStorage.getItem('fj_theme');
+    if(savedT){ const t=(typeof FJ_THEMES!=='undefined')&&FJ_THEMES.find(x=>x.id===savedT); if(t) applyFjTheme(t); }
+  }catch(e){}
   if(p==='public'){initPublic();}
   // Handle #cliente hash
   if(window.location.hash==='#cliente'){
@@ -2829,12 +2834,19 @@ function abrirFormCobro(id, opts){
     +'<div style="display:flex;gap:8px">'
     +'<button onclick="cerrarFormCobro()" style="flex:1;padding:10px;border:1px solid var(--border2);background:var(--surface);border-radius:8px;font-weight:700;cursor:pointer">Cancelar</button>'
     +'<button id="fc-ok" onclick="fcConfirmar()" '+(esTotal?'':'disabled')+' style="flex:2;padding:10px;border:none;background:#16a34a;color:#fff;border-radius:8px;font-weight:800;cursor:pointer;opacity:'+(esTotal?'1':'.4')+'">✓ Confirmar cobro</button>'
-    +'</div></div>';
+    +'</div>'
+    +((opts&&opts.ctx==='colab')?'<button onclick="fcNoCobre()" style="width:100%;margin-top:8px;padding:9px;border:1.5px solid #dc2626;background:none;color:#dc2626;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">✗ No cobré la cuota</button>':'')
+    +'</div>';
   m.style.display='flex';
   m.onclick=cerrarFormCobro;
   setTimeout(()=>{const f=document.getElementById(opts.transfer?'fc-transf':'fc-entrego');if(f)f.focus();},60);
 }
 function cerrarFormCobro(){const m=document.getElementById('form-cobro-modal');if(m)m.style.display='none';window._fcCtx=null;}
+function fcNoCobre(){
+  const x=window._fcCtx; const id=x?x.id:null;
+  cerrarFormCobro();
+  if(id && typeof colabNoCobre==='function') colabNoCobre(id);
+}
 function fcNum(v){ return parseFloat(String(v||'').replace(/[^\d]/g,''))||0; }
 function fcVacio(v){ return String(v||'').replace(/[^\d]/g,'')===''; }
 function fcFmt(el){
