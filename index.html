@@ -1157,7 +1157,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0433';
+  datos['_version']='v1.0408';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2941,7 +2941,6 @@ function fcConfirmar(){
       if(c3&&!c3.pago){c3.pago=true;c3.pagoTs=ts;saveData(d2);setPagoState(id,true,ts);}
     }catch(e){}
   },4000);
-  window._colabCobrando=null;   // v1.0433: cobro completado, se libera la traba
   cerrarFormCobro();
   if(x.ctx==='colab'){ if(typeof renderDetColab==='function') renderDetColab(id); }
   else { if(typeof renderAdminDet==='function') renderAdminDet(id); if(typeof renderAdminTable==='function') renderAdminTable(); }
@@ -7243,15 +7242,8 @@ function renderAdminDet(id){
 
   const montoClass='det-monto'; // Admin siempre ve el monto
 
-  const _enModoCobro = (window._colabCobrando===id);
   document.getElementById('admin-det-content').innerHTML=`
     <div class="det-card">
-
-      ${_enModoCobro?`<div style="background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
-        <span style="font-size:18px">⚠️</span>
-        <div><div style="font-size:13px;font-weight:800;color:#92400e">Cobrando este lote</div>
-        <div style="font-size:11px;color:#b45309">Completá el cobro (efectivo y vuelto) o tocá "No cobré" para salir.</div></div>
-      </div>`:''}
 
       <!-- 1. Lote + nombre -->
       <div class="det-lote">${loteTag}${c.moneda==='USD'?'<span style="font-size:12px;background:#1a3a4a;color:#7ab5d0;border:1px solid #3a6a8a;padding:2px 8px;border-radius:6px;margin-left:8px;font-weight:700">💵 USD</span>':''}</div>
@@ -9966,19 +9958,8 @@ function renderColab(){
   }catch(e){console.error('renderColab error:',e);el.innerHTML='<div class="empty">Error al cargar lista: '+e.message+'</div>';}
 }
 
-function colabNoCobre(id){
-  if(!confirm('¿Confirmás que NO cobraste este lote?\n\nSe va a cerrar sin registrar el pago.')) return;
-  try{
-    const c=loadData().find(x=>x.id===id);
-    if(c) addHist('edit','👁️ Colaborador vio la cuota de '+c.mz+' Lote '+c.lote+' y NO cobró',id);
-  }catch(e){}
-  window._colabCobrando=null;   // libera la traba
-  volverColab();
-}
-
 function mostrarDetColab(id){
   cobDetalleId=id;
-  window._colabCobrando = null;  // v1.0433: al abrir todavía no reveló el monto; la traba se activa con "Ver cuota"
   const lista=document.getElementById('colab-lista');
   const det=document.getElementById('colab-detalle');
   if(window.innerWidth>=768){
@@ -10016,11 +9997,6 @@ function mostrarDetColab(id){
   renderDetColab(id);
 }
 function volverColab(){
-  // v1.0433: no permitir salir sin resolver el cobro
-  if(window._colabCobrando){
-    alert('⚠️ Estás cobrando este lote.\n\nTenés que completar el cobro (efectivo y vuelto) o tocar "No cobré" para salir.');
-    return;
-  }
   const lista=document.getElementById('colab-lista');
   const det=document.getElementById('colab-detalle');
   // Restore lista to center
@@ -10434,9 +10410,6 @@ function actualizarResumenColabConAdelantos(id){
 function colabVerCuota(id){
   const el=document.getElementById('colab-accion-'+id);
   if(!el) return;
-  // v1.0433: al revelar el monto, entra en modo cobro obligatorio
-  window._colabCobrando = id;
-  renderDetColab(id);  // repinta con el banner de aviso y el botón "No cobré"
   // Desbloquear monto
   const montoVal=document.getElementById('colab-monto-val-'+id);
   const montoBox=document.getElementById('colab-monto-box-'+id);
@@ -10676,7 +10649,6 @@ function renderDetColab(id){
       <div class="det-row"><span class="det-label">Saldo</span><span class="det-val" style="color:${saldoColor}">${saldoTxt}</span></div>
       <div style="margin-top:1rem"><div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Últimas 3 cuotas</div><div class="hist-cuotas">${histHtml}</div></div>
       ${pagoBtn}
-      ${_enModoCobro?`<button onclick="colabNoCobre('${id}')" style="width:100%;margin-top:8px;padding:10px;background:none;border:1.5px solid #dc2626;color:#dc2626;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">✗ No cobré este lote</button>`:''}
       <div class="obs-area" style="margin-top:.75rem">
         <h4>Teléfono</h4>
         ${c.tel
