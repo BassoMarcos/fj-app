@@ -1157,7 +1157,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0435';
+  datos['_version']='v1.0436';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9948,7 +9948,7 @@ function renderColab(){
     const cantMora=cuotasMoraAll.filter(cm=>cm.clienteId===c.id).length;
 
     const loteStr = formatLoteTag(c.mz,c.lote);
-    return `<div onclick="mostrarDetColab('${c.id}')" style="cursor:pointer;border-radius:var(--r);margin:4px 8px;border:1px solid var(--border);padding:10px 12px;background:${isUSD?'#dcfce7':''}" data-usd="${isUSD}" onmouseover="this.style.background=this.dataset.usd==='true'?'#bbf7d0':'#f8fafc'" onmouseout="this.style.background=this.dataset.usd==='true'?'#dcfce7':''">
+    return `<div onclick="mostrarDetColab('${c.id}')" style="cursor:pointer;border-radius:var(--r);margin:4px 8px;border:1px solid var(--border);padding:10px 12px;background:${isUSD?'var(--green-bg)':'var(--surface)'}" data-usd="${isUSD}" onmouseover="this.style.background='var(--hov)'" onmouseout="this.style.background=this.dataset.usd==='true'?'var(--green-bg)':'var(--surface)'">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:3px">
         <span class="lote-tag" style="font-size:15px;padding:4px 12px 4px 0;font-weight:800;flex-shrink:0;min-width:90px;background:transparent;border:none;color:var(--acc2)">${loteStr}</span>
         ${isUSD?'<span style="font-size:11px;background:#1a3a4a;color:#7ab5d0;border:1px solid #3a6a8a;padding:2px 6px;border-radius:4px;font-weight:700;flex-shrink:0">💵</span>':''}
@@ -10466,8 +10466,7 @@ function colabVerCuota(id){
     <button onclick="colabCobrarTransfer('${id}',0)" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:2px solid #a78bfa;color:#a78bfa;border-radius:var(--r);cursor:pointer;font-weight:700">🏦 Transferencia</button>
     <button onclick="colabToggleAdelanto('${id}')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:1.5px solid #7dd3fc;color:#5eb0ef;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantos</button>
     </div>
-    <div id="adelanto-selector-${id}" style="display:none"></div>
-    <button onclick="colabNoCobre('${id}')" style="width:100%;margin-top:8px;padding:10px;background:none;border:1.5px solid #dc2626;color:#dc2626;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">✗ No cobré la cuota</button>`;
+    <div id="adelanto-selector-${id}" style="display:none"></div>`;
   _colabBloquearLista();
 }
 
