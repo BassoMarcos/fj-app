@@ -809,6 +809,12 @@ tr:hover td{background:var(--bg)}
       </select>
     </div>
 
+    <div class="field" id="e-saldo-wrap" style="display:none">
+      <label style="font-size:12px">Saldo del cliente (SAF / SEC)</label>
+      <input type="text" id="e-saldo" inputmode="numeric" placeholder="0" oninput="actualizarSaldoHint()" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);box-sizing:border-box">
+      <div id="e-saldo-hint" style="font-size:11px;color:var(--text2);margin-top:4px">Positivo = saldo a favor (SAF). Negativo = saldo en contra (SEC). Ej: 5000 a favor, -5000 en contra.</div>
+    </div>
+
     <div style="height:1px;background:var(--border);margin:14px 0 12px"></div>
     <div class="form-actions">
       <button class="btn" onclick="closeModal('modal-edit')">Cancelar</button>
@@ -1960,6 +1966,14 @@ function initAdminLoteFilter(){
 
 
 
+function actualizarSaldoHint(){
+  const el=document.getElementById('e-saldo'); const h=document.getElementById('e-saldo-hint'); if(!el||!h) return;
+  const v=parseFloat(String(el.value).replace(/[^\d.-]/g,''))||0;
+  if(v>0){ h.textContent='✅ Saldo A FAVOR del cliente: $'+Math.abs(v).toLocaleString('es-AR'); h.style.color='var(--green)'; }
+  else if(v<0){ h.textContent='⚠️ Saldo EN CONTRA del cliente: $'+Math.abs(v).toLocaleString('es-AR'); h.style.color='var(--red)'; }
+  else { h.textContent='Positivo = a favor (SAF). Negativo = en contra (SEC).'; h.style.color='var(--text2)'; }
+}
+
 function openEditModal(id){
   editId=id;
   const data=loadData();
@@ -1998,6 +2012,8 @@ function openEditModal(id){
   const triDisp=document.getElementById('e-tri-display');
   if(triDisp){triDisp.textContent=c.tri||'';triDisp.style.color='var(--text)';}
   safe('e-est',c.est||'activo');
+  safe('e-saldo',c.saldo||0);
+  { const w=document.getElementById('e-saldo-wrap'); if(w) w.style.display='block'; actualizarSaldoHint(); }
   // Titulares
   const wrap=document.getElementById('titulares-fields');
   wrap.innerHTML='';
@@ -9161,11 +9177,9 @@ function saveCliente(){
   const saldo = !editId
     ? (_lotesSeleccionados[0]?(_lotesSeleccionados[0].saldo||0):0)
     : (()=>{
-        const mEl=document.getElementById('e-saldo-monto');
-        const tEl=document.getElementById('e-saldo-tipo');
-        if(!mEl||!tEl){ const cd=loadData().find(x=>x.id===editId); return cd?cd.saldo:0; }
-        const m=+mEl.value||0; const t=tEl.value;
-        return t==='favor'?m:-m;
+        const sEl=document.getElementById('e-saldo');
+        if(sEl){ return parseFloat(String(sEl.value).replace(/[^\d.-]/g,''))||0; }
+        const cd=loadData().find(x=>x.id===editId); return cd?cd.saldo:0;
       })();
   const fechaFirma=document.getElementById('e-fecha-firma').value||'';
   const data=loadData();
@@ -9195,6 +9209,7 @@ function saveCliente(){
         }
       }
       c.ct=+safe2('e-ct')||c.ct||48;
+      if((c.saldo||0)!==(saldo||0)){ addHist('edit','Ajuste manual de saldo en '+mz+' Lote '+lote+': '+(c.saldo||0)+' → '+saldo+((saldo>0)?' (a favor)':(saldo<0?' (en contra)':'')),editId); }
       c.saldo=saldo;
       if(safe2('e-tri')) c.tri=safe2('e-tri');
       if(safe2('e-est')) c.est=safe2('e-est');
