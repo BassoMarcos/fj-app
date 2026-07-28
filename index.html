@@ -1157,7 +1157,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0408';
+  datos['_version']='v1.0434';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2942,6 +2942,7 @@ function fcConfirmar(){
     }catch(e){}
   },4000);
   cerrarFormCobro();
+  if(typeof _colabDesbloquearLista==='function') _colabDesbloquearLista();  // v1.0434: cobro OK, liberar lista
   if(x.ctx==='colab'){ if(typeof renderDetColab==='function') renderDetColab(id); }
   else { if(typeof renderAdminDet==='function') renderAdminDet(id); if(typeof renderAdminTable==='function') renderAdminTable(); }
 }
@@ -9997,6 +9998,10 @@ function mostrarDetColab(id){
   renderDetColab(id);
 }
 function volverColab(){
+  if(window._colabCobrando){
+    alert('⚠️ Estás cobrando este lote.\n\nCompletá el cobro o tocá "No cobré la cuota" para salir.');
+    return;
+  }
   const lista=document.getElementById('colab-lista');
   const det=document.getElementById('colab-detalle');
   // Restore lista to center
@@ -10407,6 +10412,28 @@ function actualizarResumenColabConAdelantos(id){
   }
 }
 
+// v1.0434: bloquear/desbloquear la lista izquierda mientras se cobra
+function _colabBloquearLista(){
+  window._colabCobrando=true;
+  const lista=document.getElementById('colab-lista');
+  if(lista){ lista.style.opacity='.35'; lista.style.pointerEvents='none'; lista.style.filter='grayscale(.5)'; }
+  const back=document.querySelector('#colab-detalle .btn-back');
+  if(back){ back.style.opacity='.4'; back.style.pointerEvents='none'; back.dataset.bloqueado='1'; }
+}
+function _colabDesbloquearLista(){
+  window._colabCobrando=false;
+  const lista=document.getElementById('colab-lista');
+  if(lista){ lista.style.opacity=''; lista.style.pointerEvents=''; lista.style.filter=''; }
+  const back=document.querySelector('#colab-detalle .btn-back');
+  if(back){ back.style.opacity=''; back.style.pointerEvents=''; back.dataset.bloqueado=''; }
+}
+function colabNoCobre(id){
+  if(!confirm('¿Confirmás que NO cobraste este lote?\n\nSe cierra sin registrar el pago.')) return;
+  try{ const c=loadData().find(x=>x.id===id); if(c) addHist('edit','👁️ Colaborador vio la cuota de '+c.mz+' Lote '+c.lote+' y NO cobró',id); }catch(e){}
+  _colabDesbloquearLista();
+  volverColab();
+}
+
 function colabVerCuota(id){
   const el=document.getElementById('colab-accion-'+id);
   if(!el) return;
@@ -10427,7 +10454,9 @@ function colabVerCuota(id){
     <button onclick="colabCobrarTransfer('${id}',0)" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:2px solid #a78bfa;color:#a78bfa;border-radius:var(--r);cursor:pointer;font-weight:700">🏦 Transferencia</button>
     <button onclick="colabToggleAdelanto('${id}')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:1.5px solid #7dd3fc;color:#5eb0ef;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantos</button>
     </div>
-    <div id="adelanto-selector-${id}" style="display:none"></div>`;
+    <div id="adelanto-selector-${id}" style="display:none"></div>
+    <button onclick="colabNoCobre('${id}')" style="width:100%;margin-top:8px;padding:10px;background:none;border:1.5px solid #dc2626;color:#dc2626;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">✗ No cobré la cuota</button>`;
+  _colabBloquearLista();
 }
 
 function colabCobrarYVerde(id, interes){
