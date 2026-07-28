@@ -1237,6 +1237,7 @@ function loadData(){
             pagoTs:pagoTs,
             autopago:sc.autopago!==undefined?sc.autopago:(b.autopago||false),
             empresaPaga:sc.empresaPaga!==undefined?sc.empresaPaga:(b.empresaPaga||false),
+            saldoDifUltimoCobro:sc.saldoDifUltimoCobro!==undefined?sc.saldoDifUltimoCobro:0,
             primeraCuota:sc.primeraCuota!==undefined?sc.primeraCuota:(b.primeraCuota!==undefined?b.primeraCuota:null),
             primeraCuotaAnio:sc.primeraCuotaAnio!==undefined?sc.primeraCuotaAnio:(b.primeraCuotaAnio!==undefined?b.primeraCuotaAnio:null),
             fechaFirma:sc.fechaFirma||b.fechaFirma||null,
@@ -1285,6 +1286,7 @@ function saveData(d){
     moneda:c.moneda||'ARS', agrimensor:c.agrimensor||false,
     autopago:c.autopago||false,
     empresaPaga:c.empresaPaga||false,
+    saldoDifUltimoCobro:c.saldoDifUltimoCobro||0,
     tel:c.tel||'', dni:c.dni||[], obs:c.obs||[], hist:c.hist||[],
     primeraCuota:c.primeraCuota!==undefined?c.primeraCuota:null,
     primeraCuotaAnio:c.primeraCuotaAnio!==undefined?c.primeraCuotaAnio:null,
@@ -2926,7 +2928,7 @@ function fcConfirmar(){
     const data=loadData();const c2=data.find(cl=>cl.id===id);
     if(c2){
       c2.pago=true; c2.pagoTs=ts;
-      if(dif!==0) c2.saldo=(Number(c2.saldo)||0)+dif;
+      if(dif!==0){ c2.saldo=(Number(c2.saldo)||0)+dif; c2.saldoDifUltimoCobro=dif; } else { c2.saldoDifUltimoCobro=0; }
       saveData(data);
       setPagoState(id,true,ts);
     }
@@ -11008,6 +11010,13 @@ function desmarcarPago(id){
   const data=loadData();const c=data.find(x=>x.id===id);if(!c)return;
   setPagoState(id,false);
   c.pago=false;c.pagoTs=null;
+  // v1.0432: revertir el SAF/SEC (vuelto/diferencia) que había generado este cobro
+  const difRev=Number(c.saldoDifUltimoCobro)||0;
+  if(difRev!==0){
+    c.saldo=(Number(c.saldo)||0)-difRev;
+    addHist('edit','Se revirtió el saldo del cobro anulado en '+c.mz+' Lote '+c.lote+': '+(difRev>0?'-SAF ':'+SEC ')+fmtPeso(Math.abs(difRev)),id);
+    c.saldoDifUltimoCobro=0;
+  }
   saveData(data);
   const bal=loadBalances();
   bal.abierto=(bal.abierto||[]).filter(p=>p.id!==id);
