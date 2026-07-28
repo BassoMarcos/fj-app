@@ -1157,7 +1157,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0436';
+  datos['_version']='v1.0437';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11604,8 +11604,8 @@ function applyFjTheme(t){
   r.setProperty('--blue', t.bluTxt);
   r.setProperty('--blue-border', t.bluTxt+'88');
   // Navbar
-  const nb=document.querySelector('.topbar')||document.querySelector('.navbar');
-  if(nb) nb.style.background=t.nav;
+  // v1.0437: aplicar el color de la barra a TODAS las topbar (admin y colaborador)
+  document.querySelectorAll('.topbar, .navbar').forEach(nb=>{ nb.style.background=t.nav; nb.style.color=t.txt; });
   document.body.style.background=t.bg;
   document.body.style.color=t.txt;
   // Save
