@@ -1169,7 +1169,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0443';
+  datos['_version']='v1.0444';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9391,6 +9391,16 @@ function renderHistorial(){
   const h=loadHist();
   const el=document.getElementById('a-hist-list');
   if(!el)return;
+
+  // Migración única: reetiquetar eventos viejos "Colaborador vio la cuota" (edit -> colabvio)
+  if(!window._migColabVio){
+    let cambios=0;
+    h.forEach(e=>{
+      if(e.tipo==='edit'&&typeof e.desc==='string'&&e.desc.includes('Colaborador vio la cuota')){ e.tipo='colabvio'; cambios++; }
+    });
+    if(cambios>0) saveHist(h);
+    window._migColabVio=true;
+  }
 
   const filtro=(window._histFiltro||'').toLowerCase();
   const porFecha=!!window._histPorFecha;
