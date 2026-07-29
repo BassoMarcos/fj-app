@@ -925,6 +925,18 @@ function toggleMoraDesactivada(){const v=getMoraDesactivada();const nv=v?'0':'1'
 function loadExtras(){try{return JSON.parse(localStorage.getItem('fj_extras')||'[]');}catch(e){return [];}}
 function saveExtras(v){localStorage.setItem('fj_extras',JSON.stringify(v));sheetsSet('Extras',v);window._fbSet('extras',v).catch(e=>console.warn('FB extras error:',e));}
 
+function limpiarTransferencias(){
+  const bal=loadBalances();
+  const n=(bal.transferencias||[]).length;
+  if(!n){ alert('No hay transferencias para limpiar.'); return; }
+  if(!confirm('🧹 LIMPIAR TRANSFERENCIAS\n\nSe van a vaciar las '+n+' transferencia(s) de la lista.\n\nEsto NO desmarca los pagos de las cuotas: los lotes siguen cobrados. Solo se limpia el registro de transferencias de la caja.\n\n¿Continuar?')) return;
+  bal.transferencias=[];
+  saveBalances(bal);
+  addHist('edit','🧹 Se limpiaron '+n+' transferencia(s) de la caja (los pagos siguen intactos)');
+  if(typeof renderBalances==='function') renderBalances();
+  alert('✅ Transferencias limpiadas. Los pagos de las cuotas siguen intactos.');
+}
+
 function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[],transferencias:Array.isArray(b.transferencias)?b.transferencias:[],cajaFisica:Array.isArray(b.cajaFisica)?b.cajaFisica:[],fusiones:Array.isArray(b.fusiones)?b.fusiones:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[],transferencias:[],cajaFisica:[],fusiones:[]};}}
 function saveBalances(d){_lsSet(dKey('balances'),JSON.stringify(d));sheetsSet('Balances',[{json:'STR:'+JSON.stringify(d)}]);}
 function _parseAdelantoCuotas(c){
@@ -1157,7 +1169,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0438';
+  datos['_version']='v1.0439';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5402,7 +5414,10 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
       <div style="margin-top:1rem">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
           <div style="font-size:14px;font-weight:700;color:#a78bfa">🏦 TRANSFERENCIAS</div>
-          <div style="font-size:15px;font-weight:800;color:#a78bfa">${fmtPeso(totalTP)}${totalTU?' · USD '+fmtPeso(totalTU):''}</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            ${(bal.transferencias||[]).length?`<button onclick="limpiarTransferencias()" style="background:none;border:1px solid #a78bfa;color:#a78bfa;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">🧹 Limpiar</button>`:''}
+            <div style="font-size:15px;font-weight:800;color:#a78bfa">${fmtPeso(totalTP)}${totalTU?' · USD '+fmtPeso(totalTU):''}</div>
+          </div>
         </div>
         <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.35);border-radius:var(--r);padding:1rem">
           ${abTransf.length?abTransf.slice().reverse().map(p=>{
