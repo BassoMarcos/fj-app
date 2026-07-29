@@ -1157,7 +1157,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0437';
+  datos['_version']='v1.0438';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2784,6 +2784,19 @@ function fcElegir(tipo){
   abrirFormCobro(p.id,{ctx:p.ctx,transfer:true,transferTipo:tipo,interes:p.interes});
 }
 
+// v1.0438: cambiar método de pago dentro del formulario
+function fcCambiarMetodo(metodo){
+  const x=window._fcCtx; if(!x) return;
+  const id=x.id, ctx=x.ctx, interes=x.interes;
+  if(metodo==='efectivo'){
+    abrirFormCobro(id,{ctx,interes});
+  } else {
+    // transferencia: mostrar el submenú total/parcial
+    window._fcPend={id,ctx,interes};
+    elegirTipoTransferencia(id,ctx,interes);
+  }
+}
+
 // ═══════════ FORMULARIO DE COBRO (entregó/vuelto/transferencia 21%) ═══════════
 window._fcCtx=null;
 function abrirFormCobro(id, opts){
@@ -2814,6 +2827,10 @@ function abrirFormCobro(id, opts){
   m.innerHTML='<div style="background:var(--card);border-radius:14px;max-width:420px;width:100%;max-height:92vh;overflow-y:auto;padding:1.25rem" onclick="event.stopPropagation()">'
     +'<div style="font-size:16px;font-weight:800;margin-bottom:2px">'+(opts.transfer?'🏦 Cobro con transferencia':'✓ Cobrar cuota')+'</div>'
     +'<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+formatLoteTag(c.mz,c.lote)+' — '+c.titular+'</div>'
+    +'<div style="display:flex;gap:6px;margin-bottom:12px">'
+      +'<button onclick="fcCambiarMetodo(\'efectivo\')" style="flex:1;padding:9px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;border:2px solid '+(opts.transfer?'var(--border2)':'#16a34a')+';background:'+(opts.transfer?'none':'#16a34a')+';color:'+(opts.transfer?'var(--text2)':'#fff')+'">💵 Efectivo</button>'
+      +'<button onclick="fcCambiarMetodo(\'transferencia\')" style="flex:1;padding:9px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;border:2px solid '+(opts.transfer?'#a78bfa':'var(--border2)')+';background:'+(opts.transfer?'#7c3aed':'none')+';color:'+(opts.transfer?'#fff':'var(--text2)')+'">🏦 Transferencia</button>'
+    +'</div>'
     +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px">'
     +desg
     +'<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--green-bg)"><span style="font-weight:800">Total cuota</span><span style="font-size:17px;font-weight:800;color:var(--green)">'+cur+fmtPeso(totalCuota)+'</span></div>'
@@ -7221,7 +7238,6 @@ function renderAdminDet(id){
     pagoBtn='<div style="margin-top:.75rem">'
       +'<button id="'+cid+'-btn" data-mid="'+id+'" data-cuota="'+montoCobrable(c).total+'" data-base="'+montoCobrable(c).base+'" data-adicional="'+montoCobrable(c).adicional+'" data-interes="'+_mora.interes+'" data-cid="'+cid+'" data-cur="'+cur+'" onclick="admCobrarAutoById(this)" style="width:100%;background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">✓ Cobrar</button>'
       +'<div style="display:flex;gap:4px;margin-bottom:6px">'
-      +'<button onclick="cobrarPorTransferencia(\''+id+'\')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:2px solid #a78bfa;color:#a78bfa;border-radius:var(--r);cursor:pointer;font-weight:700">🏦 Transferencia</button>'
       +'<button onclick="admToggleAdelanto(\''+id+'\')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:1.5px solid #7dd3fc;color:#5eb0ef;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantos</button>'
       +'<button data-cid="'+cid+'" onclick="admToggleInteresDif(this.dataset.cid)" style="flex:1;padding:7px 2px;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);font-size:11px;font-weight:700;cursor:pointer">⚠️ Interés dif.</button>'
       +'</div>'
@@ -7246,7 +7262,6 @@ function renderAdminDet(id){
     pagoBtn=`
     <button class="btn btn-primary" onclick="adminMarcarPago('${id}')" style="width:100%;margin-top:.5rem;padding:8px;font-size:14px;font-weight:700">✓ Cobrar</button>
     <div style="display:flex;gap:4px;margin-top:6px">
-      <button onclick="cobrarPorTransferencia('${id}')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:2px solid #a78bfa;color:#a78bfa;border-radius:var(--r);cursor:pointer;font-weight:700">🏦 Transferencia</button>
       <button onclick="admToggleAdelanto('${id}')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:1.5px solid #7dd3fc;color:#5eb0ef;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantos</button>
     </div>
     <div id="adelanto-selector-${id}" style="display:none"></div>
@@ -10463,7 +10478,6 @@ function colabVerCuota(id){
   el.innerHTML=`
     <button class="btn btn-primary" onclick="colabCobrarYVerde('${id}',0)" style="width:100%;margin-top:.5rem;padding:10px;font-size:14px;font-weight:700">✓ Cobrar</button>
     <div style="display:flex;gap:4px;margin-top:6px">
-    <button onclick="colabCobrarTransfer('${id}',0)" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:2px solid #a78bfa;color:#a78bfa;border-radius:var(--r);cursor:pointer;font-weight:700">🏦 Transferencia</button>
     <button onclick="colabToggleAdelanto('${id}')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:1.5px solid #7dd3fc;color:#5eb0ef;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantos</button>
     </div>
     <div id="adelanto-selector-${id}" style="display:none"></div>`;
