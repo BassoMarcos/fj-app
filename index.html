@@ -1169,7 +1169,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0445';
+  datos['_version']='v1.0446';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9451,14 +9451,27 @@ function renderHistorial(){
   const limpiarBtn=btn('var(--red-bg)','#fca5a5','var(--red)','🗑 Limpiar','confirmarConClave(()=>{saveHist([]);renderHistorial();})');
   const barra=`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">${buscador}${toggleBtn}${limpiarBtn}</div>`;
 
-  const cabecera=(key,icon,titulo,color,count,colapsada)=>`<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:${color}14;border-bottom:${colapsada?'0':'2px solid '+color}">
-      <span onclick="window._histCol=window._histCol||{};window._histCol['${key}']=!window._histCol['${key}'];renderHistorial()" style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;min-width:0">
-        <span style="font-size:11px;color:var(--text3);width:12px">${colapsada?'▸':'▾'}</span>
-        <span style="font-size:14px">${icon}</span>
-        <span style="font-size:12px;font-weight:700;color:var(--text);letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titulo}</span>
-      </span>
+  // Calcula items + cuerpo html de una sección
+  const buildSec=(s)=>{
+    let items;
+    if(s.key==='obs'){
+      items=obsCuota.filter(o=>!filtro||txtObs(o).includes(filtro)).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+      return {items, cuerpo: items.length?items.map(filaObs).join(''):vacio};
+    } else if(s.key==='sistema'){
+      items=logEvents.filter(e=>esSistema(e.tipo)&&(!filtro||txtLog(e).includes(filtro))).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+      return {items, cuerpo: items.length?items.map(filaLog).join(''):vacio};
+    } else {
+      const tipos=[s.key].concat(s.extra||[]);
+      items=logEvents.filter(e=>tipos.includes(e.tipo)&&(!filtro||txtLog(e).includes(filtro))).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+      return {items, cuerpo: items.length?items.map(filaLog).join(''):vacio};
+    }
+  };
+
+  // Cabecera unificada por fecha (sin key)
+  const cabeceraTop=(icon,titulo,color,count)=>`<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:${color}14;border-bottom:2px solid ${color}">
+      <span style="font-size:14px">${icon}</span>
+      <span style="font-size:12px;font-weight:700;color:var(--text);flex:1">${titulo}</span>
       <span style="font-size:11px;font-weight:700;color:#fff;background:${color};border-radius:10px;padding:1px 8px;min-width:22px;text-align:center">${count}</span>
-      ${key?`<button title="Limpiar esta sección" onclick="limpiarSeccionHist('${key}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 4px;line-height:1">🗑</button>`:''}
     </div>`;
 
   if(porFecha){
@@ -9468,33 +9481,57 @@ function renderHistorial(){
     all.sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
     const lista=all.length?all.map(x=>x.html).join(''):vacio;
     el.innerHTML=barra+`<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)">
-        ${cabecera('','🕓','Todo por fecha','#64748b',all.length,false)}
+        ${cabeceraTop('🕓','Todo por fecha','#64748b',all.length)}
         <div style="max-height:640px;overflow-y:auto">${lista}</div>
       </div>`;
     return;
   }
 
-  const cards=SECS.map(s=>{
-    let items;
-    if(s.key==='obs'){
-      items=obsCuota.filter(o=>!filtro||txtObs(o).includes(filtro)).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
-      var cuerpo=items.length?items.map(filaObs).join(''):vacio;
-    } else if(s.key==='sistema'){
-      items=logEvents.filter(e=>esSistema(e.tipo)&&(!filtro||txtLog(e).includes(filtro))).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
-      var cuerpo=items.length?items.map(filaLog).join(''):vacio;
-    } else {
-      const tipos=[s.key].concat(s.extra||[]);
-      items=logEvents.filter(e=>tipos.includes(e.tipo)&&(!filtro||txtLog(e).includes(filtro))).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
-      var cuerpo=items.length?items.map(filaLog).join(''):vacio;
-    }
-    const colapsada=!!(window._histCol&&window._histCol[s.key]);
-    return `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(0,0,0,.04)">
-        ${cabecera(s.key,s.icon,s.titulo,s.color,items.length,colapsada)}
-        ${colapsada?'':`<div style="max-height:520px;overflow-y:auto;flex:1">${cuerpo}</div>`}
-      </div>`;
-  }).join('');
+  // ===== Modo maestro-detalle =====
+  const sel=window._histSel||null;   // key de la sección abierta (o null)
 
-  el.innerHTML=barra+`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;align-items:start">${cards}</div>`;
+  // "Pastilla" de cada sección (comprimida)
+  const pill=(s,activa,lista)=>{
+    const {items}=buildSec(s);
+    return `<div onclick="window._histSel=(window._histSel==='${s.key}'?null:'${s.key}');renderHistorial()"
+      style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;cursor:pointer;
+        background:${activa?s.color+'22':'var(--card)'};
+        border:1px solid ${activa?s.color:'var(--border)'};
+        box-shadow:0 1px 3px rgba(0,0,0,.04);transition:all .12s;${lista?'':'min-width:150px'}">
+      <span style="font-size:18px">${s.icon}</span>
+      <span style="font-size:13px;font-weight:700;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.titulo}</span>
+      <span style="font-size:11px;font-weight:700;color:#fff;background:${s.color};border-radius:10px;padding:1px 8px;min-width:22px;text-align:center">${buildSec(s).items.length}</span>
+    </div>`;
+  };
+
+  if(!sel){
+    // Estado inicial: todas comprimidas, centradas
+    const pills=SECS.map(s=>pill(s,false,false)).join('');
+    el.innerHTML=barra+`
+      <div style="max-width:360px;margin:0 auto;display:flex;flex-direction:column;gap:10px;padding-top:8px">
+        <div style="text-align:center;font-size:12px;color:var(--text3);margin-bottom:4px">Elegí una sección para ver el detalle</div>
+        ${pills}
+      </div>`;
+    return;
+  }
+
+  // Sección abierta: lista de secciones a la izquierda, detalle a la derecha
+  const listaSecs=SECS.map(s=>pill(s,s.key===sel,true)).join('');
+  const secSel=SECS.find(s=>s.key===sel);
+  const {cuerpo,items}=buildSec(secSel);
+  el.innerHTML=barra+`
+    <div style="display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:8px">${listaSecs}</div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)">
+        <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;background:${secSel.color}14;border-bottom:2px solid ${secSel.color}">
+          <span style="font-size:16px">${secSel.icon}</span>
+          <span style="font-size:13px;font-weight:700;color:var(--text);flex:1">${secSel.titulo}</span>
+          <span style="font-size:11px;font-weight:700;color:#fff;background:${secSel.color};border-radius:10px;padding:1px 8px;min-width:22px;text-align:center">${items.length}</span>
+          <button title="Limpiar esta sección" onclick="limpiarSeccionHist('${secSel.key}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 4px">🗑</button>
+        </div>
+        <div style="max-height:600px;overflow-y:auto">${cuerpo}</div>
+      </div>
+    </div>`;
 }
 
 function limpiarSeccionHist(key){
