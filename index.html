@@ -550,7 +550,7 @@ tr:hover td{background:var(--bg)}
         <div id="respaldos-panel"></div>
       </div>
     </div>
-    <div id="atab-historial" style="display:none"><div style="max-width:1000px;margin:0 auto;padding:2rem 1.5rem">
+    <div id="atab-historial" style="display:none"><div style="max-width:1400px;margin:0 auto;padding:2rem 1.5rem">
       <h2 style="margin-bottom:1rem;font-size:16px">Historial de actividad</h2>
       <div class="hist-list" id="a-hist-list"></div>
     </div></div>
@@ -1169,7 +1169,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0442';
+  datos['_version']='v1.0443';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9395,96 +9395,91 @@ function renderHistorial(){
   const filtro=(window._histFiltro||'').toLowerCase();
   const porFecha=!!window._histPorFecha;
 
-  // Observaciones reales: se toman de cada cliente (obs a mano), con lote y cuota
+  // Observaciones reales (escritas a mano en cada cliente)
   const obsCuota=[];
   loadData().forEach(c=>{
     (c.obs||[]).forEach(o=>{
       obsCuota.push({tipo:'obs',id:c.id,titular:c.titular||'',txt:o.txt||'',ts:o.ts||'',cuota:(o.cuota!==undefined?o.cuota:null)});
     });
   });
-
-  // Resto de eventos del log (hist), excluyendo obs (esas ya salen de arriba)
   const logEvents=h.filter(e=>e.tipo!=='obs');
 
-  // Definición de secciones/columnas
   const SECS=[
-    {key:'obs',      titulo:'📋 Observaciones', color:'var(--amber)'},
-    {key:'pago',     titulo:'💰 Pagos',         color:'var(--green)'},
-    {key:'mora',     titulo:'⚠️ Mora',          color:'var(--red)'},
-    {key:'adelanto', titulo:'⏩ Adelantos',      color:'var(--acc2)'},
-    {key:'desmarcar',titulo:'↩️ Desmarcados / Colab no cobró', color:'var(--red)', extra:['colabvio']},
-    {key:'sistema',  titulo:'🔧 Cambios / ICC',  color:'var(--text2)'}
+    {key:'obs',      icon:'📋', titulo:'Observaciones',            color:'#f59e0b'},
+    {key:'pago',     icon:'💰', titulo:'Pagos',                   color:'#22c55e'},
+    {key:'mora',     icon:'⚠️', titulo:'Mora',                    color:'#ef4444'},
+    {key:'adelanto', icon:'⏩', titulo:'Adelantos',               color:'#3b82f6'},
+    {key:'desmarcar',icon:'↩️', titulo:'Desmarcados / Colab no cobró', color:'#f97316', extra:['colabvio']},
+    {key:'sistema',  icon:'🔧', titulo:'Cambios / ICC',           color:'#8b5cf6'}
   ];
-  const perteneceSistema=(t)=>(t==='edit'||t==='icc');
+  const esSistema=(t)=>(t==='edit'||t==='icc');
 
-  // Normaliza un item de obs a fila html
-  const filaObs=(o)=>`<div style="padding:8px 10px;border-bottom:1px solid var(--border)">
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:2px">
-        <span style="font-size:10px;color:var(--text3)">${fmtDate(o.ts)}</span>
-        <span style="font-weight:700;font-size:12px;color:var(--acc2)">${o.id}</span>
-        ${o.cuota!==null?`<span style="font-size:10px;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:1px 6px;color:var(--text2)">Cuota ${o.cuota}</span>`:''}
-        <span style="font-size:11px;color:var(--text3)">${o.titular}</span>
+  const filaObs=(o)=>`<div style="padding:9px 12px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:3px">
+        <span style="font-weight:700;font-size:11px;color:var(--acc2);background:var(--bg);border-radius:5px;padding:1px 6px">${o.id}</span>
+        ${o.cuota!==null?`<span style="font-size:10px;background:var(--surface);border:1px solid var(--border2);border-radius:5px;padding:1px 6px;color:var(--text2)">Cuota ${o.cuota}</span>`:''}
+        <span style="font-size:10px;color:var(--text3);margin-left:auto">${fmtDate(o.ts)}</span>
       </div>
-      <div style="font-size:12.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${o.txt}</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:2px">${o.titular}</div>
+      <div style="font-size:12.5px;color:var(--text);line-height:1.35;white-space:pre-wrap;word-break:break-word">${o.txt}</div>
     </div>`;
-  // Normaliza un item de log a fila html
-  const filaLog=(e)=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-bottom:1px solid var(--border)">
-      <div style="min-width:70px;font-size:11px;color:var(--text3);padding-top:1px">${fmtDate(e.ts)}</div>
-      <div style="flex:1;min-width:0;font-size:12.5px;color:var(--text);word-break:break-word">${e.desc}</div>
+  const filaLog=(e)=>`<div style="padding:9px 12px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:2px"><span style="font-size:10px;color:var(--text3)">${fmtDate(e.ts)}</span></div>
+      <div style="font-size:12.5px;color:var(--text);line-height:1.35;word-break:break-word">${e.desc}</div>
     </div>`;
 
-  // Texto buscable de cada item
   const txtObs=(o)=>(o.id+' '+o.titular+' '+o.txt+' '+fmtDate(o.ts)).toLowerCase();
   const txtLog=(e)=>((e.desc||'')+' '+fmtDate(e.ts)).toLowerCase();
+  const vacio='<div style="color:var(--text3);font-size:12px;padding:16px 12px;text-align:center">Sin registros</div>';
 
-  const limpiarBtn=`<button onclick="confirmarConClave(()=>{saveHist([]);renderHistorial();})" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar historial</button>`;
-  const toggleBtn=`<button onclick="window._histPorFecha=!window._histPorFecha;renderHistorial()" style="background:${porFecha?'var(--acc)':'var(--surface)'};border:1px solid var(--border2);color:${porFecha?'#fff':'var(--text)'};padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">📅 ${porFecha?'Volver a secciones':'Ver todo por fecha'}</button>`;
-  const buscador=`<input type="text" placeholder="Buscar en todo el historial..." value="${(window._histFiltro||'').replace(/"/g,'&quot;')}"
+  const btn=(bg,bd,col,txt,onclick)=>`<button onclick="${onclick}" style="background:${bg};border:1px solid ${bd};color:${col};padding:7px 14px;border-radius:var(--r);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">${txt}</button>`;
+  const buscador=`<input type="text" placeholder="🔎 Buscar en todo el historial..." value="${(window._histFiltro||'').replace(/"/g,'&quot;')}"
       id="hist-search"
       oninput="window._histFiltro=this.value;clearTimeout(window._histT);window._histT=setTimeout(()=>{const p=this.selectionStart;renderHistorial();const n=document.getElementById('hist-search');if(n){n.focus();n.setSelectionRange(p,p);}},250)"
-      style="flex:1;min-width:180px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;background:var(--card);color:var(--text)">`;
-  const barra=`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">${buscador}${toggleBtn}${limpiarBtn}</div>`;
+      style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--text)">`;
+  const toggleBtn=btn(porFecha?'var(--acc)':'var(--surface)','var(--border2)',porFecha?'#fff':'var(--text)',`📅 ${porFecha?'Volver a secciones':'Ver todo por fecha'}`,'window._histPorFecha=!window._histPorFecha;renderHistorial()');
+  const limpiarBtn=btn('var(--red-bg)','#fca5a5','var(--red)','🗑 Limpiar','confirmarConClave(()=>{saveHist([]);renderHistorial();})');
+  const barra=`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">${buscador}${toggleBtn}${limpiarBtn}</div>`;
+
+  const cabecera=(icon,titulo,color,count)=>`<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:${color}14;border-bottom:2px solid ${color}">
+      <span style="font-size:14px">${icon}</span>
+      <span style="font-size:12px;font-weight:700;color:var(--text);letter-spacing:.02em;flex:1">${titulo}</span>
+      <span style="font-size:11px;font-weight:700;color:#fff;background:${color};border-radius:10px;padding:1px 8px;min-width:22px;text-align:center">${count}</span>
+    </div>`;
 
   if(porFecha){
-    // === Vista unificada por fecha ===
     let all=[];
     obsCuota.forEach(o=>{if(!filtro||txtObs(o).includes(filtro))all.push({ts:o.ts,html:filaObs(o)});});
     logEvents.forEach(e=>{if(!filtro||txtLog(e).includes(filtro))all.push({ts:e.ts,html:filaLog(e)});});
     all.sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
-    const lista=all.length?all.map(x=>x.html).join(''):'<div style="color:var(--text3);font-size:13px;padding:12px 10px">Sin registros</div>';
-    el.innerHTML=barra+`
-      <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">🕓 Todo por fecha (${all.length})</div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);max-height:620px;overflow-y:auto">${lista}</div>`;
+    const lista=all.length?all.map(x=>x.html).join(''):vacio;
+    el.innerHTML=barra+`<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)">
+        ${cabecera('🕓','Todo por fecha','#64748b',all.length)}
+        <div style="max-height:640px;overflow-y:auto">${lista}</div>
+      </div>`;
     return;
   }
 
-  // === Vista por secciones (columnas verticales) ===
-  const colHtml=SECS.map(s=>{
+  const cards=SECS.map(s=>{
     let items;
     if(s.key==='obs'){
-      items=obsCuota.filter(o=>!filtro||txtObs(o).includes(filtro))
-        .sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
-      var cuerpo=items.length?items.map(filaObs).join(''):'<div style="color:var(--text3);font-size:12px;padding:12px 10px">Sin registros</div>';
-      var count=items.length;
+      items=obsCuota.filter(o=>!filtro||txtObs(o).includes(filtro)).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+      var cuerpo=items.length?items.map(filaObs).join(''):vacio;
     } else if(s.key==='sistema'){
-      items=logEvents.filter(e=>perteneceSistema(e.tipo)&&(!filtro||txtLog(e).includes(filtro)))
-        .sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
-      var cuerpo=items.length?items.map(filaLog).join(''):'<div style="color:var(--text3);font-size:12px;padding:12px 10px">Sin registros</div>';
-      var count=items.length;
+      items=logEvents.filter(e=>esSistema(e.tipo)&&(!filtro||txtLog(e).includes(filtro))).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+      var cuerpo=items.length?items.map(filaLog).join(''):vacio;
     } else {
       const tipos=[s.key].concat(s.extra||[]);
-      items=logEvents.filter(e=>tipos.includes(e.tipo)&&(!filtro||txtLog(e).includes(filtro)))
-        .sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
-      var cuerpo=items.length?items.map(filaLog).join(''):'<div style="color:var(--text3);font-size:12px;padding:12px 10px">Sin registros</div>';
-      var count=items.length;
+      items=logEvents.filter(e=>tipos.includes(e.tipo)&&(!filtro||txtLog(e).includes(filtro))).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+      var cuerpo=items.length?items.map(filaLog).join(''):vacio;
     }
-    return `<div style="flex:1;min-width:230px;display:flex;flex-direction:column">
-      <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;border-left:3px solid ${s.color};padding-left:6px">${s.titulo} (${count})</div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);max-height:560px;overflow-y:auto;flex:1">${cuerpo}</div>
-    </div>`;
+    return `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(0,0,0,.04)">
+        ${cabecera(s.icon,s.titulo,s.color,items.length)}
+        <div style="max-height:520px;overflow-y:auto;flex:1">${cuerpo}</div>
+      </div>`;
   }).join('');
 
-  el.innerHTML=barra+`<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch">${colHtml}</div>`;
+  el.innerHTML=barra+`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;align-items:start">${cards}</div>`;
 }
 
 // ICC
