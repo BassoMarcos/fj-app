@@ -1169,7 +1169,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0439';
+  datos['_version']='v1.0440';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9019,7 +9019,7 @@ function guardarObsAdmin(id){
   const txt=document.getElementById('obs-admin-txt-'+id)?.value.trim();if(!txt)return;
   const data=loadData();const c=data.find(x=>x.id===id);if(!c)return;
   if(!c.obs)c.obs=[];
-  c.obs.push({txt,ts:new Date().toISOString()});
+  c.obs.push({txt,ts:new Date().toISOString(),cuota:c.ca});
   saveData(data);addHist('obs',`Obs admin — ${c.mz} Lote ${c.lote}: "${txt.slice(0,60)}"`,id);
   renderAdminDet(id);
 }
@@ -9422,7 +9422,42 @@ function renderHistorial(showAllPagos, showAllObs){
     <button onclick="confirmarConClave(()=>{saveHist([]);renderHistorial();})" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar historial</button>
   </div>`;
 
-  el.innerHTML=limpiarBtn+`
+  // ==== Observaciones de cuota (todas los lotes, por fecha) ====
+  const filtroObs=(window._obsCuotaFiltro||'').toLowerCase();
+  const todasObs=[];
+  loadData().forEach(c=>{
+    (c.obs||[]).forEach(o=>{
+      todasObs.push({id:c.id,titular:c.titular||'',txt:o.txt||'',ts:o.ts||'',cuota:(o.cuota!==undefined?o.cuota:null)});
+    });
+  });
+  todasObs.sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+  const obsFiltradas=filtroObs
+    ? todasObs.filter(o=>(o.id+' '+o.titular+' '+o.txt+' '+fmtDate(o.ts)).toLowerCase().includes(filtroObs))
+    : todasObs;
+  const obsCuotaHtml=obsFiltradas.length
+    ? obsFiltradas.map(o=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-bottom:1px solid var(--border)">
+        <div style="min-width:78px;font-size:11px;color:var(--text3);padding-top:1px">${fmtDate(o.ts)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:2px">
+            <span style="font-weight:700;font-size:12px;color:var(--acc2)">${o.id}</span>
+            ${o.cuota!==null?`<span style="font-size:10px;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:1px 6px;color:var(--text2)">Cuota ${o.cuota}</span>`:''}
+            <span style="font-size:11px;color:var(--text3)">${o.titular}</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${o.txt}</div>
+        </div>
+      </div>`).join('')
+    : '<div style="color:var(--text3);font-size:13px;padding:12px 10px">Sin observaciones</div>';
+  const obsCuotaSection=`
+    <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">📋 Observaciones de cuota (${todasObs.length})</div>
+    <input type="text" placeholder="Buscar por lote, titular, texto o fecha..." value="${(window._obsCuotaFiltro||'').replace(/"/g,'&quot;')}"
+      oninput="window._obsCuotaFiltro=this.value;clearTimeout(window._obsCuotaT);window._obsCuotaT=setTimeout(()=>{const p=this.selectionStart;renderHistorial(${showAllPagos},${showAllObs});const n=document.getElementById('obs-cuota-search');if(n){n.focus();n.setSelectionRange(p,p);}},250)"
+      id="obs-cuota-search"
+      style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;margin-bottom:8px;background:var(--card);color:var(--text)">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);max-height:420px;overflow-y:auto;margin-bottom:1.5rem">
+      ${obsCuotaHtml}
+    </div>`;
+
+  el.innerHTML=limpiarBtn+obsCuotaSection+`
     <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">📝 Observaciones y cambios (${obs.length})</div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.75rem;margin-bottom:1.5rem">
       ${renderItems(obs, showAllObs, 'obs')}
@@ -11108,7 +11143,7 @@ function guardarObs(id){
   const txt=document.getElementById('obs-txt').value.trim();if(!txt)return;
   const data=loadData();const c=data.find(x=>x.id===id);if(!c)return;
   if(!c.obs)c.obs=[];
-  c.obs.push({txt,ts:new Date().toISOString()});
+  c.obs.push({txt,ts:new Date().toISOString(),cuota:c.ca});
   saveData(data);addHist('obs',`Observación en ${c.mz} Lote ${c.lote}: "${txt.slice(0,60)}"`,id);
   renderDetColab(id);
 }
