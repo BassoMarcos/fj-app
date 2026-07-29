@@ -1169,7 +1169,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0440';
+  datos['_version']='v1.0441';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9387,86 +9387,104 @@ function showConfirmModal(titulo, msg, onConfirm, btnLabel, btnColor){
 function copyMsg(){navigator.clipboard.writeText(document.getElementById('msg-content').textContent).then(()=>alert('Copiado')).catch(()=>{});}
 
 // HISTORIAL
-function renderHistorial(showAllPagos, showAllObs){
-  showAllPagos=!!showAllPagos;showAllObs=!!showAllObs;
+function renderHistorial(){
   const h=loadHist();
   const el=document.getElementById('a-hist-list');
   if(!el)return;
-  
-  // Most recent first
-  const pagos=h.filter(e=>e.tipo==='pago');
-  const obs=h.filter(e=>e.tipo!=='pago');
-  
-  const LIMIT=3;
 
-  const renderItems=(items, showAll, tipo)=>{
-    const visible=showAll?items:items.slice(0,LIMIT);
-    const items_html=visible.length
-      ?visible.map(e=>`<div class="hist-item">
-          <div class="h-dot ${e.tipo}"></div>
-          <div style="flex:1">${e.desc}</div>
-          <div class="h-time">${fmtDate(e.ts)}</div>
-        </div>`).join('')
-      :'<div style="color:var(--text3);font-size:13px;padding:8px 0">Sin registros</div>';
-    const newPagos=tipo==='pago'?!showAll:showAllPagos;
-    const newObs=tipo!=='pago'?!showAll:showAllObs;
-    const verMas=items.length>LIMIT
-      ?`<button onclick="renderHistorial(${newPagos},${newObs})" 
-          style="background:none;border:none;color:var(--acc2);font-size:13px;cursor:pointer;padding:4px 0;width:100%;text-align:center">
-          ${showAll?'Ver menos ▲':'Ver más ('+(items.length-LIMIT)+' más) ▼'}
-        </button>`:'';
-    return items_html+verMas;
-  };
+  const filtro=(window._histFiltro||'').toLowerCase();
+  const porFecha=!!window._histPorFecha;
 
-  const limpiarBtn=`<div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-    <button onclick="confirmarConClave(()=>{saveHist([]);renderHistorial();})" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar historial</button>
-  </div>`;
-
-  // ==== Observaciones de cuota (todas los lotes, por fecha) ====
-  const filtroObs=(window._obsCuotaFiltro||'').toLowerCase();
-  const todasObs=[];
+  // Observaciones reales: se toman de cada cliente (obs a mano), con lote y cuota
+  const obsCuota=[];
   loadData().forEach(c=>{
     (c.obs||[]).forEach(o=>{
-      todasObs.push({id:c.id,titular:c.titular||'',txt:o.txt||'',ts:o.ts||'',cuota:(o.cuota!==undefined?o.cuota:null)});
+      obsCuota.push({tipo:'obs',id:c.id,titular:c.titular||'',txt:o.txt||'',ts:o.ts||'',cuota:(o.cuota!==undefined?o.cuota:null)});
     });
   });
-  todasObs.sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
-  const obsFiltradas=filtroObs
-    ? todasObs.filter(o=>(o.id+' '+o.titular+' '+o.txt+' '+fmtDate(o.ts)).toLowerCase().includes(filtroObs))
-    : todasObs;
-  const obsCuotaHtml=obsFiltradas.length
-    ? obsFiltradas.map(o=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-bottom:1px solid var(--border)">
-        <div style="min-width:78px;font-size:11px;color:var(--text3);padding-top:1px">${fmtDate(o.ts)}</div>
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:2px">
-            <span style="font-weight:700;font-size:12px;color:var(--acc2)">${o.id}</span>
-            ${o.cuota!==null?`<span style="font-size:10px;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:1px 6px;color:var(--text2)">Cuota ${o.cuota}</span>`:''}
-            <span style="font-size:11px;color:var(--text3)">${o.titular}</span>
-          </div>
-          <div style="font-size:12.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${o.txt}</div>
-        </div>
-      </div>`).join('')
-    : '<div style="color:var(--text3);font-size:13px;padding:12px 10px">Sin observaciones</div>';
-  const obsCuotaSection=`
-    <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">📋 Observaciones de cuota (${todasObs.length})</div>
-    <input type="text" placeholder="Buscar por lote, titular, texto o fecha..." value="${(window._obsCuotaFiltro||'').replace(/"/g,'&quot;')}"
-      oninput="window._obsCuotaFiltro=this.value;clearTimeout(window._obsCuotaT);window._obsCuotaT=setTimeout(()=>{const p=this.selectionStart;renderHistorial(${showAllPagos},${showAllObs});const n=document.getElementById('obs-cuota-search');if(n){n.focus();n.setSelectionRange(p,p);}},250)"
-      id="obs-cuota-search"
-      style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;margin-bottom:8px;background:var(--card);color:var(--text)">
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);max-height:420px;overflow-y:auto;margin-bottom:1.5rem">
-      ${obsCuotaHtml}
+
+  // Resto de eventos del log (hist), excluyendo obs (esas ya salen de arriba)
+  const logEvents=h.filter(e=>e.tipo!=='obs');
+
+  // Definición de secciones/columnas
+  const SECS=[
+    {key:'obs',      titulo:'📋 Observaciones', color:'var(--amber)'},
+    {key:'pago',     titulo:'💰 Pagos',         color:'var(--green)'},
+    {key:'mora',     titulo:'⚠️ Mora',          color:'var(--red)'},
+    {key:'adelanto', titulo:'⏩ Adelantos',      color:'var(--acc2)'},
+    {key:'desmarcar',titulo:'↩️ Desmarcados',   color:'var(--red)'},
+    {key:'colabvio', titulo:'👁️ Colab vio y no cobró', color:'var(--text3)'},
+    {key:'sistema',  titulo:'🔧 Cambios / ICC',  color:'var(--text2)'}
+  ];
+  const perteneceSistema=(t)=>(t==='edit'||t==='icc');
+
+  // Normaliza un item de obs a fila html
+  const filaObs=(o)=>`<div style="padding:8px 10px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:2px">
+        <span style="font-size:10px;color:var(--text3)">${fmtDate(o.ts)}</span>
+        <span style="font-weight:700;font-size:12px;color:var(--acc2)">${o.id}</span>
+        ${o.cuota!==null?`<span style="font-size:10px;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:1px 6px;color:var(--text2)">Cuota ${o.cuota}</span>`:''}
+        <span style="font-size:11px;color:var(--text3)">${o.titular}</span>
+      </div>
+      <div style="font-size:12.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${o.txt}</div>
+    </div>`;
+  // Normaliza un item de log a fila html
+  const filaLog=(e)=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-bottom:1px solid var(--border)">
+      <div style="min-width:70px;font-size:11px;color:var(--text3);padding-top:1px">${fmtDate(e.ts)}</div>
+      <div style="flex:1;min-width:0;font-size:12.5px;color:var(--text);word-break:break-word">${e.desc}</div>
     </div>`;
 
-  el.innerHTML=limpiarBtn+obsCuotaSection+`
-    <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">📝 Observaciones y cambios (${obs.length})</div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.75rem;margin-bottom:1.5rem">
-      ${renderItems(obs, showAllObs, 'obs')}
-    </div>
-    <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">💰 Pagos (${pagos.length})</div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.75rem">
-      ${renderItems(pagos, showAllPagos, 'pago')}
-    </div>
-  `;
+  // Texto buscable de cada item
+  const txtObs=(o)=>(o.id+' '+o.titular+' '+o.txt+' '+fmtDate(o.ts)).toLowerCase();
+  const txtLog=(e)=>((e.desc||'')+' '+fmtDate(e.ts)).toLowerCase();
+
+  const limpiarBtn=`<button onclick="confirmarConClave(()=>{saveHist([]);renderHistorial();})" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar historial</button>`;
+  const toggleBtn=`<button onclick="window._histPorFecha=!window._histPorFecha;renderHistorial()" style="background:${porFecha?'var(--acc)':'var(--surface)'};border:1px solid var(--border2);color:${porFecha?'#fff':'var(--text)'};padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">📅 ${porFecha?'Volver a secciones':'Ver todo por fecha'}</button>`;
+  const buscador=`<input type="text" placeholder="Buscar en todo el historial..." value="${(window._histFiltro||'').replace(/"/g,'&quot;')}"
+      id="hist-search"
+      oninput="window._histFiltro=this.value;clearTimeout(window._histT);window._histT=setTimeout(()=>{const p=this.selectionStart;renderHistorial();const n=document.getElementById('hist-search');if(n){n.focus();n.setSelectionRange(p,p);}},250)"
+      style="flex:1;min-width:180px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:12px;background:var(--card);color:var(--text)">`;
+  const barra=`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">${buscador}${toggleBtn}${limpiarBtn}</div>`;
+
+  if(porFecha){
+    // === Vista unificada por fecha ===
+    let all=[];
+    obsCuota.forEach(o=>{if(!filtro||txtObs(o).includes(filtro))all.push({ts:o.ts,html:filaObs(o)});});
+    logEvents.forEach(e=>{if(!filtro||txtLog(e).includes(filtro))all.push({ts:e.ts,html:filaLog(e)});});
+    all.sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+    const lista=all.length?all.map(x=>x.html).join(''):'<div style="color:var(--text3);font-size:13px;padding:12px 10px">Sin registros</div>';
+    el.innerHTML=barra+`
+      <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">🕓 Todo por fecha (${all.length})</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);max-height:620px;overflow-y:auto">${lista}</div>`;
+    return;
+  }
+
+  // === Vista por secciones (columnas verticales) ===
+  const colHtml=SECS.map(s=>{
+    let items;
+    if(s.key==='obs'){
+      items=obsCuota.filter(o=>!filtro||txtObs(o).includes(filtro))
+        .sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+      var cuerpo=items.length?items.map(filaObs).join(''):'<div style="color:var(--text3);font-size:12px;padding:12px 10px">Sin registros</div>';
+      var count=items.length;
+    } else if(s.key==='sistema'){
+      items=logEvents.filter(e=>perteneceSistema(e.tipo)&&(!filtro||txtLog(e).includes(filtro)))
+        .sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+      var cuerpo=items.length?items.map(filaLog).join(''):'<div style="color:var(--text3);font-size:12px;padding:12px 10px">Sin registros</div>';
+      var count=items.length;
+    } else {
+      items=logEvents.filter(e=>e.tipo===s.key&&(!filtro||txtLog(e).includes(filtro)))
+        .sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+      var cuerpo=items.length?items.map(filaLog).join(''):'<div style="color:var(--text3);font-size:12px;padding:12px 10px">Sin registros</div>';
+      var count=items.length;
+    }
+    return `<div style="flex:1;min-width:230px;display:flex;flex-direction:column">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;border-left:3px solid ${s.color};padding-left:6px">${s.titulo} (${count})</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);max-height:560px;overflow-y:auto;flex:1">${cuerpo}</div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML=barra+`<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch">${colHtml}</div>`;
 }
 
 // ICC
@@ -10506,7 +10524,7 @@ function _colabDesbloquearLista(){
 }
 function colabNoCobre(id){
   if(!confirm('¿Confirmás que NO cobraste este lote?\n\nSe cierra sin registrar el pago.')) return;
-  try{ const c=loadData().find(x=>x.id===id); if(c) addHist('edit','👁️ Colaborador vio la cuota de '+c.mz+' Lote '+c.lote+' y NO cobró',id); }catch(e){}
+  try{ const c=loadData().find(x=>x.id===id); if(c) addHist('colabvio','👁️ Colaborador vio la cuota de '+c.mz+' Lote '+c.lote+' y NO cobró',id); }catch(e){}
   _colabDesbloquearLista();
   volverColab();
 }
