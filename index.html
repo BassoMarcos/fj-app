@@ -1169,7 +1169,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0444';
+  datos['_version']='v1.0445';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9451,10 +9451,14 @@ function renderHistorial(){
   const limpiarBtn=btn('var(--red-bg)','#fca5a5','var(--red)','🗑 Limpiar','confirmarConClave(()=>{saveHist([]);renderHistorial();})');
   const barra=`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">${buscador}${toggleBtn}${limpiarBtn}</div>`;
 
-  const cabecera=(icon,titulo,color,count)=>`<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:${color}14;border-bottom:2px solid ${color}">
-      <span style="font-size:14px">${icon}</span>
-      <span style="font-size:12px;font-weight:700;color:var(--text);letter-spacing:.02em;flex:1">${titulo}</span>
+  const cabecera=(key,icon,titulo,color,count,colapsada)=>`<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:${color}14;border-bottom:${colapsada?'0':'2px solid '+color}">
+      <span onclick="window._histCol=window._histCol||{};window._histCol['${key}']=!window._histCol['${key}'];renderHistorial()" style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;min-width:0">
+        <span style="font-size:11px;color:var(--text3);width:12px">${colapsada?'▸':'▾'}</span>
+        <span style="font-size:14px">${icon}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--text);letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titulo}</span>
+      </span>
       <span style="font-size:11px;font-weight:700;color:#fff;background:${color};border-radius:10px;padding:1px 8px;min-width:22px;text-align:center">${count}</span>
+      ${key?`<button title="Limpiar esta sección" onclick="limpiarSeccionHist('${key}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 4px;line-height:1">🗑</button>`:''}
     </div>`;
 
   if(porFecha){
@@ -9464,7 +9468,7 @@ function renderHistorial(){
     all.sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
     const lista=all.length?all.map(x=>x.html).join(''):vacio;
     el.innerHTML=barra+`<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)">
-        ${cabecera('🕓','Todo por fecha','#64748b',all.length)}
+        ${cabecera('','🕓','Todo por fecha','#64748b',all.length,false)}
         <div style="max-height:640px;overflow-y:auto">${lista}</div>
       </div>`;
     return;
@@ -9483,13 +9487,33 @@ function renderHistorial(){
       items=logEvents.filter(e=>tipos.includes(e.tipo)&&(!filtro||txtLog(e).includes(filtro))).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
       var cuerpo=items.length?items.map(filaLog).join(''):vacio;
     }
+    const colapsada=!!(window._histCol&&window._histCol[s.key]);
     return `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(0,0,0,.04)">
-        ${cabecera(s.icon,s.titulo,s.color,items.length)}
-        <div style="max-height:520px;overflow-y:auto;flex:1">${cuerpo}</div>
+        ${cabecera(s.key,s.icon,s.titulo,s.color,items.length,colapsada)}
+        ${colapsada?'':`<div style="max-height:520px;overflow-y:auto;flex:1">${cuerpo}</div>`}
       </div>`;
   }).join('');
 
   el.innerHTML=barra+`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;align-items:start">${cards}</div>`;
+}
+
+function limpiarSeccionHist(key){
+  const nombres={obs:'Observaciones',pago:'Pagos',mora:'Mora',adelanto:'Adelantos',desmarcar:'Desmarcados / Colab no cobró',sistema:'Cambios / ICC'};
+  confirmarConClave(()=>{
+    if(key==='obs'){
+      const data=loadData();
+      data.forEach(c=>{ if(c.obs&&c.obs.length) c.obs=[]; });
+      saveData(data);
+    } else if(key==='sistema'){
+      const h=loadHist().filter(e=>!(e.tipo==='edit'||e.tipo==='icc'));
+      saveHist(h);
+    } else {
+      const tipos=key==='desmarcar'?['desmarcar','colabvio']:[key];
+      const h=loadHist().filter(e=>!tipos.includes(e.tipo));
+      saveHist(h);
+    }
+    renderHistorial();
+  });
 }
 
 // ICC
