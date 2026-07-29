@@ -1169,7 +1169,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0441';
+  datos['_version']='v1.0442';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9412,8 +9412,7 @@ function renderHistorial(){
     {key:'pago',     titulo:'💰 Pagos',         color:'var(--green)'},
     {key:'mora',     titulo:'⚠️ Mora',          color:'var(--red)'},
     {key:'adelanto', titulo:'⏩ Adelantos',      color:'var(--acc2)'},
-    {key:'desmarcar',titulo:'↩️ Desmarcados',   color:'var(--red)'},
-    {key:'colabvio', titulo:'👁️ Colab vio y no cobró', color:'var(--text3)'},
+    {key:'desmarcar',titulo:'↩️ Desmarcados / Colab no cobró', color:'var(--red)', extra:['colabvio']},
     {key:'sistema',  titulo:'🔧 Cambios / ICC',  color:'var(--text2)'}
   ];
   const perteneceSistema=(t)=>(t==='edit'||t==='icc');
@@ -9473,7 +9472,8 @@ function renderHistorial(){
       var cuerpo=items.length?items.map(filaLog).join(''):'<div style="color:var(--text3);font-size:12px;padding:12px 10px">Sin registros</div>';
       var count=items.length;
     } else {
-      items=logEvents.filter(e=>e.tipo===s.key&&(!filtro||txtLog(e).includes(filtro)))
+      const tipos=[s.key].concat(s.extra||[]);
+      items=logEvents.filter(e=>tipos.includes(e.tipo)&&(!filtro||txtLog(e).includes(filtro)))
         .sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
       var cuerpo=items.length?items.map(filaLog).join(''):'<div style="color:var(--text3);font-size:12px;padding:12px 10px">Sin registros</div>';
       var count=items.length;
