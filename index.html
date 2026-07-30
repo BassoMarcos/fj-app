@@ -1174,7 +1174,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0452';
+  datos['_version']='v1.0453';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7577,8 +7577,11 @@ function abrirReconstruccionMayo(){
   document.body.appendChild(ov);
 }
 function _aplicarReconMayo(){
+  // Guardar el plan ANTES de cerrar el modal, y cerrar el modal para que la pedida de clave no quede tapada
+  const planGuardado=_mayoPlan();
+  const m=document.getElementById('recon-mayo-modal'); if(m) m.remove();
   confirmarConClave(()=>{
-    const p=_mayoPlan();
+    const p=planGuardado;
     const data=loadData();
     let n=0;
     [...p.pagadas,...p.impagas].forEach(x=>{
@@ -7591,7 +7594,6 @@ function _aplicarReconMayo(){
     });
     saveData(data);
     addHist('edit','🔧 Reconstrucción Mayo 2026: '+n+' cuotas insertadas al historial desde planilla');
-    const m=document.getElementById('recon-mayo-modal'); if(m) m.remove();
     alert('✓ Listo. Se insertaron '+n+' cuotas de mayo al historial.');
     if(typeof renderAdminTable==='function') try{renderAdminTable();}catch(e){}
   });
