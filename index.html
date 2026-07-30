@@ -1169,7 +1169,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0446';
+  datos['_version']='v1.0447';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2973,7 +2973,7 @@ function fcConfirmar(){
       saveData(data);
       setPagoState(id,true,ts);
     }
-    if(dif!==0) addHist('pago',(dif>0?'SAF ':'SEC ')+fmtPeso(Math.abs(dif))+' — '+c.mz+' Lote '+c.lote+' (cargado al saldo)',id);
+    if(dif!==0){ addHist('pago',(dif>0?'SAF ':'SEC ')+fmtPeso(Math.abs(dif))+' — '+c.mz+' Lote '+c.lote+' (cargado al saldo)',id); registrarSafSec(c,dif,ts,fecha); }
   }
   // Reaseguro tardío por si llega un eco viejo justo después
   setTimeout(()=>{
@@ -5216,6 +5216,29 @@ function _doFusionar(srcTs,dstTs){
 }
 function getDistPct(){const v=parseInt(localStorage.getItem('fj_dist_pct')||'70');return isNaN(v)||v<1||v>99?70:v;}
 function setDistPct(v){const n=parseInt(v);if(!isNaN(n)&&n>=1&&n<=99){localStorage.setItem('fj_dist_pct',n);window._fbSet('distPct',n).catch(x=>console.warn('FB distPct:',x));renderBalances();}}
+// ── Registro permanente SAF/SEC (nunca se limpia) ──
+function loadSafSecLog(){ try{ return JSON.parse(_lsGet(dKey('safsecLog'))||'[]'); }catch(e){ return []; } }
+function saveSafSecLog(arr){ _lsSet(dKey('safsecLog'),JSON.stringify(arr)); window._fbSet('safsecLog',arr).catch(e=>console.warn('FB safsecLog:',e)); }
+function registrarSafSec(c,dif,ts,fecha){
+  if(!dif) return;
+  const log=loadSafSecLog();
+  log.unshift({id:c.id,mz:c.mz,lote:c.lote,titular:c.titular||'',moneda:c.moneda||'ARS',dif,tipo:dif>0?'SAF':'SEC',ts:ts||new Date().toISOString(),fecha:fecha||new Date().toLocaleDateString('es-AR')});
+  saveSafSecLog(log);
+}
+// Estado actual: suma de saldos vivos de cada cliente, separado por moneda
+function calcSafSecEstado(){
+  const r={ARS:{saf:0,sec:0,clientes:[]},USD:{saf:0,sec:0,clientes:[]}};
+  loadData().forEach(c=>{
+    const s=Number(c.saldo)||0; if(!s) return;
+    const mon=(c.moneda==='USD')?'USD':'ARS';
+    if(s>0) r[mon].saf+=s; else r[mon].sec+=(-s);
+    r[mon].clientes.push({id:c.id,mz:c.mz,lote:c.lote,titular:c.titular||'',saldo:s});
+  });
+  r.ARS.clientes.sort((a,b)=>a.saldo-b.saldo);
+  r.USD.clientes.sort((a,b)=>a.saldo-b.saldo);
+  return r;
+}
+
 function renderBalances(seccion){
   window._balancesSeccion=seccion||null;
   const el=document.getElementById('a-balances-content');if(!el)return;
@@ -5249,109 +5272,57 @@ function renderBalances(seccion){
         </div>
         <button onclick="resetTodoBalances()" style="background:var(--hov);border:1px solid #d1d5db;color:var(--text);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar todo</button>
       </div>
-      <div style="display:grid;gap:12px">
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('caja')">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div style="font-size:16px;font-weight:700;margin-bottom:4px">⏳ Caja del día</div>
-              <div style="font-size:13px;color:var(--text2)">${abierto.length} pago${abierto.length!==1?'s':''} sin cerrar</div>
-            </div>
-            <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-              <div style="font-size:20px;font-weight:800;color:var(--amber)">${fmtPeso(totalAbierto)}</div>
-              <div style="display:flex;align-items:center;gap:8px">
-                ${abierto.length?`<button onclick="event.stopPropagation();resetCajaAbierta()" style="background:var(--amber-bg);border:1px solid var(--amber-border);color:var(--amber);padding:3px 8px;border-radius:var(--r);font-size:11px;cursor:pointer">🗑 Limpiar</button>`:''}
-                <div style="font-size:12px;color:var(--text2)">›</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
+        ${(()=>{
+          const totalFisica=(bal.cajaFisica||[]).filter(p=>p.moneda!=='USD').reduce((s,p)=>s+(p.efectivo||0),0);
+          const totalAgri=(bal.agrimensores||[]).reduce((s,p)=>s+(p.monto||0),0);
+          const mora=loadMora();
+          const totalMora=mora.reduce((s,p)=>s+(p.cuota||0),0);
+          const ex=loadExtras();
+          const netoExtra=ex.filter(e=>e.tipo==='ingreso').reduce((s,e)=>s+e.monto,0)-ex.filter(e=>e.tipo==='gasto').reduce((s,e)=>s+e.monto,0);
+          const ss=calcSafSecEstado();
+          const netoSSpesos=ss.ARS.saf-ss.ARS.sec, netoSSusd=ss.USD.saf-ss.USD.sec;
+          const ssLog=loadSafSecLog();
+
+          const card=(o)=>{
+            const limpiar=o.limpiarBtn?`<button onclick="event.stopPropagation();${o.limpiarBtn}" style="background:none;border:1px solid var(--border2);color:var(--text3);padding:3px 9px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer">Limpiar</button>`:'';
+            const badge=o.badge?`<span style="position:absolute;top:12px;right:14px;background:${o.badge.bg};color:${o.badge.col};border:1px solid ${o.badge.bd};padding:2px 8px;border-radius:99px;font-size:10.5px;font-weight:700">${o.badge.txt}</span>`:'';
+            const extraRow=o.subMonto?`<div style="font-size:13px;font-weight:700;color:${o.color};margin-top:2px">${o.subMonto}</div>`:'';
+            return `<div onclick="${o.onclick}" style="position:relative;background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.04);transition:transform .12s,box-shadow .12s"
+                onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 18px rgba(0,0,0,.10)'"
+                onmouseout="this.style.transform='none';this.style.boxShadow='0 1px 2px rgba(0,0,0,.04)'">
+              <div style="height:4px;background:${o.color}"></div>
+              ${badge}
+              <div style="padding:16px 16px 14px">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                  <div style="width:38px;height:38px;border-radius:10px;background:${o.color}1a;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0">${o.icon}</div>
+                  <div style="min-width:0">
+                    <div style="font-size:14.5px;font-weight:700;color:var(--text);line-height:1.2">${o.titulo}</div>
+                    <div style="font-size:11.5px;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${o.sub}</div>
+                  </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:flex-end">
+                  <div>
+                    <div style="font-size:23px;font-weight:800;color:${o.color};line-height:1">${o.monto}</div>
+                    ${extraRow}
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px">${limpiar}<span style="color:var(--text3);font-size:15px">›</span></div>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-        <div style="background:var(--surface);border:1px solid rgba(124,58,237,.35);border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('fisica')">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div style="font-size:16px;font-weight:700;margin-bottom:4px">💵 Caja Física</div>
-              <div style="font-size:13px;color:var(--text2)">${(bal.cajaFisica||[]).length} registro${(bal.cajaFisica||[]).length!==1?'s':''} — control de efectivo</div>
-            </div>
-            <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-              <div style="font-size:20px;font-weight:800;color:#a78bfa">${fmtPeso((bal.cajaFisica||[]).filter(p=>p.moneda!=='USD').reduce((s,p)=>s+(p.efectivo||0),0))}</div>
-              <div style="font-size:12px;color:var(--text2)">›</div>
-            </div>
-          </div>
-        </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('cierres')">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div style="font-size:16px;font-weight:700;margin-bottom:4px">✅ Cierres</div>
-              <div style="font-size:13px;color:var(--text2)">${cierres.length} cierre${cierres.length!==1?'s':''} registrado${cierres.length!==1?'s':''}</div>
-            </div>
-            <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-              <div style="font-size:20px;font-weight:800;color:var(--green)">${fmtPeso(totalCierres)}</div>
-              ${totalCierresUSD?`<div style="font-size:13px;font-weight:700;color:var(--green)">USD ${fmtPeso(totalCierresUSD).replace('$','')}</div>`:''}
-              <div style="display:flex;align-items:center;gap:8px">
-                ${cierres.length?`<button onclick="event.stopPropagation();resetCierres()" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:3px 8px;border-radius:var(--r);font-size:11px;cursor:pointer">🗑 Limpiar</button>`:''}
-                <span style="font-size:12px;color:var(--text2)">›</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('adelantos')">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div style="font-size:16px;font-weight:700;margin-bottom:4px">⏭ Adelantos</div>
-              <div style="font-size:13px;color:var(--text2)">
-                ${pendientes.length?`<span style="background:var(--amber-bg);border:1px solid var(--amber-border);color:var(--amber);padding:2px 7px;border-radius:99px;font-size:11px;font-weight:700">⏳ ${pendientes.length} pendiente${pendientes.length>1?'s':''}</span> `:''}
-                ${aprobados.length?`<span style="color:var(--text2)">${aprobados.length} aprobado${aprobados.length!==1?'s':''}</span>`:''}
-                ${!pendientes.length&&!aprobados.length?'Sin adelantos':''}
-              </div>
-            </div>
-            <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-              <div style="font-size:20px;font-weight:800;color:#5eb0ef">${fmtPeso(totalAprobados)}</div>
-              <div style="display:flex;align-items:center;gap:8px">
-${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" style="background:var(--blue-bg);border:1px solid #93c5fd;color:var(--blue);padding:3px 8px;border-radius:var(--r);font-size:11px;cursor:pointer">🗑 Limpiar</button>`:''}
-                <span style="font-size:12px;color:var(--text2)">›</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div style="background:var(--surface);border:1px solid #fed7aa;border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('agrimensores')">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div style="font-size:16px;font-weight:700;margin-bottom:4px">⚖️ Agrimensores</div>
-              <div style="font-size:13px;color:var(--text2)">${(bal.agrimensores||[]).length} pago${(bal.agrimensores||[]).length!==1?'s':''} sin cerrar</div>
-            </div>
-            <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-              <div style="font-size:20px;font-weight:800;color:var(--acc2)">${fmtPeso((bal.agrimensores||[]).reduce((s,p)=>s+(p.monto||0),0))}</div>
-              <div style="display:flex;align-items:center;gap:8px">
-                ${(bal.agrimensores||[]).length?`<button onclick="event.stopPropagation();resetAgrimensores()" style="background:var(--card);border:1px solid #fed7aa;color:var(--acc2);padding:3px 8px;border-radius:var(--r);font-size:11px;cursor:pointer">🗑 Limpiar</button>`:''}
-                <span style="font-size:12px;color:var(--text2)">›</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div style="background:var(--surface);border:1px solid #fca5a5;border-radius:var(--r);padding:1.25rem;cursor:pointer;position:relative" onclick="renderBalances('mora');saveUltimaVistaMora();actualizarBadgeMora()">
-          <span id="badge-caja-mora" style="display:none;position:absolute;top:-6px;right:-6px;background:#dc2626;color:#fff;border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:800;align-items:center;justify-content:center;border:2px solid #fff"></span>
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div style="font-size:16px;font-weight:700;margin-bottom:4px">⚠️ Caja de Mora</div>
-              <div style="font-size:13px;color:var(--text2)">${(()=>{const m=loadMora();return m.length?m.length+' pago'+(m.length!==1?'s':'')+' con mora':'Sin pagos en mora';})()}</div>
-            </div>
-            <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-              <div style="font-size:20px;font-weight:800;color:var(--red)">${(()=>{const m=loadMora();return fmtPeso(m.reduce((s,p)=>s+(p.cuota||0),0));})()}</div>
-              <span style="font-size:12px;color:var(--text2)">›</span>
-            </div>
-          </div>
-        </div>
-        <div style="background:var(--surface);border:1px solid #c7d2fe;border-radius:var(--r);padding:1.25rem;cursor:pointer" onclick="renderBalances('extras')">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div style="font-size:16px;font-weight:700;margin-bottom:4px">💼 Gastos e Ingresos Extras</div>
-              <div style="font-size:13px;color:var(--text2)">${(()=>{const ex=loadExtras();return ex.length?ex.length+' registro'+(ex.length!==1?'s':''):'Sin registros';})()}</div>
-            </div>
-            <div style="text-align:right">
-              <div style="font-size:20px;font-weight:800;color:${(()=>{const ex=loadExtras();const n=ex.filter(e=>e.tipo==='ingreso').reduce((s,e)=>s+e.monto,0)-ex.filter(e=>e.tipo==='gasto').reduce((s,e)=>s+e.monto,0);return n>=0?'#16a34a':'#dc2626';})()}">${(()=>{const ex=loadExtras();const n=ex.filter(e=>e.tipo==='ingreso').reduce((s,e)=>s+e.monto,0)-ex.filter(e=>e.tipo==='gasto').reduce((s,e)=>s+e.monto,0);return (n>=0?'+':'-')+fmtPeso(Math.abs(n));})()}</div>
-              <div style="font-size:12px;color:var(--text2)">›</div>
-            </div>
-          </div>
-        </div>
+            </div>`;
+          };
+
+          return [
+            card({icon:'⏳',titulo:'Caja del día',sub:abierto.length+' pago'+(abierto.length!==1?'s':'')+' sin cerrar',monto:fmtPeso(totalAbierto),color:'#d97706',onclick:"renderBalances('caja')",limpiarBtn:abierto.length?'resetCajaAbierta()':''}),
+            card({icon:'💵',titulo:'Caja Física',sub:'Control de efectivo — '+(bal.cajaFisica||[]).length+' reg.',monto:fmtPeso(totalFisica),color:'#8b5cf6',onclick:"renderBalances('fisica')"}),
+            card({icon:'📒',titulo:'Registro SAF / SEC',sub:'Saldos a favor y en contra',monto:(netoSSpesos>=0?'+':'-')+fmtPeso(Math.abs(netoSSpesos)),subMonto:netoSSusd!==0?('USD '+(netoSSusd>=0?'+':'-')+fmtPeso(Math.abs(netoSSusd)).replace('$','')):'',color:'#0ea5e9',onclick:"renderBalances('safsec')",badge:ssLog.length?{txt:ssLog.length+' mov.',bg:'#e0f2fe',col:'#0369a1',bd:'#7dd3fc'}:null}),
+            card({icon:'✅',titulo:'Cierres',sub:cierres.length+' cierre'+(cierres.length!==1?'s':'')+' registrado'+(cierres.length!==1?'s':''),monto:fmtPeso(totalCierres),subMonto:totalCierresUSD?('USD '+fmtPeso(totalCierresUSD).replace('$','')):'',color:'#16a34a',onclick:"renderBalances('cierres')",limpiarBtn:cierres.length?'resetCierres()':''}),
+            card({icon:'⏭',titulo:'Adelantos',sub:(pendientes.length?pendientes.length+' pendiente'+(pendientes.length>1?'s':'')+' · ':'')+(aprobados.length?aprobados.length+' aprobado'+(aprobados.length!==1?'s':''):(pendientes.length?'':'Sin adelantos')),monto:fmtPeso(totalAprobados),color:'#3b82f6',onclick:"renderBalances('adelantos')",limpiarBtn:adelantos.length?'resetAdelantos()':'',badge:pendientes.length?{txt:'⏳ '+pendientes.length,bg:'var(--amber-bg)',col:'var(--amber)',bd:'var(--amber-border)'}:null}),
+            card({icon:'⚖️',titulo:'Agrimensores',sub:(bal.agrimensores||[]).length+' pago'+((bal.agrimensores||[]).length!==1?'s':'')+' sin cerrar',monto:fmtPeso(totalAgri),color:'#ea580c',onclick:"renderBalances('agrimensores')",limpiarBtn:(bal.agrimensores||[]).length?'resetAgrimensores()':''}),
+            card({icon:'⚠️',titulo:'Caja de Mora',sub:mora.length?mora.length+' pago'+(mora.length!==1?'s':'')+' con mora':'Sin pagos en mora',monto:fmtPeso(totalMora),color:'#dc2626',onclick:"renderBalances('mora');saveUltimaVistaMora();actualizarBadgeMora()"}),
+            card({icon:'💼',titulo:'Gastos e Ingresos Extras',sub:ex.length?ex.length+' registro'+(ex.length!==1?'s':''):'Sin registros',monto:(netoExtra>=0?'+':'-')+fmtPeso(Math.abs(netoExtra)),color:netoExtra>=0?'#16a34a':'#dc2626',onclick:"renderBalances('extras')"})
+          ].join('');
+        })()}
       </div>
     `;
     return;
@@ -5360,6 +5331,82 @@ ${adelantos.length?`<button onclick="event.stopPropagation();resetAdelantos()" s
   // Back button shared
   const backBtn=`<button onclick="renderBalances()" style="background:none;border:none;color:var(--acc2);font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:1rem">‹ Volver</button>`;
 
+
+  if(seccion==='safsec'){
+    const ss=calcSafSecEstado();
+    const log=loadSafSecLog();
+    const money=(v)=>fmtPeso(Math.abs(v));
+
+    const bloqueMoneda=(mon,d,simbolo)=>{
+      const neto=d.saf-d.sec;
+      const filas=d.clientes.length?d.clientes.map(c=>{
+        const esSaf=c.saldo>0;
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border)">
+          <span style="font-weight:700;font-size:12px;color:var(--acc2);background:var(--bg);border-radius:5px;padding:1px 7px">${c.id}</span>
+          <span style="font-size:12px;color:var(--text2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.titular}</span>
+          <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;background:${esSaf?'var(--green-bg)':'var(--red-bg)'};color:${esSaf?'var(--green)':'var(--red)'}">${esSaf?'SAF':'SEC'}</span>
+          <span style="font-size:13px;font-weight:700;color:${esSaf?'var(--green)':'var(--red)'};min-width:90px;text-align:right">${simbolo}${money(c.saldo)}</span>
+        </div>`;
+      }).join(''):'<div style="padding:14px 12px;font-size:12px;color:var(--text3);text-align:center">Sin saldos en '+mon+'</div>';
+      return `<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface)">
+          <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:8px">${mon}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div style="flex:1;min-width:90px;background:var(--green-bg);border:1px solid var(--green-border);border-radius:9px;padding:8px 10px">
+              <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.04em">A favor (SAF)</div>
+              <div style="font-size:16px;font-weight:800;color:var(--green)">${simbolo}${money(d.saf)}</div>
+            </div>
+            <div style="flex:1;min-width:90px;background:var(--red-bg);border:1px solid #fca5a5;border-radius:9px;padding:8px 10px">
+              <div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.04em">En contra (SEC)</div>
+              <div style="font-size:16px;font-weight:800;color:var(--red)">${simbolo}${money(d.sec)}</div>
+            </div>
+            <div style="flex:1;min-width:90px;background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:8px 10px">
+              <div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Neto</div>
+              <div style="font-size:16px;font-weight:800;color:${neto>=0?'var(--green)':'var(--red)'}">${neto>=0?'+':'-'}${simbolo}${money(neto)}</div>
+            </div>
+          </div>
+        </div>
+        <div style="max-height:320px;overflow-y:auto">${filas}</div>
+      </div>`;
+    };
+
+    const logFilas=log.length?log.map(m=>{
+      const esSaf=m.dif>0, sim=m.moneda==='USD'?'USD ':'$';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border)">
+        <span style="font-size:10px;color:var(--text3);min-width:70px">${m.fecha||fmtDate(m.ts)}</span>
+        <span style="font-weight:700;font-size:12px;color:var(--acc2)">${m.id}</span>
+        <span style="font-size:12px;color:var(--text2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.titular||''}</span>
+        <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;background:${esSaf?'var(--green-bg)':'var(--red-bg)'};color:${esSaf?'var(--green)':'var(--red)'}">${esSaf?'SAF':'SEC'}</span>
+        <span style="font-size:12.5px;font-weight:700;color:${esSaf?'var(--green)':'var(--red)'};min-width:80px;text-align:right">${sim}${money(m.dif).replace('$','')}</span>
+      </div>`;
+    }).join(''):'<div style="padding:16px 12px;font-size:12px;color:var(--text3);text-align:center">Todavía no hay movimientos registrados</div>';
+
+    el.innerHTML=backBtn+`
+      <div style="max-width:1000px;margin:0 auto">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <div style="width:40px;height:40px;border-radius:11px;background:#0ea5e91a;display:flex;align-items:center;justify-content:center;font-size:20px">📒</div>
+          <div>
+            <div style="font-size:19px;font-weight:800;color:var(--text)">Registro SAF / SEC</div>
+            <div style="font-size:12px;color:var(--text3)">Saldos a favor y en contra · registro permanente</div>
+          </div>
+        </div>
+        <div style="background:#e0f2fe;border:1px solid #7dd3fc;border-radius:10px;padding:10px 14px;font-size:12px;color:#0369a1;margin:12px 0 18px">
+          ℹ️ Este registro no se borra nunca. Es la cuenta de cuánto te deben (SEC) y cuánto tenés a favor de los clientes (SAF), separado en pesos y dólares.
+        </div>
+
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);margin-bottom:10px">Estado actual (saldos vivos)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:24px">
+          ${bloqueMoneda('Pesos',ss.ARS,'$')}
+          ${bloqueMoneda('Dólares',ss.USD,'USD ')}
+        </div>
+
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);margin-bottom:10px">Historial de movimientos (${log.length})</div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04);max-height:460px;overflow-y:auto">
+          ${logFilas}
+        </div>
+      </div>`;
+    return;
+  }
   if(seccion==='caja'){
     const abPesos=abierto.filter(p=>p.moneda!=='USD'&&!p.transf);
     const abUSD=abierto.filter(p=>p.moneda==='USD'&&!p.transf);
