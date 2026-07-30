@@ -1169,7 +1169,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0448';
+  datos['_version']='v1.0449';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3460,6 +3460,7 @@ function renderPanelMora(){
   html+=`<div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <input type="text" id="mora-buscar" oninput="filtrarMoraCards(this.value)" placeholder="🔍 Buscar lote o titular…" style="flex:1;min-width:180px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text)">
     <button onclick="toggleMoraVista()" style="background:${vistaCompacta?'#1e40af':'var(--surface)'};color:${vistaCompacta?'#fff':'var(--text)'};border:1.5px solid ${vistaCompacta?'#1e40af':'var(--border)'};border-radius:var(--r);padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">${vistaCompacta?'☰ Ver lista':'⊞ Vista compacta'}</button>
+    <button onclick="abrirEditorPlantillasMora()" style="background:var(--surface);color:var(--text);border:1.5px solid var(--border);border-radius:var(--r);padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">✏️ Plantillas</button>
     <span style="font-size:11px;color:var(--text2)">Intereses al ${hoy.toLocaleDateString('es-AR')}</span>
   </div>`;
 
@@ -4247,36 +4248,51 @@ function borrarNotaMora(clienteId,idx){
 }
 
 // Mensaje automatico segun la situacion del deudor
-function mensajeMoraWA(cl){
+// ── Plantillas editables (v1.0449). Se guardan en Firebase; si no hay, usa los defaults. ──
+const PLANTILLAS_MORA_DEFAULT = {
+  t1: 'Nos comunicamos desde F&J Desarrollos Inmobiliarios en relacion al lote {lote}.\n\nSegun nuestros registros, se encuentra pendiente de pago la cuota correspondiente a {meses}, por un importe total de {monto} (intereses incluidos al dia de la fecha).\n\nEn caso de haber realizado el pago, le solicitamos que nos remita el comprobante correspondiente para su verificacion. Ante cualquier consulta, quedamos a su disposicion.',
+  t2: 'Nos comunicamos desde F&J Desarrollos Inmobiliarios en relacion al lote {lote}.\n\nSegun nuestros registros, presenta {cuotas} cuotas pendientes de pago ({meses}), por un importe total de {monto} (intereses incluidos al dia de la fecha).\n\nLe solicitamos regularizar esta situacion a la brevedad, a fin de evitar que su cuenta pase a un estado critico. Le pedimos que nos indique que dia podria acercarse a regularizar el pago. De requerir una reunion para analizar su caso, quedamos a su entera disposicion.',
+  t3: 'Nos comunicamos desde F&J Desarrollos Inmobiliarios en relacion al lote {lote}.\n\nSu cuenta registra {cuotas} cuotas impagas ({meses}), que ascienden a un total de {monto} con los intereses calculados al dia de la fecha. Se trata de una situacion que requiere atencion inmediata.\n\nLe solicitamos coordinar con caracter URGENTE una reunion para tratar su caso, antes de que el mismo sea derivado al area de Legales. Queremos ser claros: la situacion tiene solucion, pero depende de que usted se comunique a la brevedad para acordar en conjunto una via de regularizacion.\n\nLe pedimos que no permita que transcurra mas tiempo y que nos responda a fin de coordinar dia y horario de reunion.',
+  t4: 'Nos comunicamos desde F&J Desarrollos Inmobiliarios en relacion al lote {lote}.\n\nSu cuenta registra {cuotas} cuotas adeudadas, motivo por el cual su caso ha sido trasladado al area de Legales. En esta instancia, la posibilidad de revertir la situacion es sumamente limitada.\n\nNo obstante, existe una ultima oportunidad de encontrar una solucion, para lo cual resulta indispensable que se presente en nuestras oficinas. Le solicitamos que gestione un turno previo con caracter urgente, a fin de informarle personalmente como continua el proceso y evaluar las alternativas disponibles.\n\nQuedamos a la espera de su pronta comunicacion.',
+  saludo: 'Estimado/a {nombre}:',
+  firma: 'Atentamente,\nF&J Desarrollos Inmobiliarios - Los Eucaliptus'
+};
+function loadPlantillasMora(){
+  try{ const s=_lsGet(dKey('plantillasMora')); if(s){ return Object.assign({},PLANTILLAS_MORA_DEFAULT,JSON.parse(s)); } }catch(e){}
+  return Object.assign({},PLANTILLAS_MORA_DEFAULT);
+}
+function savePlantillasMora(v){
+  _lsSet(dKey('plantillasMora'),JSON.stringify(v));
+  window._fbSet('plantillasMora',v).catch(e=>console.warn('FB plantillasMora:',e));
+}
+// Reemplaza las variables {xxx} por los datos reales del cliente
+function rellenarVars(txt, cl){
   const nom=String(cl.titular||'').split(/[\/,]/)[0].trim().split(' ').slice(0,2).join(' ');
   const lote=formatLoteTag(cl.mz,cl.lote);
-  const n=cl.cuotas.length;
   const cur=cl.moneda==='USD'?'USD ':'$';
-  const cp=cur+fmtPeso(cl.totalCP).replace('$','');
-  const tot=cur+fmtPeso(cl.total).replace('$','');
-  const meses=cl.cuotas.map(q=>q.mesNombre).join(', ');
-  const descCuotas = n===1 ? ('la cuota correspondiente a '+meses) : ('las cuotas correspondientes a '+meses);
-  let cuerpo;
-  if(n===1){
-    cuerpo='Nos comunicamos desde F&J Desarrollos Inmobiliarios en relacion al lote '+lote+'.\n\n'
-      +'Segun nuestros registros, se encuentra pendiente de pago '+descCuotas+', por un importe total de '+tot+' (intereses incluidos al dia de la fecha).\n\n'
-      +'En caso de haber realizado el pago, le solicitamos que nos remita el comprobante correspondiente para su verificacion. Ante cualquier consulta, quedamos a su disposicion.';
-  } else if(n<=3){
-    cuerpo='Nos comunicamos desde F&J Desarrollos Inmobiliarios en relacion al lote '+lote+'.\n\n'
-      +'Segun nuestros registros, presenta '+n+' cuotas pendientes de pago ('+meses+'), por un importe total de '+tot+' (intereses incluidos al dia de la fecha).\n\n'
-      +'Le solicitamos regularizar esta situacion a la brevedad, a fin de evitar que su cuenta pase a un estado critico. Le pedimos que nos indique que dia podria acercarse a regularizar el pago. De requerir una reunion para analizar su caso, quedamos a su entera disposicion.';
-  } else if(n<=6){
-    cuerpo='Nos comunicamos desde F&J Desarrollos Inmobiliarios en relacion al lote '+lote+'.\n\n'
-      +'Su cuenta registra '+n+' cuotas impagas ('+meses+'), que ascienden a un total de '+tot+' con los intereses calculados al dia de la fecha. Se trata de una situacion que requiere atencion inmediata.\n\n'
-      +'Le solicitamos coordinar con caracter URGENTE una reunion para tratar su caso, antes de que el mismo sea derivado al area de Legales. Queremos ser claros: la situacion tiene solucion, pero depende de que usted se comunique a la brevedad para acordar en conjunto una via de regularizacion.\n\n'
-      +'Le pedimos que no permita que transcurra mas tiempo y que nos responda a fin de coordinar dia y horario de reunion.';
-  } else {
-    cuerpo='Nos comunicamos desde F&J Desarrollos Inmobiliarios en relacion al lote '+lote+'.\n\n'
-      +'Su cuenta registra '+n+' cuotas adeudadas, motivo por el cual su caso ha sido trasladado al area de Legales. En esta instancia, la posibilidad de revertir la situacion es sumamente limitada.\n\n'
-      +'No obstante, existe una ultima oportunidad de encontrar una solucion, para lo cual resulta indispensable que se presente en nuestras oficinas. Le solicitamos que gestione un turno previo con caracter urgente, a fin de informarle personalmente como continua el proceso y evaluar las alternativas disponibles.\n\n'
-      +'Quedamos a la espera de su pronta comunicacion.';
-  }
-  return 'Estimado/a:\n\n'+cuerpo+'\n\nAtentamente,\nF&J Desarrollos Inmobiliarios - Los Eucaliptus';
+  const map={
+    '{nombre}': nom,
+    '{lote}': lote,
+    '{cuotas}': String(cl.cuotas.length),
+    '{meses}': cl.cuotas.map(q=>q.mesNombre).join(', '),
+    '{monto}': cur+fmtPeso(cl.total).replace('$',''),
+    '{cuotapura}': cur+fmtPeso(cl.totalCP).replace('$','')
+  };
+  return String(txt||'').replace(/\{nombre\}|\{lote\}|\{cuotas\}|\{meses\}|\{monto\}|\{cuotapura\}/g, m=>map[m]!==undefined?map[m]:m);
+}
+
+function mensajeMoraWA(cl){
+  const P=loadPlantillasMora();
+  const n=cl.cuotas.length;
+  let plantilla;
+  if(n===1) plantilla=P.t1;
+  else if(n<=3) plantilla=P.t2;
+  else if(n<=6) plantilla=P.t3;
+  else plantilla=P.t4;
+  const saludo=rellenarVars(P.saludo, cl);
+  const cuerpo=rellenarVars(plantilla, cl);
+  const firma=rellenarVars(P.firma, cl);
+  return saludo+'\n\n'+cuerpo+'\n\n'+firma;
 }
 
 function abrirWhatsMora(clienteId){
@@ -4316,6 +4332,86 @@ function abrirWhatsMora(clienteId){
     saveNotasMora(n);
     cerrar(); renderPanelMora();
   };
+}
+
+// Editor de plantillas de mensajes de mora (v1.0449)
+function abrirEditorPlantillasMora(){
+  const P=loadPlantillasMora();
+  const tramos=[
+    {k:'t1',nom:'1 cuota adeudada',desc:'Recordatorio suave',color:'#5a9e78'},
+    {k:'t2',nom:'2 a 3 cuotas',desc:'Regularizar antes de estado crítico',color:'#c68a4e'},
+    {k:'t3',nom:'4 a 6 cuotas',desc:'Urgente — antes de Legales',color:'#d97706'},
+    {k:'t4',nom:'Más de 6 cuotas',desc:'Ya en Legales',color:'#c77b7b'}
+  ];
+  const vars=[
+    {v:'{nombre}',d:'Nombre del titular'},
+    {v:'{lote}',d:'Ej: M1 Lote 4B'},
+    {v:'{cuotas}',d:'Cantidad de cuotas adeudadas'},
+    {v:'{meses}',d:'Meses adeudados'},
+    {v:'{monto}',d:'Total con intereses'},
+    {v:'{cuotapura}',d:'Total sin intereses'}
+  ];
+  const chip=(v)=>`<button onclick="_plantInsert('${v.v}')" title="${v.d}" style="background:var(--bg);border:1px solid var(--border2);color:var(--acc2);padding:3px 9px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:monospace">${v.v}</button>`;
+  const bloque=(t)=>`
+    <div style="margin-bottom:18px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="width:10px;height:10px;border-radius:3px;background:${t.color}"></span>
+        <span style="font-size:13px;font-weight:700;color:var(--text)">${t.nom}</span>
+        <span style="font-size:11px;color:var(--text2)">— ${t.desc}</span>
+      </div>
+      <textarea id="plant-${t.k}" oninput="window._plantFocus='plant-${t.k}'" onfocus="window._plantFocus='plant-${t.k}'"
+        style="width:100%;min-height:120px;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;line-height:1.5;background:var(--card);color:var(--text);box-sizing:border-box;resize:vertical">${(P[t.k]||'').replace(/</g,'&lt;')}</textarea>
+    </div>`;
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML='<div style="background:var(--surface);border-radius:14px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto;padding:20px">'
+    +'<div style="font-size:17px;font-weight:800;margin-bottom:2px">✏️ Editar plantillas de mensajes</div>'
+    +'<div style="font-size:12px;color:var(--text2);margin-bottom:14px">Los cambios se guardan y se usan en todos los reclamos por WhatsApp.</div>'
+    +'<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:18px">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">📌 Variables — hacé click para insertarlas donde tengas el cursor:</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:6px">'+vars.map(chip).join('')+'</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-top:8px">Se reemplazan solas con los datos reales de cada cliente al enviar.</div>'
+    +'</div>'
+    +'<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);margin-bottom:10px">Mensajes por cantidad de cuotas</div>'
+    +tramos.map(bloque).join('')
+    +'<div style="border-top:1px solid var(--border);margin:6px 0 16px"></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">'
+      +'<div><div style="font-size:12px;font-weight:700;margin-bottom:6px">Saludo inicial</div>'
+        +'<textarea id="plant-saludo" onfocus="window._plantFocus=\'plant-saludo\'" style="width:100%;min-height:60px;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;resize:vertical">'+(P.saludo||'').replace(/</g,'&lt;')+'</textarea></div>'
+      +'<div><div style="font-size:12px;font-weight:700;margin-bottom:6px">Firma</div>'
+        +'<textarea id="plant-firma" onfocus="window._plantFocus=\'plant-firma\'" style="width:100%;min-height:60px;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--card);color:var(--text);box-sizing:border-box;resize:vertical">'+(P.firma||'').replace(/</g,'&lt;')+'</textarea></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +'<button id="plant-save" style="flex:1;min-width:140px;background:#5a9e78;color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">Guardar cambios</button>'
+      +'<button id="plant-reset" style="background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:8px;padding:11px 14px;font-size:13px;font-weight:700;cursor:pointer">Restaurar originales</button>'
+      +'<button id="plant-cancel" style="background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:8px;padding:11px 14px;font-size:13px;font-weight:700;cursor:pointer">Cerrar</button>'
+    +'</div></div>';
+  document.body.appendChild(ov);
+  window._plantFocus='plant-t1';
+  ov.querySelector('#plant-cancel').onclick=()=>ov.remove();
+  ov.querySelector('#plant-save').onclick=()=>{
+    const nuevo=Object.assign({},loadPlantillasMora());
+    ['t1','t2','t3','t4','saludo','firma'].forEach(k=>{ const e=document.getElementById('plant-'+k); if(e) nuevo[k]=e.value; });
+    savePlantillasMora(nuevo);
+    ov.remove();
+    alert('✓ Plantillas guardadas');
+  };
+  ov.querySelector('#plant-reset').onclick=()=>{
+    if(!confirm('¿Restaurar los 4 mensajes a los textos originales? Perdés tus ediciones.')) return;
+    savePlantillasMora(Object.assign({},PLANTILLAS_MORA_DEFAULT));
+    ov.remove();
+    abrirEditorPlantillasMora();
+  };
+}
+// Inserta una variable en el textarea que tengas enfocado
+function _plantInsert(v){
+  const id=window._plantFocus||'plant-t1';
+  const e=document.getElementById(id);
+  if(!e) return;
+  const s=e.selectionStart||0, en=e.selectionEnd||0;
+  e.value=e.value.slice(0,s)+v+e.value.slice(en);
+  e.focus();
+  e.setSelectionRange(s+v.length, s+v.length);
 }
 
 // ── Alertas de cambio de categoria ──
