@@ -548,6 +548,11 @@ tr:hover td{background:var(--bg)}
         <div style="font-size:22px;font-weight:800;margin-bottom:6px">💾 Respaldos</div>
         <div style="font-size:13px;color:var(--text2);margin-bottom:1.5rem">Cada mes se guardan dos copias obligatorias: una al empezar (después del ICC) y otra antes del cierre final.</div>
         <div id="respaldos-panel"></div>
+        <div style="margin-top:2rem;border-top:1px solid var(--border);padding-top:1.5rem">
+          <div style="font-size:15px;font-weight:800;margin-bottom:4px">🔧 Herramientas</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Reconstruir la cuota de Mayo 2026 que falta en el historial de los clientes, usando los montos de la planilla.</div>
+          <button onclick="abrirReconstruccionMayo()" style="background:var(--surface);border:1.5px solid var(--border2);color:var(--text);padding:10px 16px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">🔧 Reconstruir cuota de Mayo 2026</button>
+        </div>
       </div>
     </div>
     <div id="atab-historial" style="display:none"><div style="max-width:1400px;margin:0 auto;padding:2rem 1.5rem">
@@ -1169,7 +1174,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0450';
+  datos['_version']='v1.0451';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7517,6 +7522,87 @@ function renderAdminDet(id){
         <div id="obs-admin-list-${id}">${renderObsHtml(false)}</div>
       </div>
     </div>`;
+}
+
+// ══════ Reconstrucción cuota MAYO 2026 desde planilla PDF (v1.0451) ══════
+const TABLA_MAYO_2026 = {"M1-1A": {"cuota": 41, "monto": 427582}, "M1-2A": {"cuota": 38, "monto": 450706}, "M1-3A": {"cuota": 34, "monto": 424553}, "M1-3B": {"cuota": 34, "monto": 424553}, "M1-4A": {"cuota": 39, "monto": 483569}, "M1-4B": {"cuota": 38, "monto": 481288}, "M1-5A": {"cuota": 32, "monto": 366577}, "M1-5B": {"cuota": 32, "monto": 523679}, "M1-6A": {"cuota": 33, "monto": 464118}, "M1-6B": {"cuota": 34, "monto": 395347}, "M1-8A": {"cuota": 42, "monto": 574101}, "M1-8B": {"cuota": 41, "monto": 512669}, "M1-9A": {"cuota": 42, "monto": 478820}, "M1-9B": {"cuota": 43, "monto": 496475}, "M1-10A": {"cuota": 42, "monto": 478820}, "M1-10B": {"cuota": 41, "monto": 427582}, "M1-11A": {"cuota": 43, "monto": 496475}, "M1-11B": {"cuota": 41, "monto": 427582}, "M1-13A": {"cuota": 42, "monto": 478820}, "M1-13B": {"cuota": 42, "monto": 478820}, "M1-14A": {"cuota": 41, "monto": 427582}, "M1-15A": {"cuota": 43, "monto": 496475}, "M1-15B": {"cuota": 43, "monto": 496475}, "M1-16A": {"cuota": 41, "monto": 512669}, "M1-16B": {"cuota": 42, "monto": 574101}, "M1-2B": {"cuota": 31, "monto": 331166}, "M2-1A": {"cuota": 32, "monto": 366577}, "M2-1B": {"cuota": 32, "monto": 366577}, "M2-2A": {"cuota": 30, "monto": 488820}, "M2-2B": {"cuota": 31, "monto": 522292}, "M2-3A": {"cuota": 32, "monto": 418943}, "M2-3B": {"cuota": 33, "monto": 420970}, "M2-5A": {"cuota": 29, "monto": 525390}, "M2-5B": {"cuota": 32, "monto": 523679}, "M2-6A": {"cuota": 28, "monto": 487096}, "M2-6B": {"cuota": 30, "monto": 590364}, "M2-7A": {"cuota": 32, "monto": 418943}, "M2-8A": {"cuota": 38, "monto": 486265}, "M2-8B": {"cuota": 28, "monto": 489530}, "M2-9A": {"cuota": 31, "monto": 501478}, "M2-9B": {"cuota": 30, "monto": 590364}, "M2-10A": {"cuota": 32, "monto": 366577}, "M2-10B": {"cuota": 31, "monto": 473091}, "M2-11A": {"cuota": 31, "monto": 577173}, "M2-11B": {"cuota": 28, "monto": 518756}, "M2-12A": {"cuota": 34, "monto": 485202}, "M2-12B": {"cuota": 32, "monto": 418943}, "M2-13A": {"cuota": 32, "monto": 366577}, "M2-13B": {"cuota": 33, "monto": 325593}, "M2-14A": {"cuota": 39, "monto": 489882}, "M2-14B": {"cuota": 31, "monto": 473091}, "M2-15A": {"cuota": 38, "monto": 450233}, "M2-15B": {"cuota": 31, "monto": 473091}, "M2-16A": {"cuota": 40, "monto": 495641}, "M2-16B": {"cuota": 40, "monto": 495641}, "M2-17A": {"cuota": 39, "monto": 483650}, "M2-17B": {"cuota": 38, "monto": 486260}, "M2-18B": {"cuota": 34, "monto": 424553}, "M3-1A": {"cuota": 30, "monto": 435689}, "M3-1B": {"cuota": 30, "monto": 435689}, "M3-2A": {"cuota": 29, "monto": 559539}, "M3-2B": {"cuota": 25, "monto": 428610}, "M3-3A": {"cuota": 31, "monto": 570862}, "M3-3B": {"cuota": 31, "monto": 649714}, "M3-4A": {"cuota": 28, "monto": 518756}, "M3-4B": {"cuota": 28, "monto": 518756}, "M3-5A": {"cuota": 27, "monto": 392502}, "M3-5B": {"cuota": 27, "monto": 392502}, "M3-7B": {"cuota": 3, "monto": 356378}, "M3-12B": {"cuota": 31, "monto": 605556}, "M3-13A": {"cuota": 29, "monto": 559539}, "M3-13B": {"cuota": 30, "monto": 628737}, "M3-14A": {"cuota": 32, "monto": 523679}, "M3-15A": {"cuota": 30, "monto": 509190}, "M3-15B": {"cuota": 30, "monto": 560845}, "M3-16B": {"cuota": 37, "monto": 546597}, "M3-17A": {"cuota": 33, "monto": 473592}, "M3-17B": {"cuota": 31, "monto": 570993}, "M3-18A": {"cuota": 31, "monto": 465521}, "M3-18B": {"cuota": 22, "monto": 439575}, "M4-1A": {"cuota": 28, "monto": 468830}, "M4-1B": {"cuota": 27, "monto": 382567}, "M4-2A": {"cuota": 26, "monto": 439498}, "M4-2B": {"cuota": 27, "monto": 423307}, "M4-3A": {"cuota": 29, "monto": 620062}, "M4-3B": {"cuota": 29, "monto": 620062}, "M4-6A": {"cuota": 30, "monto": 504761}, "M4-8A": {"cuota": 27, "monto": 397472}, "M4-8B": {"cuota": 27, "monto": 397472}, "M4-9A": {"cuota": 27, "monto": 423307}, "M4-9B": {"cuota": 26, "monto": 324436}, "M4-10A": {"cuota": 30, "monto": 608193}, "M4-10B": {"cuota": 30, "monto": 681870}, "M4-11B": {"cuota": 29, "monto": 509041}, "M4-12A": {"cuota": 30, "monto": 435689}, "M4-12B": {"cuota": 30, "monto": 435689}, "M4-13A": {"cuota": 14, "monto": 328997}, "M4-13B": {"cuota": 14, "monto": 328997}, "M4-15A": {"cuota": 28, "monto": 550420}, "M4-15B": {"cuota": 30, "monto": 593315}, "M4-16A": {"cuota": 28, "monto": 468830}, "M4-16B": {"cuota": 28, "monto": 468830}, "ETAPA 2-2": {"cuota": 21, "monto": 271833}, "ETAPA 2-3": {"cuota": 26, "monto": 364155}, "ETAPA 2-4": {"cuota": 26, "monto": 364155}, "ETAPA 2-5": {"cuota": 25, "monto": 336480}, "ETAPA 2-6": {"cuota": 25, "monto": 336480}, "ETAPA 2-9": {"cuota": 25, "monto": 336480}, "ETAPA 2-13": {"cuota": 25, "monto": 336480}, "ETAPA 2-14": {"cuota": 21, "monto": 271833}, "ETAPA 2-15": {"cuota": 26, "monto": 351598}, "ETAPA 2-17": {"cuota": 26, "monto": 364155}, "ETAPA 2-20": {"cuota": 27, "monto": 392502}, "ETAPA 2-21": {"cuota": 27, "monto": 324933}, "ETAPA 2-22": {"cuota": 26, "monto": 351598}, "ETAPA 2-23": {"cuota": 26, "monto": 351598}, "ETAPA 2-24": {"cuota": 26, "monto": 351598}, "ETAPA 2-25": {"cuota": 27, "monto": 366171}, "ETAPA 2-26": {"cuota": 26, "monto": 372527}, "ETAPA 2-27": {"cuota": 26, "monto": 372527}, "ETAPA 2-28": {"cuota": 26, "monto": 372527}, "ETAPA 2-29": {"cuota": 26, "monto": 372527}, "ETAPA 2-30": {"cuota": 26, "monto": 372527}, "ETAPA 2-31": {"cuota": 26, "monto": 372527}, "ETAPA 2-32": {"cuota": 26, "monto": 401826}, "ETAPA 2-33": {"cuota": 26, "monto": 401826}, "ETAPA 2-34": {"cuota": 26, "monto": 401826}, "ETAPA 2-35": {"cuota": 27, "monto": 366171}, "ETAPA 2-36": {"cuota": 26, "monto": 115}, "ETAPA 2-37": {"cuota": 23, "monto": 332029}, "ETAPA 2-38": {"cuota": 23, "monto": 390900}, "ETAPA 2-39": {"cuota": 26, "monto": 308485}, "ETAPA 2-40": {"cuota": 27, "monto": 366171}, "ETAPA 2-41": {"cuota": 26, "monto": 401826}, "ETAPA 2-42": {"cuota": 26, "monto": 401826}, "ETAPA 2-43": {"cuota": 26, "monto": 372527}, "ETAPA 2-44": {"cuota": 26, "monto": 372527}, "ETAPA 2-45": {"cuota": 26, "monto": 372527}, "ETAPA 2-46": {"cuota": 23, "monto": 332029}, "ETAPA 2-47": {"cuota": 23, "monto": 332029}, "ETAPA 2-48": {"cuota": 16, "monto": 271718}, "ETAPA 2-49": {"cuota": 16, "monto": 271718}, "ETAPA 2-50": {"cuota": 16, "monto": 271718}, "ETAPA 2-51": {"cuota": 21, "monto": 304193}, "ETAPA 2-52": {"cuota": 19, "monto": 287139}, "ETAPA 2-53": {"cuota": 21, "monto": 304193}, "ETAPA 2-54": {"cuota": 27, "monto": 382567}, "ETAPA 2-55": {"cuota": 27, "monto": 496838}, "ETAPA 2-56": {"cuota": 21, "monto": 323610}, "ETAPA 2-57": {"cuota": 23, "monto": 353222}, "ETAPA 2-58": {"cuota": 25, "monto": 400571}, "ETAPA 2-59": {"cuota": 25, "monto": 432617}, "ETAPA 3-4": {"cuota": 21, "monto": 333318}, "ETAPA 3-5": {"cuota": 21, "monto": 333318}, "ETAPA 3-6": {"cuota": 21, "monto": 333318}, "ETAPA 3-10": {"cuota": 19, "monto": 314631}, "ETAPA 3-11": {"cuota": 19, "monto": 314631}, "ETAPA 3-12": {"cuota": 17, "monto": 292007}, "ETAPA 3-13": {"cuota": 16, "monto": 294598}, "ETAPA 3-14": {"cuota": 15, "monto": 278780}, "ETAPA 3-15": {"cuota": 15, "monto": 278780}, "ETAPA 3-16": {"cuota": 14, "monto": 264739}, "ETAPA 3-17": {"cuota": 16, "monto": 294598}, "ETAPA 3-19": {"cuota": 16, "monto": 283158}, "ETAPA 3-20": {"cuota": 16, "monto": 283158}, "ETAPA 3-21": {"cuota": 14, "monto": 254458}, "ETAPA 3-22": {"cuota": 14, "monto": 254458}, "ETAPA 3-23": {"cuota": 16, "monto": 283158}, "ETAPA 3-24": {"cuota": 17, "monto": 280667}, "ETAPA 3-25": {"cuota": 17, "monto": 292007}, "ETAPA 3-26": {"cuota": 17, "monto": 292007}, "ETAPA 3-27": {"cuota": 18, "monto": 295821}, "ETAPA 3-28": {"cuota": 21, "monto": 304193}, "ETAPA 3-30": {"cuota": 21, "monto": 304193}, "ETAPA 3-31": {"cuota": 20, "monto": 286479}, "ETAPA 3-32": {"cuota": 20, "monto": 286479}, "ETAPA 3-33": {"cuota": 20, "monto": 286479}, "ETAPA 3-34": {"cuota": 20, "monto": 286479}, "ETAPA 3-35": {"cuota": 20, "monto": 286479}, "ETAPA 3-36": {"cuota": 20, "monto": 286479}, "ETAPA 3-37": {"cuota": 20, "monto": 286479}, "ETAPA 3-39": {"cuota": 18, "monto": 280880}, "ETAPA 3-40": {"cuota": 19, "monto": 287139}, "ETAPA 3-41": {"cuota": 18, "monto": 280880}, "ETAPA 3-42": {"cuota": 17, "monto": 266492}, "ETAPA 3-43": {"cuota": 17, "monto": 266492}, "ETAPA 3-44": {"cuota": 17, "monto": 266492}, "ETAPA 3-45": {"cuota": 20, "monto": 286479}, "ETAPA 3-46": {"cuota": 19, "monto": 287139}, "ETAPA 3-47": {"cuota": 17, "monto": 311853}, "ETAPA 3-48": {"cuota": 17, "monto": 311853}, "ETAPA 3-49": {"cuota": 16, "monto": 314620}, "ETAPA 3-50": {"cuota": 19, "monto": 336014}, "ETAPA 3-51": {"cuota": 18, "monto": 328690}, "ETAPA 3-53": {"cuota": 17, "monto": 238142}, "ETAPA 3-54": {"cuota": 21, "monto": 414222}, "ETAPA 3-55": {"cuota": 21, "monto": 292803}, "ETAPA 3-56": {"cuota": 20, "monto": 390100}, "ETAPA 3-57": {"cuota": 21, "monto": 414222}, "ETAPA 3-58": {"cuota": 20, "monto": 390100}, "ETAPA 3-60": {"cuota": 17, "monto": 362883}, "ETAPA 3-61": {"cuota": 17, "monto": 362883}, "ETAPA 3-62": {"cuota": 16, "monto": 366103}, "ETAPA 3-63": {"cuota": 16, "monto": 366103}, "ETAPA 3-64": {"cuota": 16, "monto": 366103}, "ETAPA 3-65": {"cuota": 15, "monto": 346446}, "ETAPA 3-66": {"cuota": 15, "monto": 346446}, "ETAPA 3-67": {"cuota": 16, "monto": 366103}, "ETAPA 3-68": {"cuota": 16, "monto": 366103}, "ETAPA 3-69": {"cuota": 16, "monto": 394704}, "ETAPA 3-70": {"cuota": 16, "monto": 366103}, "ETAPA 3-71": {"cuota": 16, "monto": 366103}, "ETAPA 3-72": {"cuota": 15, "monto": 346446}, "ETAPA 3-73": {"cuota": 15, "monto": 346446}, "ETAPA 3-75": {"cuota": 14, "monto": 328997}, "ETAPA 3-76": {"cuota": 17, "monto": 362883}, "E4-M5-1A": {"cuota": 9, "monto": 352437}, "E4-M5-1B": {"cuota": 10, "monto": 348415}, "E4-M5-3B": {"cuota": 6, "monto": 361345}, "E4-M5-4A": {"cuota": 3, "monto": 320100}, "E4-M5-4B": {"cuota": 10, "monto": 348415}, "E4-M5-5A": {"cuota": 10, "monto": 348415}, "E4-M5-5B": {"cuota": 10, "monto": 348415}, "E4-M5-6A": {"cuota": 10, "monto": 348415}, "E4-M5-6B": {"cuota": 10, "monto": 348415}, "E4-M5-7A": {"cuota": 6, "monto": 361345}, "E4-M5-9A": {"cuota": 10, "monto": 348415}, "E4-M5-9B": {"cuota": 10, "monto": 348415}, "E4-M5-10A": {"cuota": 10, "monto": 354884}, "E4-M5-10B": {"cuota": 10, "monto": 348415}, "E4-M5-11A": {"cuota": 9, "monto": 352437}, "E4-M5-11B": {"cuota": 3, "monto": 342507}, "E4-M5-12B": {"cuota": 10, "monto": 346012}, "E4-M5-13A": {"cuota": 3, "monto": 320100}, "E4-M5-13B": {"cuota": 3, "monto": 342507}, "E4-M5-14A": {"cuota": 4, "monto": 316800}, "E4-M5-14B": {"cuota": 2, "monto": 300000}, "E4-M4-8A": {"cuota": 6, "monto": 361345}, "E4-M4-8B": {"cuota": 9, "monto": 352437}, "E4-M4-9A": {"cuota": 4, "monto": 316800}, "E4-M4-9B": {"cuota": 10, "monto": 354884}, "E4-M4-10A": {"cuota": 1, "monto": 340000}, "E4-M4-10B": {"cuota": 1, "monto": 340000}, "E4-M4-13B": {"cuota": 1, "monto": 340000}, "E4-M3-8B": {"cuota": 6, "monto": 361345}, "E4-M1-7B": {"cuota": 1, "monto": 300000}, "E4-M1-8A": {"cuota": 1, "monto": 300000}, "E4-M1-9B": {"cuota": 2, "monto": 320000}, "M1-12B": {"cuota": 20, "monto": 194}};
+function _mayoPlan(){
+  const data=loadData();
+  const mora=(typeof loadCuotasMora==='function')?loadCuotasMora():[];
+  const moraMayo=new Set();
+  mora.forEach(m=>{ if(!m.pagada && Number(m.mes)===4 && Number(m.anio)===2026) moraMayo.add(m.clienteId+'|'+Number(m.numeroCuota)); });
+  const plan={pagadas:[],impagas:[],sinPDF:[],noCoincide:[],yaTiene:[]};
+  data.forEach(c=>{
+    const info=TABLA_MAYO_2026[c.id];
+    const nums=(c.hist||[]).map(h=>h.cuota).filter(n=>typeof n==='number').sort((a,b)=>a-b);
+    if(nums.length<2) return;
+    const faltan=[];
+    for(let n=nums[0]; n<nums[nums.length-1]; n++){ if(!nums.includes(n)) faltan.push(n); }
+    if(!faltan.length) return;
+    if(!info){ plan.sinPDF.push({id:c.id,titular:c.titular,faltan}); return; }
+    const cm=info.cuota;
+    if(!faltan.includes(cm)){ plan.noCoincide.push({id:c.id,titular:c.titular,faltan,cuotaPDF:cm}); return; }
+    if((c.hist||[]).some(h=>h.cuota===cm)){ plan.yaTiene.push({id:c.id,cuota:cm}); return; }
+    const enMora=moraMayo.has(c.id+'|'+cm);
+    const reg={id:c.id,titular:c.titular,cuota:cm,monto:info.monto,pagada:!enMora};
+    if(enMora) plan.impagas.push(reg); else plan.pagadas.push(reg);
+  });
+  return plan;
+}
+function abrirReconstruccionMayo(){
+  const p=_mayoPlan();
+  const total=p.pagadas.length+p.impagas.length;
+  const fila=(x,color)=>`<div style="display:flex;gap:8px;padding:5px 10px;border-bottom:1px solid var(--border);font-size:12px">
+    <span style="font-weight:700;color:var(--acc2);min-width:70px">${x.id}</span>
+    <span style="flex:1;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.titular||''}</span>
+    <span style="min-width:60px;text-align:right">Cuota ${x.cuota}</span>
+    <span style="min-width:90px;text-align:right;font-weight:700">$${(x.monto||0).toLocaleString('es-AR')}</span>
+    <span style="min-width:60px;text-align:right;color:${color}">${x.pagada?'Pagada':'Impaga'}</span>
+  </div>`;
+  const ov=document.createElement('div');
+  ov.id='recon-mayo-modal';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML=`<div style="background:var(--surface);border-radius:14px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto;padding:20px">
+    <div style="font-size:17px;font-weight:800;margin-bottom:4px">🔧 Reconstruir cuota de Mayo 2026</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px">Se completa la cuota de mayo que falta en el historial, con los montos de la planilla. Pagada/impaga según la lista de mora.</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px">
+      <div style="background:var(--green-bg);border:1px solid var(--green-border);border-radius:9px;padding:10px"><div style="font-size:11px;color:var(--green);font-weight:700">SE INSERTAN PAGADAS</div><div style="font-size:22px;font-weight:800;color:var(--green)">${p.pagadas.length}</div></div>
+      <div style="background:var(--red-bg);border:1px solid #fca5a5;border-radius:9px;padding:10px"><div style="font-size:11px;color:var(--red);font-weight:700">SE INSERTAN IMPAGAS</div><div style="font-size:22px;font-weight:800;color:var(--red)">${p.impagas.length}</div></div>
+      <div style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:10px"><div style="font-size:11px;color:var(--text2);font-weight:700">SIN DATO EN PLANILLA</div><div style="font-size:22px;font-weight:800;color:var(--text2)">${p.sinPDF.length}</div></div>
+      <div style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:10px"><div style="font-size:11px;color:var(--text2);font-weight:700">NO COINCIDE (revisar)</div><div style="font-size:22px;font-weight:800;color:var(--text2)">${p.noCoincide.length}</div></div>
+    </div>
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">⚠️ Impagas (en mora de mayo)</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px;max-height:150px;overflow-y:auto">${p.impagas.length?p.impagas.map(x=>fila(x,'var(--red)')).join(''):'<div style="padding:12px;text-align:center;color:var(--text3);font-size:12px">Ninguna</div>'}</div>
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">✅ Pagadas (${p.pagadas.length})</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px;max-height:200px;overflow-y:auto">${p.pagadas.length?p.pagadas.map(x=>fila(x,'var(--green)')).join(''):'<div style="padding:12px;text-align:center;color:var(--text3);font-size:12px">Ninguna</div>'}</div>
+    ${p.noCoincide.length?`<div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:6px">❓ No coinciden — NO se tocan (revisá a mano)</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px;max-height:120px;overflow-y:auto">${p.noCoincide.map(x=>`<div style="padding:5px 10px;border-bottom:1px solid var(--border);font-size:12px"><b style="color:var(--acc2)">${x.id}</b> ${x.titular} — hueco ${x.faltan.join(',')}, planilla dice mayo=${x.cuotaPDF}</div>`).join('')}</div>`:''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button onclick="_aplicarReconMayo()" style="flex:1;min-width:180px;background:#5a9e78;color:#fff;border:none;border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer">✓ Aplicar (insertar ${total} cuotas)</button>
+      <button onclick="document.getElementById('recon-mayo-modal').remove()" style="background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:8px;padding:12px 18px;font-size:13px;font-weight:700;cursor:pointer">Cancelar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function _aplicarReconMayo(){
+  confirmarConClave(()=>{
+    const p=_mayoPlan();
+    const data=loadData();
+    let n=0;
+    [...p.pagadas,...p.impagas].forEach(x=>{
+      const c=data.find(cl=>cl.id===x.id);
+      if(!c) return;
+      if(!c.hist) c.hist=[];
+      if(c.hist.some(h=>h.cuota===x.cuota)) return;
+      c.hist.push({cuota:x.cuota, monto:x.monto, mes:'Mayo 2026', ts:new Date(2026,4,10).toISOString(), pagada:x.pagada});
+      n++;
+    });
+    saveData(data);
+    addHist('edit','🔧 Reconstrucción Mayo 2026: '+n+' cuotas insertadas al historial desde planilla');
+    const m=document.getElementById('recon-mayo-modal'); if(m) m.remove();
+    alert('✓ Listo. Se insertaron '+n+' cuotas de mayo al historial.');
+    if(typeof renderAdminTable==='function') try{renderAdminTable();}catch(e){}
+  });
 }
 
 // ══════ Historial completo de cuotas por cliente — editable (v1.0450) ══════
