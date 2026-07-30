@@ -1174,7 +1174,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0453';
+  datos['_version']='v1.0454';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7302,7 +7302,7 @@ function renderAdminDet(id){
   const loteTag=formatLoteTag(c.mz,c.lote);
   const saldoColor=c.saldo===0?'var(--text)':c.saldo>0?'var(--green)':'var(--red)';
   const saldoTxt=c.saldo===0?'Sin diferencia':c.saldo>0?`A favor ${fmtPeso(c.saldo)}`:`Deuda ${fmtPeso(Math.abs(c.saldo))}`;
-  const hist3=(c.hist||[]).slice().reverse().slice(0,3);
+  const hist3=(c.hist||[]).slice().sort((a,b)=>(b.cuota||0)-(a.cuota||0)).slice(0,3);
   const histHtml=hist3.length?hist3.map(h=>`<div class="hist-chip">Cuota ${h.cuota} — ${fmtPeso(h.monto)} — ${h.mes}</div>`).join(''):'<span style="color:var(--text3);font-size:12px">Sin registros previos</span>';
   const cur=c.moneda==='USD'?'USD ':'';
   const mesEnCurso=mesActual();
@@ -7603,7 +7603,7 @@ function _aplicarReconMayo(){
 function abrirHistorialCuotas(id){
   const c=loadData().find(x=>x.id===id);
   if(!c){alert('Lote no encontrado');return;}
-  const hist=(c.hist||[]).slice().sort((a,b)=>(a.cuota||0)-(b.cuota||0));
+  const hist=(c.hist||[]).slice().sort((a,b)=>(b.cuota||0)-(a.cuota||0));
 
   // Detectar huecos en la secuencia de números de cuota
   const nums=hist.map(h=>h.cuota).filter(n=>typeof n==='number').sort((a,b)=>a-b);
@@ -7680,7 +7680,7 @@ function _editarCuotaHist(id, idx){
   confirmarConClave(()=>{
     const data=loadData();
     const c=data.find(x=>x.id===id);
-    const hist=(c.hist||[]).slice().sort((a,b)=>(a.cuota||0)-(b.cuota||0));
+    const hist=(c.hist||[]).slice().sort((a,b)=>(b.cuota||0)-(a.cuota||0));
     const h=hist[idx];
     if(!h) return;
     const nuevoMonto=prompt('Monto de la cuota '+h.cuota+' ('+(h.mes||'')+'):', h.monto||0);
@@ -9491,7 +9491,7 @@ function renderAdminTable(){
     const rowBg=rowBgColor?('background:'+rowBgColor+';'):'';
     const saldoColor=c.saldo===0?'#94a3b8':c.saldo>0?'#4caf82':'#e05050';
     const saldoLabel=c.saldo===0?'—':c.saldo>0?'+'+fmtPeso(c.saldo):'-'+fmtPeso(Math.abs(c.saldo));
-    const hist3=(c.hist||[]).slice(-3).reverse();
+    const hist3=(c.hist||[]).slice().sort((a,b)=>(b.cuota||0)-(a.cuota||0)).slice(0,3);
     const triColor=c.moneda==='USD'?'var(--text3)':c.tri==='Mar-Jun-Sep-Dic'?'#f472b6':c.tri==='Feb-May-Ago-Nov'?'#4caf82':'#60a5fa';
     const triLabel=c.moneda==='USD'?'USD':c.tri==='Mar-Jun-Sep-Dic'?'Rosa':c.tri==='Feb-May-Ago-Nov'?'Verde':'Azul';
     const pagoColor=c.autopago?'#16a34a':c.est==='finalizado'?'#9ca3af':c.pago?'#4caf82':'#e09040';
@@ -10461,7 +10461,7 @@ function renderColab(){
     const isUSD=c.moneda==='USD';
     const saldoColor=c.saldo===0?'#94a3b8':c.saldo>0?'#4caf82':'#e05050';
     const saldoLabel=c.saldo===0?'—':c.saldo>0?'+'+fmtPeso(c.saldo):'-'+fmtPeso(Math.abs(c.saldo));
-    const hist3=(c.hist||[]).slice(-3).reverse();
+    const hist3=(c.hist||[]).slice().sort((a,b)=>(b.cuota||0)-(a.cuota||0)).slice(0,3);
     const triColor=c.moneda==='USD'?'var(--text3)':c.tri==='Mar-Jun-Sep-Dic'?'#f472b6':c.tri==='Feb-May-Ago-Nov'?'#4caf82':'#60a5fa';
     const triLabel=c.moneda==='USD'?'USD':c.tri==='Mar-Jun-Sep-Dic'?'Rosa':c.tri==='Feb-May-Ago-Nov'?'Verde':'Azul';
     const pagoColor=c.autopago?'#16a34a':c.est==='finalizado'?'#9ca3af':c.pago?'#4caf82':'#e09040';
@@ -11037,7 +11037,7 @@ function renderDetColab(id){
   const loteTag=`${getEtapa(c.mz).replace('Etapa ','E')}-${c.mz}-${c.lote}`;
   const saldoColor=c.saldo===0?'var(--text)':c.saldo>0?'var(--green)':'var(--red)';
   const saldoTxt=c.saldo===0?'Sin diferencia':c.saldo>0?`A favor ${fmtPeso(c.saldo)}`:`Deuda ${fmtPeso(Math.abs(c.saldo))}`;
-  const hist3=(c.hist||[]).slice().reverse().slice(0,3);
+  const hist3=(c.hist||[]).slice().sort((a,b)=>(b.cuota||0)-(a.cuota||0)).slice(0,3);
   const histHtml=hist3.length?hist3.map(h=>`<div class="hist-chip">Cuota ${h.cuota} — ${fmtPeso(h.monto)} — ${h.mes}</div>`).join(''):'<span style="color:var(--text3);font-size:12px">Sin registros previos</span>';
   const cur=c.moneda==='USD'?'USD ':'';
 
