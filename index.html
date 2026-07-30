@@ -1174,7 +1174,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0451';
+  datos['_version']='v1.0452';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7534,15 +7534,11 @@ function _mayoPlan(){
   const plan={pagadas:[],impagas:[],sinPDF:[],noCoincide:[],yaTiene:[]};
   data.forEach(c=>{
     const info=TABLA_MAYO_2026[c.id];
-    const nums=(c.hist||[]).map(h=>h.cuota).filter(n=>typeof n==='number').sort((a,b)=>a-b);
-    if(nums.length<2) return;
-    const faltan=[];
-    for(let n=nums[0]; n<nums[nums.length-1]; n++){ if(!nums.includes(n)) faltan.push(n); }
-    if(!faltan.length) return;
-    if(!info){ plan.sinPDF.push({id:c.id,titular:c.titular,faltan}); return; }
+    if(!info) return; // sin dato en planilla: no lo tocamos (no lo listamos como problema)
     const cm=info.cuota;
-    if(!faltan.includes(cm)){ plan.noCoincide.push({id:c.id,titular:c.titular,faltan,cuotaPDF:cm}); return; }
+    // ¿ya tiene la cuota de mayo (por número) en el hist?
     if((c.hist||[]).some(h=>h.cuota===cm)){ plan.yaTiene.push({id:c.id,cuota:cm}); return; }
+    // Falta la cuota de mayo → hay que insertarla. Pagada/impaga según mora.
     const enMora=moraMayo.has(c.id+'|'+cm);
     const reg={id:c.id,titular:c.titular,cuota:cm,monto:info.monto,pagada:!enMora};
     if(enMora) plan.impagas.push(reg); else plan.pagadas.push(reg);
@@ -7568,15 +7564,11 @@ function abrirReconstruccionMayo(){
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px">
       <div style="background:var(--green-bg);border:1px solid var(--green-border);border-radius:9px;padding:10px"><div style="font-size:11px;color:var(--green);font-weight:700">SE INSERTAN PAGADAS</div><div style="font-size:22px;font-weight:800;color:var(--green)">${p.pagadas.length}</div></div>
       <div style="background:var(--red-bg);border:1px solid #fca5a5;border-radius:9px;padding:10px"><div style="font-size:11px;color:var(--red);font-weight:700">SE INSERTAN IMPAGAS</div><div style="font-size:22px;font-weight:800;color:var(--red)">${p.impagas.length}</div></div>
-      <div style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:10px"><div style="font-size:11px;color:var(--text2);font-weight:700">SIN DATO EN PLANILLA</div><div style="font-size:22px;font-weight:800;color:var(--text2)">${p.sinPDF.length}</div></div>
-      <div style="background:var(--bg);border:1px solid var(--border2);border-radius:9px;padding:10px"><div style="font-size:11px;color:var(--text2);font-weight:700">NO COINCIDE (revisar)</div><div style="font-size:22px;font-weight:800;color:var(--text2)">${p.noCoincide.length}</div></div>
     </div>
     <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">⚠️ Impagas (en mora de mayo)</div>
     <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px;max-height:150px;overflow-y:auto">${p.impagas.length?p.impagas.map(x=>fila(x,'var(--red)')).join(''):'<div style="padding:12px;text-align:center;color:var(--text3);font-size:12px">Ninguna</div>'}</div>
     <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">✅ Pagadas (${p.pagadas.length})</div>
     <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px;max-height:200px;overflow-y:auto">${p.pagadas.length?p.pagadas.map(x=>fila(x,'var(--green)')).join(''):'<div style="padding:12px;text-align:center;color:var(--text3);font-size:12px">Ninguna</div>'}</div>
-    ${p.noCoincide.length?`<div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:6px">❓ No coinciden — NO se tocan (revisá a mano)</div>
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px;max-height:120px;overflow-y:auto">${p.noCoincide.map(x=>`<div style="padding:5px 10px;border-bottom:1px solid var(--border);font-size:12px"><b style="color:var(--acc2)">${x.id}</b> ${x.titular} — hueco ${x.faltan.join(',')}, planilla dice mayo=${x.cuotaPDF}</div>`).join('')}</div>`:''}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
       <button onclick="_aplicarReconMayo()" style="flex:1;min-width:180px;background:#5a9e78;color:#fff;border:none;border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer">✓ Aplicar (insertar ${total} cuotas)</button>
       <button onclick="document.getElementById('recon-mayo-modal').remove()" style="background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:8px;padding:12px 18px;font-size:13px;font-weight:700;cursor:pointer">Cancelar</button>
