@@ -1175,7 +1175,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0462';
+  datos['_version']='v1.0463';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7909,23 +7909,27 @@ function _refrescarHistCuotas(id){
 }
 
 function _editarCuotaHist(id, idx){
+  const data0=loadData();
+  const c0=data0.find(x=>x.id===id);
+  if(!c0) return;
+  const hist0=(c0.hist||[]).slice().sort((a,b)=>(b.cuota||0)-(a.cuota||0));
+  const h=hist0[idx];
+  if(!h) return;
+  const nuevoMonto=prompt('Monto de la cuota '+h.cuota+' ('+(h.mes||'')+'):', h.monto||0);
+  if(nuevoMonto===null) return;
+  const m=parseFloat(String(nuevoMonto).replace(/[^\d.-]/g,''));
+  if(isNaN(m)){alert('Monto inválido');return;}
+  const pag=confirm('¿La cuota está PAGADA?\n\nAceptar = Pagada\nCancelar = Impaga');
+  const modal=document.getElementById('hist-cuotas-modal'); if(modal) modal.remove();
   confirmarConClave(()=>{
     const data=loadData();
     const c=data.find(x=>x.id===id);
-    const hist=(c.hist||[]).slice().sort((a,b)=>(b.cuota||0)-(a.cuota||0));
-    const h=hist[idx];
-    if(!h) return;
-    const nuevoMonto=prompt('Monto de la cuota '+h.cuota+' ('+(h.mes||'')+'):', h.monto||0);
-    if(nuevoMonto===null) return;
-    const m=parseFloat(String(nuevoMonto).replace(/[^\d.-]/g,''));
-    if(isNaN(m)){alert('Monto inválido');return;}
-    const pag=confirm('¿La cuota está PAGADA?\n\nAceptar = Pagada\nCancelar = Impaga');
-    // encontrar el registro real en c.hist (mismo objeto)
-    const real=c.hist.find(x=>x.cuota===h.cuota && x.mes===h.mes);
+    if(!c) return;
+    const real=(c.hist||[]).find(x=>x.cuota===h.cuota && x.mes===h.mes);
     if(real){ real.monto=m; real.pagada=pag; }
     saveData(data);
     addHist('edit','✏️ Cuota '+h.cuota+' editada en '+c.mz+' Lote '+c.lote+' — '+fmtPeso(m)+' ('+(pag?'pagada':'impaga')+')',id);
-    _refrescarHistCuotas(id);
+    abrirHistorialCuotas(id);
   });
 }
 
@@ -7936,36 +7940,44 @@ function _borrarCuotaHist(id, idx){
   const h0=hist0[idx];
   if(!h0) return;
   if(!confirm('¿Borrar la cuota '+h0.cuota+' ('+(h0.mes||'')+') del historial?')) return;
+  const modal=document.getElementById('hist-cuotas-modal'); if(modal) modal.remove();
   confirmarConClave(()=>{
     const data=loadData();
     const c=data.find(x=>x.id===id);
     c.hist=(c.hist||[]).filter(x=>!(x.cuota===h0.cuota && x.mes===h0.mes));
     saveData(data);
     addHist('edit','🗑 Cuota '+h0.cuota+' borrada del historial de '+c.mz+' Lote '+c.lote,id);
-    _refrescarHistCuotas(id);
+    abrirHistorialCuotas(id);
   });
 }
 
 function _agregarCuotaHist(id){
+  const data0=loadData();
+  const c0=data0.find(x=>x.id===id);
+  if(!c0) return;
+  // Pedir los datos ANTES de la clave (los prompts sí funcionan sobre el modal)
+  const numStr=prompt('Número de cuota a agregar:');
+  if(numStr===null) return;
+  const num=parseInt(numStr);
+  if(isNaN(num)){alert('Número inválido');return;}
+  if((c0.hist||[]).some(h=>h.cuota===num)){alert('Ya existe la cuota '+num+' en el historial');return;}
+  const mes=prompt('Mes (ej: Mayo 2026):','')||'';
+  const montoStr=prompt('Monto de la cuota:', c0.monto||0);
+  if(montoStr===null) return;
+  const m=parseFloat(String(montoStr).replace(/[^\d.-]/g,''));
+  if(isNaN(m)){alert('Monto inválido');return;}
+  const pag=confirm('¿La cuota está PAGADA?\n\nAceptar = Pagada\nCancelar = Impaga');
+  // Cerrar el modal del historial para que la pedida de clave no quede tapada
+  const modal=document.getElementById('hist-cuotas-modal'); if(modal) modal.remove();
   confirmarConClave(()=>{
     const data=loadData();
     const c=data.find(x=>x.id===id);
-    const numStr=prompt('Número de cuota a agregar:');
-    if(numStr===null) return;
-    const num=parseInt(numStr);
-    if(isNaN(num)){alert('Número inválido');return;}
-    if((c.hist||[]).some(h=>h.cuota===num)){alert('Ya existe la cuota '+num+' en el historial');return;}
-    const mes=prompt('Mes (ej: Mayo 2026):','')||'';
-    const montoStr=prompt('Monto de la cuota:', c.monto||0);
-    if(montoStr===null) return;
-    const m=parseFloat(String(montoStr).replace(/[^\d.-]/g,''));
-    if(isNaN(m)){alert('Monto inválido');return;}
-    const pag=confirm('¿La cuota está PAGADA?\n\nAceptar = Pagada\nCancelar = Impaga');
+    if(!c) return;
     if(!c.hist) c.hist=[];
     c.hist.push({cuota:num, monto:m, mes:mes.trim(), ts:new Date().toISOString(), pagada:pag});
     saveData(data);
     addHist('edit','➕ Cuota '+num+' agregada al historial de '+c.mz+' Lote '+c.lote+' — '+fmtPeso(m)+' ('+(pag?'pagada':'impaga')+')',id);
-    _refrescarHistCuotas(id);
+    abrirHistorialCuotas(id);
   });
 }
 
