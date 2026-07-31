@@ -772,6 +772,12 @@ tr:hover td{background:var(--bg)}
             oninput="document.getElementById('e-ca').value=this.value;actualizarEscalonInfo()">
         </div>
         <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Total cuotas (última)</div>
+          <input type="number" id="e-ct-visible" min="1" disabled
+            style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:90px;opacity:.5">
+          <input type="hidden" id="e-ct" value="48">
+        </div>
+        <div>
           <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Cuota pura ($)</div>
           <input type="number" id="e-monto-visible" min="0" disabled
             style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:120px;opacity:.5">
@@ -1169,7 +1175,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0459';
+  datos['_version']='v1.0460';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2007,6 +2013,8 @@ function openEditModal(id){
   (function(){
     const set=(eid,val)=>{const el=document.getElementById(eid);if(el){el.value=val;el.disabled=true;el.style.opacity='.5';el.style.borderColor='var(--border2)';}};
     set('e-ca-visible',c.ca||1);
+    set('e-ct-visible',c.ct||48);
+    { const _ctv=document.getElementById('e-ct-visible'); const _cth=document.getElementById('e-ct'); if(_cth)_cth.value=c.ct||48; if(_ctv)_ctv.oninput=function(){ if(_cth)_cth.value=this.value; }; }
     set('e-monto-visible',c.monto||0);
     set('e-adic-monto',c.adicionalMonto||0);
     const _cantIni=(c.adicionalMonto&&c.adicionalHasta)?Math.max(0,(c.adicionalHasta-(c.ca||1))+1):0;
@@ -2990,7 +2998,7 @@ function fcConfirmar(){
 
 function desbloquearCuotaActual(){
   confirmarConClave(()=>{
-    ['e-ca-visible','e-monto-visible','e-adic-monto','e-adic-cant'].forEach(eid=>{
+    ['e-ca-visible','e-ct-visible','e-monto-visible','e-adic-monto','e-adic-cant'].forEach(eid=>{
       const v=document.getElementById(eid);
       if(v){ v.disabled=false; v.style.opacity='1'; v.style.borderColor='var(--red)'; }
     });
