@@ -888,6 +888,12 @@ function montoCobrable(c){
   const activo=adic>0 && hasta>0 && Number(c.ca)<=hasta;
   return {base, adicional:activo?adic:0, total:base+(activo?adic:0), escalonActivo:activo, hasta};
 }
+// Monto que se debe GUARDAR en el historial de cuotas.
+// Regla: siempre el monto PURO de la cuota (sin interés/mora). Para USD el precio es fijo,
+// nunca se infla. Nunca guardar valores con recargos en el historial.
+function montoPuroHist(c){
+  return Number(c.monto)||0;
+}
 function calcInteresAuto(monto, desdeTs){
   const hoy=new Date();
   if(getMoraDesactivada()) return {dias:0,pct:0,interes:0};
@@ -1180,7 +1186,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0472';
+  datos['_version']='v1.0473';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -8933,7 +8939,7 @@ function borrarCierreFinalYReaplicar(){
       if(c.est!=='activo' && !esPrestamoAbsorbido) return;
       if(!c.hist) c.hist=[];
       const yaEnHist=c.hist.some(h=>h.mes===mesNombre&&h.cuota===c.ca);
-      if(!yaEnHist) c.hist.push({cuota:c.ca, monto:(Number(c.monto)||0), mes:mesNombre, ts:ts, pagada:!!c.pago});
+      if(!yaEnHist) c.hist.push({cuota:c.ca, monto:montoPuroHist(c), mes:mesNombre, ts:ts, pagada:!!c.pago});
       if(c.ca < c.ct) c.ca=c.ca+1;
       // Finalizar de verdad solo si es un lote activo que completó (los absorbidos ya están finalizados)
       if(c.ct>0 && c.ca>=c.ct && c.est==='activo'){ c.est='finalizado'; c.monto=0; c.saldo=0; _finalizadosEnCierre.push(c.id); }
@@ -9240,7 +9246,7 @@ function ejecutarCierreFinal(){
       // Registrar la cuota del mes en el historial SIEMPRE (pagada o no), sin duplicar
       if(!esPrimeraCuotaFutura(c)){
         const yaEnHist=c.hist.some(h=>h.mes===mesNombre&&h.cuota===c.ca);
-        if(!yaEnHist) c.hist.push({cuota:c.ca,monto:(Number(c.monto)||0),mes:mesNombre,ts,pagada:!!c.pago});
+        if(!yaEnHist) c.hist.push({cuota:c.ca,monto:montoPuroHist(c),mes:mesNombre,ts,pagada:!!c.pago});
       }
       if(!esPrimeraCuotaFutura(c)){
         if(c.ca<c.ct) c.ca=c.ca+1;
@@ -9379,7 +9385,7 @@ function hacerCierreFinal(){
         if(!c.hist) c.hist=[];
         const yaEnHist=c.hist.some(h=>h.mes===mesNombre&&h.cuota===c.ca);
         if(!yaEnHist){
-          c.hist.push({cuota:c.ca, monto:(Number(c.monto)||0), mes:mesNombre, ts:ts, pagada:!!c.pago});
+          c.hist.push({cuota:c.ca, monto:montoPuroHist(c), mes:mesNombre, ts:ts, pagada:!!c.pago});
         }
       }
       // Lote normal que pagó su última cuota → finalizar
