@@ -1180,7 +1180,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0467';
+  datos['_version']='v1.0468';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7655,28 +7655,26 @@ function corregirLoteHist(id){
 }
 
 // Calcula el historial realineado de un lote (sin aplicar). Devuelve {antes, despues}
+// SOLO corrige meses y números correlativos desde la cuota actual. MANTIENE pagada/impaga.
 function _realinearHist(c){
   const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const mora=(typeof loadCuotasMora==='function')?loadCuotasMora():[];
-  const moraSet=new Set();
-  mora.forEach(m=>{ if(!m.pagada) moraSet.add(c.id+'|'+Number(m.numeroCuota)+'|'+Number(m.anio)); });
-  // La cuota actual (ca) = mes operativo AGOSTO 2026. Ancla.
-  const anclaCuota=c.ca, anclaMesIdx=7, anclaAnio=2026; // agosto=7
-  // Tomar las cuotas existentes (con número válido), quedarnos con montos por número
+  const anclaCuota=c.ca, anclaMesIdx=7, anclaAnio=2026; // cuota actual = Agosto 2026
   const hist=(c.hist||[]).filter(h=>typeof h.cuota==='number' && h.cuota>=1);
-  // dedup por número: si hay duplicados, quedarse con el de monto mayor
+  // dedup por número: si hay duplicados, quedarse con el que tenga monto mayor (y su estado)
   const porNum={};
   hist.forEach(h=>{ if(!porNum[h.cuota] || (h.monto||0)>(porNum[h.cuota].monto||0)) porNum[h.cuota]={...h}; });
   const nums=Object.keys(porNum).map(Number).sort((a,b)=>a-b);
   if(!nums.length) return null;
   const despues=nums.map(n=>{
-    // meses de diferencia respecto al ancla
-    const diff=anclaCuota-n; // cuántos meses atrás de agosto
+    const diff=anclaCuota-n;
     const total=anclaAnio*12+anclaMesIdx-diff;
     const anio=Math.floor(total/12), mesIdx=((total%12)+12)%12;
-    const mesTxt=MESES[mesIdx]+' '+anio;
-    const enMora=moraSet.has(c.id+'|'+n+'|'+anio);
-    return {cuota:n, mes:mesTxt, monto:porNum[n].monto||0, pagada:!enMora};
+    return {
+      cuota:n,
+      mes:MESES[mesIdx]+' '+anio,
+      monto:porNum[n].monto||0,
+      pagada:porNum[n].pagada!==false   // MANTIENE el estado original de esa cuota
+    };
   });
   const antes=(c.hist||[]).slice().sort((a,b)=>(a.cuota||0)-(b.cuota||0)).map(h=>({cuota:h.cuota,mes:h.mes,monto:h.monto,pagada:h.pagada!==false}));
   return {antes, despues};
