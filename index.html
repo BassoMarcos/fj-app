@@ -1180,7 +1180,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0468';
+  datos['_version']='v1.0469';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7655,28 +7655,37 @@ function corregirLoteHist(id){
 }
 
 // Calcula el historial realineado de un lote (sin aplicar). Devuelve {antes, despues}
-// SOLO corrige meses y números correlativos desde la cuota actual. MANTIENE pagada/impaga.
+// Corrige meses/números correlativos desde la cuota actual, completa hasta ca-1, mantiene pagada/impaga.
 function _realinearHist(c){
   const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const anclaCuota=c.ca, anclaMesIdx=7, anclaAnio=2026; // cuota actual = Agosto 2026
   const hist=(c.hist||[]).filter(h=>typeof h.cuota==='number' && h.cuota>=1);
-  // dedup por número: si hay duplicados, quedarse con el que tenga monto mayor (y su estado)
+  // dedup por número: quedarse con el de monto mayor (y su estado)
   const porNum={};
   hist.forEach(h=>{ if(!porNum[h.cuota] || (h.monto||0)>(porNum[h.cuota].monto||0)) porNum[h.cuota]={...h}; });
-  const nums=Object.keys(porNum).map(Number).sort((a,b)=>a-b);
-  if(!nums.length) return null;
-  const despues=nums.map(n=>{
+  const numsExist=Object.keys(porNum).map(Number);
+  if(!numsExist.length) return null;
+  const minNum=Math.min(...numsExist);
+  const maxNum=anclaCuota-1; // el historial debe llegar hasta la cuota anterior a la actual (Julio)
+  const mesTxtDe=(n)=>{
     const diff=anclaCuota-n;
     const total=anclaAnio*12+anclaMesIdx-diff;
     const anio=Math.floor(total/12), mesIdx=((total%12)+12)%12;
-    return {
+    return MESES[mesIdx]+' '+anio;
+  };
+  const despues=[];
+  for(let n=minNum; n<=maxNum; n++){
+    const ex=porNum[n];
+    despues.push({
       cuota:n,
-      mes:MESES[mesIdx]+' '+anio,
-      monto:porNum[n].monto||0,
-      pagada:porNum[n].pagada!==false   // MANTIENE el estado original de esa cuota
-    };
-  });
-  const antes=(c.hist||[]).slice().sort((a,b)=>(a.cuota||0)-(b.cuota||0)).map(h=>({cuota:h.cuota,mes:h.mes,monto:h.monto,pagada:h.pagada!==false}));
+      mes:mesTxtDe(n),
+      monto: ex ? (ex.monto||0) : 0,          // si falta, monto 0 (se edita después)
+      pagada: ex ? (ex.pagada!==false) : false, // si falta, la marcamos impaga por defecto
+      _nueva: !ex                              // marca si es una cuota que se agregó
+    });
+  }
+  despues.sort((a,b)=>b.cuota-a.cuota); // descendente: más nueva arriba
+  const antes=(c.hist||[]).slice().sort((a,b)=>(b.cuota||0)-(a.cuota||0)).map(h=>({cuota:h.cuota,mes:h.mes,monto:h.monto,pagada:h.pagada!==false}));
   return {antes, despues};
 }
 
@@ -7688,9 +7697,9 @@ function abrirPreviewRealineado(id){
   const col=(titulo,arr,color)=>`<div style="flex:1;min-width:0">
     <div style="font-size:12px;font-weight:800;color:${color};margin-bottom:6px;text-align:center">${titulo}</div>
     <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:340px;overflow-y:auto">
-      ${arr.map(h=>`<div style="display:flex;gap:6px;padding:5px 8px;border-bottom:1px solid var(--border);font-size:11px">
+      ${arr.map(h=>`<div style="display:flex;gap:6px;padding:5px 8px;border-bottom:1px solid var(--border);font-size:11px;${h._nueva?'background:var(--amber-bg)':''}">
         <span style="font-weight:700;min-width:32px">C${h.cuota}</span>
-        <span style="flex:1;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.mes||'—'}</span>
+        <span style="flex:1;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.mes||'—'}${h._nueva?' <span style="color:var(--amber);font-size:9px">NUEVA</span>':''}</span>
         <span style="color:${h.pagada?'var(--green)':'var(--red)'};font-size:10px">${h.pagada?'pag':'imp'}</span>
       </div>`).join('')}
     </div>
