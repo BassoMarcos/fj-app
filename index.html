@@ -1186,7 +1186,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0473';
+  datos['_version']='v1.0474';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -12151,6 +12151,7 @@ async function init(){
       const fbLotesLibres = await window._fbGet('lotesLibresE123');
       const fbLotesCerts = await window._fbGet('lotesCerts');
       const fbIccMensual = await window._fbGet('iccMensual');
+      const fbHitos = await window._fbGet('hitosRespaldo');
       if(fbData) _lsSet(dKey('data'), JSON.stringify(fbData));
       if(fbMora) localStorage.setItem('fj_cuotas_mora', JSON.stringify(fbMora));
       if(fbBal) _lsSet(dKey('balances'), JSON.stringify(fbBal));
@@ -12176,6 +12177,7 @@ async function init(){
       if(fbLotesLibres) _lsSet(dKey('lotesLibresE123'), JSON.stringify(fbLotesLibres));
       if(fbLotesCerts) _lsSet(dKey('lotesCerts'), JSON.stringify(fbLotesCerts));
       if(fbIccMensual) _lsSet(dKey('iccMensual'), JSON.stringify(fbIccMensual));
+      if(fbHitos) localStorage.setItem('fj_hitos_respaldo', JSON.stringify(fbHitos));
       console.log('Firebase data loaded');
       // Escuchar cambios en tiempo real
       let _fbInitDone = false;
@@ -12253,6 +12255,7 @@ async function init(){
       setTimeout(backupDiarioAuto, 12000);
       window._fbListen('moraDesactivada', (d) => { if(d!==null&&d!==undefined) localStorage.setItem('fj_mora_desactivada', String(d)); });
       window._fbListen('notasMora', (d) => { if(d) localStorage.setItem('fj_notas_mora', JSON.stringify(d)); });
+      window._fbListen('hitosRespaldo', (d) => { if(d){ localStorage.setItem('fj_hitos_respaldo', JSON.stringify(d)); try{ renderCicloEstado(); }catch(e){} try{ const pc=document.getElementById('page-colab'); if(pc&&pc.classList.contains('active')) renderColab(); }catch(e){} } });
     }catch(e){
       console.warn('Firebase load failed:', e);
     }
