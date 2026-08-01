@@ -1180,7 +1180,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0469';
+  datos['_version']='v1.0470';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7694,32 +7694,73 @@ function abrirPreviewRealineado(id){
   if(!c){alert('no existe');return;}
   const r=_realinearHist(c);
   if(!r){alert('sin cuotas para realinear');return;}
-  const col=(titulo,arr,color)=>`<div style="flex:1;min-width:0">
-    <div style="font-size:12px;font-weight:800;color:${color};margin-bottom:6px;text-align:center">${titulo}</div>
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:340px;overflow-y:auto">
-      ${arr.map(h=>`<div style="display:flex;gap:6px;padding:5px 8px;border-bottom:1px solid var(--border);font-size:11px;${h._nueva?'background:var(--amber-bg)':''}">
-        <span style="font-weight:700;min-width:32px">C${h.cuota}</span>
-        <span style="flex:1;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.mes||'—'}${h._nueva?' <span style="color:var(--amber);font-size:9px">NUEVA</span>':''}</span>
-        <span style="color:${h.pagada?'var(--green)':'var(--red)'};font-size:10px">${h.pagada?'pag':'imp'}</span>
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  window._realinEdit = JSON.parse(JSON.stringify(r.despues)); // copia editable
+  const fmt=(n)=>'$'+Math.round(n||0).toLocaleString('es-AR');
+  // Columna ANTES (solo lectura, con montos)
+  const colAntes=`<div style="flex:1;min-width:0">
+    <div style="font-size:12px;font-weight:800;color:var(--red);margin-bottom:6px;text-align:center">ANTES (como está)</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:380px;overflow-y:auto">
+      ${r.antes.map(h=>`<div style="display:flex;gap:6px;padding:5px 8px;border-bottom:1px solid var(--border);font-size:11px">
+        <span style="font-weight:700;min-width:30px">C${h.cuota}</span>
+        <span style="flex:1;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.mes||'—'}</span>
+        <span style="color:var(--text3);min-width:60px;text-align:right">${fmt(h.monto)}</span>
+        <span style="color:${h.pagada?'var(--green)':'var(--red)'};font-size:10px;min-width:22px">${h.pagada?'pag':'imp'}</span>
       </div>`).join('')}
+    </div>
+  </div>`;
+  // Columna DESPUÉS (editable)
+  const filaEdit=(h,i)=>`<div style="display:flex;gap:4px;padding:4px 6px;border-bottom:1px solid var(--border);font-size:11px;align-items:center;${h._nueva?'background:var(--amber-bg)':''}">
+    <input type="number" value="${h.cuota}" onchange="window._realinEdit[${i}].cuota=parseInt(this.value)" style="width:38px;padding:3px;border:1px solid var(--border2);border-radius:4px;font-size:11px;background:var(--bg);color:var(--text)">
+    <select onchange="window._realinEdit[${i}].mes=this.value" style="flex:1;min-width:0;padding:3px;border:1px solid var(--border2);border-radius:4px;font-size:10px;background:var(--bg);color:var(--text)">
+      ${meses.map(m=>{const mm=(h.mes||'').split(' ')[0];return `<option value="${m} ${(h.mes||'').split(' ')[1]||'2026'}" ${m===mm?'selected':''}>${m.slice(0,3)}</option>`}).join('')}
+    </select>
+    <input type="number" value="${Math.round(h.monto||0)}" onchange="window._realinEdit[${i}].monto=parseFloat(this.value)||0" style="width:66px;padding:3px;border:1px solid var(--border2);border-radius:4px;font-size:10px;background:var(--bg);color:var(--text)" placeholder="monto">
+    <button onclick="window._realinEdit[${i}].pagada=!window._realinEdit[${i}].pagada;this.textContent=window._realinEdit[${i}].pagada?'pag':'imp';this.style.color=window._realinEdit[${i}].pagada?'var(--green)':'var(--red)'" style="min-width:26px;background:none;border:none;cursor:pointer;font-size:10px;font-weight:700;color:${h.pagada?'var(--green)':'var(--red)'}">${h.pagada?'pag':'imp'}</button>
+  </div>`;
+  const colDespues=`<div style="flex:1.4;min-width:0">
+    <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:6px;text-align:center">DESPUÉS (editable)</div>
+    <div style="display:flex;gap:4px;padding:2px 6px;font-size:9px;color:var(--text3);text-transform:uppercase">
+      <span style="width:38px">Cuota</span><span style="flex:1">Mes</span><span style="width:66px;text-align:right">Monto</span><span style="width:26px">Est</span>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:360px;overflow-y:auto">
+      ${window._realinEdit.map((h,i)=>filaEdit(h,i)).join('')}
     </div>
   </div>`;
   const ov=document.createElement('div');
   ov.id='preview-realin-modal';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100001;display:flex;align-items:center;justify-content:center;padding:16px';
-  ov.innerHTML=`<div style="background:var(--surface);border-radius:14px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;padding:20px">
-    <div style="font-size:16px;font-weight:800;margin-bottom:2px">👁️ Preview del realineado</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:14px">${id} · ${c.titular||''} · cuota actual ${c.ca} (Agosto 2026)</div>
-    <div style="display:flex;gap:12px;margin-bottom:16px">
-      ${col('ANTES (como está)',r.antes,'var(--red)')}
-      ${col('DESPUÉS (corregido)',r.despues,'var(--green)')}
+  ov.innerHTML=`<div style="background:var(--surface);border-radius:14px;max-width:640px;width:100%;max-height:92vh;overflow-y:auto;padding:20px">
+    <div style="font-size:16px;font-weight:800;margin-bottom:2px">✏️ Corregir historial — ${id}</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px">${c.titular||''} · cuota actual ${c.ca} (Agosto 2026). Podés ajustar cada cuota antes de guardar.</div>
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      ${colAntes}
+      ${colDespues}
     </div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:14px">El realineado pone cada cuota en su mes correcto hacia atrás desde agosto, elimina cuotas inválidas y duplicados, y define pagada/impaga según la mora. Los montos se mantienen.</div>
-    <div style="display:flex;justify-content:flex-end">
-      <button onclick="document.getElementById('preview-realin-modal').remove()" style="background:var(--surface);border:1.5px solid var(--border2);color:var(--text);border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer">Cerrar</button>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Las cuotas en amarillo son nuevas (faltaban). Revisá los montos y el estado antes de guardar.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="_guardarRealinEditado('${id.replace(/'/g,"\\'")}')" style="background:#5a9e78;color:#fff;border:none;border-radius:8px;padding:11px 20px;font-size:13px;font-weight:700;cursor:pointer">✓ Guardar</button>
+      <button onclick="document.getElementById('preview-realin-modal').remove()" style="background:var(--surface);border:1.5px solid var(--border2);color:var(--text);border-radius:8px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer">Cancelar</button>
     </div>
   </div>`;
   document.body.appendChild(ov);
+}
+
+function _guardarRealinEditado(id){
+  const edit=window._realinEdit;
+  if(!edit||!edit.length){alert('nada para guardar');return;}
+  const modal=document.getElementById('preview-realin-modal'); if(modal) modal.remove();
+  const dg=document.getElementById('diag-hist-modal'); if(dg) dg.remove();
+  confirmarConClave(()=>{
+    const data=loadData();
+    const c=data.find(x=>x.id===id);
+    if(!c) return;
+    c.hist=edit.map(h=>({cuota:h.cuota, mes:h.mes, monto:h.monto||0, pagada:h.pagada, ts:new Date().toISOString()}));
+    saveData(data);
+    addHist('edit','🔧 Historial corregido a mano: '+c.mz+' Lote '+c.lote+' — '+edit.length+' cuotas',id);
+    alert('✓ '+id+' guardado con '+edit.length+' cuotas.');
+    if(typeof abrirDiagnosticoHist==='function') abrirDiagnosticoHist();
+  });
 }
 
 function abrirDiagnosticoHist(){
@@ -7755,8 +7796,7 @@ function abrirDiagnosticoHist(){
       <span style="font-size:11px;color:var(--text3)">ca=${p.ca}</span>
       <span style="font-size:10px;background:var(--bg);border:1px solid var(--border2);border-radius:5px;padding:0 6px;color:var(--text2)">${p.moneda}</span>
       <span style="font-size:11px;color:var(--text3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.titular}</span>
-      <button onclick="abrirPreviewRealineado('${p.id.replace(/'/g,"\\'")}')" style="background:var(--surface);border:1px solid var(--border2);color:var(--acc2);padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">👁️ Ver</button>
-      <button onclick="corregirLoteHist('${p.id.replace(/'/g,"\\'")}')" style="background:#5a9e78;border:1px solid #5a9e78;color:#fff;padding:2px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">✓ Corregir</button>
+      <button onclick="abrirPreviewRealineado('${p.id.replace(/'/g,"\\'")}')" style="background:#5a9e78;border:1px solid #5a9e78;color:#fff;padding:3px 12px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">✏️ Corregir</button>
     </div>
     <div style="font-size:11.5px;color:var(--red);padding-left:4px">${p.issues.map(i=>'• '+i).join('<br>')}</div>
   </div>`;
