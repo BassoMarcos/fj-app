@@ -1180,7 +1180,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0466';
+  datos['_version']='v1.0467';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7633,6 +7633,27 @@ function reactivarPrestamos(){
 }
 
 // ══════ Diagnóstico del historial de cuotas (v1.0464) ══════
+function corregirLoteHist(id){
+  const c0=loadData().find(x=>x.id===id);
+  if(!c0){alert('no existe');return;}
+  const r=_realinearHist(c0);
+  if(!r){alert('sin cuotas para realinear');return;}
+  // cerrar modales para que la clave no quede tapada
+  const pv=document.getElementById('preview-realin-modal'); if(pv) pv.remove();
+  const dg=document.getElementById('diag-hist-modal'); if(dg) dg.remove();
+  confirmarConClave(()=>{
+    const data=loadData();
+    const c=data.find(x=>x.id===id);
+    if(!c) return;
+    c.hist=r.despues.map(h=>({cuota:h.cuota, mes:h.mes, monto:h.monto, pagada:h.pagada, ts:new Date().toISOString()}));
+    saveData(data);
+    addHist('edit','🔧 Historial realineado: '+c.mz+' Lote '+c.lote+' — '+r.despues.length+' cuotas ordenadas desde Agosto 2026',id);
+    alert('✓ '+id+' corregido. '+r.despues.length+' cuotas realineadas.');
+    // reabrir el diagnóstico para seguir con el próximo
+    if(typeof abrirDiagnosticoHist==='function') abrirDiagnosticoHist();
+  });
+}
+
 // Calcula el historial realineado de un lote (sin aplicar). Devuelve {antes, despues}
 function _realinearHist(c){
   const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -7727,7 +7748,8 @@ function abrirDiagnosticoHist(){
       <span style="font-size:11px;color:var(--text3)">ca=${p.ca}</span>
       <span style="font-size:10px;background:var(--bg);border:1px solid var(--border2);border-radius:5px;padding:0 6px;color:var(--text2)">${p.moneda}</span>
       <span style="font-size:11px;color:var(--text3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.titular}</span>
-      <button onclick="abrirPreviewRealineado('${p.id.replace(/'/g,"\\'")}')" style="background:var(--surface);border:1px solid var(--border2);color:var(--acc2);padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">👁️ Ver corrección</button>
+      <button onclick="abrirPreviewRealineado('${p.id.replace(/'/g,"\\'")}')" style="background:var(--surface);border:1px solid var(--border2);color:var(--acc2);padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">👁️ Ver</button>
+      <button onclick="corregirLoteHist('${p.id.replace(/'/g,"\\'")}')" style="background:#5a9e78;border:1px solid #5a9e78;color:#fff;padding:2px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">✓ Corregir</button>
     </div>
     <div style="font-size:11.5px;color:var(--red);padding-left:4px">${p.issues.map(i=>'• '+i).join('<br>')}</div>
   </div>`;
