@@ -1180,7 +1180,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0464';
+  datos['_version']='v1.0465';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7975,22 +7975,78 @@ function _editarCuotaHist(id, idx){
   const hist0=(c0.hist||[]).slice().sort((a,b)=>(b.cuota||0)-(a.cuota||0));
   const h=hist0[idx];
   if(!h) return;
-  const nuevoMonto=prompt('Monto de la cuota '+h.cuota+' ('+(h.mes||'')+'):', h.monto||0);
-  if(nuevoMonto===null) return;
-  const m=parseFloat(String(nuevoMonto).replace(/[^\d.-]/g,''));
-  if(isNaN(m)){alert('Monto inválido');return;}
-  const pag=confirm('¿La cuota está PAGADA?\n\nAceptar = Pagada\nCancelar = Impaga');
-  const modal=document.getElementById('hist-cuotas-modal'); if(modal) modal.remove();
-  confirmarConClave(()=>{
-    const data=loadData();
-    const c=data.find(x=>x.id===id);
-    if(!c) return;
-    const real=(c.hist||[]).find(x=>x.cuota===h.cuota && x.mes===h.mes);
-    if(real){ real.monto=m; real.pagada=pag; }
-    saveData(data);
-    addHist('edit','✏️ Cuota '+h.cuota+' editada en '+c.mz+' Lote '+c.lote+' — '+fmtPeso(m)+' ('+(pag?'pagada':'impaga')+')',id);
-    abrirHistorialCuotas(id);
-  });
+  // guardar identidad original para localizar el registro exacto
+  const origCuota=h.cuota, origMes=h.mes;
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const mm=String(h.mes||'').match(/(\w+)\s+(\d{4})/);
+  const mesSel=mm?mm[1]:'', anioSel=mm?mm[2]:'2026';
+  const modal=document.getElementById('hist-cuotas-modal'); if(modal) modal.style.filter='blur(3px)';
+  const ov=document.createElement('div');
+  ov.id='edit-cuota-modal';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML=`<div style="background:var(--surface);border-radius:14px;max-width:420px;width:100%;padding:22px">
+    <div style="font-size:16px;font-weight:800;margin-bottom:2px">✏️ Editar cuota</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">${formatLoteTag(c0.mz,c0.lote)} · ${c0.titular||''}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">N° de cuota</div>
+        <input type="number" id="ec-num" value="${h.cuota!=null?h.cuota:''}" style="width:100%;padding:9px 10px;border:1.5px solid var(--border2);border-radius:8px;font-size:14px;background:var(--card);color:var(--text);box-sizing:border-box">
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">Monto</div>
+        <input type="number" id="ec-monto" value="${h.monto||0}" style="width:100%;padding:9px 10px;border:1.5px solid var(--border2);border-radius:8px;font-size:14px;background:var(--card);color:var(--text);box-sizing:border-box">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">Mes</div>
+        <select id="ec-mes" style="width:100%;padding:9px 10px;border:1.5px solid var(--border2);border-radius:8px;font-size:14px;background:var(--card);color:var(--text);box-sizing:border-box">
+          <option value="">—</option>
+          ${meses.map(m=>`<option value="${m}" ${m===mesSel?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">Año</div>
+        <input type="number" id="ec-anio" value="${anioSel}" style="width:100%;padding:9px 10px;border:1.5px solid var(--border2);border-radius:8px;font-size:14px;background:var(--card);color:var(--text);box-sizing:border-box">
+      </div>
+    </div>
+    <div style="margin-bottom:18px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">Estado</div>
+      <div style="display:flex;gap:8px">
+        <button id="ec-pag" onclick="this.dataset.v='1';document.getElementById('ec-imp').dataset.v='0';this.style.background='var(--green)';this.style.color='#fff';document.getElementById('ec-imp').style.background='transparent';document.getElementById('ec-imp').style.color='var(--text2)'" data-v="${h.pagada!==false?'1':'0'}" style="flex:1;padding:9px;border:1.5px solid var(--green);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:${h.pagada!==false?'var(--green)':'transparent'};color:${h.pagada!==false?'#fff':'var(--text2)'}">Pagada</button>
+        <button id="ec-imp" onclick="this.dataset.v='1';document.getElementById('ec-pag').dataset.v='0';this.style.background='var(--red)';this.style.color='#fff';document.getElementById('ec-pag').style.background='transparent';document.getElementById('ec-pag').style.color='var(--text2)'" data-v="${h.pagada===false?'1':'0'}" style="flex:1;padding:9px;border:1.5px solid var(--red);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:${h.pagada===false?'var(--red)':'transparent'};color:${h.pagada===false?'#fff':'var(--text2)'}">Impaga</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button id="ec-guardar" style="flex:1;background:#5a9e78;color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">Guardar</button>
+      <button id="ec-cancel" style="background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:8px;padding:11px 16px;font-size:13px;font-weight:700;cursor:pointer">Cancelar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  const cerrar=()=>{ ov.remove(); const md=document.getElementById('hist-cuotas-modal'); if(md) md.style.filter=''; };
+  ov.querySelector('#ec-cancel').onclick=cerrar;
+  ov.querySelector('#ec-guardar').onclick=()=>{
+    const num=parseInt(document.getElementById('ec-num').value);
+    const monto=parseFloat(String(document.getElementById('ec-monto').value).replace(/[^\d.-]/g,''));
+    const mesV=document.getElementById('ec-mes').value;
+    const anioV=document.getElementById('ec-anio').value;
+    const pagada=document.getElementById('ec-pag').dataset.v==='1';
+    if(isNaN(num)||num<1){alert('Número de cuota inválido');return;}
+    if(isNaN(monto)){alert('Monto inválido');return;}
+    const mesTxt=mesV?(mesV+' '+(anioV||'2026')):'';
+    ov.remove();
+    const md=document.getElementById('hist-cuotas-modal'); if(md) md.remove();
+    confirmarConClave(()=>{
+      const data=loadData();
+      const c=data.find(x=>x.id===id);
+      if(!c) return;
+      const real=(c.hist||[]).find(x=>x.cuota===origCuota && x.mes===origMes);
+      if(real){ real.cuota=num; real.monto=monto; real.mes=mesTxt; real.pagada=pagada; }
+      saveData(data);
+      addHist('edit','✏️ Cuota editada en '+c.mz+' Lote '+c.lote+' — ahora C'+num+' '+mesTxt+' '+fmtPeso(monto)+' ('+(pagada?'pagada':'impaga')+')',id);
+      abrirHistorialCuotas(id);
+    });
+  };
 }
 
 function _borrarCuotaHist(id, idx){
