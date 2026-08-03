@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0475';
+  datos['_version']='v1.0476';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11711,7 +11711,7 @@ function renderDetColab(id){
       <div class="det-row"><span class="det-label">Cuota N°</span><span class="det-val">${esPrimeraCuotaFutura(c)?'— de '+c.ct:c.ca+' de '+c.ct}</span></div>
       <div class="det-row"><span class="det-label">Trimestre</span><span class="det-val">${c.moneda==='USD'?'— (USD, sin ICC)':c.tri}</span></div>
       <div class="det-row"><span class="det-label">Saldo</span><span class="det-val" style="color:${saldoColor}">${saldoTxt}</span></div>
-      <details class="cuotas-desplegable" style="margin-top:1rem"><summary style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><span class="cuotas-flecha" style="transition:transform .2s;display:inline-block">▸</span> Últimas 3 cuotas</summary><div class="hist-cuotas" style="margin-top:6px">${histHtml}</div></details>
+      <details class="cuotas-desplegable" style="margin-top:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border2);margin-bottom:1rem"><summary style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><span class="cuotas-flecha" style="transition:transform .2s;display:inline-block">▸</span> Últimas 3 cuotas</summary><div class="hist-cuotas" style="margin-top:6px">${histHtml}</div></details>
       ${pagoBtn}
       <div class="obs-area" style="margin-top:.75rem">
         <h4>Teléfono</h4>
