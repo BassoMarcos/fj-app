@@ -202,6 +202,8 @@ tr:hover td{background:var(--hov)}
 .det-label{color:var(--text2)}
 .det-val{font-weight:600}
 .hist-cuotas{display:flex;flex-direction:column;gap:4px;margin-top:.25rem}
+.cuotas-desplegable summary::-webkit-details-marker{display:none}
+.cuotas-desplegable[open] .cuotas-flecha{transform:rotate(90deg)}
 .hist-chip{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:var(--card);color:var(--green);border:1px solid var(--green-border)}
 .hist-chip.pend{background:var(--bg);color:var(--text2);border-color:var(--border)}
 .obs-area{margin-top:0.75rem}
@@ -1186,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0474';
+  datos['_version']='v1.0475';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11709,7 +11711,7 @@ function renderDetColab(id){
       <div class="det-row"><span class="det-label">Cuota N°</span><span class="det-val">${esPrimeraCuotaFutura(c)?'— de '+c.ct:c.ca+' de '+c.ct}</span></div>
       <div class="det-row"><span class="det-label">Trimestre</span><span class="det-val">${c.moneda==='USD'?'— (USD, sin ICC)':c.tri}</span></div>
       <div class="det-row"><span class="det-label">Saldo</span><span class="det-val" style="color:${saldoColor}">${saldoTxt}</span></div>
-      <div style="margin-top:1rem"><div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Últimas 3 cuotas</div><div class="hist-cuotas">${histHtml}</div></div>
+      <details class="cuotas-desplegable" style="margin-top:1rem"><summary style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><span class="cuotas-flecha" style="transition:transform .2s;display:inline-block">▸</span> Últimas 3 cuotas</summary><div class="hist-cuotas" style="margin-top:6px">${histHtml}</div></details>
       ${pagoBtn}
       <div class="obs-area" style="margin-top:.75rem">
         <h4>Teléfono</h4>
