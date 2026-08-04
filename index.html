@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0480';
+  datos['_version']='v1.0481';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3277,9 +3277,9 @@ function mostrarVCModal(id){
 
 
 
-function editarInteresMora(clienteId, ts){
+function editarInteresMora(clienteId, ts, mesNombre){
   const mora=loadMora();
-  const p=mora.find(x=>x.id===clienteId&&x.ts===ts);
+  const p=mora.find(x=>x.id===clienteId&&x.ts===ts&&(x.mesNombre||'')===(mesNombre||''));
   if(!p){alert('No se encontró el pago de mora.');return;}
   const cur=p.moneda==='USD'?'USD ':'$';
   const actual=Number(p.interes)||0;
@@ -3295,11 +3295,10 @@ function editarInteresMora(clienteId, ts){
     if(nuevo<0){alert('El interés no puede ser negativo.');return;}
     confirmarConClave(()=>{
       const mora2=loadMora();
-      const p2=mora2.find(x=>x.id===clienteId&&x.ts===ts);
+      const p2=mora2.find(x=>x.id===clienteId&&x.ts===ts&&(x.mesNombre||'')===(mesNombre||''));
       if(!p2) return;
       const antes=Number(p2.interes)||0;
       p2.interes=nuevo;
-      // Si ya se había pasado a Extras, avisar que el ajuste no toca Extras
       saveMora(mora2);
       addHist('mora','✏️ Interés de mora corregido — '+p2.mz+' Lote '+p2.lote+' — '+(p2.mesNombre||'')+' — de '+cur+fmtPeso(antes)+' a '+cur+fmtPeso(nuevo),clienteId);
       renderBalances('mora');
@@ -5923,7 +5922,7 @@ function renderBalances(seccion){
         const fechas=[...new Set(g.items.map(p=>p.fecha))].join(' · ');
         const detalle=g.items.slice().reverse().map(p=>{
           const extraBtn=p.interes&&!p.interesEnExtras?'<button data-id="'+p.id+'" data-ts="'+p.ts+'" onclick="pasarInteresMora(this.dataset.id,this.dataset.ts)" style="background:none;border:1px solid #c7d2fe;color:#4f46e5;border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">→ Extras</button>':'';
-          const editBtn='<button data-cid="'+p.id+'" data-ts="'+p.ts+'" onclick="editarInteresMora(this.dataset.cid,this.dataset.ts)" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">✏️ Interés</button>';
+          const editBtn='<button data-cid="'+p.id+'" data-ts="'+p.ts+'" data-mes="'+(p.mesNombre||'').replace(/"/g,'&quot;')+'" onclick="editarInteresMora(this.dataset.cid,this.dataset.ts,this.dataset.mes)" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">✏️ Interés</button>';
           const desmarcaBtn='<button data-cid="'+p.id+'" data-ts="'+p.ts+'" onclick="desmararPagoMoraCaja(this.dataset.cid,this.dataset.ts)" style="background:none;border:1px solid #fca5a5;color:var(--red);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">↩ Desmarcar</button>';
           return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 6px 14px;border-bottom:1px dashed var(--border);font-size:12px">'
             +'<div><span style="font-weight:600">'+(p.mesNombre||('Cuota'+(p.numeroCuota?' '+p.numeroCuota:'')))+'</span> <span style="font-size:10px;color:var(--text2)">'+p.fecha+'</span></div>'
