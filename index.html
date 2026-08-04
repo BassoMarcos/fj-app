@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0478';
+  datos['_version']='v1.0479';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5743,10 +5743,10 @@ function renderBalances(seccion){
       const pA=Math.round(t*dp/100);const pB=Math.round(t*dp2/100);
       const btnA=est.guardado
         ?`<button onclick="setCierreEstado(${globalIdx},'guardado',false)" style="background:#16a34a;color:#fff;border:none;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">${dp}% ✓ Guardado</button>`
-        :`<button onclick="setCierreEstado(${globalIdx},'guardado',true)" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">${dp}% Guardar</button>`;
+        :`<button onclick="setCierreEstado(${globalIdx},'guardado',true)" style="background:var(--hov);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">${dp}% Guardar</button>`;
       const btnB=est.rendido
         ?`<button onclick="setCierreEstado(${globalIdx},'rendido',false)" style="background:#2d6a50;color:#d0f0e0;border:none;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">${dp2}% ✓ Rendido</button>`
-        :`<button onclick="setCierreEstado(${globalIdx},'rendido',true)" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">${dp2}% Rendir</button>`;
+        :`<button onclick="setCierreEstado(${globalIdx},'rendido',true)" style="background:var(--hov);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">${dp2}% Rendir</button>`;
       return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
           <div>
@@ -5764,7 +5764,7 @@ function renderBalances(seccion){
             <span style="font-size:10px;font-weight:700;color:var(--red)">${dp2}%</span>
             <span style="font-size:11px;font-weight:600;color:var(--red)">${isUSD?'USD ':''} ${fmtPeso(pB)}</span>
           </div>
-          <div style="margin-left:auto;display:flex;gap:4px"><button onclick="toggleCierrePagos('${ci.ts}')" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">👁 Ver pagos</button>${btnA}${btnB}<button onclick="fusionarCierre('${ci.ts}')" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">⇄ Fusionar</button><button onclick="editObsCierre('${ci.ts}')" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">📝 ${ci.obs?'Editar nota':'+ Nota'}</button></div>
+          <div style="margin-left:auto;display:flex;gap:4px"><button onclick="toggleCierrePagos('${ci.ts}')" style="background:var(--hov);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">👁 Ver pagos</button>${btnA}${btnB}<button onclick="fusionarCierre('${ci.ts}')" style="background:var(--hov);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">⇄ Fusionar</button><button onclick="editObsCierre('${ci.ts}')" style="background:var(--hov);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">📝 ${ci.obs?'Editar nota':'+ Nota'}</button></div>
         </div>
         ${ci.obs?`<div style="margin-top:6px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--text);display:flex;gap:6px;align-items:flex-start"><span style="flex-shrink:0">📝</span><span style="white-space:pre-wrap">${ci.obs}</span></div>`:''}
         <div id="cierre-pagos-${ci.ts}" style="display:none;margin-top:6px;background:var(--hov);border-radius:8px;padding:8px 10px">
