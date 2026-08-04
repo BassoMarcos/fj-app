@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0481';
+  datos['_version']='v1.0482';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6144,9 +6144,11 @@ function renderBalances(seccion){
 
   } else if(seccion==='agrimensores'){
     const agr=(bal.agrimensores||[]);
-    const agrPesos=agr.filter(p=>p.moneda!=='USD');
-    const agrUSD=agr.filter(p=>p.moneda==='USD');
-    const totalAgr=agr.reduce((s,p)=>s+(p.monto||0),0);
+    const agrDia=agr.filter(p=>!p.esMora);
+    const agrMora=agr.filter(p=>p.esMora);
+    const agrPesos=agrDia.filter(p=>p.moneda!=='USD');
+    const agrUSD=agrDia.filter(p=>p.moneda==='USD');
+    const totalAgr=agrDia.reduce((s,p)=>s+(p.monto||0),0);
     const totalAgrP=agrPesos.reduce((s,p)=>s+(p.monto||0),0);
     const totalAgrU=agrUSD.reduce((s,p)=>s+(p.monto||0),0);
     const agrAdelantos=loadAdelantos().filter(a=>{const c=data.find(x=>x.id===a.id);return c&&c.agrimensor;});
@@ -6177,6 +6179,45 @@ function renderBalances(seccion){
         <span style="font-weight:600">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.monto||0)}</span>
       </div>`;
     }).join(''):'<div style="font-size:13px;color:var(--text2)">Sin pagos</div>';
+
+    // Mora de agrimensores — agrupada por lote, con mes/fecha/interés
+    const renderMoraAgr=(list)=>{
+      if(!list.length) return '<div style="font-size:13px;color:var(--text2);padding:8px 0">Sin cuotas en mora</div>';
+      const grupos={};
+      list.forEach(p=>{
+        if(!grupos[p.id]) grupos[p.id]={id:p.id,items:[],cuota:0,interes:0};
+        grupos[p.id].items.push(p);
+        grupos[p.id].cuota+=(p.monto||0);
+        grupos[p.id].interes+=(p.interes||0);
+      });
+      return Object.values(grupos).map(g=>{
+        const c=data.find(x=>x.id===g.id)||{mz:'?',lote:'?',titular:g.id};
+        const cur=g.items[0]&&g.items[0].moneda==='USD'?'USD ':'';
+        const detalle=g.items.slice().sort((a,b)=>(a.ts||'').localeCompare(b.ts||'')).map(p=>{
+          const f=p.fecha||(p.ts?new Date(p.ts).toLocaleDateString('es-AR'):'');
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 6px 14px;border-bottom:1px dashed var(--border);font-size:12px">'
+            +'<div><span style="font-weight:600">'+(p.mesNombre||('Cuota'+(p.numeroCuota?' '+p.numeroCuota:'')))+'</span> <span style="font-size:10px;color:var(--text2)">pagó '+f+'</span></div>'
+            +'<div style="display:flex;align-items:center;gap:6px">'
+            +'<span style="color:var(--acc2);font-size:11px">⚖️ '+cur+fmtPeso(p.monto||0)+'</span>'
+            +'<span style="color:var(--red);font-size:11px">+ '+cur+fmtPeso(p.interes||0)+'</span>'
+            +'<span style="font-weight:700;font-size:12px">'+cur+fmtPeso((p.monto||0)+(p.interes||0))+'</span>'
+            +'</div></div>';
+        }).join('');
+        return '<div style="border-bottom:1px solid var(--border)">'
+          +'<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:13px">'
+          +'<div><div style="font-weight:700">'+formatLoteTag(c.mz,c.lote)+' — '+c.titular
+          +' <span style="background:var(--red-bg);color:var(--red);border:1px solid #fca5a5;font-size:10px;font-weight:700;border-radius:6px;padding:1px 7px;margin-left:4px">⚖️ agrim. en mora</span>'
+          +(g.items.length>1?' <span style="background:var(--red-bg);color:var(--red);border:1px solid #fca5a5;font-size:10px;font-weight:700;border-radius:6px;padding:1px 7px;margin-left:2px">'+g.items.length+' cuotas</span>':'')+'</div></div>'
+          +'<div style="text-align:right">'
+          +'<div style="color:var(--text2);font-size:11px">Cuotas: <b>'+cur+fmtPeso(g.cuota)+'</b></div>'
+          +'<div style="color:var(--red);font-size:11px">Interés: <b>'+cur+fmtPeso(g.interes)+'</b></div>'
+          +'<div style="font-weight:700">'+cur+fmtPeso(g.cuota+g.interes)+'</div>'
+          +'</div></div>'
+          +detalle+'</div>';
+      }).join('');
+    };
+    const totalMoraAgrCuota=agrMora.reduce((s,p)=>s+(p.monto||0),0);
+    const totalMoraAgrInt=agrMora.reduce((s,p)=>s+(p.interes||0),0);
 
     el.innerHTML=backBtn+`
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
@@ -6214,6 +6255,15 @@ function renderBalances(seccion){
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden">
         <div style="padding:.875rem 1rem;font-weight:700;border-bottom:1px solid var(--border)">💵 Caja del día — Dólares</div>
         <div style="padding:1rem">${renderPagos(agrUSD)}</div>
+      </div>
+
+      <!-- Mora de agrimensores -->
+      <div style="background:var(--surface);border:1px solid #fca5a5;border-radius:var(--r);margin-bottom:10px;overflow:hidden">
+        <div style="padding:.875rem 1rem;font-weight:700;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+          <span>⚖️ Mora de agrimensores</span>
+          ${agrMora.length?`<span style="font-size:12px;font-weight:600;color:var(--text2)">Cuotas: <b>${fmtPeso(totalMoraAgrCuota)}</b> · Interés: <b style="color:var(--red)">${fmtPeso(totalMoraAgrInt)}</b></span>`:''}
+        </div>
+        <div style="padding:1rem">${renderMoraAgr(agrMora)}</div>
       </div>
 
       <!-- Adelantos agrimensores -->
@@ -9531,7 +9581,7 @@ function registrarCobroCuotaMora(mora, c, interes, ts, fecha){
     entry.cuota=0;
     entry.cuotaAgrimensor=c.monto;
     const bal=loadBalances();
-    (bal.agrimensores=bal.agrimensores||[]).push({id,monto:c.monto,ts,fecha,moneda});
+    (bal.agrimensores=bal.agrimensores||[]).push({id,monto:c.monto,ts,fecha,moneda,esMora:true,mesNombre:c.mesNombre,numeroCuota:c.numeroCuota,interes});
     saveBalances(bal);
   } else {
     entry.cuota=c.monto;
