@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0492';
+  datos['_version']='v1.0493';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -12638,6 +12638,11 @@ function desmarcarPago(id){
     ci.pagos=(ci.pagos||[]).filter(p=>p.id!==id);
     ci.total=(ci.pagos||[]).reduce((s,p)=>s+(p.monto||0),0);
   });
+  // Revertir el último registro de transferencia y de caja física de este cobro
+  const _idxT=(bal.transferencias||[]).map(p=>p.id).lastIndexOf(id);
+  if(_idxT>=0) bal.transferencias.splice(_idxT,1);
+  const _idxF=(bal.cajaFisica||[]).map(p=>p.id).lastIndexOf(id);
+  if(_idxF>=0) bal.cajaFisica.splice(_idxF,1);
   saveBalances(bal);
   // Remove from mora
   saveMora(loadMora().filter(p=>p.id!==id));
