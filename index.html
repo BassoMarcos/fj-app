@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0482';
+  datos['_version']='v1.0483';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7453,6 +7453,175 @@ function statsToggleView(v){
   }
 }
 
+// ═══════════ COBRO AGRUPADO (varios lotes del mismo dueño) ═══════════
+// Etapa 1: selección + recibo con desglose y total. NO registra cobros todavía.
+window._caCtx=null;
+function normTitular(t){
+  return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+}
+function clienteTieneMoraCA(id){
+  return loadCuotasMora().some(cm=>cm.clienteId===id&&!cm.pagada);
+}
+// Devuelve lotes del mismo titular (normalizado), excluyendo el ya pagado
+function lotesDelDueno(idBase){
+  const data=loadData();
+  const base=data.find(x=>x.id===idBase);
+  if(!base) return [];
+  const nt=normTitular(base.titular);
+  return data.filter(c=>c.id!==idBase && normTitular(c.titular)===nt && c.est!=='finalizado' && !c.pago);
+}
+function abrirCobroAgrupado(idBase){
+  const data=loadData();
+  const base=data.find(x=>x.id===idBase);
+  if(!base){alert('No se encontró el lote.');return;}
+  // El lote base + los del mismo dueño
+  const otros=lotesDelDueno(idBase);
+  // Set inicial: base tildado (si no tiene mora), otros sin mora pre-tildados
+  const baseMora=clienteTieneMoraCA(idBase);
+  window._caCtx={
+    idBase,
+    seleccion:new Set(baseMora?[]:[idBase]),
+    adelantosPorLote:{}, // { id: [ {num, monto}, ... ] }
+  };
+  // Pre-tildar los otros sin mora
+  otros.forEach(c=>{ if(!clienteTieneMoraCA(c.id)) window._caCtx.seleccion.add(c.id); });
+  renderCobroAgrupadoModal();
+}
+function renderCobroAgrupadoModal(){
+  const x=window._caCtx; if(!x) return;
+  const data=loadData();
+  const base=data.find(c=>c.id===x.idBase);
+  const otros=lotesDelDueno(x.idBase);
+  const todos=[base,...otros];
+  let m=document.getElementById('cobro-agrupado-modal');
+  if(!m){
+    m=document.createElement('div');
+    m.id='cobro-agrupado-modal';
+    m.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;align-items:center;justify-content:center;padding:16px';
+    document.body.appendChild(m);
+  }
+  const fmtLote=(c)=>formatLoteTag(c.mz,c.lote);
+  // Filas de cada lote
+  const filas=todos.map(c=>{
+    const mora=clienteTieneMoraCA(c.id);
+    const sel=x.seleccion.has(c.id);
+    const cur=c.moneda==='USD'?'USD ':'';
+    const mc=montoCobrable(c);
+    const adel=x.adelantosPorLote[c.id]||[];
+    const totalAdel=adel.reduce((s,q)=>s+(q.monto||0),0);
+    const totalLote=mc.total+totalAdel;
+    const agrim=esAgrimensor(c.id);
+    if(mora){
+      return '<div style="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px;opacity:.55;background:var(--surface)">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center">'
+        +'<div style="font-size:13px;font-weight:700">'+fmtLote(c)+'</div>'
+        +'<span style="font-size:10px;color:var(--red);font-weight:700;background:var(--red-bg);border:1px solid #fca5a5;border-radius:6px;padding:2px 7px">⚠️ tiene mora — cobrar aparte</span>'
+        +'</div></div>';
+    }
+    return '<div style="border:1.5px solid '+(sel?'#16a34a':'var(--border2)')+';border-radius:10px;padding:10px;margin-bottom:8px;background:'+(sel?'var(--green-bg)':'var(--surface)')+'">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+      +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1">'
+      +'<input type="checkbox" '+(sel?'checked':'')+' onchange="caToggleLote(\''+c.id+'\')" style="width:17px;height:17px;cursor:pointer">'
+      +'<div><div style="font-size:13px;font-weight:700">'+fmtLote(c)+(agrim?' <span style="font-size:9px;color:var(--acc2);border:1px solid var(--acc2);border-radius:4px;padding:0 4px">⚖️ agrim</span>':'')+(c.moneda==='USD'?' <span style="font-size:9px;color:#7ab5d0">💵USD</span>':'')+'</div>'
+      +'<div style="font-size:11px;color:var(--text2)">Cuota '+c.ca+'/'+c.ct+' · '+cur+fmtPeso(mc.base)+(mc.adicional?' +escal '+fmtPeso(mc.adicional):'')+'</div></div>'
+      +'</label>'
+      +'<div style="text-align:right"><div style="font-size:14px;font-weight:800;color:'+(sel?'var(--green)':'var(--text2)')+'">'+cur+fmtPeso(totalLote)+'</div>'
+      +(sel?'<button onclick="caToggleAdelanto(\''+c.id+'\')" style="margin-top:4px;font-size:10px;background:none;border:1px solid #7dd3fc;color:#5eb0ef;border-radius:5px;padding:2px 6px;cursor:pointer;font-weight:600">⏭ Adelantar</button>':'')
+      +'</div>'
+      +'</div>'
+      +(adel.length?'<div style="margin-top:6px;font-size:11px;color:var(--blue);border-top:1px dashed var(--border);padding-top:5px">⏭ '+adel.length+' adelanto(s): +'+cur+fmtPeso(totalAdel)+' <button onclick="caLimpiarAdelanto(\''+c.id+'\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:10px">quitar</button></div>':'')
+      +'<div id="ca-adel-sel-'+c.id+'" style="display:none;margin-top:6px"></div>'
+      +'</div>';
+  }).join('');
+  // Totales por moneda
+  let totARS=0, totUSD=0;
+  todos.forEach(c=>{
+    if(!x.seleccion.has(c.id)) return;
+    const adel=(x.adelantosPorLote[c.id]||[]).reduce((s,q)=>s+(q.monto||0),0);
+    const t=montoCobrable(c).total+adel;
+    if(c.moneda==='USD') totUSD+=t; else totARS+=t;
+  });
+  const nSel=x.seleccion.size;
+  const totalStr=[totARS?('$'+fmtPeso(totARS)):'',totUSD?('USD '+fmtPeso(totUSD)):''].filter(Boolean).join(' + ')||'$0';
+  m.innerHTML='<div style="background:var(--card);border-radius:14px;max-width:460px;width:100%;max-height:92vh;overflow-y:auto;padding:1.25rem" onclick="event.stopPropagation()">'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:2px">🧾 Cobro agrupado</div>'
+    +'<div style="font-size:12px;color:var(--text2);margin-bottom:4px">'+base.titular+'</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:10px">Seleccioná los lotes de este dueño para hacer un solo recibo. Los que tienen mora se cobran aparte.</div>'
+    +filas
+    +'<div style="margin-top:6px"><button onclick="caAgregarLoteManual()" style="width:100%;padding:7px;font-size:12px;background:none;border:1.5px dashed var(--border2);color:var(--text2);border-radius:8px;cursor:pointer">➕ Agregar otro lote manualmente</button></div>'
+    +'<div style="background:var(--green-bg);border:1px solid var(--green-border);border-radius:10px;padding:12px;margin-top:12px;display:flex;justify-content:space-between;align-items:center">'
+    +'<span style="font-weight:800;font-size:13px">Total ('+nSel+' lote'+(nSel!==1?'s':'')+')</span>'
+    +'<span style="font-size:18px;font-weight:800;color:var(--green)">'+totalStr+'</span>'
+    +'</div>'
+    +(totARS&&totUSD?'<div style="font-size:11px;color:var(--acc3);margin-top:6px;text-align:center">⚠️ Hay lotes en $ y en USD: se cobran por separado cada moneda.</div>':'')
+    +'<div style="display:flex;gap:8px;margin-top:14px">'
+    +'<button onclick="cerrarCobroAgrupado()" style="flex:1;padding:10px;border:1px solid var(--border2);background:var(--surface);border-radius:8px;font-weight:700;cursor:pointer">Cancelar</button>'
+    +'<button onclick="caContinuar()" '+(nSel?'':'disabled')+' style="flex:2;padding:10px;border:none;background:#16a34a;color:#fff;border-radius:8px;font-weight:800;cursor:pointer;opacity:'+(nSel?'1':'.4')+'">Continuar →</button>'
+    +'</div>'
+    +'</div>';
+  m.style.display='flex';
+  m.onclick=cerrarCobroAgrupado;
+}
+function cerrarCobroAgrupado(){const m=document.getElementById('cobro-agrupado-modal');if(m)m.style.display='none';window._caCtx=null;}
+function caToggleLote(id){
+  const x=window._caCtx; if(!x) return;
+  if(clienteTieneMoraCA(id)){alert('Ese lote tiene mora, se cobra aparte.');return;}
+  if(x.seleccion.has(id)){ x.seleccion.delete(id); delete x.adelantosPorLote[id]; }
+  else x.seleccion.add(id);
+  renderCobroAgrupadoModal();
+}
+function caLimpiarAdelanto(id){
+  const x=window._caCtx; if(!x) return;
+  delete x.adelantosPorLote[id];
+  renderCobroAgrupadoModal();
+}
+function caAgregarLoteManual(){
+  const x=window._caCtx; if(!x) return;
+  modalPrompt({titulo:'Agregar lote manualmente',mensaje:'Ingresá el ID exacto del lote (ej: M1-2A).',placeholder:'ID del lote',okLabel:'Agregar'}).then((resp)=>{
+    if(resp===null) return;
+    const idm=String(resp||'').trim().toUpperCase();
+    const c=loadData().find(y=>String(y.id).toUpperCase()===idm);
+    if(!c){alert('No existe un lote con ID "'+idm+'".');return;}
+    if(c.pago){alert('Ese lote ya está pagado.');return;}
+    if(c.est==='finalizado'){alert('Ese lote está finalizado.');return;}
+    if(clienteTieneMoraCA(c.id)){alert('Ese lote tiene mora, se cobra aparte.');return;}
+    // Forzar que aparezca: lo agrego a la selección (aunque no sea del mismo titular)
+    x.seleccion.add(c.id);
+    // Guardar los "manuales" para que se muestren aunque no matcheen titular
+    x.manuales=x.manuales||new Set(); x.manuales.add(c.id);
+    renderCobroAgrupadoModal();
+  });
+}
+function caContinuar(){
+  // Etapa 2 (registro real) — todavía no implementada
+  alert('✓ Etapa 1 lista: selección y total calculados.\n\nEl registro real del cobro se implementa en la Etapa 2.');
+}
+// Adelantos por lote dentro del cobro agrupado (reusa selector simple)
+function caToggleAdelanto(id){
+  const cont=document.getElementById('ca-adel-sel-'+id);
+  if(!cont) return;
+  if(cont.style.display==='none'){
+    const c=loadData().find(y=>y.id===id);
+    const cur=c.moneda==='USD'?'USD ':'';
+    const mc=montoCobrable(c).total;
+    // Ofrecer adelantar de 1 a 6 cuotas siguientes al mismo precio actual
+    let btns='';
+    for(let n=1;n<=6;n++){
+      btns+='<button onclick="caSetAdelanto(\''+id+'\','+n+')" style="flex:1;padding:6px 2px;font-size:11px;background:none;border:1px solid #7dd3fc;color:#5eb0ef;border-radius:6px;cursor:pointer;margin:2px">'+n+'</button>';
+    }
+    cont.innerHTML='<div style="font-size:11px;color:var(--text2);margin-bottom:4px">¿Cuántas cuotas adelantar? (a '+cur+fmtPeso(mc)+' c/u)</div><div style="display:flex;flex-wrap:wrap">'+btns+'</div>';
+    cont.style.display='block';
+  } else cont.style.display='none';
+}
+function caSetAdelanto(id,n){
+  const x=window._caCtx; if(!x) return;
+  const c=loadData().find(y=>y.id===id);
+  const mc=montoCobrable(c).total;
+  const arr=[];
+  for(let i=1;i<=n;i++){ arr.push({num:(Number(c.ca)||0)+i, monto:mc}); }
+  x.adelantosPorLote[id]=arr;
+  renderCobroAgrupadoModal();
+}
 function renderAdminDet(id){
   const data=loadData();
   const c=data.find(x=>x.id===id);
@@ -7592,8 +7761,10 @@ function renderAdminDet(id){
       <div style="font-size:11px;color:#94a3b8;margin-top:3px">Disponible para cobrar desde ${nombreMesPrimeraCuota(c)}</div>
     </div>`;
   } else {
+    const _otrosDueno=lotesDelDueno(id).length;
     pagoBtn=`
     <button class="btn btn-primary" onclick="adminMarcarPago('${id}')" style="width:100%;margin-top:.5rem;padding:8px;font-size:14px;font-weight:700">✓ Cobrar</button>
+    ${_otrosDueno>0?`<button onclick="abrirCobroAgrupado('${id}')" style="width:100%;margin-top:6px;padding:8px;font-size:13px;font-weight:700;background:none;border:1.5px solid #16a34a;color:#16a34a;border-radius:var(--r);cursor:pointer">🧾 Cobrar junto a otros ${_otrosDueno} lote(s) del dueño</button>`:''}
     <div style="display:flex;gap:4px;margin-top:6px">
       <button onclick="admToggleAdelanto('${id}')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:1.5px solid #7dd3fc;color:#5eb0ef;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantos</button>
     </div>
