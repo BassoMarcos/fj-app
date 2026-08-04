@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0493';
+  datos['_version']='v1.0494';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7567,7 +7567,7 @@ function renderCobroAgrupadoModal(){
   m.style.display='flex';
   m.onclick=cerrarCobroAgrupado;
 }
-function cerrarCobroAgrupado(){const m=document.getElementById('cobro-agrupado-modal');if(m)m.style.display='none';window._caCtx=null;}
+function cerrarCobroAgrupado(){const m=document.getElementById('cobro-agrupado-modal');if(m)m.style.display='none';window._caCtx=null;try{if(typeof _colabDesbloquearLista==='function')_colabDesbloquearLista();}catch(e){}}
 function caToggleLote(id){
   const x=window._caCtx; if(!x) return;
   if(clienteTieneMoraCA(id)){alert('Ese lote tiene mora, se cobra aparte.');return;}
