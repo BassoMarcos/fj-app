@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0488';
+  datos['_version']='v1.0489';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7680,76 +7680,122 @@ function caContinuar(){
   const data=loadData();
   const seleccionados=[...x.seleccion].map(id=>data.find(c=>c.id===id)).filter(Boolean);
   if(!seleccionados.length){alert('No hay lotes seleccionados.');return;}
-  // Doble chequeo: ninguno con mora
   const conMora=seleccionados.filter(c=>clienteTieneMoraCA(c.id));
   if(conMora.length){alert('Hay lotes con mora en la selección. Quitalos antes de continuar.');return;}
-  // Armar resumen
+  // Separar por moneda — el efectivo/vuelto aplica solo a un grupo de moneda a la vez.
+  const hayUSD=seleccionados.some(c=>c.moneda==='USD');
+  const hayARS=seleccionados.some(c=>c.moneda!=='USD');
+  // Total en pesos (cuotas + adelantos)
+  const totalCuota=(c)=>{
+    const adel=(x.adelantosPorLote[c.id]||[]).reduce((s,q)=>s+(q.monto||0),0);
+    return montoCobrable(c).total+adel;
+  };
   let totARS=0,totUSD=0;
+  seleccionados.forEach(c=>{ if(c.moneda==='USD') totUSD+=totalCuota(c); else totARS+=totalCuota(c); });
   const lineas=seleccionados.map(c=>{
     const cur=c.moneda==='USD'?'USD ':'';
     const adel=x.adelantosPorLote[c.id]||[];
-    const totalAdel=adel.reduce((s,q)=>s+(q.monto||0),0);
-    const mc=montoCobrable(c).total;
-    const totalLote=mc+totalAdel;
-    if(c.moneda==='USD') totUSD+=totalLote; else totARS+=totalLote;
     return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border);font-size:12px">'
       +'<div><b>'+formatLoteTag(c.mz,c.lote)+'</b> <span style="color:var(--text2)">C'+c.ca+'</span>'
       +(adel.length?' <span style="color:var(--blue);font-size:10px">+'+adel.length+' adel.</span>':'')+'</div>'
-      +'<div style="font-weight:700">'+cur+fmtPeso(totalLote)+'</div></div>';
+      +'<div style="font-weight:700">'+cur+fmtPeso(totalCuota(c))+'</div></div>';
   }).join('');
   const totalStr=[totARS?fmtPeso(totARS):'',totUSD?('USD '+fmtPeso(totUSD)):''].filter(Boolean).join(' + ');
   const m=document.getElementById('cobro-agrupado-modal');
   m.innerHTML='<div style="background:var(--card);border-radius:14px;max-width:440px;width:100%;max-height:92vh;overflow-y:auto;padding:1.25rem" onclick="event.stopPropagation()">'
     +'<div style="font-size:16px;font-weight:800;margin-bottom:2px">🧾 Confirmar cobro</div>'
     +'<div style="font-size:12px;color:var(--text2);margin-bottom:12px">'+seleccionados[0].titular+'</div>'
-    +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">'+lineas+'</div>'
-    +'<div style="background:var(--green-bg);border:1px solid var(--green-border);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center">'
-    +'<span style="font-weight:800">Vas a cobrar '+seleccionados.length+' lote'+(seleccionados.length!==1?'s':'')+'</span>'
-    +'<span style="font-size:18px;font-weight:800;color:var(--green)">'+totalStr+'</span></div>'
-    +'<div style="font-size:11px;color:var(--text3);margin-top:8px">Cada lote se registra por separado (un recibo). Los agrimensores van a su caja. Se pedirá la clave.</div>'
-    +'<div style="display:flex;gap:8px;margin-top:14px">'
+    +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">'+lineas
+    +'<div style="display:flex;justify-content:space-between;padding-top:8px;margin-top:4px;border-top:2px solid var(--border);font-weight:800"><span>Total cuotas</span><span>'+totalStr+'</span></div></div>'
+    +(hayARS&&hayUSD?'<div style="font-size:11px;color:var(--acc3);margin-bottom:10px">⚠️ Hay lotes en $ y USD. El efectivo de abajo aplica a los de pesos; los USD se registran justos.</div>':'')
+    // Tarjeta de efectivo (solo pesos)
+    +(hayARS?'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px">'
+      +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">💵 Efectivo (pesos)</div>'
+      +'<div style="display:flex;gap:8px;margin-bottom:8px">'
+      +'<div style="flex:1"><label style="font-size:11px;color:var(--text2)">Entregó</label><input id="ca-entrego" type="number" value="'+Math.round(totARS)+'" oninput="caCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
+      +'<div style="flex:1"><label style="font-size:11px;color:var(--text2)">Vuelto</label><input id="ca-vuelto" type="number" value="0" oninput="caCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
+      +'</div>'
+      +'<div id="ca-vuelto-live" style="font-size:12px;padding:6px 10px;border-radius:6px;background:var(--green-bg);color:var(--green);text-align:center">✓ Justo</div>'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:6px">La diferencia (SAF/SEC) se registra en el primer lote: '+formatLoteTag(seleccionados.find(c=>c.moneda!=='USD').mz,seleccionados.find(c=>c.moneda!=='USD').lote)+'. El resto entra justo.</div>'
+      +'</div>':'')
+    +'<div style="display:flex;gap:8px;margin-top:6px">'
     +'<button onclick="renderCobroAgrupadoModal()" style="flex:1;padding:10px;border:1px solid var(--border2);background:var(--surface);border-radius:8px;font-weight:700;cursor:pointer">← Volver</button>'
     +'<button onclick="caEjecutarCobro()" style="flex:2;padding:10px;border:none;background:#16a34a;color:#fff;border-radius:8px;font-weight:800;cursor:pointer">✓ Confirmar y cobrar</button>'
     +'</div></div>';
+  window._caTotals={totARS,totUSD};
+  caCalcVuelto();
+}
+function caCalcVuelto(){
+  const eEl=document.getElementById('ca-entrego'), vEl=document.getElementById('ca-vuelto'), live=document.getElementById('ca-vuelto-live');
+  if(!eEl||!live) return;
+  const tot=(window._caTotals&&window._caTotals.totARS)||0;
+  const e=parseFloat(eEl.value)||0, v=parseFloat(vEl.value)||0;
+  const neto=e-v, dif=neto-tot;
+  if(dif===0){ live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='✓ Justo — pagó '+fmtPeso(neto); }
+  else if(dif>0){ live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='SAF (a favor): '+fmtPeso(dif); }
+  else { live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent='SEC (en contra): '+fmtPeso(-dif); }
 }
 function caEjecutarCobro(){
   const x=window._caCtx; if(!x) return;
+  // Leer efectivo/vuelto (pesos)
+  const eEl=document.getElementById('ca-entrego'), vEl=document.getElementById('ca-vuelto');
+  const entregoTotal=eEl?(parseFloat(eEl.value)||0):null;
+  const vueltoTotal=vEl?(parseFloat(vEl.value)||0):0;
   const ids=[...x.seleccion];
   const adelantosPorLote={...x.adelantosPorLote};
   confirmarConClave(()=>{
-    const data=loadData();
-    const recibo=[];
-    let totARS=0,totUSD=0;
-    ids.forEach(id=>{
-      const c=data.find(y=>y.id===id);
-      if(!c||c.pago) return;
+    const data0=loadData();
+    const sel=ids.map(id=>data0.find(c=>c.id===id)).filter(c=>c&&!c.pago);
+    // Total pesos esperado (cuotas+adelantos) para calcular la diferencia
+    const totalLoteFn=(c)=>montoCobrable(c).total+((adelantosPorLote[c.id]||[]).reduce((s,q)=>s+(q.monto||0),0));
+    const pesosLotes=sel.filter(c=>c.moneda!=='USD');
+    const totPesos=pesosLotes.reduce((s,c)=>s+totalLoteFn(c),0);
+    // Diferencia global (SAF/SEC) = (entregó - vuelto) - total pesos
+    const difGlobal=(entregoTotal!==null?(entregoTotal-vueltoTotal):totPesos)-totPesos;
+    const primerPesoId=pesosLotes.length?pesosLotes[0].id:null;
+    const recibo=[]; let totARS=0,totUSD=0;
+    sel.forEach(c=>{
+      const id=c.id;
       const cur=c.moneda==='USD'?'USD ':'';
       const mc=montoCobrable(c).total;
-      const caAntes=c.ca, ctAntes=c.ct;
-      // 1. Cobrar la cuota (sin interés, ya que excluimos mora) — motor real
+      const caAntes=c.ca;
+      const ts=new Date().toISOString(), fecha=new Date().toLocaleDateString('es-AR');
+      // 1. Cobro real (motor) — sin interés (mora excluida)
       marcarPago(id, 0);
-      // 2. Adelantos de ese lote, si tiene
+      // 2. Adelantos
       const adel=adelantosPorLote[id]||[];
       let totalAdel=0;
-      if(adel.length){
-        registrarAdelanto(id, adel.map(q=>({num:q.num,monto:q.monto})));
-        totalAdel=adel.reduce((s,q)=>s+(q.monto||0),0);
-      }
+      if(adel.length){ registrarAdelanto(id, adel.map(q=>({num:q.num,monto:q.monto}))); totalAdel=adel.reduce((s,q)=>s+(q.monto||0),0); }
       const totalLote=mc+totalAdel;
+      // 3. Caja física — este lote entra justo, salvo el primer lote de pesos que lleva la diferencia
+      const esElDeLaDif = (id===primerPesoId);
+      const difLote = esElDeLaDif ? difGlobal : 0;
+      const entregoLote = esElDeLaDif ? (totalLote+difLote) : totalLote;
+      const vueltoLote = 0;
+      const bal=loadBalances();
+      (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:totalLote,transferido:0,entrego:entregoLote,vuelto:vueltoLote,efectivo:entregoLote-vueltoLote,dif:difLote,ts,fecha});
+      saveBalances(bal);
+      // 4. Cargar SAF/SEC al saldo de ese lote (solo el que lleva la diferencia)
+      if(difLote!==0){
+        const d2=loadData();const c2=d2.find(y=>y.id===id);
+        if(c2){ c2.saldo=(Number(c2.saldo)||0)+difLote; c2.saldoDifUltimoCobro=difLote; saveData(d2); }
+        addHist('pago',(difLote>0?'SAF ':'SEC ')+fmtPeso(Math.abs(difLote))+' — '+c.mz+' Lote '+c.lote+' (cobro agrupado, cargado al saldo)',id);
+        registrarSafSec(c,difLote,ts,fecha);
+      }
       if(c.moneda==='USD') totUSD+=totalLote; else totARS+=totalLote;
-      recibo.push({lote:formatLoteTag(c.mz,c.lote),cuota:caAntes,cur,cuotaMonto:mc,nAdel:adel.length,totalAdel,total:totalLote});
+      recibo.push({lote:formatLoteTag(c.mz,c.lote),cuota:caAntes,cur,cuotaMonto:mc,nAdel:adel.length,totalAdel,total:totalLote,dif:difLote});
     });
-    // Comprobante final
-    caMostrarComprobante(recibo, totARS, totUSD);
+    caMostrarComprobante(recibo, totARS, totUSD, difGlobal);
   });
 }
-function caMostrarComprobante(recibo, totARS, totUSD){
+function caMostrarComprobante(recibo, totARS, totUSD, difGlobal){
   const m=document.getElementById('cobro-agrupado-modal');
   if(!m) return;
   const lineas=recibo.map(r=>
     '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border);font-size:12px">'
     +'<div><b>'+r.lote+'</b> <span style="color:var(--text2)">Cuota '+r.cuota+'</span>'
-    +(r.nAdel?' <span style="color:var(--blue);font-size:10px">+'+r.nAdel+' adel. '+r.cur+fmtPeso(r.totalAdel)+'</span>':'')+'</div>'
+    +(r.nAdel?' <span style="color:var(--blue);font-size:10px">+'+r.nAdel+' adel. '+r.cur+fmtPeso(r.totalAdel)+'</span>':'')
+    +(r.dif?' <span style="color:'+(r.dif>0?'var(--green)':'var(--red)')+';font-size:10px">'+(r.dif>0?'SAF ':'SEC ')+fmtPeso(Math.abs(r.dif))+'</span>':'')+'</div>'
     +'<div style="font-weight:700">'+r.cur+fmtPeso(r.total)+'</div></div>'
   ).join('');
   const totalStr=[totARS?fmtPeso(totARS):'',totUSD?('USD '+fmtPeso(totUSD)):''].filter(Boolean).join(' + ');
@@ -7758,11 +7804,11 @@ function caMostrarComprobante(recibo, totARS, totUSD){
     +'<div style="text-align:center;font-size:16px;font-weight:800;margin-bottom:4px">Cobro registrado</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--text2);margin-bottom:12px">'+recibo.length+' lote'+(recibo.length!==1?'s':'')+' cobrado'+(recibo.length!==1?'s':'')+'</div>'
     +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px">'+lineas
-    +'<div style="display:flex;justify-content:space-between;padding-top:8px;margin-top:4px;border-top:2px solid var(--border);font-weight:800"><span>TOTAL</span><span style="color:var(--green)">'+totalStr+'</span></div></div>'
+    +'<div style="display:flex;justify-content:space-between;padding-top:8px;margin-top:4px;border-top:2px solid var(--border);font-weight:800"><span>TOTAL</span><span style="color:var(--green)">'+totalStr+'</span></div>'
+    +(difGlobal?'<div style="display:flex;justify-content:space-between;font-size:11px;color:'+(difGlobal>0?'var(--green)':'var(--red)')+';margin-top:4px"><span>'+(difGlobal>0?'SAF (a favor)':'SEC (en contra)')+'</span><span>'+fmtPeso(Math.abs(difGlobal))+'</span></div>':'')+'</div>'
     +'<button onclick="caCopiarComprobante()" style="width:100%;padding:9px;margin-bottom:8px;border:1px solid var(--border2);background:var(--surface);border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">📋 Copiar detalle</button>'
     +'<button onclick="cerrarCobroAgrupado();if(typeof adminDetId!==\'undefined\'&&adminDetId)renderAdminDet(adminDetId);if(typeof renderAdminTable===\'function\')renderAdminTable();" style="width:100%;padding:10px;border:none;background:#16a34a;color:#fff;border-radius:8px;font-weight:800;cursor:pointer">Listo</button>'
     +'</div>';
-  // Guardar texto para copiar
   window._caRecibo=recibo.map(r=>r.lote+'\tCuota '+r.cuota+'\t'+r.cur+fmtPeso(r.total)+(r.nAdel?'\t(+'+r.nAdel+' adel)':'')).join('\n')
     +'\nTOTAL\t'+totalStr;
 }
