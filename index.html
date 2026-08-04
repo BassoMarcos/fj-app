@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0483';
+  datos['_version']='v1.0484';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7492,7 +7492,11 @@ function renderCobroAgrupadoModal(){
   const data=loadData();
   const base=data.find(c=>c.id===x.idBase);
   const otros=lotesDelDueno(x.idBase);
-  const todos=[base,...otros];
+  // Incluir lotes agregados manualmente que no sean del mismo titular
+  const manualIds=x.manuales?[...x.manuales]:[];
+  const otrosIds=new Set(otros.map(c=>c.id));
+  const manualesExtra=manualIds.filter(id=>id!==x.idBase&&!otrosIds.has(id)).map(id=>data.find(c=>c.id===id)).filter(Boolean);
+  const todos=[base,...otros,...manualesExtra];
   let m=document.getElementById('cobro-agrupado-modal');
   if(!m){
     m=document.createElement('div');
@@ -7577,20 +7581,93 @@ function caLimpiarAdelanto(id){
 }
 function caAgregarLoteManual(){
   const x=window._caCtx; if(!x) return;
-  modalPrompt({titulo:'Agregar lote manualmente',mensaje:'Ingresá el ID exacto del lote (ej: M1-2A).',placeholder:'ID del lote',okLabel:'Agregar'}).then((resp)=>{
-    if(resp===null) return;
-    const idm=String(resp||'').trim().toUpperCase();
-    const c=loadData().find(y=>String(y.id).toUpperCase()===idm);
-    if(!c){alert('No existe un lote con ID "'+idm+'".');return;}
-    if(c.pago){alert('Ese lote ya está pagado.');return;}
-    if(c.est==='finalizado'){alert('Ese lote está finalizado.');return;}
-    if(clienteTieneMoraCA(c.id)){alert('Ese lote tiene mora, se cobra aparte.');return;}
-    // Forzar que aparezca: lo agrego a la selección (aunque no sea del mismo titular)
-    x.seleccion.add(c.id);
-    // Guardar los "manuales" para que se muestren aunque no matcheen titular
-    x.manuales=x.manuales||new Set(); x.manuales.add(c.id);
-    renderCobroAgrupadoModal();
-  });
+  const data=loadData();
+  const etapas=[...new Set(data.map(c=>getEtapa(c.mz)))].filter(Boolean).sort();
+  let m=document.getElementById('ca-manual-modal');
+  if(!m){
+    m=document.createElement('div');
+    m.id='ca-manual-modal';
+    m.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;padding:16px';
+    document.body.appendChild(m);
+  }
+  m.innerHTML='<div style="background:var(--card);border-radius:14px;max-width:420px;width:100%;padding:1.25rem" onclick="event.stopPropagation()">'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:10px">➕ Agregar lote</div>'
+    +'<div style="display:flex;flex-direction:column;gap:8px">'
+    +'<select id="ca-f-etapa" onchange="caManualMz()" style="padding:9px;border:1px solid var(--border2);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px"><option value="">Etapa</option>'+etapas.map(e=>'<option value="'+e+'">'+e+'</option>').join('')+'</select>'
+    +'<select id="ca-f-mz" onchange="caManualLote()" disabled style="padding:9px;border:1px solid var(--border2);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px"><option value="">Manzana</option></select>'
+    +'<select id="ca-f-lote" onchange="caManualPreview()" disabled style="padding:9px;border:1px solid var(--border2);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px"><option value="">Lote</option></select>'
+    +'</div>'
+    +'<div id="ca-manual-preview" style="margin-top:10px;font-size:12px;color:var(--text2)"></div>'
+    +'<div style="display:flex;gap:8px;margin-top:14px">'
+    +'<button onclick="document.getElementById(\'ca-manual-modal\').style.display=\'none\'" style="flex:1;padding:10px;border:1px solid var(--border2);background:var(--surface);border-radius:8px;font-weight:700;cursor:pointer">Cancelar</button>'
+    +'<button id="ca-manual-add" onclick="caManualConfirmar()" disabled style="flex:2;padding:10px;border:none;background:#16a34a;color:#fff;border-radius:8px;font-weight:800;cursor:pointer;opacity:.4">Agregar</button>'
+    +'</div></div>';
+  m.style.display='flex';
+  m.onclick=()=>{m.style.display='none';};
+}
+function caManualMz(){
+  const data=loadData();
+  const etapa=document.getElementById('ca-f-etapa').value;
+  const msel=document.getElementById('ca-f-mz');
+  const lsel=document.getElementById('ca-f-lote');
+  lsel.innerHTML='<option value="">Lote</option>'; lsel.disabled=true;
+  document.getElementById('ca-manual-preview').innerHTML='';
+  document.getElementById('ca-manual-add').disabled=true; document.getElementById('ca-manual-add').style.opacity='.4';
+  if(!etapa){ msel.innerHTML='<option value="">Manzana</option>'; msel.disabled=true; return; }
+  const etapasConMz=['Etapa 1','Etapa 4'];
+  if(etapasConMz.includes(etapa)){
+    const mzs=[...new Set(data.filter(c=>getEtapa(c.mz)===etapa).map(c=>c.mz))].sort();
+    msel.innerHTML='<option value="">Manzana</option>'+mzs.map(mm=>'<option value="'+mm+'">'+mm+'</option>').join('');
+    msel.disabled=false;
+  } else {
+    // Etapa sin manzana → poblar lotes directo
+    msel.innerHTML='<option value="">(sin manzana)</option>'; msel.disabled=true;
+    caPoblarLotes(data.filter(c=>getEtapa(c.mz)===etapa));
+  }
+}
+function caManualLote(){
+  const data=loadData();
+  const etapa=document.getElementById('ca-f-etapa').value;
+  const mz=document.getElementById('ca-f-mz').value;
+  if(!mz){ document.getElementById('ca-f-lote').innerHTML='<option value="">Lote</option>'; document.getElementById('ca-f-lote').disabled=true; return; }
+  caPoblarLotes(data.filter(c=>c.mz===mz));
+}
+function caPoblarLotes(lista){
+  const lsel=document.getElementById('ca-f-lote');
+  const ord=lista.slice().sort((a,b)=>{const n=(s)=>{const ss=String(s||'');const mm=ss.match(/^(\d+)(.*)$/);return mm?[+mm[1],mm[2]]:[999,ss];};const[an,al]=n(a.lote);const[bn,bl]=n(b.lote);return an!==bn?an-bn:al.localeCompare(bl);});
+  lsel.innerHTML='<option value="">Lote</option>'+ord.map(c=>{
+    const pagado=c.pago, fin=c.est==='finalizado', mora=clienteTieneMoraCA(c.id), yaSel=window._caCtx&&window._caCtx.seleccion.has(c.id);
+    const dis=pagado||fin||yaSel;
+    const nota=fin?' (finalizado)':pagado?' (ya pagó)':yaSel?' (ya en el recibo)':mora?' ⚠️mora':'';
+    return '<option value="'+c.id+'"'+(dis?' disabled':'')+'>'+c.lote+nota+'</option>';
+  }).join('');
+  lsel.disabled=false;
+}
+function caManualPreview(){
+  const id=document.getElementById('ca-f-lote').value;
+  const prev=document.getElementById('ca-manual-preview');
+  const btn=document.getElementById('ca-manual-add');
+  if(!id){ prev.innerHTML=''; btn.disabled=true; btn.style.opacity='.4'; return; }
+  const c=loadData().find(y=>y.id===id);
+  if(!c){ prev.innerHTML=''; return; }
+  if(clienteTieneMoraCA(id)){
+    prev.innerHTML='<span style="color:var(--red)">⚠️ Este lote tiene mora — se cobra aparte, no se puede agregar.</span>';
+    btn.disabled=true; btn.style.opacity='.4'; return;
+  }
+  const cur=c.moneda==='USD'?'USD ':'';
+  prev.innerHTML='<b>'+formatLoteTag(c.mz,c.lote)+'</b> — '+c.titular+'<br>Cuota '+c.ca+'/'+c.ct+' · '+cur+fmtPeso(montoCobrable(c).total);
+  btn.disabled=false; btn.style.opacity='1';
+}
+function caManualConfirmar(){
+  const x=window._caCtx; if(!x) return;
+  const id=document.getElementById('ca-f-lote').value;
+  const c=loadData().find(y=>y.id===id);
+  if(!c) return;
+  if(clienteTieneMoraCA(id)){alert('Ese lote tiene mora, se cobra aparte.');return;}
+  x.seleccion.add(id);
+  x.manuales=x.manuales||new Set(); x.manuales.add(id);
+  document.getElementById('ca-manual-modal').style.display='none';
+  renderCobroAgrupadoModal();
 }
 function caContinuar(){
   // Etapa 2 (registro real) — todavía no implementada
