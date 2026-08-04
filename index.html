@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0479';
+  datos['_version']='v1.0480';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3277,6 +3277,35 @@ function mostrarVCModal(id){
 
 
 
+function editarInteresMora(clienteId, ts){
+  const mora=loadMora();
+  const p=mora.find(x=>x.id===clienteId&&x.ts===ts);
+  if(!p){alert('No se encontró el pago de mora.');return;}
+  const cur=p.moneda==='USD'?'USD ':'$';
+  const actual=Number(p.interes)||0;
+  modalPrompt({
+    titulo:'✏️ Editar interés de mora',
+    mensaje:(p.mesNombre||'Cuota')+' — '+formatLoteTag(p.mz,p.lote)+' — '+(p.titular||'')+'\nCapital: '+cur+fmtPeso(p.cuotaAgrimensor||p.cuota||0)+'\nInterés actual: '+cur+fmtPeso(actual),
+    valor:String(actual),
+    placeholder:'Nuevo monto de interés',
+    okLabel:'Guardar'
+  }).then((resp)=>{
+    if(resp===null) return;
+    const nuevo=Math.round(parseFloat(String(resp).replace(/[^\d.-]/g,''))||0);
+    if(nuevo<0){alert('El interés no puede ser negativo.');return;}
+    confirmarConClave(()=>{
+      const mora2=loadMora();
+      const p2=mora2.find(x=>x.id===clienteId&&x.ts===ts);
+      if(!p2) return;
+      const antes=Number(p2.interes)||0;
+      p2.interes=nuevo;
+      // Si ya se había pasado a Extras, avisar que el ajuste no toca Extras
+      saveMora(mora2);
+      addHist('mora','✏️ Interés de mora corregido — '+p2.mz+' Lote '+p2.lote+' — '+(p2.mesNombre||'')+' — de '+cur+fmtPeso(antes)+' a '+cur+fmtPeso(nuevo),clienteId);
+      renderBalances('mora');
+    });
+  });
+}
 function desmararPagoMoraCaja(clienteId, ts){
   confirmarConClave(()=>{
     // 1. Sacar de caja mora
@@ -5894,6 +5923,7 @@ function renderBalances(seccion){
         const fechas=[...new Set(g.items.map(p=>p.fecha))].join(' · ');
         const detalle=g.items.slice().reverse().map(p=>{
           const extraBtn=p.interes&&!p.interesEnExtras?'<button data-id="'+p.id+'" data-ts="'+p.ts+'" onclick="pasarInteresMora(this.dataset.id,this.dataset.ts)" style="background:none;border:1px solid #c7d2fe;color:#4f46e5;border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">→ Extras</button>':'';
+          const editBtn='<button data-cid="'+p.id+'" data-ts="'+p.ts+'" onclick="editarInteresMora(this.dataset.cid,this.dataset.ts)" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">✏️ Interés</button>';
           const desmarcaBtn='<button data-cid="'+p.id+'" data-ts="'+p.ts+'" onclick="desmararPagoMoraCaja(this.dataset.cid,this.dataset.ts)" style="background:none;border:1px solid #fca5a5;color:var(--red);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">↩ Desmarcar</button>';
           return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 6px 14px;border-bottom:1px dashed var(--border);font-size:12px">'
             +'<div><span style="font-weight:600">'+(p.mesNombre||('Cuota'+(p.numeroCuota?' '+p.numeroCuota:'')))+'</span> <span style="font-size:10px;color:var(--text2)">'+p.fecha+'</span></div>'
@@ -5901,7 +5931,7 @@ function renderBalances(seccion){
             +(p.cuotaAgrimensor?'<span style="color:var(--acc2);font-size:11px">⚖️ '+cur+fmtPeso(p.cuotaAgrimensor)+'</span>':'<span style="font-size:11px">'+cur+fmtPeso(p.cuota||0)+'</span>')
             +'<span style="color:var(--red);font-size:11px;margin-left:6px">+ '+cur+fmtPeso(p.interes||0)+'</span>'
             +'<span style="font-weight:700;font-size:12px;margin-left:8px">'+cur+fmtPeso((p.cuotaAgrimensor||p.cuota||0)+(p.interes||0))+'</span>'
-            +extraBtn+desmarcaBtn+'</div></div>';
+            +extraBtn+editBtn+desmarcaBtn+'</div></div>';
         }).join('');
         return '<div style="border-bottom:1px solid var(--border)">'
           +'<div data-k="'+key+'" onclick="toggleMoraCajaGrupo(this.dataset.k)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:13px;cursor:pointer">'
