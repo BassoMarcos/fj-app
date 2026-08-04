@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0484';
+  datos['_version']='v1.0485';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7570,7 +7570,12 @@ function cerrarCobroAgrupado(){const m=document.getElementById('cobro-agrupado-m
 function caToggleLote(id){
   const x=window._caCtx; if(!x) return;
   if(clienteTieneMoraCA(id)){alert('Ese lote tiene mora, se cobra aparte.');return;}
-  if(x.seleccion.has(id)){ x.seleccion.delete(id); delete x.adelantosPorLote[id]; }
+  if(x.seleccion.has(id)){
+    x.seleccion.delete(id);
+    delete x.adelantosPorLote[id];
+    // Si era un lote agregado manualmente (no del dueño), quitarlo de la lista al destildar
+    if(x.manuales&&x.manuales.has(id)) x.manuales.delete(id);
+  }
   else x.seleccion.add(id);
   renderCobroAgrupadoModal();
 }
