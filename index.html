@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0491';
+  datos['_version']='v1.0492';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7749,7 +7749,7 @@ function caEjecutarCobro(){
   const vueltoTotal=vEl?caNum(vEl.value):0;
   const ids=[...x.seleccion];
   const adelantosPorLote={...x.adelantosPorLote};
-  confirmarConClave(()=>{
+  (()=>{
     const data0=loadData();
     const sel=ids.map(id=>data0.find(c=>c.id===id)).filter(c=>c&&!c.pago);
     // Total pesos esperado (cuotas+adelantos) para calcular la diferencia
@@ -7792,7 +7792,7 @@ function caEjecutarCobro(){
       recibo.push({lote:formatLoteTag(c.mz,c.lote),cuota:caAntes,cur,cuotaMonto:mc,nAdel:adel.length,totalAdel,total:totalLote,dif:difLote});
     });
     caMostrarComprobante(recibo, totARS, totUSD, difGlobal);
-  });
+  })();
 }
 function caMostrarComprobante(recibo, totARS, totUSD, difGlobal){
   const m=document.getElementById('cobro-agrupado-modal');
@@ -7813,7 +7813,7 @@ function caMostrarComprobante(recibo, totARS, totUSD, difGlobal){
     +'<div style="display:flex;justify-content:space-between;padding-top:8px;margin-top:4px;border-top:2px solid var(--border);font-weight:800"><span>TOTAL</span><span style="color:var(--green)">'+totalStr+'</span></div>'
     +(difGlobal?'<div style="display:flex;justify-content:space-between;font-size:11px;color:'+(difGlobal>0?'var(--green)':'var(--red)')+';margin-top:4px"><span>'+(difGlobal>0?'SAF (a favor)':'SEC (en contra)')+'</span><span>'+fmtPeso(Math.abs(difGlobal))+'</span></div>':'')+'</div>'
     +'<button onclick="caCopiarComprobante()" style="width:100%;padding:9px;margin-bottom:8px;border:1px solid var(--border2);background:var(--surface);border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">📋 Copiar detalle</button>'
-    +'<button onclick="cerrarCobroAgrupado();if(typeof adminDetId!==\'undefined\'&&adminDetId)renderAdminDet(adminDetId);if(typeof renderAdminTable===\'function\')renderAdminTable();" style="width:100%;padding:10px;border:none;background:#16a34a;color:#fff;border-radius:8px;font-weight:800;cursor:pointer">Listo</button>'
+    +'<button onclick="cerrarCobroAgrupado();try{if(typeof adminDetId!==\'undefined\'&&adminDetId)renderAdminDet(adminDetId);}catch(e){}try{if(typeof renderAdminTable===\'function\')renderAdminTable();}catch(e){}try{if(typeof renderColab===\'function\')renderColab();}catch(e){}" style="width:100%;padding:10px;border:none;background:#16a34a;color:#fff;border-radius:8px;font-weight:800;cursor:pointer">Listo</button>'
     +'</div>';
   window._caRecibo=recibo.map(r=>r.lote+'\tCuota '+r.cuota+'\t'+r.cur+fmtPeso(r.total)+(r.nAdel?'\t(+'+r.nAdel+' adel)':'')).join('\n')
     +'\nTOTAL\t'+totalStr;
@@ -12032,8 +12032,10 @@ function colabVerCuota(id){
     montoVal.textContent=fmtPeso(montoCobrable(c).total);
   }
   // Mostrar botones de cobro
+  const _otrosDuenoColab=lotesDelDueno(id).length;
   el.innerHTML=`
     <button class="btn btn-primary" onclick="colabCobrarYVerde('${id}',0)" style="width:100%;margin-top:.5rem;padding:10px;font-size:14px;font-weight:700">✓ Cobrar</button>
+    ${_otrosDuenoColab>0?`<button onclick="abrirCobroAgrupado('${id}')" style="width:100%;margin-top:6px;padding:8px;font-size:13px;font-weight:700;background:none;border:1.5px solid #16a34a;color:#16a34a;border-radius:var(--r);cursor:pointer">🧾 Cobrar junto a otros ${_otrosDuenoColab} lote(s) del dueño</button>`:''}
     <div style="display:flex;gap:4px;margin-top:6px">
     <button onclick="colabToggleAdelanto('${id}')" style="flex:1;padding:7px 2px;font-size:11px;background:none;border:1.5px solid #7dd3fc;color:#5eb0ef;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantos</button>
     </div>
