@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0477';
+  datos['_version']='v1.0478';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3021,6 +3021,37 @@ function desbloquearCuotaActual(){
   });
 }
 
+// ── Modal propio para pedir texto (reemplazo estilizado de prompt) ──
+// Uso: const txt = await modalPrompt({titulo, mensaje, valor, placeholder, multiline});
+// Devuelve el texto (string) o null si se cancela.
+function modalPrompt(opts){
+  opts=opts||{};
+  return new Promise((resolve)=>{
+    const ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem';
+    const campo=opts.multiline
+      ? `<textarea id="_mp-input" rows="3" placeholder="${(opts.placeholder||'').replace(/"/g,'&quot;')}" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border2);border-radius:9px;font-size:14px;background:var(--surface);color:var(--text);resize:vertical;font-family:inherit">${(opts.valor||'').replace(/</g,'&lt;')}</textarea>`
+      : `<input id="_mp-input" type="text" placeholder="${(opts.placeholder||'').replace(/"/g,'&quot;')}" value="${(opts.valor||'').replace(/"/g,'&quot;')}" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border2);border-radius:9px;font-size:14px;background:var(--surface);color:var(--text)"/>`;
+    ov.innerHTML=`<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.4rem;width:min(440px,92vw);box-shadow:0 12px 40px rgba(0,0,0,.35)">
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:${opts.mensaje?'6px':'12px'}">${opts.titulo||'Ingresá un valor'}</div>
+      ${opts.mensaje?`<div style="font-size:13px;color:var(--text2);margin-bottom:12px;white-space:pre-wrap;line-height:1.4">${opts.mensaje}</div>`:''}
+      ${campo}
+      <div style="display:flex;gap:8px;margin-top:1.2rem">
+        <button id="_mp-cancel" style="flex:1;padding:9px;background:var(--hov);border:1px solid var(--border2);color:var(--text2);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer">Cancelar</button>
+        <button id="_mp-ok" style="flex:1;padding:9px;background:#2d6a50;color:#d0f0e0;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer">${opts.okLabel||'Guardar'}</button>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+    const inp=ov.querySelector('#_mp-input');
+    const cerrar=(val)=>{ ov.remove(); resolve(val); };
+    ov.querySelector('#_mp-cancel').onclick=()=>cerrar(null);
+    ov.querySelector('#_mp-ok').onclick=()=>cerrar(inp.value);
+    ov.addEventListener('mousedown',(e)=>{ if(e.target===ov) cerrar(null); });
+    if(!opts.multiline){ inp.addEventListener('keydown',(e)=>{ if(e.key==='Enter') cerrar(inp.value); if(e.key==='Escape') cerrar(null); }); }
+    else { inp.addEventListener('keydown',(e)=>{ if(e.key==='Escape') cerrar(null); }); }
+    setTimeout(()=>{ inp.focus(); if(!opts.multiline) inp.select(); },60);
+  });
+}
 function confirmarConClave(accion){
   _claveAccion=accion;
   _claveEsColab=false;
@@ -5177,11 +5208,22 @@ function editObsCierre(ts){
   const bal=loadBalances();
   const ci=(bal.cierres||[]).find(c=>c.ts===ts);
   if(!ci){alert('No se encontró el cierre.');return;}
-  const nueva=prompt('📝 Observación del cierre:\n\nEj: "Cierre pedido completo, no se dividió el 70%".\n\nDejalo vacío para borrarla.',ci.obs||'');
-  if(nueva===null) return;
-  ci.obs=nueva.trim();
-  saveBalances(bal);
-  renderBalances('cierres');
+  modalPrompt({
+    titulo:'📝 Observación del cierre',
+    mensaje:'Ej: "Cierre pedido completo, no se dividió el 70%".\nDejalo vacío para borrarla.',
+    valor:ci.obs||'',
+    placeholder:'Escribí una nota…',
+    multiline:true,
+    okLabel:'Guardar'
+  }).then((nueva)=>{
+    if(nueva===null) return;
+    const bal2=loadBalances();
+    const ci2=(bal2.cierres||[]).find(c=>c.ts===ts);
+    if(!ci2) return;
+    ci2.obs=nueva.trim();
+    saveBalances(bal2);
+    renderBalances('cierres');
+  });
 }
 function revertirFusion(){
   const bal=loadBalances();
@@ -6416,8 +6458,16 @@ function cerrarCajaDelDia(moneda){
   const total=moneda==='USD'?totalUsd:totalPes;
   const label=moneda==='TRANSF'?(fmtPeso(totalPes)+(totalUsd?' + USD '+fmtPeso(totalUsd):'')):moneda==='USD'?`USD ${fmtPeso(total)}`:fmtPeso(total);
   const tipoLabel=moneda==='TRANSF'?'Transferencias':moneda==='USD'?'USD':'Pesos';
-  const obsCierre=(prompt('📝 Observación para este cierre (opcional):\n\nEj: "Cierre pedido completo, no se dividió el 70%".\n\nDejalo vacío si no hace falta.','')||'').trim();
-  confirmarConClave(()=>{
+  modalPrompt({
+    titulo:'📝 Observación del cierre',
+    mensaje:'Opcional. Ej: "Cierre pedido completo, no se dividió el 70%".\nDejalo vacío si no hace falta.',
+    placeholder:'Escribí una nota…',
+    multiline:true,
+    okLabel:'Continuar'
+  }).then((resp)=>{
+    if(resp===null) return;
+    const obsCierre=(resp||'').trim();
+    confirmarConClave(()=>{
     (bal.cierres=bal.cierres||[]).push({
       fecha:new Date().toLocaleDateString('es-AR'),
       ts:new Date().toISOString(),
@@ -6434,6 +6484,7 @@ function cerrarCajaDelDia(moneda){
     saveBalances(bal);
     renderBalances('caja');
     alert(`✓ Caja de ${tipoLabel} cerrada: ${label}`);
+    });
   });
 }
 
