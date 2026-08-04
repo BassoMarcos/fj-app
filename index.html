@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0489';
+  datos['_version']='v1.0490';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7712,8 +7712,8 @@ function caContinuar(){
     +(hayARS?'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px">'
       +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">💵 Efectivo (pesos)</div>'
       +'<div style="display:flex;gap:8px;margin-bottom:8px">'
-      +'<div style="flex:1"><label style="font-size:11px;color:var(--text2)">Entregó</label><input id="ca-entrego" type="number" value="'+Math.round(totARS)+'" oninput="caCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
-      +'<div style="flex:1"><label style="font-size:11px;color:var(--text2)">Vuelto</label><input id="ca-vuelto" type="number" value="0" oninput="caCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
+      +'<div style="flex:1"><label style="font-size:11px;color:var(--text2)">Entregó</label><input id="ca-entrego" type="text" inputmode="numeric" value="'+fmtMiles(Math.round(totARS))+'" oninput="caFmtInput(this);caCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
+      +'<div style="flex:1"><label style="font-size:11px;color:var(--text2)">Vuelto</label><input id="ca-vuelto" type="text" inputmode="numeric" value="0" oninput="caFmtInput(this);caCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
       +'</div>'
       +'<div id="ca-vuelto-live" style="font-size:12px;padding:6px 10px;border-radius:6px;background:var(--green-bg);color:var(--green);text-align:center">✓ Justo</div>'
       +'<div style="font-size:10px;color:var(--text3);margin-top:6px">La diferencia (SAF/SEC) se registra en el primer lote: '+formatLoteTag(seleccionados.find(c=>c.moneda!=='USD').mz,seleccionados.find(c=>c.moneda!=='USD').lote)+'. El resto entra justo.</div>'
@@ -7725,11 +7725,21 @@ function caContinuar(){
   window._caTotals={totARS,totUSD};
   caCalcVuelto();
 }
+function fmtMiles(n){ return (Math.round(n)||0).toLocaleString('es-AR'); }
+function caNum(str){ return parseFloat(String(str||'').replace(/\./g,'').replace(/[^\d]/g,''))||0; }
+function caFmtInput(el){
+  const pos=el.selectionStart, len=el.value.length;
+  const n=caNum(el.value);
+  el.value=n?fmtMiles(n):'';
+  // Ajustar cursor aproximado tras reformatear
+  const diff=el.value.length-len;
+  try{ el.setSelectionRange(pos+diff,pos+diff); }catch(e){}
+}
 function caCalcVuelto(){
   const eEl=document.getElementById('ca-entrego'), vEl=document.getElementById('ca-vuelto'), live=document.getElementById('ca-vuelto-live');
   if(!eEl||!live) return;
   const tot=(window._caTotals&&window._caTotals.totARS)||0;
-  const e=parseFloat(eEl.value)||0, v=parseFloat(vEl.value)||0;
+  const e=caNum(eEl.value), v=caNum(vEl.value);
   const neto=e-v, dif=neto-tot;
   if(dif===0){ live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='✓ Justo — pagó '+fmtPeso(neto); }
   else if(dif>0){ live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='SAF (a favor): '+fmtPeso(dif); }
@@ -7739,8 +7749,8 @@ function caEjecutarCobro(){
   const x=window._caCtx; if(!x) return;
   // Leer efectivo/vuelto (pesos)
   const eEl=document.getElementById('ca-entrego'), vEl=document.getElementById('ca-vuelto');
-  const entregoTotal=eEl?(parseFloat(eEl.value)||0):null;
-  const vueltoTotal=vEl?(parseFloat(vEl.value)||0):0;
+  const entregoTotal=eEl?caNum(eEl.value):null;
+  const vueltoTotal=vEl?caNum(vEl.value):0;
   const ids=[...x.seleccion];
   const adelantosPorLote={...x.adelantosPorLote};
   confirmarConClave(()=>{
