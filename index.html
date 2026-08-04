@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0476';
+  datos['_version']='v1.0477';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5173,6 +5173,16 @@ function getCierreEstados(){try{return JSON.parse(localStorage.getItem('fj_cierr
 // v1.0381: estos dos ajustes también se sincronizan
 function saveCierreEstados(e){localStorage.setItem('fj_cierre_estados',JSON.stringify(e));window._fbSet('cierreEstados',e).catch(x=>console.warn('FB cierreEstados:',x));}
 function setCierreEstado(idx,tipo,val){const e=getCierreEstados();if(!e[idx])e[idx]={};e[idx][tipo]=val;saveCierreEstados(e);renderBalances('cierres');}
+function editObsCierre(ts){
+  const bal=loadBalances();
+  const ci=(bal.cierres||[]).find(c=>c.ts===ts);
+  if(!ci){alert('No se encontró el cierre.');return;}
+  const nueva=prompt('📝 Observación del cierre:\n\nEj: "Cierre pedido completo, no se dividió el 70%".\n\nDejalo vacío para borrarla.',ci.obs||'');
+  if(nueva===null) return;
+  ci.obs=nueva.trim();
+  saveBalances(bal);
+  renderBalances('cierres');
+}
 function revertirFusion(){
   const bal=loadBalances();
   const fus=bal.fusiones||[];
@@ -5712,8 +5722,9 @@ function renderBalances(seccion){
             <span style="font-size:10px;font-weight:700;color:var(--red)">${dp2}%</span>
             <span style="font-size:11px;font-weight:600;color:var(--red)">${isUSD?'USD ':''} ${fmtPeso(pB)}</span>
           </div>
-          <div style="margin-left:auto;display:flex;gap:4px"><button onclick="toggleCierrePagos('${ci.ts}')" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">👁 Ver pagos</button>${btnA}${btnB}<button onclick="fusionarCierre('${ci.ts}')" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">⇄ Fusionar</button></div>
+          <div style="margin-left:auto;display:flex;gap:4px"><button onclick="toggleCierrePagos('${ci.ts}')" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">👁 Ver pagos</button>${btnA}${btnB}<button onclick="fusionarCierre('${ci.ts}')" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">⇄ Fusionar</button><button onclick="editObsCierre('${ci.ts}')" style="background:var(--hov);color:var(--text3);border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">📝 ${ci.obs?'Editar nota':'+ Nota'}</button></div>
         </div>
+        ${ci.obs?`<div style="margin-top:6px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--text);display:flex;gap:6px;align-items:flex-start"><span style="flex-shrink:0">📝</span><span style="white-space:pre-wrap">${ci.obs}</span></div>`:''}
         <div id="cierre-pagos-${ci.ts}" style="display:none;margin-top:6px;background:var(--hov);border-radius:8px;padding:8px 10px">
           <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
             <select onchange="renderCierrePagosLista('${ci.ts}',this.value)" style="background:var(--card);border:1px solid var(--border2);color:var(--text2);padding:4px 6px;border-radius:6px;font-size:11px;cursor:pointer">
@@ -6405,6 +6416,7 @@ function cerrarCajaDelDia(moneda){
   const total=moneda==='USD'?totalUsd:totalPes;
   const label=moneda==='TRANSF'?(fmtPeso(totalPes)+(totalUsd?' + USD '+fmtPeso(totalUsd):'')):moneda==='USD'?`USD ${fmtPeso(total)}`:fmtPeso(total);
   const tipoLabel=moneda==='TRANSF'?'Transferencias':moneda==='USD'?'USD':'Pesos';
+  const obsCierre=(prompt('📝 Observación para este cierre (opcional):\n\nEj: "Cierre pedido completo, no se dividió el 70%".\n\nDejalo vacío si no hace falta.','')||'').trim();
   confirmarConClave(()=>{
     (bal.cierres=bal.cierres||[]).push({
       fecha:new Date().toLocaleDateString('es-AR'),
@@ -6413,7 +6425,8 @@ function cerrarCajaDelDia(moneda){
       total:moneda==='TRANSF'?totalPes:total,
       moneda:moneda||'ARS',
       totalPesos:moneda==='USD'?0:totalPes,
-      totalUSD:moneda==='TRANSF'?totalUsd:(moneda==='USD'?total:0)
+      totalUSD:moneda==='TRANSF'?totalUsd:(moneda==='USD'?total:0),
+      obs:obsCierre
     });
     // Remove closed payments from abierto
     const ids=new Set(aCerrar.map(p=>p.id));
