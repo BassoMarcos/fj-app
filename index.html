@@ -1198,7 +1198,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0504';
+  datos['_version']='v1.0505';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9872,9 +9872,11 @@ function ejecutarCierreFinal(){
     renderBalances('cierres');
     if(document.getElementById('atab-lista')&&document.getElementById('atab-lista').style.display!=='none') renderAdminTable();
     renderColab();
+    const _fin=(window._finalizadosEnCierre||[]);
     alert('✓ Cierre final de '+mesNombre+' registrado el '+fecha+' a las '+hora+
       '\n\n📋 '+avanzados+' clientes avanzaron al mes siguiente'+
       '\n⚠️ '+nuevasMora+' cuotas pasaron a mora'+
+      (_fin.length?'\n\n🏁 '+_fin.length+' lote(s) FINALIZARON su plan (pagaron todas las cuotas):\n'+_fin.join(', ')+'\n\nYa aparecen en "Lotes Finalizados".':'')+
       '\n\nDesde ahora los pagos pendientes van a Caja de Mora.');
   });
 }
@@ -10023,9 +10025,11 @@ function hacerCierreFinal(){
     renderBalances('cierres');
     if(document.getElementById('atab-lista')&&document.getElementById('atab-lista').style.display!=='none') renderAdminTable();
     renderColab();
+    const _fin=(window._finalizadosEnCierre||[]);
     alert('✓ Cierre final de '+mesNombre+' registrado el '+fecha+' a las '+hora+
       '\n\n📋 '+avanzados+' clientes avanzaron al mes siguiente'+
       '\n⚠️ '+nuevasMora+' cuotas pasaron a mora'+
+      (_fin.length?'\n\n🏁 '+_fin.length+' lote(s) FINALIZARON su plan (pagaron todas las cuotas):\n'+_fin.join(', ')+'\n\nYa aparecen en "Lotes Finalizados".':'')+
       '\n\nDesde ahora los pagos pendientes van a Caja de Mora.');
   });
 }
