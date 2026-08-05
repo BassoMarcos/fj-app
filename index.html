@@ -1190,7 +1190,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0499';
+  datos['_version']='v1.0500';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11855,6 +11855,20 @@ function toggleAdelantoCuota(id, num, monto){
 
 let _adelantoVerMas = 5; // how many cuota buttons to show
 
+function adelantoTodoResto(id){
+  const data = loadData();
+  const c = data.find(x=>x.id===id);
+  if(!c) return;
+  const montoMes = c.monto;
+  const disponibles = c.ct - c.ca; // todas las cuotas que restan
+  if(disponibles<=0){ alert('Este lote no tiene cuotas restantes para adelantar.'); return; }
+  if(!confirm('⏩ Adelantar TODAS las '+disponibles+' cuota'+(disponibles>1?'s':'')+' restante'+(disponibles>1?'s':'')+' de este lote?\n\nSe sumarán como adelanto a la cuota del mes.\nTotal adelanto: '+fmtPeso(disponibles*montoMes))) return;
+  _adelantoCuotas = [];
+  for(let i = 0; i < disponibles; i++){
+    _adelantoCuotas.push({num: c.ct - i, monto: montoMes});
+  }
+  renderAdelantoSelector(id);
+}
 function adelantoIngresarCantidad(id){
   const input = document.getElementById('adelanto-cant-input');
   if(!input) return;
@@ -11909,6 +11923,7 @@ function renderAdelantoSelector(id){
         ${_adelantoCuotas.length>0?`<button onclick="_adelantoCuotas=[];_adelantoVerMas=5;renderAdelantoSelector('${id}')"
           style="padding:5px 8px;background:var(--red-bg);color:var(--red);border:1px solid #fca5a5;border-radius:var(--r);font-size:11px;cursor:pointer">Limpiar</button>`:''}
       </div>
+      <button onclick="adelantoTodoResto('${id}')" style="width:100%;padding:7px;margin-bottom:8px;background:#6d28d9;color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">⏩ Pagar TODO lo que resta (${totalDisp} cuota${totalDisp!==1?'s':''})</button>
       <div style="display:flex;flex-wrap:wrap;gap:4px">
         ${visible.map(n=>{
           const sel = selectedNums.includes(n);
