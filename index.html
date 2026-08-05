@@ -318,13 +318,21 @@ tr:hover td{background:var(--bg)}
       }
     };
 
+    window._sanitizeUndefined = (v) => {
+      if (v === undefined) return null;
+      if (v === null || typeof v !== 'object') return v;
+      if (Array.isArray(v)) return v.map(window._sanitizeUndefined);
+      const o = {};
+      for (const k of Object.keys(v)) { if (v[k] !== undefined) o[k] = window._sanitizeUndefined(v[k]); }
+      return o;
+    };
     window._syncFlush = async () => {
       if (!window._firebaseReady) return;
       const keys = Object.keys(window._syncQueue);
       for (const k of keys) {
         const v = window._syncQueue[k];
         try {
-          await set(ref(db, 'eucaliptus/' + k), v);
+          await set(ref(db, 'eucaliptus/' + k), window._sanitizeUndefined(v));
           if (window._syncQueue[k] === v) delete window._syncQueue[k];
           window._syncLastOk = new Date().toLocaleTimeString('es-AR');
         } catch (e) {
@@ -1190,7 +1198,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0500';
+  datos['_version']='v1.0501';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1345,11 +1353,15 @@ function saveHist(h){
   })));
   // v1.0381: el historial es la caja negra de la app — fue lo único que permitió
   // recuperar los datos el 22/7/2026. Ahora también va a Firebase.
-  window._fbSet('hist', h).catch(e=>console.warn('FB hist error:',e));
+  // Sanear undefined: Firebase rechaza cualquier objeto con valores undefined.
+  const limpio=h.map(e=>{const o={};Object.keys(e).forEach(k=>{if(e[k]!==undefined)o[k]=e[k];});return o;});
+  window._fbSet('hist', limpio).catch(e=>console.warn('FB hist error:',e));
 }
 function addHist(tipo,desc,cid){
   const h=loadHist();
-  h.unshift({tipo,desc,cid,ts:new Date().toISOString()});
+  const entry={tipo,desc,ts:new Date().toISOString()};
+  if(cid!==undefined&&cid!==null) entry.cid=cid;
+  h.unshift(entry);
   if(h.length>1000)h.pop();
   saveHist(h);
 }
