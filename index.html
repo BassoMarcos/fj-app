@@ -1190,7 +1190,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0497';
+  datos['_version']='v1.0498';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1657,6 +1657,40 @@ function fmtDate(iso){
   if(isNaN(d.getTime())) return iso;
   return d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();
 }
+// Número de cuota que corresponde al MES OPERATIVO actual (no la última pagada).
+// No modifica el ca real; solo se usa para mostrar en las tarjetas.
+function cuotaOperativa(c){
+  if(!c) return c;
+  // Mes/año operativo actual
+  let mesIdx, anioIdx;
+  const cf=loadCierreFinal();
+  if(cf&&cf.mes!==undefined&&cf.anio!==undefined){
+    mesIdx=(cf.mes+1)%12;
+    anioIdx=cf.mes===11?cf.anio+1:cf.anio;
+  } else {
+    try{ const mo=getMesOperativoICC(); mesIdx=mo.mesIdx; anioIdx=mo.anio; }
+    catch(e){ return c.ca; }
+  }
+  const opVal=anioIdx*12+mesIdx; // valor comparable del mes operativo
+  // Buscar en el historial una cuota anclada a un mes/año, y proyectar
+  const hist=(c.hist||[]).filter(h=>h.cuota&&h.mes);
+  if(hist.length){
+    // Tomar la cuota más reciente del historial con su mes
+    let ancla=null, mejorVal=-1;
+    hist.forEach(h=>{
+      const parts=String(h.mes).trim().split(/\s+/);
+      const mi=MESES.indexOf(parts[0]); const an=parseInt(parts[1]);
+      if(mi>=0&&an>0){ const v=an*12+mi; if(v>mejorVal){ mejorVal=v; ancla={cuota:h.cuota,val:v}; } }
+    });
+    if(ancla){
+      const diff=opVal-ancla.val; // cuántos meses del ancla al operativo
+      const n=ancla.cuota+diff;
+      if(n>=1&&n<=(c.ct||9999)) return n;
+      return Math.min(Math.max(1,n),c.ct||n);
+    }
+  }
+  return c.ca; // fallback: lo que había
+}
 function mesActual(){
   const cf=loadCierreFinal();
   if(cf&&cf.mes!==undefined){
@@ -1852,7 +1886,7 @@ function renderTarjetaCliente(id, containerId){
     +'<div class="res-lote">'+loteTag+'</div>'
     +'<div class="res-titular">'+c.titular+'</div>'
     +montoHtml
-    +'<div class="res-row"><span class="res-label">Cuota N°</span><span class="res-val">'+c.ca+' de '+c.ct+'</span></div>'
+    +'<div class="res-row"><span class="res-label">Cuota N°</span><span class="res-val">'+cuotaOperativa(c)+' de '+c.ct+'</span></div>'
     +'<div class="res-row"><span class="res-label">Próximo incremento</span><span class="res-val">'+proximoInc+'</span></div>'
     +'<div style="margin-top:1rem;font-size:12px;color:var(--text2);text-align:center">Podés abonar del 1 al 10 de cada mes.</div>'
     +'</div></div>';
@@ -3266,7 +3300,7 @@ function mostrarVCModal(id){
   }
 
   html+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;font-size:14px">';
-  html+='<span style="color:#888">Cuota N°</span><span style="font-weight:600">'+c.ca+' de '+c.ct+'</span></div>';
+  html+='<span style="color:#888">Cuota N°</span><span style="font-weight:600">'+cuotaOperativa(c)+' de '+c.ct+'</span></div>';
 
   const prox=getProximoIncrementoHtml(c.tri);
   html+='<div style="padding:8px 0;font-size:13px;color:#555">'+prox+'</div>';
@@ -8071,7 +8105,7 @@ function renderAdminDet(id){
       ${moraHtml}
 
       <!-- 4. Info del cliente -->
-      <div class="det-row"><span class="det-label">Cuota N°</span><span class="det-val">${esPrimeraCuotaFutura(c)?'— de '+c.ct:c.ca+' de '+c.ct}</span></div>
+      <div class="det-row"><span class="det-label">Cuota N°</span><span class="det-val">${esPrimeraCuotaFutura(c)?'— de '+c.ct:cuotaOperativa(c)+' de '+c.ct}</span></div>
       <div class="det-row"><span class="det-label">Trimestre</span><span class="det-val">${c.moneda==='USD'?'— (USD, sin ICC)':c.tri}</span></div>
       <div class="det-row"><span class="det-label">Saldo</span><span class="det-val" style="color:${saldoColor}">${saldoTxt}</span></div>
       <div class="det-row"><span class="det-label">Próximo incremento</span><span class="det-val">${getProximoIncrementoHtml(c.tri)}</span></div>
@@ -12299,7 +12333,7 @@ function renderDetColab(id){
 
       ${moraHtml}
 
-      <div class="det-row"><span class="det-label">Cuota N°</span><span class="det-val">${esPrimeraCuotaFutura(c)?'— de '+c.ct:c.ca+' de '+c.ct}</span></div>
+      <div class="det-row"><span class="det-label">Cuota N°</span><span class="det-val">${esPrimeraCuotaFutura(c)?'— de '+c.ct:cuotaOperativa(c)+' de '+c.ct}</span></div>
       <div class="det-row"><span class="det-label">Trimestre</span><span class="det-val">${c.moneda==='USD'?'— (USD, sin ICC)':c.tri}</span></div>
       <div class="det-row"><span class="det-label">Saldo</span><span class="det-val" style="color:${saldoColor}">${saldoTxt}</span></div>
       <details class="cuotas-desplegable" style="margin-top:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border2);margin-bottom:1rem"><summary style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px"><span class="cuotas-flecha" style="transition:transform .2s;display:inline-block">▸</span> Últimas 3 cuotas</summary><div class="hist-cuotas" style="margin-top:6px">${histHtml}</div></details>
