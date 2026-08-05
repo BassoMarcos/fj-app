@@ -1198,7 +1198,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0502';
+  datos['_version']='v1.0503';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11920,35 +11920,36 @@ function renderAdelantoSelector(id){
   const hayMas = totalDisp > _adelantoVerMas;
 
   // Update top summary with adelantos in real time
-  actualizarResumenAdminConAdelantos(id);
-  actualizarResumenColabConAdelantos(id);
+  try{ actualizarResumenAdminConAdelantos(id); }catch(e){}
+  try{ actualizarResumenColabConAdelantos(id); }catch(e){}
 
   el.innerHTML = `
-    <div style="background:var(--blue-bg);border:1px solid #bae6fd;border-radius:var(--r);padding:.75rem;margin-top:6px">
-      <div style="font-size:12px;font-weight:700;color:#5eb0ef;margin-bottom:8px">⏭ Seleccioná cuotas a adelantar</div>
-      <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
-        <input type="number" id="adelanto-cant-input" min="1" max="${totalDisp}" placeholder="Cantidad"
-          style="flex:1;padding:5px 8px;border:1.5px solid #7dd3fc;border-radius:var(--r);font-size:12px"
+    <div style="background:var(--blue-bg);border:1px solid #bae6fd;border-radius:var(--r);padding:.5rem;margin-top:5px">
+      <div style="font-size:11px;font-weight:700;color:#5eb0ef;margin-bottom:5px">⏭ Cuotas a adelantar</div>
+      <div style="display:flex;gap:5px;align-items:center;margin-bottom:6px">
+        <input type="number" id="adelanto-cant-input" min="1" max="${totalDisp}" placeholder="Cant."
+          style="flex:1;padding:4px 6px;border:1px solid #7dd3fc;border-radius:var(--r);font-size:11px;box-sizing:border-box"
           onkeydown="if(event.key==='Enter')adelantoIngresarCantidad('${id}')">
         <button onclick="adelantoIngresarCantidad('${id}')"
-          style="padding:5px 10px;background:#0369a1;color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:600;cursor:pointer">Aplicar</button>
+          style="padding:4px 8px;background:#0369a1;color:#fff;border:none;border-radius:var(--r);font-size:11px;font-weight:600;cursor:pointer">Aplicar</button>
+        <button onclick="adelantoTodoResto('${id}')" title="Adelantar todas las cuotas restantes"
+          style="padding:4px 8px;background:#6d28d9;color:#fff;border:none;border-radius:var(--r);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">⏩ Todo (${totalDisp})</button>
         ${_adelantoCuotas.length>0?`<button onclick="_adelantoCuotas=[];_adelantoVerMas=5;renderAdelantoSelector('${id}')"
-          style="padding:5px 8px;background:var(--red-bg);color:var(--red);border:1px solid #fca5a5;border-radius:var(--r);font-size:11px;cursor:pointer">Limpiar</button>`:''}
+          style="padding:4px 6px;background:var(--red-bg);color:var(--red);border:1px solid #fca5a5;border-radius:var(--r);font-size:10px;cursor:pointer">✕</button>`:''}
       </div>
-      <button onclick="adelantoTodoResto('${id}')" style="width:100%;padding:7px;margin-bottom:8px;background:#6d28d9;color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">⏩ Pagar TODO lo que resta (${totalDisp} cuota${totalDisp!==1?'s':''})</button>
-      <div style="display:flex;flex-wrap:wrap;gap:4px">
+      <div style="display:flex;flex-wrap:wrap;gap:3px">
         ${visible.map(n=>{
           const sel = selectedNums.includes(n);
           const enabled = sel || n === nextEnabled;
           return `<button onclick="${enabled?`toggleAdelantoCuota('${id}',${n},${montoMes})`:'void(0)'}"
-            style="padding:4px 10px;border-radius:var(--r);font-size:12px;font-weight:600;
-              border:2px solid ${sel?'#0369a1':enabled?'#7dd3fc':'#e2e8f0'};
+            style="padding:3px 8px;border-radius:var(--r);font-size:11px;font-weight:600;
+              border:1.5px solid ${sel?'#0369a1':enabled?'#7dd3fc':'#e2e8f0'};
               background:${sel?'var(--blue)':enabled?'var(--blue-bg)':'var(--surface)'};
               color:${sel?'#fff':enabled?'#0369a1':'#94a3b8'};
               cursor:${enabled?'pointer':'not-allowed'}">${n}</button>`;
         }).join('')}
         ${hayMas?`<button onclick="_adelantoVerMas+=5;renderAdelantoSelector('${id}')"
-          style="padding:4px 10px;border-radius:var(--r);font-size:12px;border:2px dashed #7dd3fc;background:var(--blue-bg);color:#5eb0ef;cursor:pointer">+5...</button>`:''}
+          style="padding:3px 8px;border-radius:var(--r);font-size:11px;border:1.5px dashed #7dd3fc;background:var(--blue-bg);color:#5eb0ef;cursor:pointer">+5</button>`:''}
       </div>
     </div>
   `;
