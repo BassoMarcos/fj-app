@@ -1190,7 +1190,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0498';
+  datos['_version']='v1.0499';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11989,7 +11989,7 @@ function renderAgrLista(){
       return `<tr onclick="mostrarAdminDet('${c.id}')" style="cursor:pointer;border-bottom:1px solid var(--border);background:var(--card)">
         <td style="padding:10px 6px"><span class="lote-tag" style="background:#2d6a50;color:#d0f0e0">${formatLoteTag(c.mz,c.lote)}</span>${isUSD?'<span style="font-size:10px;color:var(--green);margin-left:4px">💵</span>':''}</td>
         <td style="padding:10px 6px;font-weight:600">${c.titular}${waLink}</td>
-        <td style="padding:10px 6px;text-align:right">${c.ca}/${c.ct}</td>
+        <td style="padding:10px 6px;text-align:right">${cuotaOperativa(c)}/${c.ct}</td>
         <td style="padding:10px 6px;text-align:right;font-weight:600">${isUSD?'USD ':''} ${fmtPeso(montoCobrable(c).total)}</td>
         <td style="padding:10px 6px;text-align:right"><span style="background:${c.saldo===0?'#f3f4f6':c.saldo<0?'#fee2e2':'#dcfce7'};color:${saldoColor(c)};padding:2px 8px;border-radius:99px;font-weight:600">${saldoTxt(c)}</span></td>
         <td style="padding:10px 6px;text-align:center">${pagoLabel}</td>
