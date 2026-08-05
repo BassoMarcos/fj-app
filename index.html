@@ -1198,7 +1198,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0503';
+  datos['_version']='v1.0504';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11874,7 +11874,6 @@ function adelantoTodoResto(id){
   const montoMes = c.monto;
   const disponibles = c.ct - c.ca; // todas las cuotas que restan
   if(disponibles<=0){ alert('Este lote no tiene cuotas restantes para adelantar.'); return; }
-  if(!confirm('⏩ Adelantar TODAS las '+disponibles+' cuota'+(disponibles>1?'s':'')+' restante'+(disponibles>1?'s':'')+' de este lote?\n\nSe sumarán como adelanto a la cuota del mes.\nTotal adelanto: '+fmtPeso(disponibles*montoMes))) return;
   _adelantoCuotas = [];
   for(let i = 0; i < disponibles; i++){
     _adelantoCuotas.push({num: c.ct - i, monto: montoMes});
