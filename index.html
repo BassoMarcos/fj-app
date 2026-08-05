@@ -1188,7 +1188,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0494';
+  datos['_version']='v1.0495';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6433,14 +6433,17 @@ function renderBalances(seccion){
       <div>
         <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:8px">✅ APROBADOS</div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
-          ${aprobados.length?aprobados.slice().reverse().map(a=>`
-            <div style="display:flex;justify-content:space-between;padding:10px 1rem;border-bottom:1px solid var(--border);font-size:13px">
+          ${aprobados.length?aprobados.slice().reverse().map(a=>{const gi=adelantos.indexOf(a);return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 1rem;border-bottom:1px solid var(--border);font-size:13px">
               <div>
                 <div style="font-weight:600">${formatLoteTag(a.mz,a.lote)} — ${a.titular}</div>
                 <div style="font-size:12px;color:var(--text2)">Cuotas: ${a.cuotas.map(q=>q.num||q.numeroCuota||q.nro||'').filter(Boolean).sort((x,y)=>y-x).join(', ')} · ${fmtFechaAdel(a.fechaAprobacion||a.fecha)}</div>
               </div>
-              <div style="font-weight:700">${fmtPeso(a.total)}</div>
-            </div>`).join('')
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="font-weight:700">${fmtPeso(a.total)}</div>
+                <button onclick="deshacerAdelanto(${gi})" title="Deshacer: devuelve la(s) cuota(s) al total del lote" style="background:var(--amber-bg);border:1px solid var(--amber-border);color:var(--amber);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">↩ Deshacer</button>
+              </div>
+            </div>`;}).join('')
           :'<div style="padding:1rem;font-size:13px;color:var(--text2)">No hay adelantos aprobados aún</div>'}
         </div>
       </div>`;
@@ -11718,6 +11721,34 @@ function registrarAdelanto(id, cuotas){
   addHist('adelanto', `Adelanto pendiente — ${c.mz} Lote ${c.lote} — ${c.titular} — ${cuotas.length} cuota${cuotas.length>1?'s':''} — ${fmtPeso(cuotas.reduce((s,q)=>s+q.monto,0))}`, id);
 }
 
+function deshacerAdelanto(idx){
+  const adelantos = loadAdelantos();
+  const a = adelantos[idx];
+  if(!a || a.estado!=='aprobado'){alert('Ese adelanto no está aprobado.');return;}
+  const data0=loadData();
+  const c0=data0.find(x=>x.id===a.id);
+  const ctActual=c0?c0.ct:'?';
+  if(!confirm('↩ Deshacer adelanto de '+formatLoteTag(a.mz,a.lote)+' — '+a.titular+'\n\n'
+    +'Se devolverá '+a.cuotas.length+' cuota'+(a.cuotas.length>1?'s':'')+' al total del lote.\n'
+    +'El total pasará de '+ctActual+' a '+(typeof ctActual==='number'?ctActual+a.cuotas.length:'?')+' cuotas.\n'
+    +'El adelanto vuelve a quedar PENDIENTE de aprobación.\n\n¿Confirmás?')) return;
+  confirmarConClave(()=>{
+    const ads=loadAdelantos();
+    const ad=ads[idx];
+    if(!ad||ad.estado!=='aprobado') return;
+    // Devolver las cuotas al total del lote
+    const data=loadData();
+    const c=data.find(x=>x.id===ad.id);
+    if(c){ c.ct = (Number(c.ct)||0) + ad.cuotas.length; saveData(data); }
+    // El adelanto vuelve a pendiente
+    ad.estado='pendiente';
+    delete ad.fechaAprobacion;
+    saveAdelantos(ads);
+    addHist('adelanto', `Adelanto DESHECHO — ${ad.mz} Lote ${ad.lote} — ${ad.titular} — ${ad.cuotas.length} cuota${ad.cuotas.length>1?'s':''} devuelta(s) al total (vuelve a pendiente)`, ad.id);
+    renderBalances('adelantos');
+    if(typeof renderAdminTable==='function') renderAdminTable();
+  });
+}
 function aprobarAdelanto(idx){
   confirmarConClave(()=>{
     const adelantos = loadAdelantos();
