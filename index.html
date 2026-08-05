@@ -979,6 +979,8 @@ function _parseAdelantoCuotas(c){
 }
 function loadAdelantos(){try{const d=JSON.parse(_lsGet(dKey('adelantos'))||'[]');return d.map(a=>({...a,cuotas:_parseAdelantoCuotas(a.cuotas)}));}catch(e){return[];}}
 function saveAdelantos(d){_lsSet(dKey('adelantos'),JSON.stringify(d));sheetsSet('Adelantos',d);window._fbSet('adelantos',d).catch(e=>console.warn('FB adel error:',e));}
+function loadAdelantosBackup(){try{return JSON.parse(_lsGet(dKey('adelantosBackup'))||'null');}catch(e){return null;}}
+function saveAdelantosBackup(obj){_lsSet(dKey('adelantosBackup'),JSON.stringify(obj));window._fbSet('adelantosBackup',obj).catch(e=>{});}
 
 // ── Agrimensores: lista dinámica persistida ──────────────────────────
 function loadAgrimensorLotes(){
@@ -1188,7 +1190,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0495';
+  datos['_version']='v1.0496';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6395,7 +6397,10 @@ function renderBalances(seccion){
     el.innerHTML=backBtn+`
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
         <div style="font-size:17px;font-weight:700">⏭ Adelantos</div>
-        <button onclick="resetAdelantos()" style="background:var(--blue-bg);border:1px solid #93c5fd;color:var(--blue);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar</button>
+        <div style="display:flex;gap:6px">
+          ${(()=>{const bk=loadAdelantosBackup();return (bk&&bk.adelantos&&bk.adelantos.length)?'<button onclick="restaurarLimpiezaAdelantos()" style="background:var(--amber-bg);border:1px solid var(--amber-border);color:var(--amber);padding:6px 12px;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">↩ Deshacer limpieza del '+bk.fecha+'</button>':'';})()}
+          <button onclick="resetAdelantos()" style="background:var(--blue-bg);border:1px solid #93c5fd;color:var(--blue);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar</button>
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem">
         <div style="background:var(--card);border:1px solid var(--amber-border);border-radius:var(--r);padding:.875rem">
@@ -6732,7 +6737,7 @@ function modalModoConfirm(revertir){
   confirmarConClave(()=>{
     if(tipo === 'caja') resetCajaAbiertaConfirm(revertir);
     else if(tipo === 'cierres') resetCierresConfirm(revertir);
-    else if(tipo === 'adelantos') resetAdelantosConfirm(revertir);
+    else if(tipo === 'adelantos') resetAdelantos();
     else if(tipo === 'agrimensores') resetAgrimensoresConfirm(revertir);
   });
 }
@@ -6804,25 +6809,31 @@ function pasarInteresMora(id, ts){
 }
 
 function resetAdelantos(){
-  mostrarModalModo('adelantos');
-}
-function resetAdelantosConfirm(revertir){
-  if(revertir){
-    // Revert: remove adelanto approvals from clients (reset ca back)
-    const adelantos=loadAdelantos().filter(a=>a.estado==='aprobado');
-    if(adelantos.length){
-      const data=loadData();
-      adelantos.forEach(a=>{
-        const c=data.find(x=>x.id===a.id);
-        if(c) c.ct+=a.cuotas.length;
-      });
-      saveData(data);
-    }
-  }
+  const ads=loadAdelantos();
+  if(!ads.length){alert('La caja de adelantos ya está vacía.');return;}
+  if(!confirm('🗑 ¿Limpiar toda la caja de adelantos?\n\nSolo se vacía la lista de la pantalla. No se tocan las cuotas ni las aprobaciones.\n\nPodés recuperarla con "Deshacer limpieza".')) return;
+  // Guardar respaldo con fecha antes de limpiar
+  saveAdelantosBackup({ fecha:new Date().toLocaleDateString('es-AR'), ts:new Date().toISOString(), adelantos:ads });
   saveAdelantos([]);
-  renderBalances();
-  if(document.getElementById('atab-lista')&&document.getElementById('atab-lista').style.display!=='none') renderAdminTable();
-  alert(revertir?'✓ Adelantos eliminados — cambios revertidos (Modo Prueba)':'✓ Adelantos eliminados — cambios conservados (Modo Real)');
+  addHist('adelanto','🗑 Caja de adelantos limpiada ('+ads.length+' adelanto'+(ads.length>1?'s':'')+') — respaldo guardado');
+  renderBalances('adelantos');
+  if(typeof renderAdminTable==='function') renderAdminTable();
+}
+function restaurarLimpiezaAdelantos(){
+  const bk=loadAdelantosBackup();
+  if(!bk||!bk.adelantos||!bk.adelantos.length){alert('No hay ninguna limpieza para deshacer.');return;}
+  const actuales=loadAdelantos();
+  if(!confirm('↩ Deshacer la limpieza del '+bk.fecha+'\n\nSe van a restaurar '+bk.adelantos.length+' adelanto'+(bk.adelantos.length>1?'s':'')+' tal como estaban (con sus estados).\n'
+    +(actuales.length?'Los '+actuales.length+' adelanto(s) actuales se conservan y se suman a los restaurados.\n':'')
+    +'\nNo se modifican las cuotas de ningún lote.\n\n¿Confirmás?')) return;
+  // Fusionar: restaurar los del backup + conservar los actuales (evitar duplicar por ts)
+  const tsActuales=new Set(actuales.map(a=>a.ts));
+  const restaurados=bk.adelantos.filter(a=>!tsActuales.has(a.ts));
+  saveAdelantos([...actuales,...restaurados]);
+  saveAdelantosBackup(null); // consumido
+  addHist('adelanto','↩ Limpieza de adelantos deshecha — '+restaurados.length+' adelanto(s) restaurado(s)');
+  renderBalances('adelantos');
+  if(typeof renderAdminTable==='function') renderAdminTable();
 }
 
 function resetAgrimensores(){
