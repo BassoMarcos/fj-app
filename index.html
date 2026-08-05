@@ -1190,7 +1190,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0496';
+  datos['_version']='v1.0497';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -12734,6 +12734,7 @@ async function init(){
       const fbBal = await window._fbGet('balances');
       const fbIcc = await window._fbGet('icc');
       const fbAdel = await window._fbGet('adelantos');
+      const fbAdelBk = await window._fbGet('adelantosBackup');
       const fbPago = await window._fbGet('pagoStore');
       const fbMoraReg = await window._fbGet('mora');
       const fbExtras = await window._fbGet('extras');
@@ -12755,6 +12756,7 @@ async function init(){
       if(fbBal) _lsSet(dKey('balances'), JSON.stringify(fbBal));
       if(fbIcc) _lsSet(dKey('icc'), JSON.stringify(fbIcc));
       if(fbAdel) _lsSet(dKey('adelantos'), JSON.stringify(fbAdel));
+      if(fbAdelBk!==undefined) _lsSet(dKey('adelantosBackup'), JSON.stringify(fbAdelBk));
       if(fbPago) _lsSet(dKey('pagos'), JSON.stringify(fbPago));
       if(fbMoraReg) localStorage.setItem('fj_mora', JSON.stringify(fbMoraReg));
       if(fbExtras) localStorage.setItem('fj_extras', JSON.stringify(fbExtras));
