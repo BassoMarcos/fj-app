@@ -1198,7 +1198,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0506';
+  datos['_version']='v1.0507';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3029,7 +3029,8 @@ function fcConfirmar(){
   {
     const bal=loadBalances();
     const cuotaPura=x.totalCuota-(x.totalAdel||0); // cuota de lista sin adelantos
-    (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:cuotaPura,adelanto:(x.totalAdel||0),transferido:t,entrego:e,vuelto:v,efectivo:e-v,dif,ts,fecha});
+    const efectivoPuro=(e-v)-(x.totalAdel||0); // efectivo de la cuota, sin el adelanto
+    (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:cuotaPura,adelanto:(x.totalAdel||0),transferido:t,entrego:e,vuelto:v,efectivo:efectivoPuro,dif,ts,fecha});
     saveBalances(bal);
   }
   // Confirmación final en UNA escritura: reasegurar pago marcado + SAF/SEC
@@ -7842,7 +7843,7 @@ function caEjecutarCobro(){
       const entregoLote = esElDeLaDif ? (totalLote+difLote) : totalLote;
       const vueltoLote = 0;
       const bal=loadBalances();
-      (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:mc,adelanto:totalAdel,transferido:0,entrego:entregoLote,vuelto:vueltoLote,efectivo:entregoLote-vueltoLote,dif:difLote,ts,fecha});
+      (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:mc,adelanto:totalAdel,transferido:0,entrego:entregoLote,vuelto:vueltoLote,efectivo:mc+difLote,dif:difLote,ts,fecha});
       saveBalances(bal);
       // 4. Cargar SAF/SEC al saldo de ese lote (solo el que lleva la diferencia)
       if(difLote!==0){
