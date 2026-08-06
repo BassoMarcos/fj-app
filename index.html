@@ -1198,7 +1198,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0505';
+  datos['_version']='v1.0506';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3028,7 +3028,8 @@ function fcConfirmar(){
   }
   {
     const bal=loadBalances();
-    (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:x.totalCuota,transferido:t,entrego:e,vuelto:v,efectivo:e-v,dif,ts,fecha});
+    const cuotaPura=x.totalCuota-(x.totalAdel||0); // cuota de lista sin adelantos
+    (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:cuotaPura,adelanto:(x.totalAdel||0),transferido:t,entrego:e,vuelto:v,efectivo:e-v,dif,ts,fecha});
     saveBalances(bal);
   }
   // Confirmación final en UNA escritura: reasegurar pago marcado + SAF/SEC
@@ -5756,6 +5757,7 @@ function renderBalances(seccion){
     const totEfP=cfP.reduce((s,p)=>s+(p.efectivo||0),0);
     const totEfU=cfU.reduce((s,p)=>s+(p.efectivo||0),0);
     const totCuotaP=cfP.reduce((s,p)=>s+(p.cuotaLista||0),0);
+    const totAdelP=cfP.reduce((s,p)=>s+(p.adelanto||0),0);
     const pendTransfP=cfP.reduce((s,p)=>s+Math.max(0,(p.transferido||0)-(p.rellenadoMonto||0)),0);
     const row=(p)=>{
       const dif=p.dif||0;
@@ -5770,7 +5772,7 @@ function renderBalances(seccion){
           <span style="font-weight:800">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.efectivo||0)} <span style="font-weight:400;color:var(--text2);font-size:11px">efectivo</span></span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-top:2px">
-          <span>Cuota ${fmtPeso(p.cuotaLista||0)} · entregó ${fmtPeso(p.entrego||0)}${motivo.length?' · '+motivo.join(' · '):''}</span>
+          <span>Cuota ${fmtPeso(p.cuotaLista||0)}${(p.adelanto||0)>0?' <span style="color:var(--blue)">+ adelanto '+fmtPeso(p.adelanto)+'</span>':''} · entregó ${fmtPeso(p.entrego||0)}${motivo.length?' · '+motivo.join(' · '):''}</span>
           ${difLabel?`<span style="font-weight:800;color:${dif>0?'var(--green)':'var(--red)'}">${marcar?'⚠️ ':''}${difLabel}</span>`:'<span style="color:var(--green)">✓ justo</span>'}
         </div>
       </div>`;
@@ -5789,6 +5791,7 @@ function renderBalances(seccion){
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center" title="Suma de cuotas de lista de estos pagos — comparalo con la Caja del día">
           <div style="font-size:11px;color:var(--text2)">CUOTAS DE LISTA</div>
           <div style="font-size:18px;font-weight:800">${fmtPeso(totCuotaP)}</div>
+          ${totAdelP?`<div style="font-size:11px;font-weight:700;color:var(--blue)">+ adelantos ${fmtPeso(totAdelP)}</div>`:''}
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center" title="Parte transferida aún no rellenada con ingresos">
           <div style="font-size:11px;color:var(--text2)">TRANSF. SIN RELLENAR</div>
@@ -7839,7 +7842,7 @@ function caEjecutarCobro(){
       const entregoLote = esElDeLaDif ? (totalLote+difLote) : totalLote;
       const vueltoLote = 0;
       const bal=loadBalances();
-      (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:totalLote,transferido:0,entrego:entregoLote,vuelto:vueltoLote,efectivo:entregoLote-vueltoLote,dif:difLote,ts,fecha});
+      (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:mc,adelanto:totalAdel,transferido:0,entrego:entregoLote,vuelto:vueltoLote,efectivo:entregoLote-vueltoLote,dif:difLote,ts,fecha});
       saveBalances(bal);
       // 4. Cargar SAF/SEC al saldo de ese lote (solo el que lleva la diferencia)
       if(difLote!==0){
