@@ -1198,7 +1198,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0507';
+  datos['_version']='v1.0508';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7997,10 +7997,6 @@ function renderAdminDet(id){
       </div>
       ${filas}
       <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer">
-          <input type="checkbox" id="adm-mora-all-${id}" onchange="onAdmMoraSelectAll('${id}',this.checked)" style="width:15px;height:15px">
-          Seleccionar todas
-        </label>
         <div style="flex:1"></div>
         <div id="adm-mora-total-${id}" style="font-size:13px;font-weight:700;color:var(--red)"></div>
       </div>
@@ -8011,10 +8007,6 @@ function renderAdminDet(id){
       <button onclick="cobrarTodoAdmin('${id}')"
         style="width:100%;margin-top:6px;background:#7c3aed;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer">
         ⚡ Cobrar todo (mora + mes actual)
-      </button>
-      <button onclick="deshacerUltimoCobro('${id}')"
-        style="width:100%;margin-top:6px;background:none;border:1.5px solid #fca5a5;color:var(--red);border-radius:var(--r);padding:7px;font-size:12px;font-weight:600;cursor:pointer">
-        ↩ Deshacer último cobro mora
       </button>
     </div>`;
   }
@@ -9325,11 +9317,33 @@ function cobrarTodoAdmin(clienteId){
     +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanelTodo()"> $ Monto</label>'
     +'</div>'
     +'<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanelTodo()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
-    +'<button onclick="admConfirmarTodo()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'
+    +'</div>'
+    // Tarjeta efectivo/vuelto — solo la cuota del mes va a caja física; SAF/SEC sobre el total
+    +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:10px">'
+    +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">💵 Efectivo</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:8px">'
+    +'<div style="flex:1"><label style="font-size:11px;color:var(--text2)">Entregó</label><input id="mora-ca-entrego" type="text" inputmode="numeric" value="'+fmtMiles(Math.round(grandTotal))+'" oninput="caFmtInput(this);moraCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
+    +'<div style="flex:1"><label style="font-size:11px;color:var(--text2)">Vuelto</label><input id="mora-ca-vuelto" type="text" inputmode="numeric" value="$0" oninput="caFmtInput(this);moraCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
+    +'</div>'
+    +'<div id="mora-ca-vuelto-live" style="font-size:12px;padding:6px 10px;border-radius:6px;background:var(--green-bg);color:var(--green);text-align:center">✓ Justo</div>'
+    +'<div style="font-size:10px;color:var(--text3);margin-top:6px">A Caja Física entra solo la cuota del mes ('+fmtCur(cuotaActual,cur)+'). La mora e intereses van a Caja de Mora.</div>'
     +'</div>'
     +'<button onclick="admConfirmarTodo()" style="width:100%;background:#7c3aed;color:#fff;border:none;border-radius:var(--r);padding:10px;font-size:14px;font-weight:800;cursor:pointer">✓ Confirmar cobro total</button>'
     +'</div></div>';
   document.body.appendChild(ov);
+  window._moraCaGrandTotal=grandTotal;
+  window._moraCaCuotaActual=cuotaActual;
+  moraCalcVuelto();
+}
+function moraCalcVuelto(){
+  const eEl=document.getElementById('mora-ca-entrego'), vEl=document.getElementById('mora-ca-vuelto'), live=document.getElementById('mora-ca-vuelto-live');
+  if(!eEl||!live) return;
+  const tot=window._moraCaGrandTotal||0;
+  const e=caNum(eEl.value), v=caNum(vEl.value);
+  const neto=e-v, dif=neto-tot;
+  if(dif===0){ live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='✓ Justo — pagó '+fmtPeso(neto); }
+  else if(dif>0){ live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='SAF (a favor): '+fmtPeso(dif); }
+  else { live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent='SEC (en contra): '+fmtPeso(-dif); }
 }
 
 function admUpdateMoraPanelTodo(){
@@ -9360,12 +9374,34 @@ function admConfirmarTodo(){
     total:c.monto+(totalMonto>0?Math.round(interes*(c.monto/totalMonto)):0)
   }));
   const grandTotal=totalMonto+interes+(cuotaActual||0);
+  // Leer efectivo/vuelto (la cuota del mes va a caja física; el SAF/SEC se calcula sobre el total)
+  const eEl=document.getElementById('mora-ca-entrego'), vEl=document.getElementById('mora-ca-vuelto');
+  const entregoTotal=eEl?caNum(eEl.value):grandTotal;
+  const vueltoTotal=vEl?caNum(vEl.value):0;
+  const difGlobal=(entregoTotal-vueltoTotal)-grandTotal; // SAF (+) / SEC (-)
   mostrarConfirmAdmin('Confirmar cobro total',fmtCur(grandTotal,cur),()=>{
     document.getElementById('mora-panel-overlay')?.remove();
-    // Cobrar mora
+    // 1. Cobrar mora (capital + interés → caja de mora)
     _ejecutarCobroAdmMora(selConInteres,clienteId,(cur||''),totalMonto+interes);
-    // Cobrar cuota mes actual (sin mora de días ya que tiene mora de meses)
+    // 2. Cobrar cuota mes actual (caja del día)
     marcarPago(clienteId, 0);
+    // 3. Registrar la cuota del mes en Caja Física + SAF/SEC sobre el total
+    const dataX=loadData();
+    const cX=dataX.find(x=>x.id===clienteId);
+    if(cX){
+      const ts=new Date().toISOString(), fecha=new Date().toLocaleDateString('es-AR');
+      const efectivoMes=(cuotaActual||0)+difGlobal; // cuota del mes + diferencia
+      const bal=loadBalances();
+      (bal.cajaFisica=bal.cajaFisica||[]).push({id:clienteId,mz:cX.mz,lote:cX.lote,titular:cX.titular,moneda:cX.moneda||'ARS',cuotaLista:(cuotaActual||0),adelanto:0,transferido:0,entrego:efectivoMes,vuelto:0,efectivo:efectivoMes,dif:difGlobal,ts,fecha});
+      saveBalances(bal);
+      // Cargar SAF/SEC al saldo del cliente
+      if(difGlobal!==0){
+        cX.saldo=(Number(cX.saldo)||0)+difGlobal; cX.saldoDifUltimoCobro=difGlobal; saveData(dataX);
+        addHist('pago',(difGlobal>0?'SAF ':'SEC ')+fmtPeso(Math.abs(difGlobal))+' — '+cX.mz+' Lote '+cX.lote+' (cobro mora+mes, cargado al saldo)',clienteId);
+        try{ registrarSafSec(cX,difGlobal,ts,fecha); }catch(e){}
+      }
+      try{ renderBalances('caja'); }catch(e){}
+    }
   });
 }
 
