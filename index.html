@@ -1198,7 +1198,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0513';
+  datos['_version']='v1.0514';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9145,6 +9145,10 @@ function _deshacerUltimoCobroMora(clienteId, esColab){
   setTimeout(()=>mostrarToastCobro('Cobro mora deshecho correctamente'),50);
 }
 
+function cerrarMoraPanel(){
+  document.getElementById('mora-panel-overlay')?.remove();
+  try{ if(typeof _colabDesbloquearLista==='function') _colabDesbloquearLista(); }catch(e){}
+}
 function cobrarTodoColab(clienteId){
   const data=loadData();
   const c=data.find(x=>x.id===clienteId);
@@ -9181,7 +9185,7 @@ function cobrarTodoColab(clienteId){
     '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">'
     +'<div style="background:#7c3aed;padding:14px 18px;display:flex;justify-content:space-between;align-items:center">'
     +'<div style="color:#fff;font-size:16px;font-weight:800">⚡ Cobrar todo</div>'
-    +'<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>'
+    +'<button onclick="cerrarMoraPanel()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>'
     +'</div>'
     +'<div style="padding:16px">'
     +'<div style="background:var(--red-bg);border:1.5px solid #fca5a5;border-radius:var(--r);padding:12px;margin-bottom:10px">'
@@ -9223,6 +9227,7 @@ function cobrarTodoColab(clienteId){
     +'<div style="font-size:10px;color:var(--text3);margin-top:6px">A Caja Física entra solo la cuota del mes ('+fmtCur(cuotaActual,cur)+'). La mora e intereses van a Caja de Mora.</div>'
     +'</div>'
     +'<button onclick="admConfirmarTodoColab()" style="width:100%;background:#7c3aed;color:#fff;border:none;border-radius:var(--r);padding:10px;font-size:14px;font-weight:800;cursor:pointer">✓ Confirmar cobro total</button>'
+    +'<button onclick="cerrarMoraPanel()" style="width:100%;margin-top:8px;background:none;border:1px solid var(--border2);color:var(--text2);border-radius:var(--r);padding:9px;font-size:13px;font-weight:600;cursor:pointer">No cobré (cerrar)</button>'
     +'</div></div>';
   document.body.appendChild(ov);
   window._moraCaGrandTotal=grandTotal;
@@ -9319,7 +9324,7 @@ function cobrarTodoAdmin(clienteId){
     '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">'
     +'<div style="background:#7c3aed;padding:14px 18px;display:flex;justify-content:space-between;align-items:center">'
     +'<div style="color:#fff;font-size:16px;font-weight:800">⚡ Cobrar todo</div>'
-    +'<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>'
+    +'<button onclick="cerrarMoraPanel()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>'
     +'</div>'
     +'<div style="padding:16px">'
     // Desglose mora
@@ -9364,6 +9369,7 @@ function cobrarTodoAdmin(clienteId){
     +'<div style="font-size:10px;color:var(--text3);margin-top:6px">A Caja Física entra solo la cuota del mes ('+fmtCur(cuotaActual,cur)+'). La mora e intereses van a Caja de Mora.</div>'
     +'</div>'
     +'<button onclick="admConfirmarTodo()" style="width:100%;background:#7c3aed;color:#fff;border:none;border-radius:var(--r);padding:10px;font-size:14px;font-weight:800;cursor:pointer">✓ Confirmar cobro total</button>'
+    +'<button onclick="cerrarMoraPanel()" style="width:100%;margin-top:8px;background:none;border:1px solid var(--border2);color:var(--text2);border-radius:var(--r);padding:9px;font-size:13px;font-weight:600;cursor:pointer">No cobré (cerrar)</button>'
     +'</div></div>';
   document.body.appendChild(ov);
   window._moraCaGrandTotal=grandTotal;
@@ -9480,7 +9486,7 @@ function cobrarAdmMora(clienteId){
     '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">'+
     '<div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">'+
     '<div style="font-size:16px;font-weight:800">💰 Cobrar mora</div>'+
-    '<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
+    '<button onclick="cerrarMoraPanel()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
     '</div>'+
     '<div style="padding:16px">'+
     '<div style="background:var(--card);border:2px solid #fed7aa;border-radius:var(--r);padding:12px;margin-bottom:10px">'+
@@ -10245,7 +10251,7 @@ function cobrarConMoraColab(btn){
     '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">'+
     '<div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">'+
     '<div style="font-size:16px;font-weight:800">💰 Confirmar cobro</div>'+
-    '<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
+    '<button onclick="cerrarMoraPanel()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
     '</div>'+
     '<div style="padding:16px">'+
     '<div style="background:var(--card);border:2px solid #fed7aa;border-radius:var(--r);padding:12px;margin-bottom:10px">'+
@@ -10450,7 +10456,7 @@ function revertirCobroMesAnterior(clienteId){
     '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">'+
     '<div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">'+
     '<div style="font-size:15px;font-weight:800">↩ ¿Qué mes revertir?</div>'+
-    '<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
+    '<button onclick="cerrarMoraPanel()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
     '</div>'+
     '<div style="padding:16px">'+
     '<div style="font-size:12px;color:var(--text2);margin-bottom:10px">Seleccioná el mes cuyo cobro querés revertir y pasar a mora:</div>'+
