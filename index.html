@@ -1198,7 +1198,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0517';
+  datos['_version']='v1.0518';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5766,6 +5766,10 @@ function renderBalances(seccion){
     const totAdelP=cfP.reduce((s,p)=>s+(p.adelanto||0),0);
     const totAgrEfP=cfAgrP.reduce((s,p)=>s+(p.efectivo||0),0);
     const totAgrEfU=cfAgrU.reduce((s,p)=>s+(p.efectivo||0),0);
+    // Adelantos: registros con adelanto > 0 (de cualquier grupo)
+    const cfAdel=cf.filter(p=>(p.adelanto||0)>0);
+    const totAdelEfP=cfAdel.filter(p=>p.moneda!=='USD').reduce((s,p)=>s+(p.adelanto||0),0);
+    const totAdelEfU=cfAdel.filter(p=>p.moneda==='USD').reduce((s,p)=>s+(p.adelanto||0),0);
     const pendTransfP=cfP.reduce((s,p)=>s+Math.max(0,(p.transferido||0)-(p.rellenadoMonto||0)),0);
     const row=(p)=>{
       const dif=p.dif||0;
@@ -5826,6 +5830,25 @@ function renderBalances(seccion){
       </div>
       <div style="background:var(--surface);border:1px solid var(--acc3);border-radius:var(--r);overflow:hidden">
         ${bloqueLista(cfAgr)}
+      </div>`:''}
+      ${cfAdel.length?`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;margin-bottom:4px">
+        <div style="font-size:12px;font-weight:700;color:var(--blue)">⏭ Adelantos</div>
+        <div style="font-size:12px;font-weight:700;color:var(--blue)">${fmtPeso(totAdelEfP)}${totAdelEfU?' · USD '+fmtPeso(totAdelEfU):''}</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--blue);border-radius:var(--r);overflow:hidden">
+        ${(()=>{
+          const ap=cfAdel.filter(p=>p.moneda!=='USD');
+          const au=cfAdel.filter(p=>p.moneda==='USD');
+          const rowAdel=(p)=>`<div style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px;display:flex;justify-content:space-between">
+            <span style="font-weight:600">${formatLoteTag(p.mz,p.lote)} — ${p.titular||''}</span>
+            <span style="font-weight:800;color:var(--blue)">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.adelanto||0)}</span>
+          </div>`;
+          let h='';
+          if(ap.length) h+='<div style="font-size:10px;font-weight:700;color:var(--text3);padding:6px 10px;background:var(--hov)">PESOS</div>'+ap.slice().reverse().map(rowAdel).join('');
+          if(au.length) h+='<div style="font-size:10px;font-weight:700;color:var(--text3);padding:6px 10px;background:var(--hov)">DÓLARES</div>'+au.slice().reverse().map(rowAdel).join('');
+          return h;
+        })()}
       </div>`:''}
       <div style="font-size:11px;color:var(--text2);margin-top:8px">💡 Diferencias mayores a $1.000 quedan remarcadas. Al limpiar no queda registro (el SAF/SEC ya está en el saldo de cada cliente).</div>`;
   }
