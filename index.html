@@ -1198,7 +1198,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0512';
+  datos['_version']='v1.0513';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -12233,7 +12233,13 @@ function colabVerCuota(id){
     <div id="adelanto-selector-${id}" style="display:none"></div>`;
   _colabBloquearLista();
 }
-
+function colabVerCuotaMora(id){
+  const tapa=document.getElementById('mora-colab-tapa-'+id);
+  const panel=document.getElementById('mora-colab-panel-'+id);
+  if(tapa) tapa.style.display='none';
+  if(panel) panel.style.display='block';
+  _colabBloquearLista();
+}
 function colabCobrarYVerde(id, interes){
   abrirFormCobro(id,{ctx:'colab',interes:interes});
 }
@@ -12340,23 +12346,30 @@ function renderDetColab(id){
     }).join('');
 
     moraHtml=`
-    <div style="background:var(--red-bg);border:2px solid #fca5a5;border-radius:var(--r);padding:12px;margin:.5rem 0">
-      <div style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:8px">
-        ⚠️ ${cuotasMoraCliente.length} cuota${cuotasMoraCliente.length>1?'s':''} pendiente${cuotasMoraCliente.length>1?'s':''} de meses anteriores
+    <div style="position:relative;margin:.5rem 0">
+      <div id="mora-colab-tapa-${id}" style="background:linear-gradient(135deg,#7f1d1d,#991b1b);border-radius:var(--r);padding:1.25rem;text-align:center">
+        <div style="font-size:12px;color:rgba(255,255,255,0.8);margin-bottom:4px">⚠️ ${cuotasMoraCliente.length} cuota${cuotasMoraCliente.length>1?'s':''} en mora + cuota del mes</div>
+        <div style="font-size:32px;font-weight:800;color:#fff;filter:blur(9px);user-select:none">${cur}${fmtPeso(totalMoraCliente+_mcC.total)}</div>
+        <button onclick="colabVerCuotaMora('${id}')" style="margin-top:12px;width:100%;padding:10px;font-size:14px;font-weight:700;background:#fff;color:#991b1b;border:none;border-radius:var(--r);cursor:pointer">👁 Ver cuota</button>
       </div>
-      ${filas}
-      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
-        <div style="flex:1"></div>
-        <div id="colab-mora-total-${id}" style="font-size:13px;font-weight:700;color:var(--red)"></div>
+      <div id="mora-colab-panel-${id}" style="display:none;background:var(--red-bg);border:2px solid #fca5a5;border-radius:var(--r);padding:12px">
+        <div style="font-size:13px;font-weight:800;color:var(--red);margin-bottom:8px">
+          ⚠️ ${cuotasMoraCliente.length} cuota${cuotasMoraCliente.length>1?'s':''} pendiente${cuotasMoraCliente.length>1?'s':''} de meses anteriores
+        </div>
+        ${filas}
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <div style="flex:1"></div>
+          <div id="colab-mora-total-${id}" style="font-size:13px;font-weight:700;color:var(--red)"></div>
+        </div>
+        <button id="colab-mora-cobrar-btn-${id}" onclick="cobrarColabMoraSeleccionadas('${id}')"
+          style="width:100%;margin-top:8px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;opacity:0.4;pointer-events:none">
+          💰 Cobrar seleccionadas
+        </button>
+        <button onclick="cobrarTodoColab('${id}')"
+          style="width:100%;margin-top:6px;background:#7c3aed;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer">
+          ⚡ Cobrar todo (mora + mes actual)
+        </button>
       </div>
-      <button id="colab-mora-cobrar-btn-${id}" onclick="cobrarColabMoraSeleccionadas('${id}')"
-        style="width:100%;margin-top:8px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;opacity:0.4;pointer-events:none">
-        💰 Cobrar seleccionadas
-      </button>
-      <button onclick="cobrarTodoColab('${id}')"
-        style="width:100%;margin-top:6px;background:#7c3aed;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer">
-        ⚡ Cobrar todo (mora + mes actual)
-      </button>
     </div>`;
   }
 
