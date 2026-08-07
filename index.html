@@ -1198,7 +1198,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0516';
+  datos['_version']='v1.0517';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5753,12 +5753,19 @@ function renderBalances(seccion){
 
   if(seccion==='fisica'){
     const cf=(bal.cajaFisica||[]);
-    const cfP=cf.filter(p=>p.moneda!=='USD');
-    const cfU=cf.filter(p=>p.moneda==='USD');
+    // Separar normales de agrimensores
+    const cfNorm=cf.filter(p=>!esAgrimensor(p.id));
+    const cfAgr=cf.filter(p=>esAgrimensor(p.id));
+    const cfP=cfNorm.filter(p=>p.moneda!=='USD');
+    const cfU=cfNorm.filter(p=>p.moneda==='USD');
+    const cfAgrP=cfAgr.filter(p=>p.moneda!=='USD');
+    const cfAgrU=cfAgr.filter(p=>p.moneda==='USD');
     const totEfP=cfP.reduce((s,p)=>s+(p.efectivo||0),0);
     const totEfU=cfU.reduce((s,p)=>s+(p.efectivo||0),0);
     const totCuotaP=cfP.reduce((s,p)=>s+(p.cuotaLista||0),0);
     const totAdelP=cfP.reduce((s,p)=>s+(p.adelanto||0),0);
+    const totAgrEfP=cfAgrP.reduce((s,p)=>s+(p.efectivo||0),0);
+    const totAgrEfU=cfAgrU.reduce((s,p)=>s+(p.efectivo||0),0);
     const pendTransfP=cfP.reduce((s,p)=>s+Math.max(0,(p.transferido||0)-(p.rellenadoMonto||0)),0);
     const row=(p)=>{
       const dif=p.dif||0;
@@ -5777,6 +5784,15 @@ function renderBalances(seccion){
           ${difLabel?`<span style="font-weight:800;color:${dif>0?'var(--green)':'var(--red)'}">${marcar?'⚠️ ':''}${difLabel}</span>`:'<span style="color:var(--green)">✓ justo</span>'}
         </div>
       </div>`;
+    };
+    // Bloque de lista por grupos (pesos primero, luego USD)
+    const bloqueLista=(lista)=>{
+      const lp=lista.filter(p=>p.moneda!=='USD');
+      const lu=lista.filter(p=>p.moneda==='USD');
+      let html='';
+      if(lp.length) html+='<div style="font-size:10px;font-weight:700;color:var(--text3);padding:6px 10px;background:var(--hov)">PESOS</div>'+lp.slice().reverse().map(row).join('');
+      if(lu.length) html+='<div style="font-size:10px;font-weight:700;color:var(--text3);padding:6px 10px;background:var(--hov)">DÓLARES</div>'+lu.slice().reverse().map(row).join('');
+      return html||'<div style="padding:1rem;font-size:13px;color:var(--text2)">Sin registros.</div>';
     };
     el.innerHTML=`<button onclick="renderBalances('caja')" style="background:none;border:none;color:var(--acc2);font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:1rem">‹ Volver a Caja del día</button>`+`
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
@@ -5799,9 +5815,18 @@ function renderBalances(seccion){
           <div style="font-size:18px;font-weight:800;color:${pendTransfP?'#d97706':'var(--text3)'}">${fmtPeso(pendTransfP)}</div>
         </div>
       </div>
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px">Cuotas normales</div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
-        ${cf.length?cf.slice().reverse().map(row).join(''):'<div style="padding:1rem;font-size:13px;color:var(--text2)">Sin registros. Los cobros con el formulario de entregó/vuelto aparecen acá.</div>'}
+        ${cfNorm.length?bloqueLista(cfNorm):'<div style="padding:1rem;font-size:13px;color:var(--text2)">Sin registros. Los cobros con el formulario de entregó/vuelto aparecen acá.</div>'}
       </div>
+      ${cfAgr.length?`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;margin-bottom:4px">
+        <div style="font-size:12px;font-weight:700;color:var(--acc3)">⚖️ Agrimensores</div>
+        <div style="font-size:12px;font-weight:700;color:var(--acc3)">${fmtPeso(totAgrEfP)}${totAgrEfU?' · USD '+fmtPeso(totAgrEfU):''}</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--acc3);border-radius:var(--r);overflow:hidden">
+        ${bloqueLista(cfAgr)}
+      </div>`:''}
       <div style="font-size:11px;color:var(--text2);margin-top:8px">💡 Diferencias mayores a $1.000 quedan remarcadas. Al limpiar no queda registro (el SAF/SEC ya está en el saldo de cada cliente).</div>`;
   }
 
@@ -7932,8 +7957,8 @@ function caEjecutarCobro(){
         const esElDeLaDif = esUSD ? (id===primerUSDId) : (id===primerPesoId);
         difLote = esElDeLaDif ? (esUSD?difGlobalUSD:difGlobal) : 0;
       }
-      // 4. Caja física — el agrimensor NO entra a caja física (va solo a su caja)
-      if(!esAgr){
+      // 4. Caja física — todos entran (el agrimensor se muestra en su sección aparte)
+      {
         const bal=loadBalances();
         (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:mc,adelanto:totalAdel,transferido:0,entrego:totalLote+difLote,vuelto:0,efectivo:mc+difLote,dif:difLote,ts,fecha});
         saveBalances(bal);
