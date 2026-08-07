@@ -1198,7 +1198,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0508'; // redeploy
+  datos['_version']='v1.0509';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9359,7 +9359,16 @@ function admUpdateMoraPanelTodo(){
   const total=totalMoraCapital+interes+cuotaActual;
   const totalEl=document.getElementById('cobrar-todo-total');
   if(totalEl) totalEl.textContent=fmtCur(total,cur);
-  _moraPanelState.totalInteresAuto=interes;
+  // Actualizar el total de referencia para el cálculo de vuelto
+  window._moraCaGrandTotal=total;
+  // Recalcular el campo "Entregó" al nuevo total y refrescar el vuelto en vivo
+  const eEl=document.getElementById('mora-ca-entrego');
+  if(eEl){ eEl.value=fmtMiles(Math.round(total)); }
+  const vEl=document.getElementById('mora-ca-vuelto');
+  if(vEl && !vEl.value) vEl.value='$0';
+  try{ moraCalcVuelto(); }catch(e){}
+  // NO pisar totalInteresAuto (guardo el interés efectivo aparte)
+  _moraPanelState.interesEfectivo=interes;
 }
 
 function admConfirmarTodo(){
