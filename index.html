@@ -1095,13 +1095,17 @@ function registrarPagoEnCaja(id,monto,ts){
   const c=data.find(x=>x.id===id);
   const moneda=c?c.moneda||'ARS':'ARS';
   const transf=!!window._cobroTransferencia;
+  // Detalle de efectivo solo para cuotas en dólares (para que sobreviva en cierres)
+  const detUSD=(moneda==='USD'&&window._cobroDetalleUSD)?window._cobroDetalleUSD:null;
+  const extraUSD=detUSD?{cuotaUSD:detUSD.cuota,entregoUSD:detUSD.entrego,difUSD:detUSD.dif}:{};
   if(esAgrimensor(id)){
     if(!(bal.agrimensores||[]).some(p=>p.id===id))
-      (bal.agrimensores=bal.agrimensores||[]).push({id,monto,ts,fecha,moneda,transf});
+      (bal.agrimensores=bal.agrimensores||[]).push({id,monto,ts,fecha,moneda,transf,...extraUSD});
   } else {
-    (bal.abierto=bal.abierto||[]).push({id,monto,ts,fecha,moneda,transf});
+    (bal.abierto=bal.abierto||[]).push({id,monto,ts,fecha,moneda,transf,...extraUSD});
   }
   saveBalances(bal);
+  window._cobroDetalleUSD=null; // consumir
 }
 
 
@@ -1198,7 +1202,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0518';
+  datos['_version']='v1.0519';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3016,6 +3020,8 @@ function fcConfirmar(){
   const neto=t+e-v, dif=neto-x.totalCuota;
   const fullTransf=x.transfer&&t>=x.totalCuota;
   window._cobroTransferencia=fullTransf;
+  // Detalle USD para que sobreviva en cierres (cuota/entregado/SAF-SEC)
+  if(c.moneda==='USD'){ window._cobroDetalleUSD={cuota:x.totalCuota,entrego:e,dif:dif}; }
   try{ marcarPago(id, x.interes||0); } finally { window._cobroTransferencia=false; }
   if(x.adelantos.length) registrarAdelanto(id, x.adelantos);
   try{_adelantoCuotas=[];_adelantoVerMas=5;}catch(e){}
@@ -5393,9 +5399,13 @@ function renderCierrePagosLista(ts,orden){
   cont.innerHTML=pagos.map(p=>{
     const c=data.find(x=>x.id===p.id)||{mz:'?',lote:'?',titular:p.id};
     const fh=p.ts?new Date(p.ts).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' '+new Date(p.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
-    return `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed var(--border);font-size:12px">
-      <span>${formatLoteTag(c.mz,c.lote)} — ${(c.titular||'').slice(0,30)} <span style="font-size:10px;color:var(--text3)">${fh}</span>${p.transf?' <span style="color:#a78bfa;font-size:10px;font-weight:700">🏦</span>':''}</span>
-      <span style="font-weight:700">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.monto||0)}</span>
+    const detU=(p.moneda==='USD'&&p.entregoUSD!==undefined)?
+      '<div style="font-size:10px;color:var(--text3);margin-top:1px">Cuota USD '+fmtPeso(p.cuotaUSD||0)+' · entregó USD '+fmtPeso(p.entregoUSD||0)+((p.difUSD||0)!==0?' · <span style="color:'+((p.difUSD||0)>0?'var(--green)':'var(--red)')+'">'+((p.difUSD||0)>0?'SAF ':'SEC ')+'USD '+fmtPeso(Math.abs(p.difUSD||0))+'</span>':' · ✓ justo')+'</div>':'';
+    return `<div style="padding:3px 0;border-bottom:1px dashed var(--border);font-size:12px">
+      <div style="display:flex;justify-content:space-between">
+        <span>${formatLoteTag(c.mz,c.lote)} — ${(c.titular||'').slice(0,30)} <span style="font-size:10px;color:var(--text3)">${fh}</span>${p.transf?' <span style="color:#a78bfa;font-size:10px;font-weight:700">🏦</span>':''}</span>
+        <span style="font-weight:700">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.monto||0)}</span>
+      </div>${detU}
     </div>`;
   }).join('')||'<div style="font-size:12px;color:var(--text2)">Sin pagos</div>';
 }
@@ -5674,9 +5684,13 @@ function renderBalances(seccion){
     const totalTU=abTransf.filter(p=>p.moneda==='USD').reduce((s,p)=>s+(p.monto||0),0);
     const renderPagos=(lista)=>lista.length?lista.slice().reverse().map(p=>{
       const c=data.find(x=>x.id===p.id)||{mz:'?',lote:'?',titular:p.id};
-      return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
-        <span>${formatLoteTag(c.mz,c.lote)} — ${c.titular}</span>
-        <span style="font-weight:600">${fmtPeso(p.monto||0)}</span>
+      const detU=(p.moneda==='USD'&&p.entregoUSD!==undefined)?
+        '<div style="font-size:10px;color:var(--text3);margin-top:1px">Cuota USD '+fmtPeso(p.cuotaUSD||0)+' · entregó USD '+fmtPeso(p.entregoUSD||0)+((p.difUSD||0)!==0?' · <span style="color:'+((p.difUSD||0)>0?'var(--green)':'var(--red)')+'">'+((p.difUSD||0)>0?'SAF ':'SEC ')+'USD '+fmtPeso(Math.abs(p.difUSD||0))+'</span>':' · ✓ justo')+'</div>':'';
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <div style="display:flex;justify-content:space-between">
+          <span>${formatLoteTag(c.mz,c.lote)} — ${c.titular}</span>
+          <span style="font-weight:600">${fmtPeso(p.monto||0)}</span>
+        </div>${detU}
       </div>`;
     }).join(''):'<div style="font-size:13px;color:var(--text2)">Sin pagos</div>';
     el.innerHTML=backBtn+`
@@ -6274,9 +6288,13 @@ function renderBalances(seccion){
     const renderPagos=(list)=>list.length?ordenar(list).map(p=>{
       const c=data.find(x=>x.id===p.id)||{mz:'?',lote:'?',titular:p.id};
       const hora=p.ts?new Date(p.ts).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
-      return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
-        <span>${formatLoteTag(c.mz,c.lote)} — ${c.titular}${hora?' <span style="font-size:10px;color:var(--text3)">'+hora+'</span>':''}</span>
-        <span style="font-weight:600">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.monto||0)}</span>
+      const detU=(p.moneda==='USD'&&p.entregoUSD!==undefined)?
+        '<div style="font-size:10px;color:var(--text3);margin-top:1px">Cuota USD '+fmtPeso(p.cuotaUSD||0)+' · entregó USD '+fmtPeso(p.entregoUSD||0)+((p.difUSD||0)!==0?' · <span style="color:'+((p.difUSD||0)>0?'var(--green)':'var(--red)')+'">'+((p.difUSD||0)>0?'SAF ':'SEC ')+'USD '+fmtPeso(Math.abs(p.difUSD||0))+'</span>':' · ✓ justo')+'</div>':'';
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <div style="display:flex;justify-content:space-between">
+          <span>${formatLoteTag(c.mz,c.lote)} — ${c.titular}${hora?' <span style="font-size:10px;color:var(--text3)">'+hora+'</span>':''}</span>
+          <span style="font-weight:600">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.monto||0)}</span>
+        </div>${detU}
       </div>`;
     }).join(''):'<div style="font-size:13px;color:var(--text2)">Sin pagos</div>';
 
@@ -7965,14 +7983,7 @@ function caEjecutarCobro(){
       const mc=montoCobrable(c).total;
       const caAntes=c.ca;
       const ts=new Date().toISOString(), fecha=new Date().toLocaleDateString('es-AR');
-      // 1. Cobro real (motor) — rutea agrimensor a su caja automáticamente
-      marcarPago(id, 0);
-      // 2. Adelantos
-      const adel=adelantosPorLote[id]||[];
-      let totalAdel=0;
-      if(adel.length){ registrarAdelanto(id, adel.map(q=>({num:q.num,monto:q.monto}))); totalAdel=adel.reduce((s,q)=>s+(q.monto||0),0); }
-      const totalLote=mc+totalAdel;
-      // 3. Determinar la diferencia de este lote
+      // Determinar la diferencia de este lote (antes de cobrar, para el detalle USD)
       let difLote;
       if(cajasDistintas){
         difLote=difAsignada[id]||0;
@@ -7980,6 +7991,15 @@ function caEjecutarCobro(){
         const esElDeLaDif = esUSD ? (id===primerUSDId) : (id===primerPesoId);
         difLote = esElDeLaDif ? (esUSD?difGlobalUSD:difGlobal) : 0;
       }
+      // Detalle USD para cierres
+      if(esUSD){ window._cobroDetalleUSD={cuota:mc,entrego:mc+difLote,dif:difLote}; }
+      // 1. Cobro real (motor) — rutea agrimensor a su caja automáticamente
+      marcarPago(id, 0);
+      // 2. Adelantos
+      const adel=adelantosPorLote[id]||[];
+      let totalAdel=0;
+      if(adel.length){ registrarAdelanto(id, adel.map(q=>({num:q.num,monto:q.monto}))); totalAdel=adel.reduce((s,q)=>s+(q.monto||0),0); }
+      const totalLote=mc+totalAdel;
       // 4. Caja física — todos entran (el agrimensor se muestra en su sección aparte)
       {
         const bal=loadBalances();
