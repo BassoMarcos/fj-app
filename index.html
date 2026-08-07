@@ -1198,7 +1198,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0509';
+  datos['_version']='v1.0510';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9165,7 +9165,7 @@ function cobrarTodoColab(clienteId){
   _moraPanelState={clienteId,seleccionadas:moraConInteres,totalMonto:totalMoraCapital,totalInteresAuto:totalMoraInteres,cur,_incluyeMesActual:true,cuotaActual,_esColab:true};
 
   const filasHtml=moraConInteres.map(cm=>
-    '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #e9d5ff">'
+    '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid rgba(252,165,165,.3)">'
     +'<span style="color:var(--text2)">'+cm.mesNombre+' — Cuota '+cm.numeroCuota+'</span>'
     +'<span>'+fmtCur(cm.monto,cur)+' <span style="color:var(--red)">+ '+fmtCur(cm.interes,cur)+'</span></span>'
     +'</div>'
@@ -9184,10 +9184,10 @@ function cobrarTodoColab(clienteId){
     +'<button onclick="document.getElementById(\'mora-panel-overlay\').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:16px">✕</button>'
     +'</div>'
     +'<div style="padding:16px">'
-    +'<div style="background:#faf5ff;border:1.5px solid #e9d5ff;border-radius:var(--r);padding:12px;margin-bottom:10px">'
-    +'<div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:6px">CUOTAS EN MORA</div>'
+    +'<div style="background:var(--red-bg);border:1.5px solid #fca5a5;border-radius:var(--r);padding:12px;margin-bottom:10px">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px">CUOTAS EN MORA</div>'
     +filasHtml
-    +'<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px;padding-top:6px;border-top:1px solid #e9d5ff">'
+    +'<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px;padding-top:6px;border-top:1px solid #fca5a5">'
     +'<span style="color:var(--red)">Subtotal mora</span>'
     +'<span style="font-weight:700;color:var(--red)">'+fmtCur(totalMoraCapital+totalMoraInteres,cur)+'</span>'
     +'</div></div>'
@@ -9268,7 +9268,7 @@ function cobrarTodoAdmin(clienteId){
 
   // Construir filas desglose
   const filasHtml=moraConInteres.map(cm=>
-    '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #e9d5ff">'
+    '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid rgba(252,165,165,.3)">'
     +'<span style="color:var(--text2)">'+cm.mesNombre+' — Cuota '+cm.numeroCuota+'</span>'
     +'<span>'+fmtCur(cm.monto,cur)+' <span style="color:var(--red)">+ '+fmtCur(cm.interes,cur)+'</span></span>'
     +'</div>'
@@ -9288,10 +9288,10 @@ function cobrarTodoAdmin(clienteId){
     +'</div>'
     +'<div style="padding:16px">'
     // Desglose mora
-    +'<div style="background:#faf5ff;border:1.5px solid #e9d5ff;border-radius:var(--r);padding:12px;margin-bottom:10px">'
-    +'<div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:6px">CUOTAS EN MORA</div>'
+    +'<div style="background:var(--red-bg);border:1.5px solid #fca5a5;border-radius:var(--r);padding:12px;margin-bottom:10px">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px">CUOTAS EN MORA</div>'
     +filasHtml
-    +'<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px;padding-top:6px;border-top:1px solid #e9d5ff">'
+    +'<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px;padding-top:6px;border-top:1px solid #fca5a5">'
     +'<span style="color:var(--red)">Subtotal mora</span>'
     +'<span style="font-weight:700;color:var(--red)">'+fmtCur(totalMoraCapital+totalMoraInteres,cur)+'</span>'
     +'</div></div>'
