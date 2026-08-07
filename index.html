@@ -1198,7 +1198,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0515';
+  datos['_version']='v1.0516';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7756,6 +7756,11 @@ function caContinuar(){
   };
   let totARS=0,totUSD=0;
   seleccionados.forEach(c=>{ if(c.moneda==='USD') totUSD+=totalCuota(c); else totARS+=totalCuota(c); });
+  // Detectar si hay cuotas que van a cajas distintas (normal vs agrimensor)
+  const hayAgrim=seleccionados.some(c=>esAgrimensor(c.id));
+  const hayNormal=seleccionados.some(c=>!esAgrimensor(c.id));
+  const cajasDistintas=hayAgrim&&hayNormal;
+  window._caCajasDistintas=cajasDistintas;
   const lineas=seleccionados.map(c=>{
     const cur=c.moneda==='USD'?'USD ':'';
     const adel=x.adelantosPorLote[c.id]||[];
@@ -7792,6 +7797,18 @@ function caContinuar(){
       +'<div id="ca-vuelto-live-usd" style="font-size:12px;padding:6px 10px;border-radius:6px;background:var(--green-bg);color:var(--green);text-align:center">✓ Justo</div>'
       +'<div style="font-size:10px;color:var(--text3);margin-top:6px">La diferencia (SAF/SEC) se registra en el primer lote de USD. El resto entra justo.</div>'
       +'</div>':'')
+    // Selector de reparto del vuelto — solo si hay cuotas en cajas distintas
+    +(cajasDistintas?'<div style="background:var(--acc3-bg,rgba(251,146,60,0.1));border:1px solid var(--acc3);border-radius:10px;padding:12px;margin-bottom:12px">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:4px">⚖️ Cuotas en cajas distintas</div>'
+      +'<div style="font-size:10px;color:var(--text2);margin-bottom:8px">Hay cuotas normales y de agrimensor. Si hay diferencia (SAF/SEC), ¿cómo la reparto?</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:7px;min-width:110px"><input type="radio" name="ca-reparto" value="equitativo" checked onchange="caRepartoChange()"> Equitativo (partes iguales)</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px;min-width:110px"><input type="radio" name="ca-reparto" value="especifica" onchange="caRepartoChange()"> A una cuota</label>'
+      +'</div>'
+      +'<select id="ca-reparto-lote" style="display:none;width:100%;margin-top:8px;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:13px">'
+      +seleccionados.map(c=>'<option value="'+c.id+'">'+formatLoteTag(c.mz,c.lote)+(esAgrimensor(c.id)?' (agrimensor)':'')+'</option>').join('')
+      +'</select>'
+      +'</div>':'')
     +'<div style="display:flex;gap:8px;margin-top:6px">'
     +'<button onclick="renderCobroAgrupadoModal()" style="flex:1;padding:10px;border:1px solid var(--border2);background:var(--surface);border-radius:8px;font-weight:700;cursor:pointer">← Volver</button>'
     +'<button onclick="caEjecutarCobro()" style="flex:2;padding:10px;border:none;background:#16a34a;color:#fff;border-radius:8px;font-weight:800;cursor:pointer">✓ Confirmar y cobrar</button>'
@@ -7799,6 +7816,11 @@ function caContinuar(){
   window._caTotals={totARS,totUSD};
   caCalcVuelto();
   caCalcVueltoUSD();
+}
+function caRepartoChange(){
+  const tipo=document.querySelector('input[name="ca-reparto"]:checked')?.value||'equitativo';
+  const sel=document.getElementById('ca-reparto-lote');
+  if(sel) sel.style.display=tipo==='especifica'?'block':'none';
 }
 function fmtMiles(n){ return '$'+(Math.round(n)||0).toLocaleString('es-AR'); }
 function fmtMilesUSD(n){ return 'USD '+(Math.round(n)||0).toLocaleString('es-AR'); }
@@ -7857,38 +7879,74 @@ function caEjecutarCobro(){
     const difGlobalUSD=(entregoTotalUSD!==null?(entregoTotalUSD-vueltoTotalUSD):totUSDesp)-totUSDesp;
     const primerPesoId=pesosLotes.length?pesosLotes[0].id:null;
     const primerUSDId=usdLotes.length?usdLotes[0].id:null;
+    // Reparto del vuelto cuando hay cajas distintas (normal vs agrimensor)
+    const cajasDistintas=window._caCajasDistintas;
+    const repartoTipo=cajasDistintas?(document.querySelector('input[name="ca-reparto"]:checked')?.value||'equitativo'):null;
+    const repartoLoteId=cajasDistintas?(document.getElementById('ca-reparto-lote')?.value||null):null;
+    // Calcular la diferencia asignada a cada lote
+    const difAsignada={}; // id -> dif en su moneda
+    if(cajasDistintas){
+      // Reparto para pesos
+      if(pesosLotes.length && difGlobal!==0){
+        if(repartoTipo==='equitativo'){
+          const parte=Math.round(difGlobal/pesosLotes.length);
+          pesosLotes.forEach((c,i)=>{ difAsignada[c.id]=(i===pesosLotes.length-1)?(difGlobal-parte*(pesosLotes.length-1)):parte; });
+        } else {
+          // A una específica: si el lote elegido es de pesos, todo ahí; sino al primer peso
+          const target=pesosLotes.find(c=>c.id===repartoLoteId)?repartoLoteId:primerPesoId;
+          difAsignada[target]=difGlobal;
+        }
+      }
+      // Reparto para USD
+      if(usdLotes.length && difGlobalUSD!==0){
+        if(repartoTipo==='equitativo'){
+          const parteU=Math.round(difGlobalUSD/usdLotes.length);
+          usdLotes.forEach((c,i)=>{ difAsignada[c.id]=(i===usdLotes.length-1)?(difGlobalUSD-parteU*(usdLotes.length-1)):parteU; });
+        } else {
+          const targetU=usdLotes.find(c=>c.id===repartoLoteId)?repartoLoteId:primerUSDId;
+          difAsignada[targetU]=difGlobalUSD;
+        }
+      }
+    }
     const recibo=[]; let totARS=0,totUSD=0;
     sel.forEach(c=>{
       const id=c.id;
       const esUSD=c.moneda==='USD';
+      const esAgr=esAgrimensor(id);
       const cur=esUSD?'USD ':'';
       const mc=montoCobrable(c).total;
       const caAntes=c.ca;
       const ts=new Date().toISOString(), fecha=new Date().toLocaleDateString('es-AR');
-      // 1. Cobro real (motor) — sin interés (mora excluida)
+      // 1. Cobro real (motor) — rutea agrimensor a su caja automáticamente
       marcarPago(id, 0);
       // 2. Adelantos
       const adel=adelantosPorLote[id]||[];
       let totalAdel=0;
       if(adel.length){ registrarAdelanto(id, adel.map(q=>({num:q.num,monto:q.monto}))); totalAdel=adel.reduce((s,q)=>s+(q.monto||0),0); }
       const totalLote=mc+totalAdel;
-      // 3. Caja física — cada lote entra justo salvo el primero de su moneda que lleva la diferencia
-      const esElDeLaDif = esUSD ? (id===primerUSDId) : (id===primerPesoId);
-      const difLote = esElDeLaDif ? (esUSD?difGlobalUSD:difGlobal) : 0;
-      const entregoLote = esElDeLaDif ? (totalLote+difLote) : totalLote;
-      const vueltoLote = 0;
-      const bal=loadBalances();
-      (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:mc,adelanto:totalAdel,transferido:0,entrego:entregoLote,vuelto:vueltoLote,efectivo:mc+difLote,dif:difLote,ts,fecha});
-      saveBalances(bal);
-      // 4. Cargar SAF/SEC al saldo de ese lote (solo el que lleva la diferencia)
+      // 3. Determinar la diferencia de este lote
+      let difLote;
+      if(cajasDistintas){
+        difLote=difAsignada[id]||0;
+      } else {
+        const esElDeLaDif = esUSD ? (id===primerUSDId) : (id===primerPesoId);
+        difLote = esElDeLaDif ? (esUSD?difGlobalUSD:difGlobal) : 0;
+      }
+      // 4. Caja física — el agrimensor NO entra a caja física (va solo a su caja)
+      if(!esAgr){
+        const bal=loadBalances();
+        (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:mc,adelanto:totalAdel,transferido:0,entrego:totalLote+difLote,vuelto:0,efectivo:mc+difLote,dif:difLote,ts,fecha});
+        saveBalances(bal);
+      }
+      // 5. Cargar SAF/SEC al saldo del lote (si le tocó diferencia)
       if(difLote!==0){
         const d2=loadData();const c2=d2.find(y=>y.id===id);
         if(c2){ c2.saldo=(Number(c2.saldo)||0)+difLote; c2.saldoDifUltimoCobro=difLote; saveData(d2); }
-        addHist('pago',(difLote>0?'SAF ':'SEC ')+cur+fmtPeso(Math.abs(difLote))+' — '+c.mz+' Lote '+c.lote+' (cobro agrupado, cargado al saldo)',id);
+        addHist('pago',(difLote>0?'SAF ':'SEC ')+cur+fmtPeso(Math.abs(difLote))+' — '+c.mz+' Lote '+c.lote+' (cobro agrupado'+(esAgr?' agrimensor':'')+', cargado al saldo)',id);
         registrarSafSec(c,difLote,ts,fecha);
       }
       if(esUSD) totUSD+=totalLote; else totARS+=totalLote;
-      recibo.push({lote:formatLoteTag(c.mz,c.lote),cuota:caAntes,cur,cuotaMonto:mc,nAdel:adel.length,totalAdel,total:totalLote,dif:difLote});
+      recibo.push({lote:formatLoteTag(c.mz,c.lote),cuota:caAntes,cur,cuotaMonto:mc,nAdel:adel.length,totalAdel,total:totalLote,dif:difLote,agr:esAgr});
     });
     caMostrarComprobante(recibo, totARS, totUSD, difGlobal, difGlobalUSD);
   })();
