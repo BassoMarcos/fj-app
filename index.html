@@ -1204,7 +1204,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0521';
+  datos['_version']='v1.0522';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5296,6 +5296,11 @@ function editObsCierre(ts){
   const bal=loadBalances();
   const ci=(bal.cierres||[]).find(c=>c.ts===ts);
   if(!ci){alert('No se encontró el cierre.');return;}
+  // Si tiene varias notas acumuladas (cierre fusionado), mostrar editor por nota
+  if(Array.isArray(ci.obsList)&&ci.obsList.length>1){
+    editObsListModal(ts);
+    return;
+  }
   modalPrompt({
     titulo:'📝 Observación del cierre',
     mensaje:'Ej: "Cierre pedido completo, no se dividió el 70%".\nDejalo vacío para borrarla.',
@@ -5309,9 +5314,62 @@ function editObsCierre(ts){
     const ci2=(bal2.cierres||[]).find(c=>c.ts===ts);
     if(!ci2) return;
     ci2.obs=nueva.trim();
+    if(ci2.obs) ci2.obsList=[{fecha:ci2.fecha||'',texto:ci2.obs}]; else delete ci2.obsList;
     saveBalances(bal2);
     renderBalances('cierres');
   });
+}
+function editObsListModal(ts){
+  const bal=loadBalances();
+  const ci=(bal.cierres||[]).find(c=>c.ts===ts);
+  if(!ci||!Array.isArray(ci.obsList)){return;}
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem';
+  ov.onclick=(e)=>{if(e.target===ov)ov.remove();};
+  const filas=ci.obsList.map((o,i)=>
+    '<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:8px">'
+    +'<div style="flex:1">'
+    +'<div style="font-size:10px;color:var(--text3);margin-bottom:2px">'+(o.fecha||'cierre')+'</div>'
+    +'<textarea id="obsedit-'+i+'" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:13px;min-height:44px;resize:vertical">'+(o.texto||'')+'</textarea>'
+    +'</div>'
+    +'<button onclick="_borrarObsFila(\''+ts+'\','+i+')" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;margin-top:16px">🗑</button>'
+    +'</div>'
+  ).join('');
+  ov.innerHTML='<div style="background:var(--card);border-radius:14px;max-width:460px;width:100%;max-height:88vh;overflow-y:auto;padding:1.25rem" onclick="event.stopPropagation()">'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:4px">📝 Notas del cierre fusionado</div>'
+    +'<div style="font-size:11px;color:var(--text2);margin-bottom:12px">Este cierre reúne varias notas. Editá o borrá cada una por separado.</div>'
+    +filas
+    +'<div style="display:flex;gap:8px;margin-top:12px">'
+    +'<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="flex:1;padding:9px;border:1px solid var(--border2);background:var(--surface);border-radius:8px;font-weight:700;cursor:pointer">Cancelar</button>'
+    +'<button onclick="_guardarObsList(\''+ts+'\')" style="flex:2;padding:9px;border:none;background:#16a34a;color:#fff;border-radius:8px;font-weight:800;cursor:pointer">Guardar</button>'
+    +'</div></div>';
+  document.body.appendChild(ov);
+}
+function _borrarObsFila(ts,i){
+  const bal=loadBalances();
+  const ci=(bal.cierres||[]).find(c=>c.ts===ts);
+  if(!ci||!Array.isArray(ci.obsList))return;
+  // Leer los valores actuales de los textareas antes de borrar
+  ci.obsList.forEach((o,idx)=>{const t=document.getElementById('obsedit-'+idx);if(t)o.texto=t.value.trim();});
+  ci.obsList.splice(i,1);
+  ci.obs=ci.obsList.map(o=>'['+(o.fecha||'cierre')+'] '+o.texto).join('\n');
+  if(!ci.obsList.length) delete ci.obsList;
+  saveBalances(bal);
+  document.querySelector('div[style*=fixed]')?.remove();
+  if(Array.isArray(ci.obsList)&&ci.obsList.length>1) editObsListModal(ts);
+  renderBalances('cierres');
+}
+function _guardarObsList(ts){
+  const bal=loadBalances();
+  const ci=(bal.cierres||[]).find(c=>c.ts===ts);
+  if(!ci||!Array.isArray(ci.obsList))return;
+  ci.obsList.forEach((o,i)=>{const t=document.getElementById('obsedit-'+i);if(t)o.texto=t.value.trim();});
+  ci.obsList=ci.obsList.filter(o=>o.texto);
+  ci.obs=ci.obsList.map(o=>'['+(o.fecha||'cierre')+'] '+o.texto).join('\n');
+  if(!ci.obsList.length) delete ci.obsList;
+  saveBalances(bal);
+  document.querySelector('div[style*=fixed]')?.remove();
+  renderBalances('cierres');
 }
 function revertirFusion(){
   const bal=loadBalances();
@@ -5355,6 +5413,16 @@ function _doRevertirFusion(fid){
     dst.total=(dst.total||0)-(f.src.total||0);
     dst.totalPesos=(dst.totalPesos||0)-(f.src.totalPesos||0);
     dst.totalUSD=(dst.totalUSD||0)-(f.src.totalUSD||0);
+    // Quitar del destino las notas que vinieron del origen
+    if(Array.isArray(dst.obsList)){
+      const srcList=Array.isArray(f.src.obsList)&&f.src.obsList.length?f.src.obsList:(f.src.obs&&f.src.obs.trim()?[{fecha:f.src.fecha||'',texto:f.src.obs.trim()}]:[]);
+      srcList.forEach(so=>{
+        const k=dst.obsList.findIndex(o=>o.texto===so.texto&&(o.fecha||'')===(so.fecha||''));
+        if(k>=0) dst.obsList.splice(k,1);
+      });
+      dst.obs=dst.obsList.map(o=>'['+(o.fecha||'cierre')+'] '+o.texto).join('\n');
+      if(!dst.obsList.length) delete dst.obsList;
+    }
     // Reinsertar el cierre original después del destino
     const insertAt=dstIdx+1;
     bal.cierres.splice(insertAt,0,JSON.parse(JSON.stringify(f.src)));
@@ -5471,6 +5539,16 @@ function _doFusionar(srcTs,dstTs){
   dst.total=(dst.total||0)+(src.total||0);
   dst.totalPesos=(dst.totalPesos||0)+(src.totalPesos||0);
   dst.totalUSD=(dst.totalUSD||0)+(src.totalUSD||0);
+  // Acumular notas con su fecha de origen (obsList = lista estructurada)
+  const _mkList=(ci)=>{
+    if(Array.isArray(ci.obsList)&&ci.obsList.length) return ci.obsList.slice();
+    if(ci.obs&&ci.obs.trim()) return [{fecha:ci.fecha||'',texto:ci.obs.trim()}];
+    return [];
+  };
+  const listaDst=_mkList(dst);
+  const listaSrc=_mkList(src);
+  dst.obsList=listaDst.concat(listaSrc);
+  dst.obs=dst.obsList.map(o=>'['+(o.fecha||'cierre')+'] '+o.texto).join('\n');
   // Remove src
   cierres.splice(srcIdx,1);
   // Also clean up estados
