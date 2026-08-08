@@ -1204,7 +1204,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0523';
+  datos['_version']='v1.0524';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5296,14 +5296,9 @@ function editObsCierre(ts){
   const bal=loadBalances();
   const ci=(bal.cierres||[]).find(c=>c.ts===ts);
   if(!ci){alert('No se encontró el cierre.');return;}
-  // Si tiene varias notas acumuladas (cierre fusionado), mostrar editor por nota
-  if(Array.isArray(ci.obsList)&&ci.obsList.length>1){
-    editObsListModal(ts);
-    return;
-  }
   modalPrompt({
-    titulo:'📝 Observación del cierre',
-    mensaje:'Ej: "Cierre pedido completo, no se dividió el 70%".\nDejalo vacío para borrarla.',
+    titulo:'📝 Nota del cierre',
+    mensaje:'Editá o borrá libremente. Dejalo vacío para eliminar la nota.',
     valor:ci.obs||'',
     placeholder:'Escribí una nota…',
     multiline:true,
@@ -5314,6 +5309,7 @@ function editObsCierre(ts){
     const ci2=(bal2.cierres||[]).find(c=>c.ts===ts);
     if(!ci2) return;
     ci2.obs=nueva.trim();
+    // La nota es texto libre; obsList deja de usarse como estructura fija
     if(ci2.obs) ci2.obsList=[{fecha:ci2.fecha||'',texto:ci2.obs}]; else delete ci2.obsList;
     saveBalances(bal2);
     renderBalances('cierres');
