@@ -1204,7 +1204,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0524';
+  datos['_version']='v1.0525';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6084,6 +6084,8 @@ function renderBalances(seccion){
   }
 
   if(seccion==='cierres'){
+    window._cierresSeleccionados=new Set();
+    document.getElementById('barra-fusion')?.remove();
     const cierresPesos=cierres.filter(c=>c.moneda!=='USD'&&c.moneda!=='TRANSF');
     const cierresUSD=cierres.filter(c=>c.moneda==='USD');
     const cierresTransf=cierres.filter(c=>c.moneda==='TRANSF');
