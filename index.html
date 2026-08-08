@@ -1098,14 +1098,16 @@ function registrarPagoEnCaja(id,monto,ts){
   // Detalle de efectivo solo para cuotas en dólares (para que sobreviva en cierres)
   const detUSD=(moneda==='USD'&&window._cobroDetalleUSD)?window._cobroDetalleUSD:null;
   const extraUSD=detUSD?{cuotaUSD:detUSD.cuota,entregoUSD:detUSD.entrego,difUSD:detUSD.dif}:{};
+  const adelInfo=(window._cobroAdelanto>0)?{adelanto:window._cobroAdelanto}:{};
   if(esAgrimensor(id)){
     if(!(bal.agrimensores||[]).some(p=>p.id===id))
-      (bal.agrimensores=bal.agrimensores||[]).push({id,monto,ts,fecha,moneda,transf,...extraUSD});
+      (bal.agrimensores=bal.agrimensores||[]).push({id,monto,ts,fecha,moneda,transf,...extraUSD,...adelInfo});
   } else {
-    (bal.abierto=bal.abierto||[]).push({id,monto,ts,fecha,moneda,transf,...extraUSD});
+    (bal.abierto=bal.abierto||[]).push({id,monto,ts,fecha,moneda,transf,...extraUSD,...adelInfo});
   }
   saveBalances(bal);
   window._cobroDetalleUSD=null; // consumir
+  window._cobroAdelanto=null; // consumir
 }
 
 
@@ -1202,7 +1204,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0520';
+  datos['_version']='v1.0521';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3022,6 +3024,8 @@ function fcConfirmar(){
   window._cobroTransferencia=fullTransf;
   // Detalle USD para que sobreviva en cierres (cuota/entregado/SAF-SEC)
   if(c.moneda==='USD'){ window._cobroDetalleUSD={cuota:x.totalCuota,entrego:e,dif:dif}; }
+  // Adelanto para mostrarlo en caja del día (no suma al total)
+  window._cobroAdelanto=(x.totalAdel||0);
   try{ marcarPago(id, x.interes||0); } finally { window._cobroTransferencia=false; }
   if(x.adelantos.length) registrarAdelanto(id, x.adelantos);
   try{_adelantoCuotas=[];_adelantoVerMas=5;}catch(e){}
@@ -5682,17 +5686,49 @@ function renderBalances(seccion){
     const totalU=abUSD.reduce((s,p)=>s+(p.monto||0),0);
     const totalTP=abTransf.filter(p=>p.moneda!=='USD').reduce((s,p)=>s+(p.monto||0),0);
     const totalTU=abTransf.filter(p=>p.moneda==='USD').reduce((s,p)=>s+(p.monto||0),0);
-    const renderPagos=(lista)=>lista.length?lista.slice().reverse().map(p=>{
+    const renderPago1=(p)=>{
       const c=data.find(x=>x.id===p.id)||{mz:'?',lote:'?',titular:p.id};
       const detU=(p.moneda==='USD'&&p.entregoUSD!==undefined)?
         '<div style="font-size:10px;color:var(--text3);margin-top:1px">Cuota USD '+fmtPeso(p.cuotaUSD||0)+' · entregó USD '+fmtPeso(p.entregoUSD||0)+((p.difUSD||0)!==0?' · <span style="color:'+((p.difUSD||0)>0?'var(--green)':'var(--red)')+'">'+((p.difUSD||0)>0?'SAF ':'SEC ')+'USD '+fmtPeso(Math.abs(p.difUSD||0))+'</span>':' · ✓ justo')+'</div>':'';
+      const adelInfo=(p.adelanto>0)?'<div style="font-size:10px;color:var(--blue);margin-top:1px">⏭ incluye adelanto '+(p.moneda==='USD'?'USD ':'')+fmtPeso(p.adelanto)+'</div>':'';
       return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
         <div style="display:flex;justify-content:space-between">
           <span>${formatLoteTag(c.mz,c.lote)} — ${c.titular}</span>
-          <span style="font-weight:600">${fmtPeso(p.monto||0)}</span>
-        </div>${detU}
+          <span style="font-weight:600">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.monto||0)}</span>
+        </div>${detU}${adelInfo}
       </div>`;
-    }).join(''):'<div style="font-size:13px;color:var(--text2)">Sin pagos</div>';
+    };
+    // Divide una lista (de una moneda) en normales y agrimensores, y arma su HTML
+    const seccionMoneda=(lista,esUSDcaja)=>{
+      const norm=lista.filter(p=>!esAgrimensor(p.id));
+      const agr=lista.filter(p=>esAgrimensor(p.id));
+      const adel=lista.filter(p=>(p.adelanto||0)>0);
+      const totNorm=norm.reduce((s,p)=>s+(p.monto||0),0);
+      const totAgr=agr.reduce((s,p)=>s+(p.monto||0),0);
+      const totAdel=adel.reduce((s,p)=>s+(p.adelanto||0),0);
+      const cur=esUSDcaja?'USD ':'';
+      let h='';
+      // Normales
+      h+='<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--text2);padding:6px 0 2px">'
+        +'<span>Cuotas normales</span><span>'+cur+fmtPeso(totNorm)+'</span></div>';
+      h+=norm.length?norm.slice().reverse().map(renderPago1).join(''):'<div style="font-size:12px;color:var(--text2);padding:4px 0">Sin cuotas normales</div>';
+      // Agrimensores
+      if(agr.length){
+        h+='<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--acc3);padding:8px 0 2px;margin-top:6px;border-top:1px dashed var(--border)">'
+          +'<span>⚖️ Agrimensores</span><span>'+cur+fmtPeso(totAgr)+'</span></div>';
+        h+=agr.slice().reverse().map(renderPago1).join('');
+      }
+      // Adelantos (solo informativo, no suma)
+      if(adel.length){
+        h+='<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--blue);padding:8px 0 2px;margin-top:6px;border-top:1px dashed var(--border)">'
+          +'<span>⏭ Adelantos (informativo)</span><span>'+cur+fmtPeso(totAdel)+'</span></div>';
+        h+=adel.slice().reverse().map(p=>{
+          const c=data.find(x=>x.id===p.id)||{mz:'?',lote:'?',titular:p.id};
+          return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;color:var(--text2)"><span>'+formatLoteTag(c.mz,c.lote)+' — '+(c.titular||'')+'</span><span style="color:var(--blue);font-weight:700">'+cur+fmtPeso(p.adelanto)+'</span></div>';
+        }).join('');
+      }
+      return h;
+    };
     el.innerHTML=backBtn+`
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
         <div style="font-size:17px;font-weight:700">⏳ Caja del día</div>
@@ -5712,8 +5748,8 @@ function renderBalances(seccion){
           <div style="font-size:15px;font-weight:800">${fmtPeso(totalP)}</div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem">
-          ${renderPagos(abPesos)}
-          ${abPesos.length?`<div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px;padding-top:10px"><span>Total pesos</span><span>${fmtPeso(totalP)}</span></div>`:''}
+          ${abPesos.length?seccionMoneda(abPesos,false):'<div style="font-size:13px;color:var(--text2)">Sin pagos</div>'}
+          ${abPesos.length?`<div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px;padding-top:10px;margin-top:6px;border-top:2px solid var(--border)"><span>Total pesos</span><span>${fmtPeso(totalP)}</span></div>`:''}
         </div>
       </div>
 
@@ -5724,8 +5760,8 @@ function renderBalances(seccion){
           <div style="font-size:15px;font-weight:800;color:var(--green)">USD ${fmtPeso(totalU)}</div>
         </div>
         <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:var(--r);padding:1rem">
-          ${renderPagos(abUSD)}
-          ${abUSD.length?`<div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px;padding-top:10px;color:var(--green)"><span>Total USD</span><span>USD ${fmtPeso(totalU)}</span></div>`:''}
+          ${abUSD.length?seccionMoneda(abUSD,true):'<div style="font-size:13px">Sin pagos</div>'}
+          ${abUSD.length?`<div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px;padding-top:10px;margin-top:6px;border-top:2px solid var(--green-border)"><span>Total USD</span><span>USD ${fmtPeso(totalU)}</span></div>`:''}
         </div>
       </div>
 
@@ -5774,6 +5810,7 @@ function renderBalances(seccion){
     const totEfP=cfP0.reduce((s,p)=>s+(p.efectivo||0),0);
     const totEfU=cfU0.reduce((s,p)=>s+(p.efectivo||0),0);
     const totCuotaP=cfP0.reduce((s,p)=>s+(p.cuotaLista||0),0);
+    const totCuotaU=cfU0.reduce((s,p)=>s+(p.cuotaLista||0),0);
     const totAdelP=cfP0.reduce((s,p)=>s+(p.adelanto||0),0);
     const pendTransfP=cfP0.reduce((s,p)=>s+Math.max(0,(p.transferido||0)-(p.rellenadoMonto||0)),0);
     const row=(p)=>{
@@ -5859,9 +5896,10 @@ function renderBalances(seccion){
           <div style="font-size:18px;font-weight:800;color:#a78bfa">${fmtPeso(totEfP)}</div>
           ${totEfU?`<div style="font-size:12px;font-weight:700;color:var(--green)">USD ${fmtPeso(totEfU)}</div>`:''}
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center" title="Suma de cuotas de lista de estos pagos — comparalo con la Caja del día">
-          <div style="font-size:11px;color:var(--text2)">CUOTAS DE LISTA</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center" title="Cuota pura (CP): suma de cuotas de lista sin adelanto — comparalo con la Caja del día">
+          <div style="font-size:11px;color:var(--text2)">CUOTA PURA (CP)</div>
           <div style="font-size:18px;font-weight:800">${fmtPeso(totCuotaP)}</div>
+          ${totCuotaU?`<div style="font-size:12px;font-weight:700;color:var(--green)">USD ${fmtPeso(totCuotaU)}</div>`:''}
           ${totAdelP?`<div style="font-size:11px;font-weight:700;color:var(--blue)">+ adelantos ${fmtPeso(totAdelP)}</div>`:''}
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center" title="Parte transferida aún no rellenada con ingresos">
@@ -8011,6 +8049,9 @@ function caEjecutarCobro(){
       }
       // Detalle USD para cierres
       if(esUSD){ window._cobroDetalleUSD={cuota:mc,entrego:mc+difLote,dif:difLote}; }
+      // Adelanto para mostrarlo en caja del día (no suma al total)
+      const adelPre=adelantosPorLote[id]||[];
+      window._cobroAdelanto=adelPre.reduce((s,q)=>s+(q.monto||0),0);
       // 1. Cobro real (motor) — rutea agrimensor a su caja automáticamente
       marcarPago(id, 0);
       // 2. Adelantos
