@@ -1204,7 +1204,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0522';
+  datos['_version']='v1.0523';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5509,6 +5509,104 @@ function fusionarCierre(srcTs){
   </div>`;
   document.body.appendChild(modal);
 }
+function toggleCierreSel(ts){
+  window._cierresSeleccionados=window._cierresSeleccionados||new Set();
+  const s=window._cierresSeleccionados;
+  if(s.has(ts)) s.delete(ts); else s.add(ts);
+  const card=document.getElementById('cierre-card-'+ts);
+  if(card){
+    if(s.has(ts)){ card.style.outline='2px solid var(--acc2)'; card.style.background='var(--hov)'; }
+    else { card.style.outline='none'; card.style.background='transparent'; }
+  }
+  actualizarBarraFusion();
+}
+function actualizarBarraFusion(){
+  const s=window._cierresSeleccionados||new Set();
+  let bar=document.getElementById('barra-fusion');
+  if(s.size>=2){
+    if(!bar){
+      bar=document.createElement('div');
+      bar.id='barra-fusion';
+      bar.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9998;background:var(--card);border:1.5px solid var(--acc2);border-radius:12px;padding:10px 16px;box-shadow:0 4px 20px rgba(0,0,0,.4);display:flex;gap:10px;align-items:center';
+      document.body.appendChild(bar);
+    }
+    bar.innerHTML='<span style="font-size:13px;font-weight:700">'+s.size+' cierres seleccionados</span>'
+      +'<button onclick="fusionarSeleccionados()" style="background:#2d6a50;color:#d0f0e0;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:800;cursor:pointer">⇄ Fusionar</button>'
+      +'<button onclick="limpiarSelCierres()" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer">Cancelar</button>';
+  } else if(bar){ bar.remove(); }
+}
+function limpiarSelCierres(){
+  window._cierresSeleccionados=new Set();
+  document.getElementById('barra-fusion')?.remove();
+  renderBalances('cierres');
+}
+function fusionarSeleccionados(){
+  const s=window._cierresSeleccionados||new Set();
+  if(s.size<2){alert('Seleccioná al menos 2 cierres.');return;}
+  const bal=loadBalances();
+  const cierres=bal.cierres||[];
+  const sel=[...s].map(ts=>cierres.find(c=>c.ts===ts)).filter(Boolean);
+  if(sel.length<2){alert('No se encontraron los cierres seleccionados.');return;}
+  const mon=sel[0].moneda||'ARS';
+  if(sel.some(c=>(c.moneda||'ARS')!==mon)){alert('❌ No se pueden fusionar cierres de monedas distintas. Seleccioná solo cierres de la misma moneda.');return;}
+  const cur=(mon==='USD')?'USD ':'$';
+  sel.sort((a,b)=>(a.ts||'').localeCompare(b.ts||''));
+  const dst=sel[sel.length-1];
+  const fuentes=sel.slice(0,-1);
+  const totalPagos=sel.reduce((n,c)=>n+(c.pagos||[]).length,0);
+  const totalMonto=sel.reduce((n,c)=>n+(c.total||0),0);
+  const ok=confirm('⇄ FUSIONAR '+sel.length+' CIERRES\n\n'
+    +sel.map(c=>'• '+(c.fecha||'')+' — '+(c.pagos||[]).length+' pagos — '+cur+(c.total||0).toLocaleString('es-AR')).join('\n')
+    +'\n\nResultado: 1 cierre de '+totalPagos+' pagos — '+cur+totalMonto.toLocaleString('es-AR')
+    +'\n\nLas notas se acumulan con su fecha. ¿Confirmás?');
+  if(!ok)return;
+  confirmarConClave(()=>{
+    fuentes.forEach(src=>{ _doFusionarSilencioso(src.ts, dst.ts); });
+    window._cierresSeleccionados=new Set();
+    document.getElementById('barra-fusion')?.remove();
+    renderBalances('cierres');
+    alert('✅ '+sel.length+' cierres fusionados en uno solo.');
+  });
+}
+function _doFusionarSilencioso(srcTs,dstTs){
+  if(srcTs===dstTs)return;
+  const bal=loadBalances();
+  const cierres=bal.cierres||[];
+  const srcIdx=cierres.findIndex(c=>c.ts===srcTs);
+  const dstIdx=cierres.findIndex(c=>c.ts===dstTs);
+  const src=cierres[srcIdx];
+  const dst=cierres[dstIdx];
+  if(!src||!dst)return;
+  if((src.moneda||'ARS')!==(dst.moneda||'ARS'))return;
+  (bal.fusiones=bal.fusiones||[]).push({
+    id:Date.now().toString()+Math.random().toString(36).slice(2,6),
+    ts:new Date().toISOString(),
+    src:JSON.parse(JSON.stringify(src)),
+    dstTs:dst.ts, dstFecha:dst.fecha, moneda:src.moneda||'ARS'
+  });
+  dst.pagos=(dst.pagos||[]).concat(src.pagos||[]);
+  dst.total=(dst.total||0)+(src.total||0);
+  dst.totalPesos=(dst.totalPesos||0)+(src.totalPesos||0);
+  dst.totalUSD=(dst.totalUSD||0)+(src.totalUSD||0);
+  const _mkList=(ci)=>{
+    if(Array.isArray(ci.obsList)&&ci.obsList.length) return ci.obsList.slice();
+    if(ci.obs&&ci.obs.trim()) return [{fecha:ci.fecha||'',texto:ci.obs.trim()}];
+    return [];
+  };
+  dst.obsList=_mkList(dst).concat(_mkList(src));
+  dst.obs=dst.obsList.map(o=>'['+(o.fecha||'cierre')+'] '+o.texto).join('\n');
+  cierres.splice(srcIdx,1);
+  const est=getCierreEstados();
+  const newEst={};
+  Object.keys(est).forEach(k=>{
+    const ki=parseInt(k);
+    if(ki===srcIdx)return;
+    const newK=ki>srcIdx?ki-1:ki;
+    newEst[newK]=est[k];
+  });
+  saveCierreEstados(newEst);
+  saveBalances(bal);
+}
 function _doFusionar(srcTs,dstTs){
   if(srcTs===dstTs)return;
   const bal=loadBalances();
@@ -6011,10 +6109,10 @@ function renderBalances(seccion){
       const btnB=est.rendido
         ?`<button onclick="setCierreEstado(${globalIdx},'rendido',false)" style="background:#2d6a50;color:#d0f0e0;border:none;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">${dp2}% ✓ Rendido</button>`
         :`<button onclick="setCierreEstado(${globalIdx},'rendido',true)" style="background:var(--hov);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">${dp2}% Rendir</button>`;
-      return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+      return `<div id="cierre-card-${ci.ts}" onclick="toggleCierreSel('${ci.ts}')" style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;border-radius:8px;transition:background .1s">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
           <div>
-            <div style="font-weight:600">${ci.fecha||''} ${hora?`<span style="color:var(--text2);font-weight:400">${hora}</span>`:''}</div>
+            <div style="font-weight:600">${ci.fecha||''} ${hora?`<span style="color:var(--text2);font-weight:400">${hora}</span>`:''} <span style="font-size:10px;color:var(--acc2)">☑ tocá para seleccionar</span></div>
             <div style="font-size:11px;color:var(--text2)">${(ci.pagos||[]).length} pago${(ci.pagos||[]).length!==1?'s':''}</div>
           </div>
           <div style="font-weight:700">${isUSD?'USD ':''} ${fmtPeso(t)}</div>
@@ -6028,10 +6126,10 @@ function renderBalances(seccion){
             <span style="font-size:10px;font-weight:700;color:var(--red)">${dp2}%</span>
             <span style="font-size:11px;font-weight:600;color:var(--red)">${isUSD?'USD ':''} ${fmtPeso(pB)}</span>
           </div>
-          <div style="margin-left:auto;display:flex;gap:4px"><button onclick="toggleCierrePagos('${ci.ts}')" style="background:var(--hov);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">👁 Ver pagos</button>${btnA}${btnB}<button onclick="fusionarCierre('${ci.ts}')" style="background:var(--hov);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">⇄ Fusionar</button><button onclick="editObsCierre('${ci.ts}')" style="background:var(--hov);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">📝 ${ci.obs?'Editar nota':'+ Nota'}</button></div>
+          <div style="margin-left:auto;display:flex;gap:4px"><button onclick="event.stopPropagation();toggleCierrePagos('${ci.ts}')" style="background:var(--hov);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">👁 Ver pagos</button>${btnA}${btnB}<button onclick="event.stopPropagation();editObsCierre('${ci.ts}')" style="background:var(--hov);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600;cursor:pointer">📝 ${ci.obs?'Editar nota':'+ Nota'}</button></div>
         </div>
         ${ci.obs?`<div style="margin-top:6px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--text);display:flex;gap:6px;align-items:flex-start"><span style="flex-shrink:0">📝</span><span style="white-space:pre-wrap">${ci.obs}</span></div>`:''}
-        <div id="cierre-pagos-${ci.ts}" style="display:none;margin-top:6px;background:var(--hov);border-radius:8px;padding:8px 10px">
+        <div id="cierre-pagos-${ci.ts}" onclick="event.stopPropagation()" style="display:none;margin-top:6px;background:var(--hov);border-radius:8px;padding:8px 10px">
           <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
             <select onchange="renderCierrePagosLista('${ci.ts}',this.value)" style="background:var(--card);border:1px solid var(--border2);color:var(--text2);padding:4px 6px;border-radius:6px;font-size:11px;cursor:pointer">
               <option value="fecha">Orden: fecha de pago</option>
