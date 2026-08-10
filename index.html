@@ -1204,7 +1204,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0526';
+  datos['_version']='v1.0527';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7779,7 +7779,46 @@ function renderLotesTerminados(origen){
     html+=`</div>`;
   });
 
-  el.innerHTML = _histFinHtml + (html);
+  // ── Columnas por estado de certificado (proceso: entregado > recibido > solicitado) ──
+  const todosFin=[...normales,...prestamos];
+  const estadoDe=(c)=>{
+    const ce=certs[c.id]||{};
+    if(ce.certEntregado) return 'entregado';
+    if(ce.certRecibido) return 'recibido';
+    if(ce.certSolicitado) return 'solicitado';
+    return null;
+  };
+  const colSolic=sortLotes(todosFin.filter(c=>estadoDe(c)==='solicitado'));
+  const colRecib=sortLotes(todosFin.filter(c=>estadoDe(c)==='recibido'));
+  const colEntreg=sortLotes(todosFin.filter(c=>estadoDe(c)==='entregado'));
+  const chipCol=(c,color)=>{
+    const ce=certs[c.id]||{};
+    const urg=ce.urgente;
+    return `<div onclick="expandLoteTerminado('${c.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border);font-size:12px;cursor:pointer${urg?';background:rgba(220,38,38,.08)':''}">
+      <span style="font-weight:700;color:${color}">${formatLoteTag(c.mz,c.lote)}${urg?' ⚡':''}</span>
+      <span style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px">${(c.titular||'').slice(0,16)}</span>
+    </div>`;
+  };
+  const colHtml=(titulo,color,bg,lista)=>`
+    <div style="flex:1;min-width:0;background:var(--surface);border:1px solid ${color};border-radius:10px;overflow:hidden">
+      <div style="background:${bg};padding:8px 10px;font-size:12px;font-weight:800;color:${color};display:flex;justify-content:space-between;align-items:center">
+        <span>${titulo}</span><span style="font-size:11px">${lista.length}</span>
+      </div>
+      <div style="max-height:520px;overflow-y:auto">
+        ${lista.length?lista.map(c=>chipCol(c,color)).join(''):'<div style="padding:10px;font-size:11px;color:var(--text2);text-align:center">—</div>'}
+      </div>
+    </div>`;
+  const columnasHtml=`
+    <div style="flex:1;min-width:300px">
+      <div style="font-size:13px;font-weight:800;margin-bottom:8px">📋 Estado de certificados</div>
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        ${colHtml('✉ Solicitados','#4f46e5','rgba(79,70,229,.12)',colSolic)}
+        ${colHtml('📄 Recibidos','#16a34a','rgba(22,163,74,.12)',colRecib)}
+        ${colHtml('✅ Entregados','#0891b2','rgba(8,145,178,.12)',colEntreg)}
+      </div>
+    </div>`;
+
+  el.innerHTML = _histFinHtml + `<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap"><div style="flex:1;min-width:320px">`+(html)+`</div>`+columnasHtml+`</div>`;
 
   // Restaurar grupos abiertos
   gruposAbiertos.forEach(key=>{
@@ -7807,7 +7846,15 @@ function toggleGrupoTerminados(key){
 function expandLoteTerminado(id){
   const panel=document.getElementById('lt-exp-'+id);
   if(!panel) return;
-  panel.style.display=panel.style.display==='none'?'block':'none';
+  // Si el lote está dentro de un grupo colapsado, abrir el grupo primero
+  const grupo=panel.closest('[id^="lt-grupo-"]');
+  if(grupo&&grupo.style.display==='none'){
+    const key=grupo.id.replace('lt-grupo-','');
+    toggleGrupoTerminados(key);
+  }
+  panel.style.display='block';
+  // Scroll hasta el lote para que se vea
+  try{ panel.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){}
 }
 
 function statsToggleView(v){
