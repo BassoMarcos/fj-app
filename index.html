@@ -1204,7 +1204,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0528';
+  datos['_version']='v1.0529';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7791,6 +7791,7 @@ function renderLotesTerminados(origen){
   const colSolic=sortLotes(todosFin.filter(c=>estadoDe(c)==='solicitado'));
   const colRecib=sortLotes(todosFin.filter(c=>estadoDe(c)==='recibido'));
   const colEntreg=sortLotes(todosFin.filter(c=>estadoDe(c)==='entregado'));
+  const colPend=sortLotes(todosFin.filter(c=>estadoDe(c)===null));
   const chipCol=(c,color)=>{
     const ce=certs[c.id]||{};
     const urg=ce.urgente;
@@ -7812,6 +7813,7 @@ function renderLotesTerminados(origen){
     <div style="flex:1;min-width:300px">
       <div style="font-size:13px;font-weight:800;margin-bottom:8px">📋 Estado de certificados</div>
       <div style="display:flex;gap:8px;align-items:flex-start">
+        ${colHtml('⬜ Por solicitar','#d97706','rgba(217,119,6,.12)',colPend)}
         ${colHtml('✉ Solicitados','#4f46e5','rgba(79,70,229,.12)',colSolic)}
         ${colHtml('📄 Recibidos','#16a34a','rgba(22,163,74,.12)',colRecib)}
         ${colHtml('✅ Entregados','#0891b2','rgba(8,145,178,.12)',colEntreg)}
