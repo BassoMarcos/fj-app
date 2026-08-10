@@ -1204,7 +1204,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0527';
+  datos['_version']='v1.0528';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7794,7 +7794,7 @@ function renderLotesTerminados(origen){
   const chipCol=(c,color)=>{
     const ce=certs[c.id]||{};
     const urg=ce.urgente;
-    return `<div onclick="expandLoteTerminado('${c.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border);font-size:12px;cursor:pointer${urg?';background:rgba(220,38,38,.08)':''}">
+    return `<div onclick="previewLoteCert('${c.id}')" id="lt-chip-${c.id}" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid var(--border);font-size:12px;cursor:pointer${urg?';background:rgba(220,38,38,.08)':''}">
       <span style="font-weight:700;color:${color}">${formatLoteTag(c.mz,c.lote)}${urg?' ⚡':''}</span>
       <span style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px">${(c.titular||'').slice(0,16)}</span>
     </div>`;
@@ -7816,6 +7816,7 @@ function renderLotesTerminados(origen){
         ${colHtml('📄 Recibidos','#16a34a','rgba(22,163,74,.12)',colRecib)}
         ${colHtml('✅ Entregados','#0891b2','rgba(8,145,178,.12)',colEntreg)}
       </div>
+      <div id="lt-preview" style="display:none;margin-top:12px;background:var(--card);border:1.5px solid var(--acc2);border-radius:10px;padding:12px"></div>
     </div>`;
 
   el.innerHTML = _histFinHtml + `<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap"><div style="flex:1;min-width:320px">`+(html)+`</div>`+columnasHtml+`</div>`;
@@ -7843,18 +7844,65 @@ function toggleGrupoTerminados(key){
   if(arrow){ arrow.style.transform=open?'rotate(90deg)':''; arrow.style.transition='transform .2s'; }
 }
 
+function previewLoteCert(id){
+  const box=document.getElementById('lt-preview');
+  if(!box) return;
+  // Toggle: si ya está mostrando este lote, cerrar
+  if(box.style.display!=='none' && box.dataset.lote===id){
+    box.style.display='none'; box.dataset.lote='';
+    document.getElementById('lt-chip-'+id)?.style.removeProperty('outline');
+    return;
+  }
+  // Quitar resaltado de cualquier chip anterior
+  document.querySelectorAll('[id^="lt-chip-"]').forEach(el=>el.style.removeProperty('outline'));
+  const data=loadData();
+  const c=data.find(x=>x.id===id);
+  const certs=loadLotesCerts();
+  const ce=certs[id]||{};
+  if(!c){ box.style.display='none'; return; }
+  const fecha=ce.fecha||'';
+  const fechaDisplay=fecha?fecha.split('-').reverse().join('/'):'—';
+  const esPrestamo=!!c.autopago;
+  const btnCert=(field,label,color)=>{
+    const active=!!ce[field];
+    return `<button onclick="toggleCertField('${id}','${field}');renderLotesTerminados(_ltOrigen);previewLoteCert('${id}')" style="padding:5px 12px;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ${active?color:'var(--border)'};background:${active?color:'transparent'};color:${active?'#fff':'var(--text2)'}">${label}</button>`;
+  };
+  box.dataset.lote=id;
+  box.style.display='block';
+  box.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+      <div>
+        <div style="font-size:16px;font-weight:800">${formatLoteTag(c.mz,c.lote)} ${esPrestamo?'<span style="font-size:10px;background:#d97706;color:#fff;padding:1px 6px;border-radius:3px">Préstamo</span>':''}</div>
+        <div style="font-size:13px;color:var(--text2)">${c.titular||''}</div>
+      </div>
+      <button onclick="previewLoteCert('${id}')" style="background:var(--hov);border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer">✕ Cerrar</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span style="font-size:12px;color:var(--text2)">📅 Finalizó:</span>
+      <input type="date" value="${fecha}" onchange="setCertFecha('${id}',this.value);renderLotesTerminados(_ltOrigen);previewLoteCert('${id}')" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--card);color:var(--text)">
+      <span style="font-size:12px;color:var(--text2)">${fechaDisplay}</span>
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Estado del certificado (tocá para cambiar):</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${btnCert('certSolicitado','✉ Solicitado','#4f46e5')}
+      ${btnCert('certRecibido','📄 Recibido','#16a34a')}
+      ${btnCert('certEntregado','✅ Entregado','#0891b2')}
+      ${btnCert('urgente','⚡ Urgente','#dc2626')}
+    </div>`;
+  const chip=document.getElementById('lt-chip-'+id);
+  if(chip){ chip.style.outline='2px solid var(--acc2)'; }
+  try{ box.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){}
+}
 function expandLoteTerminado(id){
   const panel=document.getElementById('lt-exp-'+id);
   if(!panel) return;
-  // Si el lote está dentro de un grupo colapsado, abrir el grupo primero
   const grupo=panel.closest('[id^="lt-grupo-"]');
   if(grupo&&grupo.style.display==='none'){
     const key=grupo.id.replace('lt-grupo-','');
     toggleGrupoTerminados(key);
   }
-  panel.style.display='block';
-  // Scroll hasta el lote para que se vea
-  try{ panel.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){}
+  panel.style.display=panel.style.display==='none'?'block':'none';
+  if(panel.style.display==='block'){ try{ panel.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }
 }
 
 function statsToggleView(v){
