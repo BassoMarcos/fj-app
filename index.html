@@ -829,7 +829,13 @@ tr:hover td{background:var(--bg)}
           <div>
             <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Monto refinanciación ($)</div>
             <input type="number" id="e-refi-monto" min="0" placeholder="0"
-              style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:130px"
+              style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:120px"
+              oninput="actualizarRefiInfo()">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Desde cuota N°</div>
+            <input type="number" id="e-refi-desde-input" min="1" placeholder="actual"
+              style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:90px"
               oninput="actualizarRefiInfo()">
           </div>
           <div>
@@ -1239,7 +1245,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0534';
+  datos['_version']='v1.0535';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2137,6 +2143,7 @@ function openEditModal(id){
       const rc=document.getElementById('e-refi-cant'); if(rc){ rc.value=_refiCant; rc.disabled=false; rc.style.opacity='1'; }
       const _rh=document.getElementById('e-refi-hasta'); if(_rh) _rh.value=c.refiHasta||0;
       const _rd=document.getElementById('e-refi-desde'); if(_rd) _rd.value=c.refiDesde||0;
+      const _rdi=document.getElementById('e-refi-desde-input'); if(_rdi){ _rdi.value=c.refiDesde||''; _rdi.disabled=false; _rdi.style.opacity='1'; }
     })();
     setTimeout(actualizarRefiInfo,0);
     const b=document.getElementById('e-ca-unlock');
@@ -2893,19 +2900,21 @@ function actualizarRefiInfo(){
   const caEl=document.getElementById('e-ca-visible');
   const montoEl=document.getElementById('e-refi-monto');
   const cantEl=document.getElementById('e-refi-cant');
+  const desdeInEl=document.getElementById('e-refi-desde-input');
   const hastaEl=document.getElementById('e-refi-hasta');
   const desdeEl=document.getElementById('e-refi-desde');
-  if(!info||!caEl||!montoEl||!cantEl||!hastaEl||!desdeEl) return;
-  const ca=+caEl.value||1;
+  if(!info||!montoEl||!cantEl||!hastaEl||!desdeEl) return;
+  const ca=+((caEl||{}).value)||1;
   const monto=+montoEl.value||0;
   const cant=+cantEl.value||0;
+  const desde=(+((desdeInEl||{}).value))||ca; // si no ponen nada, arranca en la cuota actual
   if(cant<=0||monto<=0){ hastaEl.value=0; desdeEl.value=0; info.style.display='none'; return; }
-  const desde=ca; // arranca en la cuota actual
-  const hasta=ca+cant-1;
+  const hasta=desde+cant-1;
   desdeEl.value=desde;
   hastaEl.value=hasta;
   info.style.display='block';
-  info.textContent='💠 Refinanciación: '+cant+' cuotas de '+fmtPeso(monto)+' (cuota '+desde+' a '+hasta+'). Se cobra junto a la cuota y cae en Caja de Mora.';
+  const yaArranco=ca>=desde;
+  info.textContent='💠 Refinanciación: '+cant+' cuotas de '+fmtPeso(monto)+' (cuota '+desde+' a '+hasta+'). '+(yaArranco?'Ya en curso.':'Arranca en la cuota '+desde+'.')+' Cae en Caja de Mora.';
 }
 
 function cobrarPorTransferencia(id){
