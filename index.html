@@ -1204,7 +1204,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0530';
+  datos['_version']='v1.0531';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7800,22 +7800,26 @@ function renderLotesTerminados(origen){
       <span style="font-size:12px;color:var(--text2);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.titular||''}</span>
     </div>`;
   };
-  const colHtml=(titulo,color,bg,lista)=>`
+  const colHtml=(titulo,color,bg,lista,key)=>{
+    const abierto=localStorage.getItem('fj_lt_col_'+key)==='1';
+    return `
     <div style="background:var(--surface);border:1px solid ${color};border-radius:10px;overflow:hidden;margin-bottom:10px">
-      <div style="background:${bg};padding:8px 12px;font-size:13px;font-weight:800;color:${color};display:flex;justify-content:space-between;align-items:center">
-        <span>${titulo}</span><span style="font-size:12px">${lista.length}</span>
+      <div onclick="toggleColCert('${key}')" style="background:${bg};padding:8px 12px;font-size:13px;font-weight:800;color:${color};display:flex;justify-content:space-between;align-items:center;cursor:pointer">
+        <span><span id="lt-col-arrow-${key}" style="display:inline-block;transform:rotate(${abierto?90:0}deg);transition:transform .2s">▶</span> ${titulo}</span>
+        <span style="font-size:12px">${lista.length}</span>
       </div>
-      <div>
+      <div id="lt-col-body-${key}" style="display:${abierto?'block':'none'}">
         ${lista.length?lista.map(c=>chipCol(c,color)).join(''):'<div style="padding:10px;font-size:12px;color:var(--text2);text-align:center">—</div>'}
       </div>
     </div>`;
+  };
   const columnasHtml=`
     <div style="flex:1;min-width:300px">
       <div style="font-size:13px;font-weight:800;margin-bottom:8px">📋 Estado de certificados</div>
-      ${colHtml('⬜ Por solicitar','#d97706','rgba(217,119,6,.12)',colPend)}
-      ${colHtml('✉ Solicitados','#4f46e5','rgba(79,70,229,.12)',colSolic)}
-      ${colHtml('📄 Recibidos','#16a34a','rgba(22,163,74,.12)',colRecib)}
-      ${colHtml('✅ Entregados','#0891b2','rgba(8,145,178,.12)',colEntreg)}
+      ${colHtml('⬜ Por solicitar','#d97706','rgba(217,119,6,.12)',colPend,'pend')}
+      ${colHtml('✉ Solicitados','#4f46e5','rgba(79,70,229,.12)',colSolic,'solic')}
+      ${colHtml('📄 Recibidos','#16a34a','rgba(22,163,74,.12)',colRecib,'recib')}
+      ${colHtml('✅ Entregados','#0891b2','rgba(8,145,178,.12)',colEntreg,'entreg')}
       <div id="lt-preview" style="display:none;margin-top:12px;background:var(--card);border:1.5px solid var(--acc2);border-radius:10px;padding:12px"></div>
     </div>`;
 
@@ -7835,6 +7839,15 @@ function renderLotesTerminados(origen){
   });
 }
 
+function toggleColCert(key){
+  const body=document.getElementById('lt-col-body-'+key);
+  const arrow=document.getElementById('lt-col-arrow-'+key);
+  if(!body) return;
+  const abrir=body.style.display==='none';
+  body.style.display=abrir?'block':'none';
+  if(arrow) arrow.style.transform=abrir?'rotate(90deg)':'rotate(0deg)';
+  try{ localStorage.setItem('fj_lt_col_'+key, abrir?'1':'0'); }catch(e){}
+}
 function toggleGrupoTerminados(key){
   const panel=document.getElementById('lt-grupo-'+key);
   const arrow=document.getElementById('lt-arrow-'+key);
