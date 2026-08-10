@@ -834,9 +834,12 @@ tr:hover td{background:var(--bg)}
           </div>
           <div>
             <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Desde cuota N°</div>
-            <input type="number" id="e-refi-desde-input" min="1" placeholder="actual"
-              style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:90px"
-              oninput="actualizarRefiInfo()">
+            <div style="display:flex;gap:4px;align-items:center">
+              <input type="number" id="e-refi-desde-input" min="1" placeholder="actual"
+                style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:70px"
+                oninput="actualizarRefiInfo()">
+              <button type="button" onclick="refiDesdeEsteMes()" style="padding:6px 8px;border:1px solid #c084fc;background:rgba(192,132,252,.12);color:#c084fc;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📅 Este mes</button>
+            </div>
           </div>
           <div>
             <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Cantidad de cuotas</div>
@@ -1245,7 +1248,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0535';
+  datos['_version']='v1.0536';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2895,6 +2898,13 @@ function actualizarEscalonInfo(){
   info.style.display='block';
   info.textContent='🪜 Escalón desde la cuota '+ca+' hasta la cuota '+hasta+' inclusive — última cuota escalonada: '+MESES[finIdx]+' '+finAnio;
 }
+function refiDesdeEsteMes(){
+  const caEl=document.getElementById('e-ca-visible')||document.getElementById('e-ca');
+  const ca=+((caEl||{}).value)||1;
+  const inp=document.getElementById('e-refi-desde-input');
+  if(inp){ inp.value=ca; }
+  actualizarRefiInfo();
+}
 function actualizarRefiInfo(){
   const info=document.getElementById('e-refi-info');
   const caEl=document.getElementById('e-ca-visible');
@@ -2913,8 +2923,9 @@ function actualizarRefiInfo(){
   desdeEl.value=desde;
   hastaEl.value=hasta;
   info.style.display='block';
-  const yaArranco=ca>=desde;
-  info.textContent='💠 Refinanciación: '+cant+' cuotas de '+fmtPeso(monto)+' (cuota '+desde+' a '+hasta+'). '+(yaArranco?'Ya en curso.':'Arranca en la cuota '+desde+'.')+' Cae en Caja de Mora.';
+  const esEsteMes=desde===ca;
+  const cuando=esEsteMes?'Arranca ESTE mes operativo (cuota '+desde+').':(ca>desde?'Ya en curso.':'Arranca en la cuota '+desde+'.');
+  info.textContent='💠 Refinanciación: '+cant+' cuotas de '+fmtPeso(monto)+' (cuota '+desde+' a '+hasta+'). '+cuando+' Cae en Caja de Mora.';
 }
 
 function cobrarPorTransferencia(id){
