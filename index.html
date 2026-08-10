@@ -816,31 +816,34 @@ tr:hover td{background:var(--bg)}
       <div id="e-escalon-info" style="display:none;font-size:11px;color:#5eb0ef;margin-top:4px;background:rgba(56,152,236,.10);border-radius:6px;padding:5px 8px"></div>
       <div id="e-ca-warn" style="display:none;font-size:11px;color:var(--red);margin-top:4px">⚠️ Estos campos modifican el plan del cliente. El escalón se suma a la cuota durante la cantidad de cuotas indicada (contando desde la cuota actual); el ICC solo aumenta la cuota pura. Usalo solo para correcciones.</div>
     </div>
-    <!-- Refinanciación: extra mensual que va a caja de mora (no es cuota) -->
-    <div style="margin-top:10px;padding:10px;border:1.5px solid #c084fc;border-radius:var(--r);background:rgba(192,132,252,.06)">
-      <label style="font-size:12px;font-weight:700;color:#c084fc">💠 Refinanciación <span style="font-weight:400;color:var(--text3)">(extra mensual que se cobra junto a la cuota y cae en Caja de Mora)</span></label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:6px">
-        <div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Monto refinanciación ($)</div>
-          <input type="number" id="e-refi-monto" min="0" placeholder="0"
-            style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:130px"
-            oninput="actualizarRefiInfo()">
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Cantidad de cuotas</div>
-          <input type="number" id="e-refi-cant" min="0" placeholder="0"
-            style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:100px"
-            oninput="actualizarRefiInfo()">
-        </div>
-        <input type="hidden" id="e-refi-hasta" value="0">
-        <input type="hidden" id="e-refi-desde" value="0">
-      </div>
-      <div id="e-refi-info" style="display:none;font-size:11px;color:#c084fc;margin-top:4px;background:rgba(192,132,252,.10);border-radius:6px;padding:5px 8px"></div>
-    </div>
 
     <input type="hidden" id="e-saldo-tipo" value="favor">
     <input type="hidden" id="e-saldo-monto" value="0">
     <input type="hidden" id="e-saldo" value="0">
+
+    <!-- Refinanciación (solo edición, siempre editable) -->
+    <div class="field" id="e-refi-wrap" style="display:none">
+      <div style="padding:10px;border:1.5px solid #c084fc;border-radius:var(--r);background:rgba(192,132,252,.06)">
+        <label style="font-size:12px;font-weight:700;color:#c084fc">💠 Refinanciación <span style="font-weight:400;color:var(--text3)">(extra mensual que se cobra junto a la cuota y cae en Caja de Mora)</span></label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:6px">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Monto refinanciación ($)</div>
+            <input type="number" id="e-refi-monto" min="0" placeholder="0"
+              style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:130px"
+              oninput="actualizarRefiInfo()">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Cantidad de cuotas</div>
+            <input type="number" id="e-refi-cant" min="0" placeholder="0"
+              style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:100px"
+              oninput="actualizarRefiInfo()">
+          </div>
+          <input type="hidden" id="e-refi-hasta" value="0">
+          <input type="hidden" id="e-refi-desde" value="0">
+        </div>
+        <div id="e-refi-info" style="display:none;font-size:11px;color:#c084fc;margin-top:4px;background:rgba(192,132,252,.10);border-radius:6px;padding:5px 8px"></div>
+      </div>
+    </div>
 
     <!-- Estado (solo edición) -->
     <div class="field" id="e-est-wrap" style="display:none">
@@ -1236,7 +1239,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0533';
+  datos['_version']='v1.0534';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2115,6 +2118,7 @@ function openEditModal(id){
   // Mostrar/ocultar secciones
   safeDisp('e-est-wrap','block');
   safeDisp('e-ca-wrap','block');
+  safeDisp('e-refi-wrap','block');
   (function(){
     const set=(eid,val)=>{const el=document.getElementById(eid);if(el){el.value=val;el.disabled=true;el.style.opacity='.5';el.style.borderColor='var(--border2)';}};
     set('e-ca-visible',c.ca||1);
@@ -2126,12 +2130,14 @@ function openEditModal(id){
     set('e-adic-cant',_cantIni);
     const _h=document.getElementById('e-adic-hasta'); if(_h) _h.value=c.adicionalHasta||0;
     setTimeout(actualizarEscalonInfo,0);
-    // Refinanciación
-    set('e-refi-monto',c.refiMonto||0);
-    const _refiCant=(c.refiMonto&&c.refiHasta&&c.refiDesde)?Math.max(0,(c.refiHasta-c.refiDesde)+1):0;
-    set('e-refi-cant',_refiCant);
-    const _rh=document.getElementById('e-refi-hasta'); if(_rh) _rh.value=c.refiHasta||0;
-    const _rd=document.getElementById('e-refi-desde'); if(_rd) _rd.value=c.refiDesde||0;
+    // Refinanciación (editable, no usar set() que deshabilita)
+    (function(){
+      const rm=document.getElementById('e-refi-monto'); if(rm){ rm.value=c.refiMonto||0; rm.disabled=false; rm.style.opacity='1'; }
+      const _refiCant=(c.refiMonto&&c.refiHasta&&c.refiDesde)?Math.max(0,(c.refiHasta-c.refiDesde)+1):0;
+      const rc=document.getElementById('e-refi-cant'); if(rc){ rc.value=_refiCant; rc.disabled=false; rc.style.opacity='1'; }
+      const _rh=document.getElementById('e-refi-hasta'); if(_rh) _rh.value=c.refiHasta||0;
+      const _rd=document.getElementById('e-refi-desde'); if(_rd) _rd.value=c.refiDesde||0;
+    })();
     setTimeout(actualizarRefiInfo,0);
     const b=document.getElementById('e-ca-unlock');
     if(b){ b.style.display='inline-block'; b.textContent='🔒 Habilitar edición'; }
