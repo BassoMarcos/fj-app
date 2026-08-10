@@ -833,18 +833,15 @@ tr:hover td{background:var(--bg)}
               oninput="actualizarRefiInfo()">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Desde cuota N°</div>
-            <div style="display:flex;gap:4px;align-items:center">
-              <input type="number" id="e-refi-desde-input" min="1" placeholder="actual"
-                style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:70px"
-                oninput="actualizarRefiInfo()">
-              <button type="button" onclick="refiDesdeEsteMes()" style="padding:6px 8px;border:1px solid #c084fc;background:rgba(192,132,252,.12);color:#c084fc;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📅 Este mes</button>
-            </div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Cuota N° (este mes)</div>
+            <input type="number" id="e-refi-num" min="1" placeholder="1"
+              style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:90px"
+              oninput="actualizarRefiInfo()">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Cantidad de cuotas</div>
-            <input type="number" id="e-refi-cant" min="0" placeholder="0"
-              style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:100px"
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">de un total de</div>
+            <input type="number" id="e-refi-cant" min="1" placeholder="0"
+              style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:90px"
               oninput="actualizarRefiInfo()">
           </div>
           <input type="hidden" id="e-refi-hasta" value="0">
@@ -1248,7 +1245,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0536';
+  datos['_version']='v1.0537';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2143,11 +2140,15 @@ function openEditModal(id){
     (function(){
       const rm=document.getElementById('e-refi-monto'); if(rm){ rm.value=c.refiMonto||0; rm.disabled=false; rm.style.opacity='1'; }
       const _refiCant=(c.refiMonto&&c.refiHasta&&c.refiDesde)?Math.max(0,(c.refiHasta-c.refiDesde)+1):0;
-      const rc=document.getElementById('e-refi-cant'); if(rc){ rc.value=_refiCant; rc.disabled=false; rc.style.opacity='1'; }
+      const rc=document.getElementById('e-refi-cant'); if(rc){ rc.value=_refiCant||''; rc.disabled=false; rc.style.opacity='1'; }
+      // Número de refi de este mes = ca - desde + 1
+      const _ca=c.ca||1;
+      const _num=(c.refiMonto&&c.refiDesde)?Math.max(1,(_ca-c.refiDesde+1)):'';
+      const rn=document.getElementById('e-refi-num'); if(rn){ rn.value=_num; rn.disabled=false; rn.style.opacity='1'; }
       const _rh=document.getElementById('e-refi-hasta'); if(_rh) _rh.value=c.refiHasta||0;
       const _rd=document.getElementById('e-refi-desde'); if(_rd) _rd.value=c.refiDesde||0;
-      const _rdi=document.getElementById('e-refi-desde-input'); if(_rdi){ _rdi.value=c.refiDesde||''; _rdi.disabled=false; _rdi.style.opacity='1'; }
     })();
+    setTimeout(actualizarRefiInfo,0);
     setTimeout(actualizarRefiInfo,0);
     const b=document.getElementById('e-ca-unlock');
     if(b){ b.style.display='inline-block'; b.textContent='🔒 Habilitar edición'; }
@@ -2899,33 +2900,30 @@ function actualizarEscalonInfo(){
   info.textContent='🪜 Escalón desde la cuota '+ca+' hasta la cuota '+hasta+' inclusive — última cuota escalonada: '+MESES[finIdx]+' '+finAnio;
 }
 function refiDesdeEsteMes(){
-  const caEl=document.getElementById('e-ca-visible')||document.getElementById('e-ca');
-  const ca=+((caEl||{}).value)||1;
-  const inp=document.getElementById('e-refi-desde-input');
-  if(inp){ inp.value=ca; }
-  actualizarRefiInfo();
+  // (compat) ya no se usa el botón, pero dejo la función por si quedó alguna referencia
 }
 function actualizarRefiInfo(){
   const info=document.getElementById('e-refi-info');
-  const caEl=document.getElementById('e-ca-visible');
+  const caEl=document.getElementById('e-ca-visible')||document.getElementById('e-ca');
   const montoEl=document.getElementById('e-refi-monto');
+  const numEl=document.getElementById('e-refi-num');
   const cantEl=document.getElementById('e-refi-cant');
-  const desdeInEl=document.getElementById('e-refi-desde-input');
   const hastaEl=document.getElementById('e-refi-hasta');
   const desdeEl=document.getElementById('e-refi-desde');
-  if(!info||!montoEl||!cantEl||!hastaEl||!desdeEl) return;
+  if(!info||!montoEl||!numEl||!cantEl||!hastaEl||!desdeEl) return;
   const ca=+((caEl||{}).value)||1;
   const monto=+montoEl.value||0;
-  const cant=+cantEl.value||0;
-  const desde=(+((desdeInEl||{}).value))||ca; // si no ponen nada, arranca en la cuota actual
-  if(cant<=0||monto<=0){ hastaEl.value=0; desdeEl.value=0; info.style.display='none'; return; }
+  const num=+numEl.value||0;   // cuál cuota de refi es la de ESTE mes
+  const cant=+cantEl.value||0; // total de cuotas de refi
+  if(monto<=0||num<=0||cant<=0){ hastaEl.value=0; desdeEl.value=0; info.style.display='none'; return; }
+  // Anclar: la cuota 'num' de refi = la cuota operativa actual (ca)
+  // => la refi arrancó en la cuota del plan: ca - (num - 1)
+  const desde=ca-(num-1);
   const hasta=desde+cant-1;
   desdeEl.value=desde;
   hastaEl.value=hasta;
   info.style.display='block';
-  const esEsteMes=desde===ca;
-  const cuando=esEsteMes?'Arranca ESTE mes operativo (cuota '+desde+').':(ca>desde?'Ya en curso.':'Arranca en la cuota '+desde+'.');
-  info.textContent='💠 Refinanciación: '+cant+' cuotas de '+fmtPeso(monto)+' (cuota '+desde+' a '+hasta+'). '+cuando+' Cae en Caja de Mora.';
+  info.textContent='💠 Refinanciación: este mes es la cuota '+num+' de '+cant+' ('+fmtPeso(monto)+'). Se cobra junto a la cuota y cae en Caja de Mora. Avanza sola cada mes hasta la '+cant+'.';
 }
 
 function cobrarPorTransferencia(id){
