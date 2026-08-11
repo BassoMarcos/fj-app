@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0546';
+  datos['_version']='v1.0547';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6372,6 +6372,24 @@ function renderBalances(seccion){
           </div>`
           :'<div style="font-size:13px;color:var(--text2)">Sin cierres de transferencias</div>'}
           <div style="font-size:11px;color:var(--text2);margin-top:8px">💡 Plata no física — pendiente de reponer en caja.</div>
+          ${(()=>{
+            // Transferencias parciales pendientes de rellenar (persisten aunque limpies la caja física)
+            const pend=(bal.transferencias||[]).filter(t=>(t.rellenado||0)<(t.cuotaParte||0));
+            if(!pend.length) return '';
+            return `<div style="margin-top:14px;border-top:1px dashed rgba(124,58,237,.35);padding-top:10px">
+              <div style="font-size:12px;font-weight:700;color:#f0a742;margin-bottom:6px">💧 Transferencias por rellenar (${pend.length})</div>
+              ${pend.slice().reverse().map(t=>{
+                const pendiente=Math.max(0,(t.cuotaParte||0)-(t.rellenado||0));
+                return `<div style="padding:7px 0;border-bottom:1px solid rgba(124,58,237,.2);font-size:12px">
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span style="font-weight:600">${formatLoteTag(t.mz,t.lote)} — ${t.titular||''} ${t.parcial?'<span style="background:rgba(217,119,6,.15);color:#f0a742;font-size:9px;padding:1px 5px;border-radius:99px;font-weight:700">PARCIAL</span>':''} ${t.moneda==='USD'?'<span style="background:rgba(22,163,74,.15);color:#4ade80;font-size:9px;padding:1px 5px;border-radius:99px;font-weight:700">USD</span>':''}</span>
+                    <button onclick="rellenarTransferencia('${t.ts}')" style="background:none;border:1.5px solid #a78bfa;color:#a78bfa;padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;cursor:pointer">💧 Rellenar</button>
+                  </div>
+                  <div style="font-size:11px;color:var(--text2)">Falta rellenar: ${t.moneda==='USD'?'USD ':''}${fmtPeso(pendiente)}${(t.rellenado||0)>0?' · ya rellenado '+fmtPeso(t.rellenado):''} · ${t.fecha||''}</div>
+                </div>`;
+              }).join('')}
+            </div>`;
+          })()}
         </div>
       </div>`;
   } else if(seccion==='mora'){
@@ -7012,16 +7030,9 @@ function traspasoMora30(){
 
 function limpiarCajaFisica(){
   confirmarConClave(()=>{
+    if(!confirm('¿Limpiar la Caja Física? No queda registro (los SAF/SEC ya están en los saldos, y las transferencias sin rellenar quedan en Cierres de Transferencias).'))return;
     const bal=loadBalances();
-    const cf=(bal.cajaFisica||[]);
-    // Conservar las que tienen transferencia parcial SIN rellenar (para no perder la opción de rellenar)
-    const pendientes=cf.filter(p=>(p.transferido||0)>(p.rellenadoMonto||0));
-    const aBorrar=cf.length-pendientes.length;
-    const msg=pendientes.length
-      ? '¿Limpiar la Caja Física?\n\nSe borrarán '+aBorrar+' pago(s) ya saldados.\n\n⚠️ Se CONSERVAN '+pendientes.length+' pago(s) con transferencia parcial SIN rellenar (para que puedas rellenarlos después).'
-      : '¿Limpiar la Caja Física? No queda registro (los SAF/SEC ya están en los saldos).';
-    if(!confirm(msg))return;
-    bal.cajaFisica=pendientes;
+    bal.cajaFisica=[];
     saveBalances(bal);
     renderBalances('fisica');
   });
@@ -7030,15 +7041,9 @@ function limpiarCajaFisicaFecha(fecha){
   confirmarConClave(()=>{
     const bal=loadBalances();
     const antes=(bal.cajaFisica||[]).length;
-    // De la fecha elegida, conservar las parciales sin rellenar
-    const deLaFecha=(bal.cajaFisica||[]).filter(p=>(p.fecha||'(sin fecha)')===fecha);
-    const pendientesFecha=deLaFecha.filter(p=>(p.transferido||0)>(p.rellenadoMonto||0));
-    const quedan=(bal.cajaFisica||[]).filter(p=>(p.fecha||'(sin fecha)')!==fecha || (p.transferido||0)>(p.rellenadoMonto||0));
+    const quedan=(bal.cajaFisica||[]).filter(p=>(p.fecha||'(sin fecha)')!==fecha);
     const borrados=antes-quedan.length;
-    const msg=pendientesFecha.length
-      ? '¿Limpiar los pago(s) del '+fecha+'?\n\nSe borrarán '+borrados+' ya saldados.\n\n⚠️ Se CONSERVAN '+pendientesFecha.length+' con transferencia parcial SIN rellenar.'
-      : '¿Limpiar los '+borrados+' pago(s) del '+fecha+'? No queda registro (los SAF/SEC ya están en los saldos).';
-    if(!confirm(msg))return;
+    if(!confirm('¿Limpiar los '+borrados+' pago(s) del '+fecha+'? No queda registro (las transferencias sin rellenar quedan en Cierres de Transferencias).'))return;
     bal.cajaFisica=quedan;
     saveBalances(bal);
     renderBalances('fisica');
