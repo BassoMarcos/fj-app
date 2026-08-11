@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0548';
+  datos['_version']='v1.0549';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6446,7 +6446,7 @@ function renderBalances(seccion){
           const editBtn='<button data-cid="'+p.id+'" data-ts="'+p.ts+'" data-mes="'+(p.mesNombre||'').replace(/"/g,'&quot;')+'" onclick="editarInteresMora(this.dataset.cid,this.dataset.ts,this.dataset.mes)" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">✏️ Interés</button>';
           const desmarcaBtn='<button data-cid="'+p.id+'" data-ts="'+p.ts+'" onclick="desmararPagoMoraCaja(this.dataset.cid,this.dataset.ts)" style="background:none;border:1px solid #fca5a5;color:var(--red);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">↩ Desmarcar</button>';
           return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 6px 14px;border-bottom:1px dashed var(--border);font-size:12px">'
-            +'<div><span style="font-weight:600">'+(p.esRefi?'💠 Refinanciación cuota '+p.refiNumero+' de '+p.refiTotal:(p.mesNombre||('Cuota'+(p.numeroCuota?' '+p.numeroCuota:''))))+'</span> <span style="font-size:10px;color:var(--text2)">'+p.fecha+'</span></div>'
+            +'<div><span style="font-weight:600">'+(p.esRefi?'💠 Refinanciación cuota '+p.refiNumero+' de '+p.refiTotal:(p.esInteresMes?'🔴 Interés del mes (cuota '+(p.numeroCuota||'')+')':(p.mesNombre||('Cuota'+(p.numeroCuota?' '+p.numeroCuota:'')))))+'</span> <span style="font-size:10px;color:var(--text2)">'+p.fecha+'</span></div>'
             +'<div style="display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end">'
             +(p.cuotaAgrimensor?'<span style="color:var(--acc2);font-size:11px">⚖️ '+cur+fmtPeso(p.cuotaAgrimensor)+'</span>':'<span style="font-size:11px">'+cur+fmtPeso(p.cuota||0)+'</span>')
             +'<span style="color:var(--red);font-size:11px;margin-left:6px">+ '+cur+fmtPeso(p.interes||0)+'</span>'
@@ -10840,6 +10840,25 @@ function registrarCobroCuotaMora(mora, c, interes, ts, fecha){
   mora.push(entry);
 }
 
+function registrarInteresMesEnMora(c, interes, ts, fecha){
+  if(!interes||interes<=0) return;
+  const mora=loadMora();
+  const id=c.clienteId||c.id;
+  const entry={
+    id, interes, cuota:0, ts, fecha,
+    mz:c.mz, lote:c.lote, titular:c.titular, moneda:c.moneda||'ARS',
+    esInteresMes:true, mesNombre:'Interés del mes', numeroCuota:c.ca
+  };
+  if(esAgrimensor(id)){
+    entry.cuotaAgrimensor=0;
+    const bal=loadBalances();
+    (bal.agrimensores=bal.agrimensores||[]).push({id,monto:0,ts,fecha,moneda:c.moneda||'ARS',esMora:true,interes,esInteresMes:true});
+    saveBalances(bal);
+  }
+  mora.push(entry);
+  saveMora(mora);
+  addHist('pago','🔴 Interés del mes '+fmtPeso(interes)+' — '+c.mz+' Lote '+c.lote+' — cuota '+c.ca+' (a Caja de Mora; la cuota fue a caja del día)',id);
+}
 function registrarRefiEnMora(c, monto, numero, total, ts, fecha){
   const mora=loadMora();
   const id=c.id;
@@ -13519,8 +13538,11 @@ function marcarPago(id, interesOverride){
   }
 
   if(tieneMora){
-    // Cliente con mora: cuota + interes van a caja de mora
-    registrarPagoMora(id, _mc.total, interes, ts);
+    // La cuota del mes en curso va a CAJA DEL DÍA (cobro normal).
+    // El interés por los días de atraso va SOLO a Caja de Mora.
+    registrarPagoEnCaja(id, _mc.total, ts);
+    const fechaM=new Date(ts||Date.now()).toLocaleDateString('es-AR');
+    registrarInteresMesEnMora(c, interes, ts, fechaM);
   } else {
     // Cliente sin mora: cobro normal a caja del dia
     registrarPagoEnCaja(id, _mc.total, ts);
