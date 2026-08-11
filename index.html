@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0551';
+  datos['_version']='v1.0552';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -1366,6 +1366,24 @@ function loadData(){
     agrimensor:c.agrimensor||false,autopago:c.autopago||false
   }));
   saveData(d);return d;
+}
+function loadBorrados(){try{return JSON.parse(localStorage.getItem('fj_borrados')||'[]');}catch(e){return [];}}
+function saveBorrados(v){localStorage.setItem('fj_borrados',JSON.stringify(v));if(window._fbSet)window._fbSet('borrados',v).catch(e=>console.warn('FB borrados error:',e));}
+function registrarBorrado(id){
+  const b=loadBorrados();
+  // Guardar id + timestamp; limpiar los muy viejos (más de 60 días) para no acumular
+  const ahora=Date.now();
+  const limpio=b.filter(x=>x&&x.id&&(ahora-(x.ts||0))<60*24*3600*1000&&x.id!==id);
+  limpio.push({id,ts:ahora});
+  saveBorrados(limpio);
+}
+function esBorrado(id){
+  return loadBorrados().some(x=>x&&x.id===id);
+}
+function quitarBorrado(id){
+  const b=loadBorrados();
+  const limpio=b.filter(x=>x&&x.id!==id);
+  if(limpio.length!==b.length) saveBorrados(limpio);
 }
 function saveData(d){
   // Save full data so it becomes the new base for next month
@@ -11654,7 +11672,9 @@ function saveCliente(){
     }
 
     // Lote principal
-    data.push(buildClienteFromSlot(s0, mz, lote, saldo));
+    const _cliPrin=buildClienteFromSlot(s0, mz, lote, saldo);
+    data.push(_cliPrin);
+    if(_cliPrin&&_cliPrin.id) quitarBorrado(_cliPrin.id);
     addHist('edit','Nuevo cliente: '+mz+' Lote '+lote+' — '+titularPrincipal, mz+'-'+lote);
 
     // Lotes extra
@@ -11665,7 +11685,9 @@ function saveCliente(){
       else emz = s.etapa+'-'+s.mz;
       elote = s.lote;
       const sIgualado = s.igualado ? {...s0, isAgri: s.isAgri} : s;
-      data.push(buildClienteFromSlot(sIgualado, emz, elote, 0));
+      const _cliExtra=buildClienteFromSlot(sIgualado, emz, elote, 0);
+      data.push(_cliExtra);
+      if(_cliExtra&&_cliExtra.id) quitarBorrado(_cliExtra.id);
       addHist('edit','Nuevo cliente: '+emz+' Lote '+elote+' — '+titularPrincipal, emz+'-'+elote);
     });
   }
@@ -11692,6 +11714,8 @@ function delCliente(){
       const d=loadData();
       d.splice(d.findIndex(x=>x.id===editId),1);
       saveData(d);
+      // Registrar borrado intencional (tombstone) para que no reviva desde otro dispositivo
+      registrarBorrado(editId);
       // Si es E1/E2/E3, guardar el lote como vacante
       const mzE1=['M1','M2','M3','M4'];
       if(mzE1.includes(c.mz)||c.mz==='ETAPA 2'||c.mz==='ETAPA 3') agregarLoteLibreE123(c.id);
@@ -13742,16 +13766,34 @@ async function init(){
       // o con cuotas más atrasadas sin avisar (esto causó la pérdida del 22/7/2026)
       window._fbListen('data', (d) => {
         if(!d) return;
-        const remoto = Array.isArray(d) ? d : Object.values(d);
+        let remoto = Array.isArray(d) ? d : Object.values(d);
+        // Filtrar clientes borrados intencionalmente (tombstones) para que no revivan
+        const borradosSet = new Set(loadBorrados().map(x=>x&&x.id).filter(Boolean));
+        if(borradosSet.size){
+          const antes=remoto.length;
+          remoto = remoto.filter(c=>!(c&&c.id&&borradosSet.has(c.id)));
+          if(remoto.length<antes){
+            // La nube traía clientes ya borrados: reafirmar la versión limpia
+            if(window._fbSet) window._fbSet('data', remoto).catch(()=>{});
+          }
+        }
         let local = [];
         try{ local = JSON.parse(_lsGet(dKey('data'))||'[]'); }catch(e){}
         if(local.length){
           const mapR = {}; remoto.forEach(c=>{ if(c&&c.id) mapR[c.id]=c; });
-          const faltan = local.filter(c=>c&&c.id&&!mapR[c.id]).length;
-          let atrasados = 0;
-          local.forEach(c=>{ const r=mapR[c&&c.id]; if(r && (r.ca||0) < (c.ca||0)) atrasados++; });
-          if(faltan > 0 || atrasados > 2){
-            console.warn('SYNC BLOQUEADO: la versión remota tiene '+faltan+' clientes menos y '+atrasados+' con cuotas atrasadas.');
+          // Clientes que yo tengo y la versión remota no (sin contar los que borré a propósito)
+          const faltan = local.filter(c=>c&&c.id&&!mapR[c.id]&&!borradosSet.has(c.id)).length;
+          let atrasados = 0;   // cuota retrocedida en remoto
+          let montoViejo = 0;  // monto o saldo distinto con cuota igual (posible dato viejo)
+          local.forEach(c=>{
+            const r=mapR[c&&c.id];
+            if(!r) return;
+            if((r.ca||0) < (c.ca||0)) atrasados++;
+            // Si la cuota es la misma pero el monto o saldo cambió, puede ser una versión vieja
+            else if((r.ca||0)===(c.ca||0) && ((r.monto||0)!==(c.monto||0) || (r.saldo||0)!==(c.saldo||0))) montoViejo++;
+          });
+          if(faltan > 0 || atrasados > 2 || montoViejo > 5){
+            console.warn('SYNC BLOQUEADO: remoto tiene '+faltan+' clientes menos, '+atrasados+' con cuota atrasada, '+montoViejo+' con monto/saldo distinto.');
             if(!window._syncConflicto){
               window._syncConflicto = true;
               const el=document.getElementById('sync-indicator');
@@ -13760,16 +13802,17 @@ async function init(){
                 el.style.background='rgba(220,38,38,0.15)'; el.style.color='#dc2626';
                 el.title='Otro dispositivo tiene datos más viejos. Tus datos NO fueron pisados. Cerrá la app en los otros dispositivos.';
               }
-              alert('⚠️ SINCRONIZACIÓN BLOQUEADA\n\nOtro dispositivo intentó sobrescribir tus datos con una versión más vieja ('+faltan+' clientes menos, '+atrasados+' cuotas atrasadas).\n\nTus datos NO fueron modificados.\n\nCerrá la app en los otros dispositivos y recargá esta pestaña.');
+              alert('⚠️ SINCRONIZACIÓN BLOQUEADA\n\nOtro dispositivo intentó sobrescribir tus datos con una versión más vieja ('+faltan+' clientes menos, '+atrasados+' cuotas atrasadas, '+montoViejo+' montos/saldos distintos).\n\nTus datos NO fueron modificados.\n\nCerrá la app en los otros dispositivos y recargá esta pestaña.');
             }
             // Reafirmar la versión local (la más completa) en la nube
             if(window._fbSet) window._fbSet('data', local).catch(()=>{});
             return;
           }
         }
-        _lsSet(dKey('data'), JSON.stringify(d)); _fbRerender('lista'); _fbRerender('colab');
+        _lsSet(dKey('data'), JSON.stringify(remoto)); _fbRerender('lista'); _fbRerender('colab');
       });
       window._fbListen('pagoStore', (d) => { if(d){ _lsSet(dKey('pagos'), JSON.stringify(d)); _fbRerender('lista'); _fbRerender('colab'); } });
+      window._fbListen('borrados', (d) => { if(Array.isArray(d)){ localStorage.setItem('fj_borrados', JSON.stringify(d)); } });
       window._fbListen('cuotasMora', (d) => { if(d){ localStorage.setItem('fj_cuotas_mora', JSON.stringify(d)); _fbRerender('mora'); } });
       window._fbListen('balances', (d) => { if(d){ _lsSet(dKey('balances'), JSON.stringify(d)); _fbRerender('balances'); } });
       window._fbListen('icc', (d) => { if(d) _lsSet(dKey('icc'), JSON.stringify(d)); });
