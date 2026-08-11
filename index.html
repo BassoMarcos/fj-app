@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0545';
+  datos['_version']='v1.0546';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7012,9 +7012,16 @@ function traspasoMora30(){
 
 function limpiarCajaFisica(){
   confirmarConClave(()=>{
-    if(!confirm('¿Limpiar la Caja Física? No queda registro (los SAF/SEC ya están en los saldos).'))return;
     const bal=loadBalances();
-    bal.cajaFisica=[];
+    const cf=(bal.cajaFisica||[]);
+    // Conservar las que tienen transferencia parcial SIN rellenar (para no perder la opción de rellenar)
+    const pendientes=cf.filter(p=>(p.transferido||0)>(p.rellenadoMonto||0));
+    const aBorrar=cf.length-pendientes.length;
+    const msg=pendientes.length
+      ? '¿Limpiar la Caja Física?\n\nSe borrarán '+aBorrar+' pago(s) ya saldados.\n\n⚠️ Se CONSERVAN '+pendientes.length+' pago(s) con transferencia parcial SIN rellenar (para que puedas rellenarlos después).'
+      : '¿Limpiar la Caja Física? No queda registro (los SAF/SEC ya están en los saldos).';
+    if(!confirm(msg))return;
+    bal.cajaFisica=pendientes;
     saveBalances(bal);
     renderBalances('fisica');
   });
@@ -7023,9 +7030,15 @@ function limpiarCajaFisicaFecha(fecha){
   confirmarConClave(()=>{
     const bal=loadBalances();
     const antes=(bal.cajaFisica||[]).length;
-    const quedan=(bal.cajaFisica||[]).filter(p=>(p.fecha||'(sin fecha)')!==fecha);
+    // De la fecha elegida, conservar las parciales sin rellenar
+    const deLaFecha=(bal.cajaFisica||[]).filter(p=>(p.fecha||'(sin fecha)')===fecha);
+    const pendientesFecha=deLaFecha.filter(p=>(p.transferido||0)>(p.rellenadoMonto||0));
+    const quedan=(bal.cajaFisica||[]).filter(p=>(p.fecha||'(sin fecha)')!==fecha || (p.transferido||0)>(p.rellenadoMonto||0));
     const borrados=antes-quedan.length;
-    if(!confirm('¿Limpiar los '+borrados+' pago(s) del '+fecha+'? No queda registro (los SAF/SEC ya están en los saldos).'))return;
+    const msg=pendientesFecha.length
+      ? '¿Limpiar los pago(s) del '+fecha+'?\n\nSe borrarán '+borrados+' ya saldados.\n\n⚠️ Se CONSERVAN '+pendientesFecha.length+' con transferencia parcial SIN rellenar.'
+      : '¿Limpiar los '+borrados+' pago(s) del '+fecha+'? No queda registro (los SAF/SEC ya están en los saldos).';
+    if(!confirm(msg))return;
     bal.cajaFisica=quedan;
     saveBalances(bal);
     renderBalances('fisica');
