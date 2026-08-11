@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0538';
+  datos['_version']='v1.0539';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3133,7 +3133,7 @@ function fcConfirmar(){
     const bal=loadBalances();
     const cuotaPura=x.totalCuota-(x.totalAdel||0)-(x.refiMonto||0); // cuota de lista sin adelantos ni refi (la refi va a mora)
     const efectivoPuro=(e-v)-(x.totalAdel||0)-(x.refiMonto||0); // efectivo de la cuota, sin adelanto ni refi
-    (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:cuotaPura,adelanto:(x.totalAdel||0),refi:(x.refiMonto||0),transferido:t,entrego:e,vuelto:v,efectivo:efectivoPuro,dif,ts,fecha});
+    (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:cuotaPura,adelanto:(x.totalAdel||0),refi:(x.refiMonto||0),transferido:t,transfTotal:!!fullTransf,entrego:e,vuelto:v,efectivo:efectivoPuro,dif,ts,fecha});
     saveBalances(bal);
   }
   // Confirmación final en UNA escritura: reasegurar pago marcado + SAF/SEC
@@ -6067,7 +6067,12 @@ function renderBalances(seccion){
   }
 
   if(seccion==='fisica'){
-    const cf=(bal.cajaFisica||[]);
+    const cfAll=(bal.cajaFisica||[]);
+    // Excluir cuotas 100% transferencia (viven en la caja de transferencias, no en la física).
+    // Detección: flag transfTotal, o (registros viejos) transferido>0 y sin efectivo.
+    const esTransfTotal=(p)=>p.transfTotal===true || ((p.transferido||0)>0 && (p.efectivo||0)<=0 && !(p.adelanto>0));
+    const cf=cfAll.filter(p=>!esTransfTotal(p));
+    const cfTransfTotal=cfAll.filter(esTransfTotal);
     // Totales generales (solo normales para los de arriba)
     const cfNorm0=cf.filter(p=>!esAgrimensor(p.id));
     const cfP0=cfNorm0.filter(p=>p.moneda!=='USD');
@@ -6196,7 +6201,7 @@ function renderBalances(seccion){
         </div>`;
       })()}
       ${cf.length?bloquesFecha:'<div style="padding:1rem;font-size:13px;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:var(--r)">Sin registros. Los cobros con el formulario de entregó/vuelto aparecen acá.</div>'}
-      <div style="font-size:11px;color:var(--text2);margin-top:8px">💡 Cada fecha se puede limpiar por separado. Al limpiar no queda registro (el SAF/SEC ya está en el saldo de cada cliente). Los totales de arriba son de toda la caja.</div>`;
+      <div style="font-size:11px;color:var(--text2);margin-top:8px">💡 Cada fecha se puede limpiar por separado. Al limpiar no queda registro (el SAF/SEC ya está en el saldo de cada cliente). Los totales de arriba son de toda la caja.${cfTransfTotal.length?' <span style="color:#d97706">Se excluyeron '+cfTransfTotal.length+' cuota(s) 100% transferencia (están en Cierres de Transferencias).</span>':''}</div>`;
   }
 
   if(seccion==='cierres'){
