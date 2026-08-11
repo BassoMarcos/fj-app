@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0547';
+  datos['_version']='v1.0548';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6388,6 +6388,22 @@ function renderBalances(seccion){
                   <div style="font-size:11px;color:var(--text2)">Falta rellenar: ${t.moneda==='USD'?'USD ':''}${fmtPeso(pendiente)}${(t.rellenado||0)>0?' · ya rellenado '+fmtPeso(t.rellenado):''} · ${t.fecha||''}</div>
                 </div>`;
               }).join('')}
+            </div>`;
+          })()}
+          ${(()=>{
+            // Transferencias ya rellenadas (registro de lo saldado)
+            const listas=(bal.transferencias||[]).filter(t=>(t.rellenado||0)>=(t.cuotaParte||0)&&(t.rellenado||0)>0);
+            if(!listas.length) return '';
+            const totRell=listas.reduce((s,t)=>s+(t.rellenado||0),0);
+            return `<div style="margin-top:14px;border-top:1px dashed rgba(124,58,237,.35);padding-top:10px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <div style="font-size:12px;font-weight:700;color:#4ade80">✓ Transferencias ya rellenadas (${listas.length})</div>
+                <div style="font-size:11px;font-weight:700;color:#4ade80">${fmtPeso(totRell)}</div>
+              </div>
+              ${listas.slice().reverse().map(t=>`<div style="padding:6px 0;border-bottom:1px solid rgba(124,58,237,.2);font-size:12px;display:flex;justify-content:space-between;align-items:center">
+                <span style="font-weight:600">${formatLoteTag(t.mz,t.lote)} — ${t.titular||''} ${t.moneda==='USD'?'<span style="background:rgba(22,163,74,.15);color:#4ade80;font-size:9px;padding:1px 5px;border-radius:99px;font-weight:700">USD</span>':''}</span>
+                <span style="color:#4ade80;font-weight:700">✓ ${t.moneda==='USD'?'USD ':''}${fmtPeso(t.rellenado)} <span style="font-size:10px;font-weight:400;color:var(--text2)">${t.fecha||''}</span></span>
+              </div>`).join('')}
             </div>`;
           })()}
         </div>
