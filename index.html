@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0544';
+  datos['_version']='v1.0545';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6206,20 +6206,18 @@ function renderBalances(seccion){
       ${(()=>{
         // Conciliación: por qué CP ≠ Físico. CP = Físico + Transferencias − SAF + SEC
         const dif=totCuotaP-totEfP;
-        if(Math.abs(dif)<1 && !pendTransfP && !totSafP && !totSecP) return '';
+        if(Math.abs(dif)<1 && !pendTransfP) return '';
         const fila=(lbl,val,col,signo)=>`<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text2)">${lbl}</span><span style="font-weight:700;color:${col}">${signo}${fmtPeso(val)}</span></div>`;
         return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:16px">
           <div style="font-size:12px;font-weight:800;margin-bottom:6px">🔎 ¿Por qué la Cuota Pura no coincide con el efectivo?</div>
           ${fila('Cuota Pura (lo que se cobró en cuotas)',totCuotaP,'var(--text)','')}
           ${pendTransfP?fila('− Transferencia sin rellenar (todavía no es físico)',pendTransfP,'#d97706','−'):''}
           ${totRellenoP?fila('(transferencia ya rellenada con efectivo: '+fmtPeso(totRellenoP)+')',0,'var(--text3)',''):''}
-          ${totSafP?fila('+ SAF (pagaron de más, sobra en caja)',totSafP,'var(--green)','+'):''}
-          ${totSecP?fila('− SEC (pagaron de menos, falta)',totSecP,'var(--red)','−'):''}
           <div style="border-top:1px dashed var(--border);margin-top:6px;padding-top:6px">
-            ${fila('= Debería haber en efectivo físico',totCuotaP-pendTransfP+totSafP-totSecP,'#a78bfa','')}
+            ${fila('= Debería haber en efectivo físico',totCuotaP-pendTransfP,'#a78bfa','')}
             ${fila('Efectivo físico real',totEfP,'#a78bfa','')}
           </div>
-          <div style="font-size:10px;color:var(--text3);margin-top:6px">La transferencia entra por su propia caja (no en efectivo). Cuando se rellena con plata física, pasa a ser efectivo y deja de restarse acá.</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:6px">La transferencia entra por su propia caja (no en efectivo). Cuando se rellena con plata física, pasa a ser efectivo y deja de restarse acá. Pequeñas diferencias pueden ser por SAF/SEC (pagaron de más o de menos).</div>
         </div>`;
       })()}
       ${cf.length?bloquesFecha:'<div style="padding:1rem;font-size:13px;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:var(--r)">Sin registros. Los cobros con el formulario de entregó/vuelto aparecen acá.</div>'}
