@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0550';
+  datos['_version']='v1.0551';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6075,8 +6075,17 @@ function renderBalances(seccion){
     // Excluir cuotas 100% transferencia (viven en la caja de transferencias, no en la física).
     // Detección: flag transfTotal, o (registros viejos) transferido>0 y sin efectivo.
     const esTransfTotal=(p)=>p.transfTotal===true || ((p.transferido||0)>0 && (p.efectivo||0)<=0 && !(p.adelanto>0));
-    const cf=cfAll.filter(p=>!esTransfTotal(p));
+    const cfVisible=cfAll.filter(p=>!esTransfTotal(p)); // todos los visibles (para la lista)
     const cfTransfTotal=cfAll.filter(esTransfTotal);
+    // ── Fechas activas para los totales de arriba (se guardan en localStorage) ──
+    const _todasFechasCF=[...new Set(cfVisible.map(p=>p.fecha||'(sin fecha)'))];
+    let _fechasActivas;
+    try{ _fechasActivas=JSON.parse(localStorage.getItem('fj_cf_fechas_activas')||'null'); }catch(e){ _fechasActivas=null; }
+    // Si no hay preferencia guardada, arrancan todas activas
+    if(!Array.isArray(_fechasActivas)) _fechasActivas=_todasFechasCF.slice();
+    const _fechaActiva=(f)=>_fechasActivas.includes(f);
+    // cf = solo lo de las fechas activas (para los totales)
+    const cf=cfVisible.filter(p=>_fechaActiva(p.fecha||'(sin fecha)'));
     // Totales generales (solo normales para los de arriba)
     const cfNorm0=cf.filter(p=>!esAgrimensor(p.id));
     const cfP0=cfNorm0.filter(p=>p.moneda!=='USD');
@@ -6133,9 +6142,9 @@ function renderBalances(seccion){
       if(lu.length) html+='<div style="font-size:10px;font-weight:700;color:var(--text3);padding:6px 10px;background:var(--hov)">DÓLARES</div>'+lu.slice().reverse().map(fn||row).join('');
       return html;
     };
-    // Agrupar por fecha
+    // Agrupar por fecha (todas las visibles, activas o no)
     const porFecha={};
-    cf.forEach(p=>{ const f=p.fecha||'(sin fecha)'; (porFecha[f]=porFecha[f]||[]).push(p); });
+    cfVisible.forEach(p=>{ const f=p.fecha||'(sin fecha)'; (porFecha[f]=porFecha[f]||[]).push(p); });
     // Ordenar fechas de más nueva a más vieja
     const fechas=Object.keys(porFecha).sort((a,b)=>{
       const pa=porFecha[a][0]?.ts||'', pb=porFecha[b][0]?.ts||'';
@@ -6143,6 +6152,9 @@ function renderBalances(seccion){
     });
     const bloquesFecha=fechas.map(fecha=>{
       const pagos=porFecha[fecha];
+      const activa=_fechaActiva(fecha);
+      let plegado; try{ plegado=localStorage.getItem('fj_cf_pleg_'+fecha)==='1'; }catch(e){ plegado=false; }
+      const fesc=fecha.replace(/'/g,"\\'");
       const norm=pagos.filter(p=>!esAgrimensor(p.id));
       const agr=pagos.filter(p=>esAgrimensor(p.id));
       const adel=pagos.filter(p=>(p.adelanto||0)>0);
@@ -6156,12 +6168,15 @@ function renderBalances(seccion){
       const cpAgrU=agr.filter(p=>p.moneda==='USD').reduce((s,p)=>s+(p.cuotaLista||0),0);
       const adelP=adel.filter(p=>p.moneda!=='USD').reduce((s,p)=>s+(p.adelanto||0),0);
       const adelU=adel.filter(p=>p.moneda==='USD').reduce((s,p)=>s+(p.adelanto||0),0);
-      return `<div style="margin-bottom:18px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
+      return `<div style="margin-bottom:18px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;${activa?'':'opacity:.55'}">
         <div style="display:flex;justify-content:space-between;align-items:center;background:var(--hov);padding:8px 12px;border-bottom:1px solid var(--border)">
-          <div style="font-size:14px;font-weight:800">📅 ${fecha} <span style="font-size:11px;font-weight:400;color:var(--text2)">(${pagos.length} pago${pagos.length!==1?'s':''})</span></div>
-          <button onclick="limpiarCajaFisicaFecha('${fecha.replace(/'/g,"\\'")}')" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:5px 10px;border-radius:var(--r);font-size:11px;cursor:pointer">🗑 Limpiar ${fecha}</button>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" ${activa?'checked':''} onchange="toggleFechaActivaCF('${fesc}')" style="cursor:pointer;width:16px;height:16px" title="Sumar este día a los totales de arriba">
+            <div onclick="togglePlegarFechaCF('${fesc}')" style="cursor:pointer;font-size:14px;font-weight:800">${plegado?'▶':'▼'} 📅 ${fecha} <span style="font-size:11px;font-weight:400;color:var(--text2)">(${pagos.length} pago${pagos.length!==1?'s':''})${activa?'':' · no suma'}</span></div>
+          </div>
+          <button onclick="limpiarCajaFisicaFecha('${fesc}')" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:5px 10px;border-radius:var(--r);font-size:11px;cursor:pointer">🗑 Limpiar ${fecha}</button>
         </div>
-        <div style="padding:8px">
+        <div style="padding:8px;display:${plegado?'none':'block'}">
           <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:2px">Cuotas normales <span style="font-weight:400">efectivo ${fmtPeso(efNormP)}${efNormU?' · USD '+fmtPeso(efNormU):''}</span> <span style="font-weight:400;color:var(--text3)">· CP ${fmtPeso(cpNormP)}${cpNormU?' · USD '+fmtPeso(cpNormU):''}</span></div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:${agr.length||adel.length?'10px':'0'}">
             ${norm.length?bloqueLista(norm):'<div style="padding:8px;font-size:12px;color:var(--text2)">Sin cuotas normales.</div>'}
@@ -7044,6 +7059,24 @@ function traspasoMora30(){
   });
 }
 
+function toggleFechaActivaCF(fecha){
+  let activas; try{ activas=JSON.parse(localStorage.getItem('fj_cf_fechas_activas')||'null'); }catch(e){ activas=null; }
+  // Si no había preferencia, arrancar desde "todas activas"
+  if(!Array.isArray(activas)){
+    const bal=loadBalances();
+    activas=[...new Set((bal.cajaFisica||[]).map(p=>p.fecha||'(sin fecha)'))];
+  }
+  const i=activas.indexOf(fecha);
+  if(i>=0) activas.splice(i,1); else activas.push(fecha);
+  localStorage.setItem('fj_cf_fechas_activas',JSON.stringify(activas));
+  renderBalances('fisica');
+}
+function togglePlegarFechaCF(fecha){
+  const k='fj_cf_pleg_'+fecha;
+  const cur=localStorage.getItem(k)==='1';
+  localStorage.setItem(k, cur?'0':'1');
+  renderBalances('fisica');
+}
 function limpiarCajaFisica(){
   confirmarConClave(()=>{
     if(!confirm('¿Limpiar la Caja Física? No queda registro (los SAF/SEC ya están en los saldos, y las transferencias sin rellenar quedan en Cierres de Transferencias).'))return;
