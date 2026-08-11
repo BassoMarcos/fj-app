@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0539';
+  datos['_version']='v1.0540';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6088,6 +6088,13 @@ function renderBalances(seccion){
     const totSafP=cfP0.reduce((s,p)=>s+Math.max(0,p.dif||0),0);  // pagaron de más (sobra)
     const totSecP=cfP0.reduce((s,p)=>s+Math.max(0,-(p.dif||0)),0); // pagaron de menos (falta)
     const totRellenoP=cfP0.reduce((s,p)=>s+(p.rellenadoMonto||0),0); // transf ya repuesta con físico
+    // Agrimensores en efectivo (de bal.agrimensores, solo lo físico en pesos)
+    const cfAgrP=cfAll.filter(p=>esAgrimensor(p.id)&&p.moneda!=='USD'&&!esTransfTotal(p));
+    const totAgrEfP=cfAgrP.reduce((s,p)=>s+(p.efectivo||0),0);
+    // Total físico ajustable (opcional: sumar adelantos y/o agrimensores)
+    const sumAdel=window._cfSumAdel===true;
+    const sumAgr=window._cfSumAgr===true;
+    const totFisicoAjustadoP=totEfP+(sumAdel?totAdelP:0)+(sumAgr?totAgrEfP:0);
     const row=(p)=>{
       const dif=p.dif||0;
       const marcar=Math.abs(dif)>1000;
@@ -6168,8 +6175,12 @@ function renderBalances(seccion){
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center">
           <div style="font-size:11px;color:var(--text2)">EFECTIVO FÍSICO</div>
-          <div style="font-size:18px;font-weight:800;color:#a78bfa">${fmtPeso(totEfP)}</div>
+          <div style="font-size:18px;font-weight:800;color:#a78bfa">${fmtPeso(totFisicoAjustadoP)}</div>
           ${totEfU?`<div style="font-size:12px;font-weight:700;color:var(--green)">USD ${fmtPeso(totEfU)}</div>`:''}
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:6px;flex-wrap:wrap">
+            <label style="font-size:10px;color:var(--text2);display:flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" ${sumAdel?'checked':''} onchange="window._cfSumAdel=this.checked;renderBalances('fisica')" style="cursor:pointer"> +Adelantos ${totAdelP?'('+fmtPeso(totAdelP)+')':''}</label>
+            <label style="font-size:10px;color:var(--text2);display:flex;align-items:center;gap:3px;cursor:pointer"><input type="checkbox" ${sumAgr?'checked':''} onchange="window._cfSumAgr=this.checked;renderBalances('fisica')" style="cursor:pointer"> +Agrim. ${totAgrEfP?'('+fmtPeso(totAgrEfP)+')':''}</label>
+          </div>
         </div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center" title="Cuota pura (CP): suma de cuotas de lista sin adelanto — comparalo con la Caja del día">
           <div style="font-size:11px;color:var(--text2)">CUOTA PURA (CP)</div>
