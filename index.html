@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0554';
+  datos['_version']='v1.0555';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6460,6 +6460,8 @@ function renderBalances(seccion){
     // v1.0364: agrupado por lote — línea resumen desplegable con el detalle por cuota adentro
     if(!window._moraCajaAbierto) window._moraCajaAbierto={};
     const renderMoraList=(lista,isUSD)=>{
+      // Los intereses del mes (de días) NO van en esta lista: van al banner de arriba, juntos
+      lista=lista.filter(p=>!p.esInteresMes);
       if(!lista.length) return '<div style="font-size:13px;color:var(--text2);padding:8px 0">Sin pagos</div>';
       const cur=isUSD?'USD ':'';
       // agrupar por cliente, orden por último cobro desc
@@ -6513,12 +6515,27 @@ function renderBalances(seccion){
     moraHtml+='<button onclick="toggleMoraCajaEtapas()" id="btn-mora-etapas" style="background:'+(window._moraCajaEtapas?'var(--brand)':'none')+';border:1.5px solid var(--border);border-radius:var(--r);padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;color:'+(window._moraCajaEtapas?'#fff':'var(--text2)')+'">⇄ Etapas</button>';
     moraHtml+=mora.length?'<button onclick="resetMora()" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar</button>':'';
     moraHtml+='</div></div>';
-    // Banner: juntar todos los intereses del mes (de días) para pasarlos de una a Extras
+    // Banner: intereses del mes (de días) juntos, con su total y detalle desplegable
     if(totalIntMesPend>0){
-      moraHtml+='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:rgba(79,70,229,.08);border:1px solid rgba(79,70,229,.35);border-radius:var(--r);padding:10px 14px;margin-bottom:1rem">'
-        +'<div style="font-size:12px;color:var(--text2)">🔴 <b>Intereses del mes</b> (de días) pendientes: <b style="color:#818cf8">'+fmtPeso(totalIntMesPend)+'</b> — '+intMesPend.length+' cuota'+(intMesPend.length>1?'s':'')+'</div>'
+      const _imAbierto=!!window._intMesAbierto;
+      moraHtml+='<div style="background:rgba(79,70,229,.08);border:1px solid rgba(79,70,229,.35);border-radius:var(--r);padding:12px 14px;margin-bottom:1rem">';
+      moraHtml+='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'
+        +'<div onclick="window._intMesAbierto=!window._intMesAbierto;renderBalances(\'mora\')" style="cursor:pointer;font-size:13px;color:var(--text)">'+(_imAbierto?'▼':'▶')+' 🔴 <b>Intereses del mes</b> (de días) — <b style="color:#818cf8">'+fmtPeso(totalIntMesPend)+'</b> · '+intMesPend.length+' cuota'+(intMesPend.length>1?'s':'')+'</div>'
         +'<button onclick="pasarTodosInteresesMes()" style="background:#4f46e5;color:#fff;border:none;border-radius:var(--r);padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">➡️ Pasar TODOS a Extras</button>'
         +'</div>';
+      if(_imAbierto){
+        moraHtml+='<div style="margin-top:10px;border-top:1px dashed rgba(79,70,229,.3);padding-top:8px">';
+        intMesPend.slice().reverse().forEach(p=>{
+          moraHtml+='<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed var(--border);font-size:12px">'
+            +'<span>'+formatLoteTag(p.mz,p.lote)+' — '+(p.titular||'')+' <span style="font-size:10px;color:var(--text2)">cuota '+(p.numeroCuota||'')+' · '+p.fecha+'</span></span>'
+            +'<span style="display:flex;align-items:center;gap:6px"><b style="color:var(--red)">'+(p.moneda==='USD'?'USD ':'')+fmtPeso(p.interes||0)+'</b>'
+            +'<button data-id="'+p.id+'" data-ts="'+p.ts+'" onclick="pasarInteresMora(this.dataset.id,this.dataset.ts)" style="background:none;border:1px solid #c7d2fe;color:#4f46e5;border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer">→ Extras</button>'
+            +'<button data-cid="'+p.id+'" data-ts="'+p.ts+'" onclick="desmararPagoMoraCaja(this.dataset.cid,this.dataset.ts)" style="background:none;border:1px solid #fca5a5;color:var(--red);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer">↩</button>'
+            +'</span></div>';
+        });
+        moraHtml+='</div>';
+      }
+      moraHtml+='</div>';
     }
 
     moraHtml+='<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px">PESOS</div>';
