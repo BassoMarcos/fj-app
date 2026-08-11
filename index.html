@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0553';
+  datos['_version']='v1.0554';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3149,8 +3149,8 @@ function fcConfirmar(){
   }
   {
     const bal=loadBalances();
-    const cuotaPura=x.totalCuota-(x.totalAdel||0)-(x.refiMonto||0); // cuota de lista sin adelantos ni refi (la refi va a mora)
-    const efectivoPuro=(e-v)-(x.totalAdel||0)-(x.refiMonto||0); // efectivo de la cuota, sin adelanto ni refi
+    const cuotaPura=x.totalCuota-(x.totalAdel||0)-(x.refiMonto||0)-(x.interes||0); // cuota de lista sin adelantos, refi ni interés de mora (todos van aparte)
+    const efectivoPuro=(e-v)-(x.totalAdel||0)-(x.refiMonto||0)-(x.interes||0); // efectivo de la cuota, sin adelanto, refi ni interés (el interés va a mora)
     (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:cuotaPura,adelanto:(x.totalAdel||0),refi:(x.refiMonto||0),moraInteres:(x.interes||0),transferido:t,transfTotal:!!fullTransf,entrego:e,vuelto:v,efectivo:efectivoPuro,dif,ts,fecha});
     saveBalances(bal);
   }
@@ -6452,6 +6452,9 @@ function renderBalances(seccion){
     const totalInteresP=pesos.reduce((s,p)=>s+(p.interes||0),0);
     const totalCuotaU=usd.reduce((s,p)=>s+(p.cuota||0),0);
     const totalInteresU=usd.reduce((s,p)=>s+(p.interes||0),0);
+    // Intereses del mes (de días) pendientes de pasar a Extras — para juntarlos todos
+    const intMesPend=mora.filter(p=>p.esInteresMes&&p.interes&&!p.interesEnExtras);
+    const totalIntMesPend=intMesPend.reduce((s,p)=>s+(p.interes||0),0);
     const cf=loadCierreFinal();
 
     // v1.0364: agrupado por lote — línea resumen desplegable con el detalle por cuota adentro
@@ -6510,6 +6513,13 @@ function renderBalances(seccion){
     moraHtml+='<button onclick="toggleMoraCajaEtapas()" id="btn-mora-etapas" style="background:'+(window._moraCajaEtapas?'var(--brand)':'none')+';border:1.5px solid var(--border);border-radius:var(--r);padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;color:'+(window._moraCajaEtapas?'#fff':'var(--text2)')+'">⇄ Etapas</button>';
     moraHtml+=mora.length?'<button onclick="resetMora()" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:6px 12px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑 Limpiar</button>':'';
     moraHtml+='</div></div>';
+    // Banner: juntar todos los intereses del mes (de días) para pasarlos de una a Extras
+    if(totalIntMesPend>0){
+      moraHtml+='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:rgba(79,70,229,.08);border:1px solid rgba(79,70,229,.35);border-radius:var(--r);padding:10px 14px;margin-bottom:1rem">'
+        +'<div style="font-size:12px;color:var(--text2)">🔴 <b>Intereses del mes</b> (de días) pendientes: <b style="color:#818cf8">'+fmtPeso(totalIntMesPend)+'</b> — '+intMesPend.length+' cuota'+(intMesPend.length>1?'s':'')+'</div>'
+        +'<button onclick="pasarTodosInteresesMes()" style="background:#4f46e5;color:#fff;border:none;border-radius:var(--r);padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">➡️ Pasar TODOS a Extras</button>'
+        +'</div>';
+    }
 
     moraHtml+='<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px">PESOS</div>';
     moraHtml+='<div style="margin-bottom:4px">';
@@ -7343,6 +7353,31 @@ function resetMora(){
   });
 }
 
+function pasarTodosInteresesMes(){
+  confirmarConClave(()=>{
+    const mora=loadMora();
+    const items=mora.filter(x=>x.esInteresMes&&x.interes&&!x.interesEnExtras);
+    if(!items.length){alert('No hay intereses del mes pendientes de pasar a Extras.');return;}
+    const total=items.reduce((s,p)=>s+(p.interes||0),0);
+    const extras=loadExtras();
+    // Un solo registro con el total, y detalle de cuántos lotes
+    const lotes=[...new Set(items.map(p=>formatLoteTag(p.mz,p.lote)))];
+    extras.push({
+      id:Date.now().toString(),
+      tipo:'ingreso',
+      desc:'Intereses del mes ('+items.length+' cuota'+(items.length>1?'s':'')+' — '+lotes.length+' lote'+(lotes.length>1?'s':'')+')',
+      monto:total,
+      fecha:new Date().toLocaleDateString('es-AR'),
+      ts:new Date().toISOString()
+    });
+    saveExtras(extras);
+    items.forEach(p=>{p.interesEnExtras=true;});
+    saveMora(mora);
+    actualizarBadgeMora();
+    renderBalances('mora');
+    alert('✓ '+fmtPeso(total)+' de intereses del mes ('+items.length+' cuota'+(items.length>1?'s':'')+') enviados a Extras.');
+  });
+}
 function pasarInteresesGrupo(id){
   confirmarConClave(()=>{
     const mora=loadMora();
