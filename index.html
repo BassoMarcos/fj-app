@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0549';
+  datos['_version']='v1.0550';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3133,7 +3133,7 @@ function fcConfirmar(){
     const bal=loadBalances();
     const cuotaPura=x.totalCuota-(x.totalAdel||0)-(x.refiMonto||0); // cuota de lista sin adelantos ni refi (la refi va a mora)
     const efectivoPuro=(e-v)-(x.totalAdel||0)-(x.refiMonto||0); // efectivo de la cuota, sin adelanto ni refi
-    (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:cuotaPura,adelanto:(x.totalAdel||0),refi:(x.refiMonto||0),transferido:t,transfTotal:!!fullTransf,entrego:e,vuelto:v,efectivo:efectivoPuro,dif,ts,fecha});
+    (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:cuotaPura,adelanto:(x.totalAdel||0),refi:(x.refiMonto||0),moraInteres:(x.interes||0),transferido:t,transfTotal:!!fullTransf,entrego:e,vuelto:v,efectivo:efectivoPuro,dif,ts,fecha});
     saveBalances(bal);
   }
   // Confirmación final en UNA escritura: reasegurar pago marcado + SAF/SEC
@@ -6115,7 +6115,7 @@ function renderBalances(seccion){
           <span style="font-weight:800">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.efectivo||0)} <span style="font-weight:400;color:var(--text2);font-size:11px">efectivo</span></span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-top:2px">
-          <span>Cuota ${fmtPeso(p.cuotaLista||0)}${(p.adelanto||0)>0?' <span style="color:var(--blue)">+ adelanto '+fmtPeso(p.adelanto)+'</span>':''} · entregó ${fmtPeso(p.entrego||0)}${motivo.length?' · '+motivo.join(' · '):''}</span>
+          <span>Cuota ${fmtPeso(p.cuotaLista||0)}${(p.adelanto||0)>0?' <span style="color:var(--blue)">+ adelanto '+fmtPeso(p.adelanto)+'</span>':''}${(p.moraInteres||0)>0?' <span style="color:var(--red)">+ mora '+fmtPeso(p.moraInteres)+' (a Caja de Mora)</span>':''} · entregó ${fmtPeso(p.entrego||0)}${motivo.length?' · '+motivo.join(' · '):''}</span>
           ${difLabel?`<span style="font-weight:800;color:${dif>0?'var(--green)':'var(--red)'}">${marcar?'⚠️ ':''}${difLabel}</span>`:'<span style="color:var(--green)">✓ justo</span>'}
         </div>
       </div>`;
