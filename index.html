@@ -819,7 +819,6 @@ tr:hover td{background:var(--bg)}
 
     <input type="hidden" id="e-saldo-tipo" value="favor">
     <input type="hidden" id="e-saldo-monto" value="0">
-    <input type="hidden" id="e-saldo" value="0">
 
     <!-- Refinanciación (solo edición, siempre editable) -->
     <div class="field" id="e-refi-wrap" style="display:none">
@@ -1245,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0537';
+  datos['_version']='v1.0538';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6079,6 +6078,11 @@ function renderBalances(seccion){
     const totCuotaU=cfU0.reduce((s,p)=>s+(p.cuotaLista||0),0);
     const totAdelP=cfP0.reduce((s,p)=>s+(p.adelanto||0),0);
     const pendTransfP=cfP0.reduce((s,p)=>s+Math.max(0,(p.transferido||0)-(p.rellenadoMonto||0)),0);
+    // Conciliación CP vs Físico (para entender la diferencia de un vistazo)
+    const totTransfP=cfP0.reduce((s,p)=>s+(p.transferido||0),0);
+    const totSafP=cfP0.reduce((s,p)=>s+Math.max(0,p.dif||0),0);  // pagaron de más (sobra)
+    const totSecP=cfP0.reduce((s,p)=>s+Math.max(0,-(p.dif||0)),0); // pagaron de menos (falta)
+    const totRellenoP=cfP0.reduce((s,p)=>s+(p.rellenadoMonto||0),0); // transf ya repuesta con físico
     const row=(p)=>{
       const dif=p.dif||0;
       const marcar=Math.abs(dif)>1000;
@@ -6173,6 +6177,24 @@ function renderBalances(seccion){
           <div style="font-size:18px;font-weight:800;color:${pendTransfP?'#d97706':'var(--text3)'}">${fmtPeso(pendTransfP)}</div>
         </div>
       </div>
+      ${(()=>{
+        // Conciliación: por qué CP ≠ Físico. CP = Físico + Transferencias − SAF + SEC
+        const dif=totCuotaP-totEfP;
+        if(Math.abs(dif)<1 && !totTransfP && !totSafP && !totSecP) return '';
+        const fila=(lbl,val,col,signo)=>`<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text2)">${lbl}</span><span style="font-weight:700;color:${col}">${signo}${fmtPeso(val)}</span></div>`;
+        return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:16px">
+          <div style="font-size:12px;font-weight:800;margin-bottom:6px">🔎 ¿Por qué la Cuota Pura no coincide con el efectivo?</div>
+          ${fila('Cuota Pura (lo que se cobró en cuotas)',totCuotaP,'var(--text)','')}
+          ${totTransfP?fila('− Pagado por transferencia (no es físico)',totTransfP,'#d97706','−'):''}
+          ${totSafP?fila('+ SAF (pagaron de más, sobra en caja)',totSafP,'var(--green)','+'):''}
+          ${totSecP?fila('− SEC (pagaron de menos, falta)',totSecP,'var(--red)','−'):''}
+          <div style="border-top:1px dashed var(--border);margin-top:6px;padding-top:6px">
+            ${fila('= Debería haber en efectivo físico',totCuotaP-totTransfP+totSafP-totSecP,'#a78bfa','')}
+            ${fila('Efectivo físico real',totEfP,'#a78bfa','')}
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:6px">La transferencia entra por su propia caja (no en efectivo). Cuando se rellena con plata física, pasa a ser efectivo.</div>
+        </div>`;
+      })()}
       ${cf.length?bloquesFecha:'<div style="padding:1rem;font-size:13px;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:var(--r)">Sin registros. Los cobros con el formulario de entregó/vuelto aparecen acá.</div>'}
       <div style="font-size:11px;color:var(--text2);margin-top:8px">💡 Cada fecha se puede limpiar por separado. Al limpiar no queda registro (el SAF/SEC ya está en el saldo de cada cliente). Los totales de arriba son de toda la caja.</div>`;
   }
