@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0552';
+  datos['_version']='v1.0553';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11003,52 +11003,9 @@ function updateMoraColab(el){
 function cobrarConMoraColab(btn){
   const id=btn.dataset.mid;
   const interes=parseFloat(btn.dataset.interes)||0;
-  const cuota=parseFloat(btn.dataset.cuota)||0;
-  const cur=btn.dataset.cur||'';
-  const total=cuota+interes;
-  // Mostrar panel de confirmación con desglose, igual que admin
-  // Guardar en estado global para usar en callbacks
-  _moraPanelState={
-    clienteId:id,
-    seleccionadas:[{clienteId:id,monto:cuota,interes,total}],
-    totalMonto:cuota,
-    totalInteresAuto:interes,
-    cur,
-    _esColab:true
-  };
-  const pct=cuota>0?Math.round(interes/cuota*100):0;
-  const c=loadData().find(x=>x.id===id)||{};
-  let ov=document.getElementById('mora-panel-overlay');
-  if(ov) ov.remove();
-  ov=document.createElement('div');
-  ov.id='mora-panel-overlay';
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
-  ov.onclick=function(e){if(e.target===ov)ov.remove();};
-  ov.innerHTML=
-    '<div style="background:var(--surface);border-radius:12px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">'+
-    '<div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">'+
-    '<div style="font-size:16px;font-weight:800">💰 Confirmar cobro</div>'+
-    '<button onclick="cerrarMoraPanel()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>'+
-    '</div>'+
-    '<div style="padding:16px">'+
-    '<div style="background:var(--card);border:2px solid #fed7aa;border-radius:var(--r);padding:12px;margin-bottom:10px">'+
-    '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span>Cuota</span><span style="font-weight:700">'+fmtCur(cuota,cur)+'</span></div>'+
-    '<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--red)">Interés mora</span><span id="mora-adm-panel-interes" style="color:var(--red);font-weight:700">+ '+fmtCur(interes,cur)+'</span></div>'+
-    '<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;border-top:1px solid #fed7aa;padding-top:6px;margin-top:4px"><span>Total</span><span id="mora-adm-panel-total" style="color:var(--acc3)">'+fmtCur(total,cur)+'</span></div>'+
-    '</div>'+
-    '<button onclick="admConfirmarMoraPanelColab()" style="width:100%;background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">✓ Cobrar</button>'+
-    '<button onclick="admToggleMoraPanel()" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente</button>'+
-    '<div id="mora-adm-panel-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'+
-    '<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'+
-    '<div style="display:flex;gap:6px;margin-bottom:8px">'+
-    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanel()"> ⚡ Auto ('+pct+'%)</label>'+
-    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanel()"> % Porc.</label>'+
-    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanel()"> $ Monto</label>'+
-    '</div>'+
-    '<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanel()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'+
-    '<button onclick="admConfirmarMoraPanelColab()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'+
-    '</div></div></div>';
-  document.body.appendChild(ov);
+  // Usar el MISMO formulario que admin: cuota pura -> caja del dia/fisica, interes -> mora.
+  // El formulario maneja efectivo/vuelto y el desglose. ctx colab para el bloqueo.
+  abrirFormCobro(id,{ctx:'colab',interes:interes});
 }
 
 function admConfirmarMoraPanelColab(){
