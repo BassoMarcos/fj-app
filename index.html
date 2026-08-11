@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0542';
+  datos['_version']='v1.0543';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6107,9 +6107,11 @@ function renderBalances(seccion){
       if(p.transferido) motivo.push('transf. '+fmtPeso(p.transferido)+((p.rellenadoMonto||0)>0?' (rellenada '+fmtPeso(p.rellenadoMonto)+')':''));
       if(p.vuelto) motivo.push('vuelto '+fmtPeso(p.vuelto));
       const hora=p.ts?new Date(p.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
-      return `<div style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px;${marcar?'background:'+(dif>0?'var(--green-bg)':'var(--red-bg)')+';border-left:4px solid '+(dif>0?'var(--green)':'var(--red)')+';':''}">
+      const esParcial=(p.transferido||0)>0 && !p.transfTotal;
+      const badgeTransf=esParcial?' <span style="font-size:9px;background:#7c3aed;color:#fff;padding:1px 6px;border-radius:3px;vertical-align:middle;font-weight:700">🏦 transf. parcial '+fmtPeso(p.transferido)+'</span>':'';
+      return `<div style="padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px;${esParcial?'border-left:4px solid #7c3aed;':marcar?'background:'+(dif>0?'var(--green-bg)':'var(--red-bg)')+';border-left:4px solid '+(dif>0?'var(--green)':'var(--red)')+';':''}">
         <div style="display:flex;justify-content:space-between">
-          <span style="font-weight:600">${formatLoteTag(p.mz,p.lote)} — ${p.titular||''} ${hora?'<span style=\"font-size:10px;color:var(--text3);font-weight:400\">'+hora+'</span>':''}</span>
+          <span style="font-weight:600">${formatLoteTag(p.mz,p.lote)} — ${p.titular||''} ${hora?'<span style=\"font-size:10px;color:var(--text3);font-weight:400\">'+hora+'</span>':''}${badgeTransf}</span>
           <span style="font-weight:800">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.efectivo||0)} <span style="font-weight:400;color:var(--text2);font-size:11px">efectivo</span></span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-top:2px">
