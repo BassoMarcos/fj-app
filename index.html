@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0541';
+  datos['_version']='v1.0542';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6004,6 +6004,10 @@ function renderBalances(seccion){
           ${abTransf.length?`<button onclick="cerrarCajaDelDia('TRANSF')" style="background:#7c3aed;color:#fff;border:none;padding:8px 14px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">Cerrar Transferencias</button>`:''}
           ${abierto.length?`<button onclick="resetCajaAbierta()" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:6px 10px;border-radius:var(--r);font-size:12px;cursor:pointer">🗑</button>`:''}
         </div>
+      </div>
+
+      <div style="font-size:11px;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;margin-bottom:12px">
+        ℹ️ <b>Pesos</b> y <b>USD</b> incluyen las cuotas en efectivo y las de <b>transferencia parcial</b> (la cuota completa). Las cuotas <b>100% transferencia</b> van aparte, en la sección Transferencias.
       </div>
 
       <!-- PESOS -->
