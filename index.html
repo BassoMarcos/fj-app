@@ -1246,7 +1246,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0564';
+  datos['_version']='v1.0565';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6657,7 +6657,11 @@ function renderBalances(seccion){
     el.innerHTML=moraHtml;
 
   } else if(seccion==='extras'){
-    const extras=loadExtras();
+    const extrasAll=loadExtras();
+    const verRendidos=!!window._extrasVerRendidos;
+    // La lista principal muestra solo los NO rendidos; los rendidos se ven aparte
+    const extras=extrasAll.filter(e=>!e.rendido);
+    const rendidos=extrasAll.filter(e=>e.rendido);
     const ingresos=extras.filter(e=>e.tipo==='ingreso');
     const gastos=extras.filter(e=>e.tipo==='gasto');
     const totalIng=ingresos.reduce((s,e)=>s+e.monto,0);
@@ -6683,9 +6687,11 @@ function renderBalances(seccion){
           +'</div></div>';
       }
       return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 1rem;border-bottom:1px solid var(--border);font-size:13px">'
+        +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<input type="checkbox" data-exid="'+e.id+'" class="extra-chk" style="width:16px;height:16px;cursor:pointer" onchange="toggleExtraSel(\''+e.id+'\')" '+(window._extraSel&&window._extraSel[e.id]?'checked':'')+'>'
         +'<div><span style="background:'+(isIng?'#dcfce7':'#fee2e2')+';color:'+(isIng?'#16a34a':'#dc2626')+';padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700;margin-right:6px">'+(isIng?'💰':'📤')+'</span>'
         +'<span style="font-weight:600">'+e.desc+'</span>'
-        +'<div style="font-size:11px;color:var(--text2);margin-top:2px">'+fmtDate(e.fecha||e.ts||'')+'</div></div>'
+        +'<div style="font-size:11px;color:var(--text2);margin-top:2px">'+fmtDate(e.fecha||e.ts||'')+'</div></div></div>'
         +'<div style="text-align:right"><div style="font-weight:700;color:'+(isIng?'#16a34a':'#dc2626')+'">'+(isIng?'+':'-')+fmtPeso(e.monto)+'</div>'
         +'<button onclick="eliminarExtra(\''+e.id+'\')" style="background:none;border:none;color:#94a3b8;font-size:11px;cursor:pointer;padding:0;margin-top:2px">✕ eliminar</button></div></div>';
     }).join(''):'<div style="padding:1rem;font-size:13px;color:var(--text2)">Sin registros aún</div>';
@@ -6743,7 +6749,10 @@ function renderBalances(seccion){
       +'<button onclick="toggleVistaColumnasExtras()" id="btn-cols-extras" style="background:'+(window._extrasColView?'var(--brand)':'none')+';border:1.5px solid var(--border);border-radius:var(--r);padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;color:'+(window._extrasColView?'#fff':'var(--text2)')+'">⇄ Columnas</button>'
       +'<div style="flex:1;display:flex;justify-content:flex-end">'
       +(extras.length?'<button onclick="limpiarExtras()" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);padding:3px 8px;border-radius:var(--r);font-size:11px;cursor:pointer">🗑 Limpiar</button>':'')
-      +'</div></div>'+(window._extrasColView?colsHtml:histHtml+'</div>');
+      +'</div></div>'
+      +((!window._extrasColView&&!window._extrasEditMode&&extras.length)?'<div style="padding:8px 1rem;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--hov)"><span style="font-size:11px;color:var(--text2)">Tildá los que quieras separar y marcalos como rendidos:</span><button onclick="marcarExtrasRendidos()" style="background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer">✓ Marcar rendidos</button></div>':'')
+      +(window._extrasColView?colsHtml:histHtml+'</div>')
+      +(rendidos.length?'<div style="margin-top:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden"><div onclick="window._extrasVerRendidos=!window._extrasVerRendidos;renderBalances(\'extras\')" style="padding:.875rem 1rem;font-weight:700;border-bottom:'+(verRendidos?'1px solid var(--border)':'none')+';cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span>'+(verRendidos?'▼':'▶')+' 📁 Rendidos ('+rendidos.length+')</span><span style="font-size:11px;color:var(--text2)">tocá para '+(verRendidos?'ocultar':'ver')+'</span></div>'+(verRendidos?rendidos.slice().reverse().map(e=>{const isIng=e.tipo==='ingreso';return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 1rem;border-bottom:1px solid var(--border);font-size:12px;opacity:.8"><div><span style="background:'+(isIng?'#dcfce7':'#fee2e2')+';color:'+(isIng?'#16a34a':'#dc2626')+';padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700;margin-right:6px">'+(isIng?'💰':'📤')+'</span><span style="font-weight:600">'+e.desc+'</span> <span style="font-size:10px;color:var(--text2)">'+fmtDate(e.fecha||e.ts||'')+'</span></div><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;color:'+(isIng?'#16a34a':'#dc2626')+'">'+(isIng?'+':'-')+fmtPeso(e.monto)+'</span><button onclick="desmarcarExtraRendido(\''+e.id+'\')" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer">↩ Reactivar</button></div></div>';}).join(''):'')+'</div>':'');
 
     window._extraTipo = window._extraTipo || 'ingreso';
     setExtraTipo(window._extraTipo);
@@ -7345,6 +7354,27 @@ function editarExtraField(input){
   saveExtras(extras);
 }
 
+function toggleExtraSel(id){
+  window._extraSel=window._extraSel||{};
+  window._extraSel[id]=!window._extraSel[id];
+}
+function marcarExtrasRendidos(){
+  const sel=window._extraSel||{};
+  const ids=Object.keys(sel).filter(k=>sel[k]);
+  if(!ids.length){alert('Tildá primero los ingresos/egresos que querés marcar como rendidos.');return;}
+  const extras=loadExtras();
+  let n=0;
+  extras.forEach(e=>{ if(ids.includes(e.id)){ e.rendido=true; e.rendidoTs=new Date().toISOString(); n++; } });
+  saveExtras(extras);
+  window._extraSel={};
+  renderBalances('extras');
+  alert('✓ '+n+' registro(s) marcados como rendidos. Quedan guardados en la carpeta "Rendidos".');
+}
+function desmarcarExtraRendido(id){
+  const extras=loadExtras();
+  const e=extras.find(x=>x.id===id);
+  if(e){ delete e.rendido; delete e.rendidoTs; saveExtras(extras); renderBalances('extras'); }
+}
 function eliminarExtra(id){
   confirmarConClave(()=>{
     const extras=loadExtras().filter(e=>e.id!==id);
