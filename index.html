@@ -1139,12 +1139,13 @@ function registrarPagoEnCaja(id,monto,ts){
   const detUSD=(moneda==='USD'&&window._cobroDetalleUSD)?window._cobroDetalleUSD:null;
   const extraUSD=detUSD?{cuotaUSD:detUSD.cuota,entregoUSD:detUSD.entrego,difUSD:detUSD.dif}:{};
   const adelInfo=(window._cobroAdelanto>0)?{adelanto:window._cobroAdelanto}:{};
+  const cuotaNum=(window._cobroCuotaNum!==undefined&&window._cobroCuotaNum!==null)?window._cobroCuotaNum:(c?c.ca:null);
   if(esAgrimensor(id)){
     // Anti-duplicado: mirar solo pagos de CUOTA normal (no los de mora, que conviven con la cuota del mes)
     if(!(bal.agrimensores||[]).some(p=>p.id===id && !p.esMora))
-      (bal.agrimensores=bal.agrimensores||[]).push({id,monto,ts,fecha,moneda,transf,...extraUSD,...adelInfo});
+      (bal.agrimensores=bal.agrimensores||[]).push({id,monto,ts,fecha,moneda,transf,cuotaNum,...extraUSD,...adelInfo});
   } else {
-    (bal.abierto=bal.abierto||[]).push({id,monto,ts,fecha,moneda,transf,...extraUSD,...adelInfo});
+    (bal.abierto=bal.abierto||[]).push({id,monto,ts,fecha,moneda,transf,cuotaNum,...extraUSD,...adelInfo});
   }
   saveBalances(bal);
   window._cobroDetalleUSD=null; // consumir
@@ -1245,7 +1246,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0562';
+  datos['_version']='v1.0563';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3134,7 +3135,8 @@ function fcConfirmar(){
   if(c.moneda==='USD'){ window._cobroDetalleUSD={cuota:x.totalCuota,entrego:e,dif:dif}; }
   // Adelanto para mostrarlo en caja del día (no suma al total)
   window._cobroAdelanto=(x.totalAdel||0);
-  try{ marcarPago(id, x.interes||0); } finally { window._cobroTransferencia=false; }
+  window._cobroCuotaNum=c.ca; // número de cuota que se está pagando (antes de avanzar)
+  try{ marcarPago(id, x.interes||0); } finally { window._cobroTransferencia=false; window._cobroCuotaNum=null; }
   // Refinanciación → Caja de Mora (extra, con su descripción "cuota X de Y")
   if(x.refiMonto>0){
     try{ registrarRefiEnMora(c, x.refiMonto, x.refiNumero, x.refiTotal, ts, fecha); }catch(e){ console.warn('refi mora error',e); }
@@ -6781,7 +6783,7 @@ function renderBalances(seccion){
         '<div style="font-size:10px;color:var(--text3);margin-top:1px">Cuota USD '+fmtPeso(p.cuotaUSD||0)+' · entregó USD '+fmtPeso(p.entregoUSD||0)+((p.difUSD||0)!==0?' · <span style="color:'+((p.difUSD||0)>0?'var(--green)':'var(--red)')+'">'+((p.difUSD||0)>0?'SAF ':'SEC ')+'USD '+fmtPeso(Math.abs(p.difUSD||0))+'</span>':' · ✓ justo')+'</div>':'';
       return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
         <div style="display:flex;justify-content:space-between">
-          <span>${formatLoteTag(c.mz,c.lote)} — ${c.titular}${hora?' <span style="font-size:10px;color:var(--text3)">'+hora+'</span>':''}</span>
+          <span>${formatLoteTag(c.mz,c.lote)} — ${c.titular}${(p.cuotaNum!==undefined&&p.cuotaNum!==null)?' <span style="font-size:10px;color:var(--acc2);font-weight:700">cuota '+p.cuotaNum+'</span>':''}${hora?' <span style="font-size:10px;color:var(--text3)">'+hora+'</span>':''}</span>
           <span style="font-weight:600">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.monto||0)}</span>
         </div>${detU}
       </div>`;
