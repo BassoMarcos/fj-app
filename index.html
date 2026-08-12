@@ -1245,7 +1245,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0561';
+  datos['_version']='v1.0562';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6750,6 +6750,10 @@ function renderBalances(seccion){
     const totalAgr=agrDia.reduce((s,p)=>s+(p.monto||0),0);
     const totalAgrP=agrPesos.reduce((s,p)=>s+(p.monto||0),0);
     const totalAgrU=agrUSD.reduce((s,p)=>s+(p.monto||0),0);
+    // Totales USD: entregado real y SAF/SEC (los dólares no son redondos, hay que rendir con esto)
+    const totalAgrUEntreg=agrUSD.reduce((s,p)=>s+(p.entregoUSD!==undefined?p.entregoUSD:(p.monto||0)),0);
+    const totalAgrUSaf=agrUSD.reduce((s,p)=>s+Math.max(0,p.difUSD||0),0);
+    const totalAgrUSec=agrUSD.reduce((s,p)=>s+Math.max(0,-(p.difUSD||0)),0);
     const agrAdelantos=loadAdelantos().filter(a=>{const c=data.find(x=>x.id===a.id);return c&&c.agrimensor;});
     const agrPend=agrAdelantos.filter(a=>a.estado==='pendiente');
     const agrApro=agrAdelantos.filter(a=>a.estado==='aprobado');
@@ -6856,7 +6860,10 @@ function renderBalances(seccion){
 
       <!-- Caja dolares -->
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden">
-        <div style="padding:.875rem 1rem;font-weight:700;border-bottom:1px solid var(--border)">💵 Caja del día — Dólares</div>
+        <div style="padding:.875rem 1rem;font-weight:700;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+          <span>💵 Caja del día — Dólares</span>
+          ${agrUSD.length?`<span style="font-size:11px;font-weight:600;color:var(--text2)">Cuota pura: <b>USD ${fmtPeso(totalAgrU)}</b> · Entregó: <b style="color:var(--green)">USD ${fmtPeso(totalAgrUEntreg)}</b>${totalAgrUSaf?' · SAF <b style="color:var(--green)">USD '+fmtPeso(totalAgrUSaf)+'</b>':''}${totalAgrUSec?' · SEC <b style="color:var(--red)">USD '+fmtPeso(totalAgrUSec)+'</b>':''}</span>`:''}
+        </div>
         <div style="padding:1rem">${renderPagos(agrUSD)}</div>
       </div>
 
