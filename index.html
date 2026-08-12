@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0559';
+  datos['_version']='v1.0560';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6270,7 +6270,7 @@ function renderBalances(seccion){
           <div style="font-size:10px;color:var(--text3);margin-top:6px">El efectivo físico es lo que entró en la mano (cuota + interés + lo que pagaron de más). El SAF/SEC tiene su propia cuenta. La transferencia sin rellenar todavía no es efectivo.</div>
         </div>`;
       })()}
-      ${cf.length?bloquesFecha:'<div style="padding:1rem;font-size:13px;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:var(--r)">Sin registros. Los cobros con el formulario de entregó/vuelto aparecen acá.</div>'}
+      ${cfVisible.length?bloquesFecha:'<div style="padding:1rem;font-size:13px;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:var(--r)">Sin registros. Los cobros con el formulario de entregó/vuelto aparecen acá.</div>'}
       <div style="font-size:11px;color:var(--text2);margin-top:8px">💡 Cada fecha se puede limpiar por separado. Al limpiar no queda registro (el SAF/SEC ya está en el saldo de cada cliente). Los totales de arriba son de toda la caja.${cfTransfTotal.length?' <span style="color:#d97706">Se excluyeron '+cfTransfTotal.length+' cuota(s) 100% transferencia (están en Cierres de Transferencias).</span>':''}</div>`;
   }
 
