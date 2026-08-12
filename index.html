@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0555';
+  datos['_version']='v1.0556';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3149,8 +3149,10 @@ function fcConfirmar(){
   }
   {
     const bal=loadBalances();
-    const cuotaPura=x.totalCuota-(x.totalAdel||0)-(x.refiMonto||0)-(x.interes||0); // cuota de lista sin adelantos, refi ni interés de mora (todos van aparte)
-    const efectivoPuro=(e-v)-(x.totalAdel||0)-(x.refiMonto||0)-(x.interes||0); // efectivo de la cuota, sin adelanto, refi ni interés (el interés va a mora)
+    // CP = cuota de lista pura (base + escalón), EXACTAMENTE la misma que registra la Caja del día (_mc.total).
+    // Así la CP de Caja Física y la Caja del día siempre coinciden. Adelanto, refi e interés van aparte.
+    const cuotaPura=montoCobrable(c).total;
+    const efectivoPuro=(e-v)-(x.totalAdel||0)-(x.refiMonto||0)-(x.interes||0); // efectivo entregado para la cuota (sin adelanto, refi ni interés)
     (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:cuotaPura,adelanto:(x.totalAdel||0),refi:(x.refiMonto||0),moraInteres:(x.interes||0),transferido:t,transfTotal:!!fullTransf,entrego:e,vuelto:v,efectivo:efectivoPuro,dif,ts,fecha});
     saveBalances(bal);
   }
