@@ -1246,7 +1246,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0563';
+  datos['_version']='v1.0564';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5587,7 +5587,7 @@ function renderCierrePagosLista(ts,orden){
     const c=data.find(x=>x.id===p.id)||{mz:'?',lote:'?',titular:p.id};
     const fh=p.ts?new Date(p.ts).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' '+new Date(p.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
     const detU=(p.moneda==='USD'&&p.entregoUSD!==undefined)?
-      '<div style="font-size:10px;color:var(--text3);margin-top:1px">Cuota USD '+fmtPeso(p.cuotaUSD||0)+' · entregó USD '+fmtPeso(p.entregoUSD||0)+((p.difUSD||0)!==0?' · <span style="color:'+((p.difUSD||0)>0?'var(--green)':'var(--red)')+'">'+((p.difUSD||0)>0?'SAF ':'SEC ')+'USD '+fmtPeso(Math.abs(p.difUSD||0))+'</span>':' · ✓ justo')+'</div>':'';
+      '<div style="font-size:11px;color:var(--text3);margin-top:2px">Cuota USD '+fmtPeso(p.cuotaUSD||0)+' · <span style="color:var(--green);font-weight:700">💵 efectivo USD '+fmtPeso(p.entregoUSD||0)+'</span>'+((p.difUSD||0)!==0?' · <span style="color:'+((p.difUSD||0)>0?'var(--green)':'var(--red)')+'">'+((p.difUSD||0)>0?'SAF ':'SEC ')+'USD '+fmtPeso(Math.abs(p.difUSD||0))+'</span>':' · ✓ justo')+'</div>':'';
     return `<div style="padding:3px 0;border-bottom:1px dashed var(--border);font-size:12px">
       <div style="display:flex;justify-content:space-between">
         <span>${formatLoteTag(c.mz,c.lote)} — ${(c.titular||'').slice(0,30)} <span style="font-size:10px;color:var(--text3)">${fh}</span>${p.transf?' <span style="color:#a78bfa;font-size:10px;font-weight:700">🏦</span>':''}</span>
@@ -6294,6 +6294,8 @@ function renderBalances(seccion){
       const est=cierreEstados[globalIdx]||{};
       const hora=ci.ts?new Date(ci.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
       const isUSD=ci.moneda==='USD';const t=ci.total||0;
+      // Total efectivo entregado (USD) — para rendir con lo que realmente entró en la mano
+      const efectivoUSD=isUSD?(ci.pagos||[]).reduce((s,p)=>s+(p.entregoUSD!==undefined?p.entregoUSD:(p.monto||0)),0):0;
       const pA=Math.round(t*dp/100);const pB=Math.round(t*dp2/100);
       const btnA=est.guardado
         ?`<button onclick="setCierreEstado(${globalIdx},'guardado',false)" style="background:#16a34a;color:#fff;border:none;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">${dp}% ✓ Guardado</button>`
@@ -6307,7 +6309,10 @@ function renderBalances(seccion){
             <div style="font-weight:600">${ci.fecha||''} ${hora?`<span style="color:var(--text2);font-weight:400">${hora}</span>`:''} <span style="font-size:10px;color:var(--acc2)">☑ tocá para seleccionar</span></div>
             <div style="font-size:11px;color:var(--text2)">${(ci.pagos||[]).length} pago${(ci.pagos||[]).length!==1?'s':''}</div>
           </div>
-          <div style="font-weight:700">${isUSD?'USD ':''} ${fmtPeso(t)}</div>
+          <div style="text-align:right">
+            <div style="font-weight:700">${isUSD?'USD ':''} ${fmtPeso(t)}</div>
+            ${isUSD&&efectivoUSD?`<div style="font-size:11px;color:var(--green);font-weight:700">💵 efectivo USD ${fmtPeso(efectivoUSD)}</div>`:''}
+          </div>
         </div>
         <div style="display:flex;gap:4px;margin-top:3px;align-items:center;flex-wrap:wrap">
           <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:4px;padding:2px 8px;display:flex;gap:6px;align-items:center">
