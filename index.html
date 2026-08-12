@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0557';
+  datos['_version']='v1.0558';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3152,9 +3152,10 @@ function fcConfirmar(){
     // CP = cuota de lista pura (base + escalón), EXACTAMENTE la misma que registra la Caja del día (_mc.total).
     // Así la CP de Caja Física y la Caja del día siempre coinciden. Adelanto, refi e interés van aparte.
     const cuotaPura=montoCobrable(c).total;
-    // Efectivo físico = la plata REAL que entró en la mano por la cuota (incluye el interés de mora,
-    // porque el cliente lo pagó en efectivo). Solo se restan adelanto y refi (van a sus propias cajas).
-    const efectivoPuro=(e-v)-(x.totalAdel||0)-(x.refiMonto||0);
+    // Efectivo físico = lo que se ingresó en el campo de efectivo (la plata que tenés en la mano).
+    // NO se resta el vuelto (eso es SAF, tiene su propia cuenta) ni el interés (también entró en efectivo).
+    // Solo se restan adelanto y refi, que son plata de otras cajas.
+    const efectivoPuro=e-(x.totalAdel||0)-(x.refiMonto||0);
     (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:cuotaPura,adelanto:(x.totalAdel||0),refi:(x.refiMonto||0),moraInteres:(x.interes||0),transferido:t,transfTotal:!!fullTransf,entrego:e,vuelto:v,efectivo:efectivoPuro,dif,ts,fecha});
     saveBalances(bal);
   }
@@ -6240,23 +6241,30 @@ function renderBalances(seccion){
           <div style="font-size:11px;color:var(--text2)">TRANSF. SIN RELLENAR</div>
           <div style="font-size:18px;font-weight:800;color:${pendTransfP?'#d97706':'var(--text3)'}">${fmtPeso(pendTransfP)}</div>
         </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center" title="SAF: pagaron de más (a favor del cliente). SEC: pagaron de menos (te deben). Tienen su propia cuenta, aparte del efectivo.">
+          <div style="font-size:11px;color:var(--text2)">SAF / SEC del día</div>
+          <div style="font-size:14px;font-weight:800;color:var(--green)">SAF ${fmtPeso(totSafP)}</div>
+          <div style="font-size:14px;font-weight:800;color:var(--red)">SEC ${fmtPeso(totSecP)}</div>
+        </div>
       </div>
       ${(()=>{
         // Conciliación: CP + interés (que también entró en efectivo) − transferencia sin rellenar ± SAF/SEC = Efectivo
         const dif=(totCuotaP+totMoraIntP)-totEfP;
-        if(Math.abs(dif)<1 && !pendTransfP && !totMoraIntP) return '';
+        if(Math.abs(dif)<1 && !pendTransfP && !totMoraIntP && !totSafP && !totSecP) return '';
         const fila=(lbl,val,col,signo)=>`<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--text2)">${lbl}</span><span style="font-weight:700;color:${col}">${signo}${fmtPeso(val)}</span></div>`;
         return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:16px">
           <div style="font-size:12px;font-weight:800;margin-bottom:6px">🔎 ¿Por qué la Cuota Pura no coincide con el efectivo?</div>
           ${fila('Cuota Pura (lo que se cobró en cuotas)',totCuotaP,'var(--text)','')}
           ${totMoraIntP?fila('+ Interés de mora (se cobró en efectivo)',totMoraIntP,'var(--red)','+'):''}
+          ${totSafP?fila('+ SAF (pagaron de más, está en la caja)',totSafP,'var(--green)','+'):''}
+          ${totSecP?fila('− SEC (pagaron de menos, te deben)',totSecP,'var(--red)','−'):''}
           ${pendTransfP?fila('− Transferencia sin rellenar (todavía no es físico)',pendTransfP,'#d97706','−'):''}
           ${totRellenoP?fila('(transferencia ya rellenada con efectivo: '+fmtPeso(totRellenoP)+')',0,'var(--text3)',''):''}
           <div style="border-top:1px dashed var(--border);margin-top:6px;padding-top:6px">
-            ${fila('= Debería haber en efectivo físico',totCuotaP+totMoraIntP-pendTransfP,'#a78bfa','')}
+            ${fila('= Debería haber en efectivo físico',totCuotaP+totMoraIntP+totSafP-totSecP-pendTransfP,'#a78bfa','')}
             ${fila('Efectivo físico real',totEfP,'#a78bfa','')}
           </div>
-          <div style="font-size:10px;color:var(--text3);margin-top:6px">El interés de mora se cobró en efectivo, así que está en la caja física (se separa a la Caja de Mora solo como dato). La transferencia sin rellenar todavía no es efectivo. Pequeñas diferencias pueden ser por SAF/SEC.</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:6px">El efectivo físico es lo que entró en la mano (cuota + interés + lo que pagaron de más). El SAF/SEC tiene su propia cuenta. La transferencia sin rellenar todavía no es efectivo.</div>
         </div>`;
       })()}
       ${cf.length?bloquesFecha:'<div style="padding:1rem;font-size:13px;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:var(--r)">Sin registros. Los cobros con el formulario de entregó/vuelto aparecen acá.</div>'}
