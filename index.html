@@ -1244,7 +1244,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0558';
+  datos['_version']='v1.0559';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6241,10 +6241,13 @@ function renderBalances(seccion){
           <div style="font-size:11px;color:var(--text2)">TRANSF. SIN RELLENAR</div>
           <div style="font-size:18px;font-weight:800;color:${pendTransfP?'#d97706':'var(--text3)'}">${fmtPeso(pendTransfP)}</div>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center" title="SAF: pagaron de más (a favor del cliente). SEC: pagaron de menos (te deben). Tienen su propia cuenta, aparte del efectivo.">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center" title="SAF: pagaron de más. SEC: pagaron de menos. Tienen su propia cuenta, aparte del efectivo.">
           <div style="font-size:11px;color:var(--text2)">SAF / SEC del día</div>
-          <div style="font-size:14px;font-weight:800;color:var(--green)">SAF ${fmtPeso(totSafP)}</div>
-          <div style="font-size:14px;font-weight:800;color:var(--red)">SEC ${fmtPeso(totSecP)}</div>
+          ${window._cfVerSafSec
+            ? `<div style="font-size:14px;font-weight:800;color:var(--green)">SAF ${fmtPeso(totSafP)}</div>
+               <div style="font-size:14px;font-weight:800;color:var(--red)">SEC ${fmtPeso(totSecP)}</div>
+               <button onclick="window._cfVerSafSec=false;renderBalances('fisica')" style="margin-top:4px;background:none;border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer">Ocultar</button>`
+            : `<button onclick="window._cfVerSafSec=true;renderBalances('fisica')" style="margin-top:6px;background:none;border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer">👁 Ver SAF/SEC</button>`}
         </div>
       </div>
       ${(()=>{
