@@ -1140,7 +1140,8 @@ function registrarPagoEnCaja(id,monto,ts){
   const extraUSD=detUSD?{cuotaUSD:detUSD.cuota,entregoUSD:detUSD.entrego,difUSD:detUSD.dif}:{};
   const adelInfo=(window._cobroAdelanto>0)?{adelanto:window._cobroAdelanto}:{};
   if(esAgrimensor(id)){
-    if(!(bal.agrimensores||[]).some(p=>p.id===id))
+    // Anti-duplicado: mirar solo pagos de CUOTA normal (no los de mora, que conviven con la cuota del mes)
+    if(!(bal.agrimensores||[]).some(p=>p.id===id && !p.esMora))
       (bal.agrimensores=bal.agrimensores||[]).push({id,monto,ts,fecha,moneda,transf,...extraUSD,...adelInfo});
   } else {
     (bal.abierto=bal.abierto||[]).push({id,monto,ts,fecha,moneda,transf,...extraUSD,...adelInfo});
@@ -1244,7 +1245,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0560';
+  datos['_version']='v1.0561';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
