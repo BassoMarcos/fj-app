@@ -1246,7 +1246,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0568';
+  datos['_version']='v1.0569';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7836,8 +7836,13 @@ function renderStats(){
 
   // ── Por etapa: tarjetas en columnas, clickeables ──
   const etapas=['Etapa 1','Etapa 2','Etapa 3','Etapa 4'];
-  // IDs de lotes que pagaron por transferencia (plata que aún no está en efectivo) — para seguir mostrándolos en el mapa
-  const _transfIds=new Set((bal.transferencias||[]).map(t=>t.id));
+  // IDs de lotes que pagaron por transferencia (plata que aún no está en efectivo) — para seguir mostrándolos en el mapa.
+  // Incluye tanto las transferencias vivas (bal.transferencias) como las ya cerradas (cierres con moneda TRANSF y sus pagos).
+  const _transfIds=new Set();
+  (bal.transferencias||[]).forEach(t=>{ if(t&&t.id!=null) _transfIds.add(t.id); });
+  (bal.cierres||[]).filter(c=>c.moneda==='TRANSF').forEach(ci=>{
+    (ci.pagos||[]).forEach(p=>{ if(p&&p.id!=null) _transfIds.add(p.id); });
+  });
   html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:8px">POR ETAPA <span style="font-weight:400;font-size:11px">(tocá una para ver por manzana)</span></div>';
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:6px">';
   etapas.forEach((e,i)=>{
