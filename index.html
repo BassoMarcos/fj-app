@@ -1246,7 +1246,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0569';
+  datos['_version']='v1.0570';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7836,8 +7836,8 @@ function renderStats(){
 
   // ── Por etapa: tarjetas en columnas, clickeables ──
   const etapas=['Etapa 1','Etapa 2','Etapa 3','Etapa 4'];
-  // IDs de lotes que pagaron por transferencia (plata que aún no está en efectivo) — para seguir mostrándolos en el mapa.
-  // Incluye tanto las transferencias vivas (bal.transferencias) como las ya cerradas (cierres con moneda TRANSF y sus pagos).
+  // IDs de lotes que pagaron por transferencia (plata que aún no está en efectivo) — para seguir mostrándolos en el mapa
+  // y para descontarlos del efectivo esperado por manzana. Incluye transferencias vivas y ya cerradas.
   const _transfIds=new Set();
   (bal.transferencias||[]).forEach(t=>{ if(t&&t.id!=null) _transfIds.add(t.id); });
   (bal.cierres||[]).filter(c=>c.moneda==='TRANSF').forEach(ci=>{
@@ -7861,10 +7861,12 @@ function renderStats(){
     const mzs={};
     cl.forEach(c=>{
       const mz=String(c.mz).toUpperCase();
-      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],agrPend:[]};
+      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],agrPend:[],efec:0};
       mzs[mz].t++;
       if(c.pago){
         mzs[mz].p++;
+        // Efectivo esperado: cuota de lista de los pagados en pesos que NO transfirieron (los transferidos no son efectivo)
+        if(c.moneda!=='USD'&&!_transfIds.has(c.id)) mzs[mz].efec+=montoCobrable(c).total;
         // Si pagó por transferencia, sigue apareciendo (plata que no está en efectivo)
         if(_transfIds.has(c.id)) mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,transf:true,usd:c.moneda==='USD'});
       }
@@ -7873,7 +7875,7 @@ function renderStats(){
     // Agrimensores impagos de esta etapa (no cuentan en % ni en plata, pero se ordenan junto al resto)
     agrim.filter(c=>getEtapa(c.mz)===e&&!c.pago).forEach(c=>{
       const mz=String(c.mz).toUpperCase();
-      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[]};
+      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],efec:0};
       mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,agr:true,usd:c.moneda==='USD'});
     });
     Object.values(mzs).forEach(m=>{
@@ -7889,6 +7891,9 @@ function renderStats(){
       html+='<span style="width:70px;color:var(--text2)">'+mz+'</span>';
       html+='<div style="flex:1;background:var(--border2);border-radius:99px;height:6px;overflow:hidden"><div style="background:#4f46e5;width:'+pp+'%;height:100%"></div></div>';
       html+='<span style="width:44px;text-align:right;font-weight:700">'+m.p+'/'+m.t+'</span></div>';
+      if(m.efec>0){
+        html+='<div style="margin:0 0 4px 76px;font-size:10px;color:var(--green);font-weight:700">💵 Efectivo esperado: '+fmtPeso(m.efec)+'</div>';
+      }
       if(m.pend.length){
         html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin:0 0 8px 76px">';
         m.pend.forEach(p=>{
