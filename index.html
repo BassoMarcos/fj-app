@@ -1246,7 +1246,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0572';
+  datos['_version']='v1.0573';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7836,12 +7836,23 @@ function renderStats(){
 
   // ── Por etapa: tarjetas en columnas, clickeables ──
   const etapas=['Etapa 1','Etapa 2','Etapa 3','Etapa 4'];
-  // IDs de lotes que pagaron por transferencia (plata que aún no está en efectivo) — para seguir mostrándolos en el mapa
-  // y para descontarlos del efectivo esperado por manzana. Incluye transferencias vivas y ya cerradas.
+  // IDs de lotes que pagaron el TOTAL por transferencia (plata que no está en efectivo) — para mostrarlos en el mapa
+  // y descontarlos del efectivo. Las transferencias PARCIALES NO cuentan: esa parte ya entró en efectivo.
   const _transfIds=new Set();
-  (bal.transferencias||[]).forEach(t=>{ if(t&&t.id!=null) _transfIds.add(t.id); });
+  const _transfParcial={}; // id -> monto transferido en pagos PARCIALES (para descontar solo esa parte del efectivo)
+  (bal.transferencias||[]).forEach(t=>{
+    if(!t||t.id==null||t.moneda==='USD') return;
+    if(t.parcial!==true) _transfIds.add(t.id);
+    else _transfParcial[t.id]=(_transfParcial[t.id]||0)+(t.cuotaParte||0);
+  });
   (bal.cierres||[]).filter(c=>c.moneda==='TRANSF').forEach(ci=>{
-    (ci.pagos||[]).forEach(p=>{ if(p&&p.id!=null) _transfIds.add(p.id); });
+    (ci.pagos||[]).forEach(p=>{
+      if(!p||p.id==null||p.moneda==='USD') return;
+      const esTotal=(p.transfTotal===true)||((p.transferido||0)>0&&(p.efectivo||0)<=0&&!(p.adelanto>0));
+      const esParcial=(p.transferido||0)>0&&!p.transfTotal&&(p.efectivo||0)>0;
+      if(esTotal&&!esParcial) _transfIds.add(p.id);
+      else if(esParcial) _transfParcial[p.id]=(_transfParcial[p.id]||0)+(p.transferido||0);
+    });
   });
   html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:8px">POR ETAPA <span style="font-weight:400;font-size:11px">(tocá una para ver por manzana)</span></div>';
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:6px">';
@@ -7851,8 +7862,8 @@ function renderStats(){
     const pag=cl.filter(c=>c.pago);
     const p=Math.round(pag.length/cl.length*100);
     // Efectivo real: los que pagaron pero transfirieron NO son efectivo (van al pendiente). El % de arriba no se toca.
-    const $c=sum(cl.filter(c=>c.pago&&!_transfIds.has(c.id)));
-    const $p=sum(cl.filter(c=>!c.pago||_transfIds.has(c.id)));
+    const $c=sum(cl.filter(c=>c.pago&&!_transfIds.has(c.id)))-cl.filter(c=>c.pago&&!_transfIds.has(c.id)&&c.moneda!=='USD').reduce((s,c)=>s+(_transfParcial[c.id]||0),0);
+    const $p=sum(cl.filter(c=>!c.pago||_transfIds.has(c.id)))+cl.filter(c=>c.pago&&!_transfIds.has(c.id)&&c.moneda!=='USD').reduce((s,c)=>s+(_transfParcial[c.id]||0),0);
     html+='<div onclick="statsToggleEtapa('+i+')" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;cursor:pointer">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-weight:800">'+e+'</span><span style="font-size:20px;font-weight:800;color:'+(p>=70?'var(--green)':p>=40?'#d97706':'var(--red)')+'">'+p+'%</span></div>';
     html+='<div style="background:var(--border2);border-radius:99px;height:10px;overflow:hidden;margin-bottom:8px"><div style="background:#4f46e5;width:'+p+'%;height:100%;border-radius:99px"></div></div>';
@@ -7868,8 +7879,10 @@ function renderStats(){
       if(c.pago){
         mzs[mz].p++;
         // Efectivo esperado: cuota de lista de los pagados en pesos que NO transfirieron (los transferidos no son efectivo)
-        if(c.moneda!=='USD'&&!_transfIds.has(c.id)) mzs[mz].efec+=montoCobrable(c).total;
-        // Si pagó por transferencia: no es efectivo → va al pendiente y sigue apareciendo como chip
+        if(c.moneda!=='USD'&&!_transfIds.has(c.id)) mzs[mz].efec+=Math.max(0,montoCobrable(c).total-(_transfParcial[c.id]||0));
+        // Parte transferida de un pago PARCIAL: esa porción no está en efectivo → va al pendiente
+        if(c.moneda!=='USD'&&!_transfIds.has(c.id)&&(_transfParcial[c.id]||0)>0) mzs[mz].pend$+=(_transfParcial[c.id]||0);
+        // Si pagó el TOTAL por transferencia: no es efectivo → va al pendiente y aparece como chip
         if(_transfIds.has(c.id)){
           if(c.moneda!=='USD') mzs[mz].pend$+=montoCobrable(c).total;
           mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,transf:true,usd:c.moneda==='USD'});
