@@ -1246,7 +1246,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0573';
+  datos['_version']='v1.0574';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7837,21 +7837,32 @@ function renderStats(){
   // ── Por etapa: tarjetas en columnas, clickeables ──
   const etapas=['Etapa 1','Etapa 2','Etapa 3','Etapa 4'];
   // IDs de lotes que pagaron el TOTAL por transferencia (plata que no está en efectivo) — para mostrarlos en el mapa
-  // y descontarlos del efectivo. Las transferencias PARCIALES NO cuentan: esa parte ya entró en efectivo.
+  // y descontarlos del efectivo. Las transferencias PARCIALES solo descuentan su parte transferida.
+  // La info de total/parcial está en cajaFisica (transfTotal/transferido/efectivo), no en los pagos del cierre.
+  const _cf=bal.cajaFisica||[];
+  const _cfById={}; _cf.forEach(p=>{ if(p&&p.id!=null) _cfById[p.id]=p; }); // último registro gana
   const _transfIds=new Set();
-  const _transfParcial={}; // id -> monto transferido en pagos PARCIALES (para descontar solo esa parte del efectivo)
+  const _transfParcial={}; // id -> monto transferido en pagos PARCIALES
+  // Transferencias vivas (aún sin cerrar)
   (bal.transferencias||[]).forEach(t=>{
     if(!t||t.id==null||t.moneda==='USD') return;
     if(t.parcial!==true) _transfIds.add(t.id);
     else _transfParcial[t.id]=(_transfParcial[t.id]||0)+(t.cuotaParte||0);
   });
+  // Transferencias ya cerradas: para cada pago del cierre TRANSF, mirar su registro en cajaFisica
   (bal.cierres||[]).filter(c=>c.moneda==='TRANSF').forEach(ci=>{
     (ci.pagos||[]).forEach(p=>{
       if(!p||p.id==null||p.moneda==='USD') return;
-      const esTotal=(p.transfTotal===true)||((p.transferido||0)>0&&(p.efectivo||0)<=0&&!(p.adelanto>0));
-      const esParcial=(p.transferido||0)>0&&!p.transfTotal&&(p.efectivo||0)>0;
-      if(esTotal&&!esParcial) _transfIds.add(p.id);
-      else if(esParcial) _transfParcial[p.id]=(_transfParcial[p.id]||0)+(p.transferido||0);
+      if(_transfIds.has(p.id)) return;
+      const cf=_cfById[p.id];
+      if(cf){
+        const esTotal=(cf.transfTotal===true)||((cf.transferido||0)>0&&(cf.efectivo||0)<=0&&!(cf.adelanto>0));
+        if(esTotal) _transfIds.add(p.id);
+        else if((cf.transferido||0)>0) _transfParcial[p.id]=(_transfParcial[p.id]||0)+(cf.transferido||0);
+      } else {
+        // Sin registro en cajaFisica: el pago está en un cierre TRANSF, así que fue transferencia total
+        _transfIds.add(p.id);
+      }
     });
   });
   html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:8px">POR ETAPA <span style="font-weight:400;font-size:11px">(tocá una para ver por manzana)</span></div>';
