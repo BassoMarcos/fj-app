@@ -1246,7 +1246,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0571';
+  datos['_version']='v1.0572';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7914,7 +7914,7 @@ function renderStats(){
           else if(p.usd){bg='rgba(76,175,130,.15)';col='#4caf82';bd='rgba(76,175,130,.5)';pre='💵 ';}
           else if(p.mora){bg='var(--red-bg)';col='var(--red)';bd='#fca5a5';}
           else {bg='rgba(217,119,6,.12)';col='#d97706';bd='rgba(217,119,6,.4)';}
-          html+='<span onclick="event.stopPropagation();mostrarAdminDet(\''+p.id+'\')" style="background:'+bg+';color:'+col+';border:1px solid '+bd+';padding:1px 7px;border-radius:99px;font-size:10px;font-weight:'+(p.agr?'800':'700')+';cursor:pointer">'+pre+p.lote+(p.transf?' ✓':'')+(p.mora&&!p.agr?' ⚠':'')+'</span>';
+          html+='<span title="'+(()=>{const dc=data.find(x=>x.id===p.id);if(!dc)return p.lote;const cuota=montoCobrable(dc).total;const cur=dc.moneda==='USD'?'USD ':'$';const saf=(Number(dc.saldo)||0);const safTxt=saf>0?(' | Saldo a favor: '+cur+fmtPeso(saf)):(saf<0?(' | Saldo en contra: '+cur+fmtPeso(Math.abs(saf))):'');const precioTotal=cuota*(Number(dc.ct)||0);return (dc.titular||'').replace(/"/g,'&quot;')+' — '+formatLoteTag(dc.mz,dc.lote)+' | Cuota '+(dc.ca||'?')+'/'+(dc.ct||'?')+' | Cuota del mes: '+cur+fmtPeso(cuota)+' | Precio total aprox: '+cur+fmtPeso(precioTotal)+safTxt+(p.transf?' | 🏦 Pagó por transferencia':'')+(p.agr?' | ⚖️ Agrimensor':'');})()+'" onclick="event.stopPropagation();mostrarAdminDet(\''+p.id+'\')" style="background:'+bg+';color:'+col+';border:1px solid '+bd+';padding:1px 7px;border-radius:99px;font-size:10px;font-weight:'+(p.agr?'800':'700')+';cursor:pointer">'+pre+p.lote+(p.transf?' ✓':'')+(p.mora&&!p.agr?' ⚠':'')+'</span>';
         });
         html+='</div>';
       }
