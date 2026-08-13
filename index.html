@@ -1246,7 +1246,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0570';
+  datos['_version']='v1.0571';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7850,7 +7850,9 @@ function renderStats(){
     if(!cl.length) return;
     const pag=cl.filter(c=>c.pago);
     const p=Math.round(pag.length/cl.length*100);
-    const $c=sum(pag), $p=sum(cl.filter(c=>!c.pago));
+    // Efectivo real: los que pagaron pero transfirieron NO son efectivo (van al pendiente). El % de arriba no se toca.
+    const $c=sum(cl.filter(c=>c.pago&&!_transfIds.has(c.id)));
+    const $p=sum(cl.filter(c=>!c.pago||_transfIds.has(c.id)));
     html+='<div onclick="statsToggleEtapa('+i+')" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;cursor:pointer">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-weight:800">'+e+'</span><span style="font-size:20px;font-weight:800;color:'+(p>=70?'var(--green)':p>=40?'#d97706':'var(--red)')+'">'+p+'%</span></div>';
     html+='<div style="background:var(--border2);border-radius:99px;height:10px;overflow:hidden;margin-bottom:8px"><div style="background:#4f46e5;width:'+p+'%;height:100%;border-radius:99px"></div></div>';
@@ -7861,21 +7863,27 @@ function renderStats(){
     const mzs={};
     cl.forEach(c=>{
       const mz=String(c.mz).toUpperCase();
-      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],agrPend:[],efec:0};
+      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],agrPend:[],efec:0,pend$:0};
       mzs[mz].t++;
       if(c.pago){
         mzs[mz].p++;
         // Efectivo esperado: cuota de lista de los pagados en pesos que NO transfirieron (los transferidos no son efectivo)
         if(c.moneda!=='USD'&&!_transfIds.has(c.id)) mzs[mz].efec+=montoCobrable(c).total;
-        // Si pagó por transferencia, sigue apareciendo (plata que no está en efectivo)
-        if(_transfIds.has(c.id)) mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,transf:true,usd:c.moneda==='USD'});
+        // Si pagó por transferencia: no es efectivo → va al pendiente y sigue apareciendo como chip
+        if(_transfIds.has(c.id)){
+          if(c.moneda!=='USD') mzs[mz].pend$+=montoCobrable(c).total;
+          mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,transf:true,usd:c.moneda==='USD'});
+        }
       }
-      else mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,mora:calcInteresAuto(montoCobrable(c).total).interes>0,usd:c.moneda==='USD'});
+      else {
+        if(c.moneda!=='USD') mzs[mz].pend$+=montoCobrable(c).total;
+        mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,mora:calcInteresAuto(montoCobrable(c).total).interes>0,usd:c.moneda==='USD'});
+      }
     });
     // Agrimensores impagos de esta etapa (no cuentan en % ni en plata, pero se ordenan junto al resto)
     agrim.filter(c=>getEtapa(c.mz)===e&&!c.pago).forEach(c=>{
       const mz=String(c.mz).toUpperCase();
-      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],efec:0};
+      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],efec:0,pend$:0};
       mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,agr:true,usd:c.moneda==='USD'});
     });
     Object.values(mzs).forEach(m=>{
@@ -7891,8 +7899,11 @@ function renderStats(){
       html+='<span style="width:70px;color:var(--text2)">'+mz+'</span>';
       html+='<div style="flex:1;background:var(--border2);border-radius:99px;height:6px;overflow:hidden"><div style="background:#4f46e5;width:'+pp+'%;height:100%"></div></div>';
       html+='<span style="width:44px;text-align:right;font-weight:700">'+m.p+'/'+m.t+'</span></div>';
-      if(m.efec>0){
-        html+='<div style="margin:0 0 4px 76px;font-size:10px;color:var(--green);font-weight:700">💵 Efectivo esperado: '+fmtPeso(m.efec)+'</div>';
+      if(m.efec>0||m.pend$>0){
+        html+='<div style="margin:0 0 6px 76px;font-size:10px;display:flex;gap:10px;flex-wrap:wrap">';
+        if(m.efec>0) html+='<span style="color:var(--green);font-weight:700">💵 Efectivo: '+fmtPeso(m.efec)+'</span>';
+        if(m.pend$>0) html+='<span style="color:#d97706;font-weight:700">⏳ Falta: '+fmtPeso(m.pend$)+'</span>';
+        html+='</div>';
       }
       if(m.pend.length){
         html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin:0 0 8px 76px">';
