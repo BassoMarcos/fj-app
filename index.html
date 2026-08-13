@@ -1246,7 +1246,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0565';
+  datos['_version']='v1.0566';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5815,6 +5815,9 @@ function renderBalances(seccion){
   const totalAbierto=abierto.reduce((s,p)=>s+(p.monto||0),0);
   const totalCierres=cierres.filter(c=>c.moneda!=='USD').reduce((s,c)=>s+(c.moneda==='TRANSF'?(c.totalPesos||0):(c.total||0)),0);
   const totalCierresUSD=cierres.reduce((s,c)=>s+(c.moneda==='USD'?(c.total||0):(c.totalUSD||0)),0);
+  // Efectivo puro (sin transferencias) y transferencias por separado — para mostrarlo claro en la tarjeta
+  const totalCierresEfectivo=cierres.filter(c=>c.moneda!=='USD'&&c.moneda!=='TRANSF').reduce((s,c)=>s+(c.total||0),0);
+  const totalCierresTransf=cierres.filter(c=>c.moneda==='TRANSF').reduce((s,c)=>s+(c.totalPesos||0),0);
   const totalAprobados=aprobados.reduce((s,a)=>s+a.total,0);
   const totalPendientes=pendientes.reduce((s,a)=>s+a.total,0);
 
@@ -5877,7 +5880,7 @@ function renderBalances(seccion){
 
           return [
             card({icon:'⏳',titulo:'Caja del día',sub:abierto.length+' pago'+(abierto.length!==1?'s':'')+' sin cerrar',valor:fmtPeso(totalAbierto),color:'#c68a4e',onclick:"renderBalances('caja')",limpiarBtn:abierto.length?'resetCajaAbierta()':''}),
-            card({icon:'✅',titulo:'Cierres',sub:cierres.length+' cierre'+(cierres.length!==1?'s':'')+' registrado'+(cierres.length!==1?'s':''),valor:fmtPeso(totalCierres),subMonto:totalCierresUSD?('USD '+fmtPeso(totalCierresUSD).replace('$','')):'',color:'#5a9e78',onclick:"renderBalances('cierres')",limpiarBtn:cierres.length?'resetCierres()':''}),
+            card({icon:'✅',titulo:'Cierres',sub:cierres.length+' cierre'+(cierres.length!==1?'s':'')+' registrado'+(cierres.length!==1?'s':''),valor:fmtPeso(totalCierresEfectivo),valorSub:'💵 efectivo'+(totalCierresTransf?(' · 🏦 transf. '+fmtPeso(totalCierresTransf)):''),subMonto:totalCierresUSD?('USD '+fmtPeso(totalCierresUSD).replace('$','')):'',color:'#5a9e78',onclick:"renderBalances('cierres')",limpiarBtn:cierres.length?'resetCierres()':''}),
             card({icon:'⏭',titulo:'Adelantos',sub:'Lotes que adelantaron',valor:String(lotesAdel),valorSub:'lote'+(lotesAdel!==1?'s':''),color:'#6591c4',onclick:"renderBalances('adelantos')",limpiarBtn:adelantos.length?'resetAdelantos()':'',badge:pendientes.length?{txt:'⏳ '+pendientes.length+' pend.',bg:'var(--amber-bg)',col:'var(--amber)',bd:'var(--amber-border)'}:null}),
             card({icon:'⚖️',titulo:'Agrimensores',sub:(bal.agrimensores||[]).length+' pago'+((bal.agrimensores||[]).length!==1?'s':'')+' sin cerrar',valor:fmtPeso(totalAgri),color:'#c08a5e',onclick:"renderBalances('agrimensores')",limpiarBtn:(bal.agrimensores||[]).length?'resetAgrimensores()':''}),
             card({icon:'⚠️',titulo:'Caja de Mora',sub:'Lotes que pagaron mora',valor:String(lotesMora),valorSub:'lote'+(lotesMora!==1?'s':''),color:'#c77b7b',onclick:"renderBalances('mora');saveUltimaVistaMora();actualizarBadgeMora()"}),
