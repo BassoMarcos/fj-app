@@ -904,9 +904,24 @@ function loadCajaMoraRendidos(){try{return JSON.parse(localStorage.getItem('fj_c
 function saveCajaMoraRendidos(o){localStorage.setItem('fj_cajamora_rendidos',JSON.stringify(o||{}));}
 function rendirCajaMora(loteId){
   if(!loteId) return;
-  if(!confirm('¿Marcar este lote como RENDIDO en la Caja de Mora? Se archiva y deja de sumar en los totales de esta caja.')) return;
   const r=loadCajaMoraRendidos(); r[loteId]=new Date().toISOString(); saveCajaMoraRendidos(r);
+}
+function toggleCajaMoraSel(id){
+  window._cajaMoraSel=window._cajaMoraSel||{};
+  window._cajaMoraSel[id]=!window._cajaMoraSel[id];
   renderBalances('mora');
+}
+function marcarCajaMoraRendidos(){
+  const sel=window._cajaMoraSel||{};
+  const ids=Object.keys(sel).filter(k=>sel[k]);
+  if(!ids.length){alert('Tildá primero los lotes que querés marcar como rendidos.');return;}
+  const r=loadCajaMoraRendidos();
+  const ts=new Date().toISOString();
+  ids.forEach(id=>{ r[id]=ts; });
+  saveCajaMoraRendidos(r);
+  window._cajaMoraSel={};
+  renderBalances('mora');
+  alert('✓ '+ids.length+' lote(s) marcados como rendidos. Quedan guardados en la carpeta "Rendidos".');
 }
 function reactivarCajaMora(loteId){
   const r=loadCajaMoraRendidos(); delete r[loteId]; saveCajaMoraRendidos(r);
@@ -1259,7 +1274,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0581';
+  datos['_version']='v1.0582';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6545,7 +6560,7 @@ function renderBalances(seccion){
           +'<div style="color:var(--red);font-size:11px">Interés: <b>'+cur+fmtPeso(g.interes)+'</b></div>'
           +'<div style="font-weight:700">'+cur+fmtPeso(g.cuota+g.interes)+'</div>'
           +(g.items.some(p=>p.interes&&!p.interesEnExtras)?'<button data-id="'+g.id+'" onclick="event.stopPropagation();pasarInteresesGrupo(this.dataset.id)" style="background:none;border:1px solid #c7d2fe;color:#4f46e5;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-top:3px">→ Pasar intereses a Extras</button>':'')
-          +'<button data-id="'+g.id+'" onclick="event.stopPropagation();rendirCajaMora(this.dataset.id)" style="display:block;background:#2d6a50;color:#d0f0e0;border:none;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-top:3px;margin-left:auto">✓ Rendir</button>'
+          +'<label onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:5px;justify-content:flex-end;margin-top:5px;font-size:10px;color:var(--text2);cursor:pointer"><input type="checkbox" data-mid="'+g.id+'" onchange="toggleCajaMoraSel(\''+g.id+'\')" style="width:15px;height:15px;cursor:pointer" '+(window._cajaMoraSel&&window._cajaMoraSel[g.id]?'checked':'')+'> rendir</label>'
           +'</div></div>'
           +'<div style="display:'+(abierto?'block':'none')+'">'+detalle+'</div>'
           +'</div>';
@@ -6583,6 +6598,10 @@ function renderBalances(seccion){
       moraHtml+='</div>';
     }
 
+    if(mora.filter(p=>!p.esInteresMes).length){
+      const _selN=Object.keys(window._cajaMoraSel||{}).filter(k=>window._cajaMoraSel[k]).length;
+      moraHtml+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--hov);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;margin-bottom:10px"><span style="font-size:11px;color:var(--text2)">Tildá los lotes que ya rendiste y marcalos juntos:</span><button onclick="marcarCajaMoraRendidos()" style="background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer">✓ Marcar rendidos'+(_selN?' ('+_selN+')':'')+'</button></div>';
+    }
     moraHtml+='<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px">PESOS</div>';
     moraHtml+='<div style="margin-bottom:4px">';
     moraHtml+='<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:.75rem;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.12),0 1px 3px rgba(0,0,0,0.08)"><div style="font-size:11px;color:var(--text2)">Total CP Mora</div><div style="font-weight:700">'+fmtPeso(totalCuotaP)+'</div><div style="display:flex;gap:6px;margin-top:8px"><div style="flex:1;background:var(--green-bg);border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:var(--green)">'+dp+'%</div><div style="font-size:12px;font-weight:800;color:var(--green)">'+fmtPeso(Math.round(totalCuotaP*dp/100))+'</div></div><div style="flex:1;background:var(--red-bg);border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:var(--red)">'+dp2+'%</div><div style="font-size:12px;font-weight:800;color:var(--red)">'+fmtPeso(Math.round(totalCuotaP*dp2/100))+'</div></div></div></div>';
