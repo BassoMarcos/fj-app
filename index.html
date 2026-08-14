@@ -1246,7 +1246,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0575';
+  datos['_version']='v1.0576';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7942,6 +7942,88 @@ function renderStats(){
   });
   html+='</div>';
 
+  // ── RENDICIÓN DE CUENTAS PARA DUEÑOS (duplicado de POR ETAPA, v1.0576) ──
+  html+='<div style="border-top:2px solid var(--border);margin:1.5rem 0 1rem;padding-top:1rem"></div>';
+  html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:8px">🧾 RENDICIÓN DE CUENTAS PARA DUEÑOS <span style="font-weight:400;font-size:11px">(tocá una para ver por manzana)</span></div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:6px">';
+  etapas.forEach((e,i)=>{
+    const cl=cobrables.filter(c=>getEtapa(c.mz)===e);
+    if(!cl.length) return;
+    const pag=cl.filter(c=>c.pago);
+    const p=Math.round(pag.length/cl.length*100);
+    // Efectivo real: los que pagaron pero transfirieron NO son efectivo (van al pendiente). El % de arriba no se toca.
+    const $c=sum(cl.filter(c=>c.pago&&!_transfIds.has(c.id)));
+    const $p=sum(cl.filter(c=>!c.pago||_transfIds.has(c.id)));
+    html+='<div onclick="duenosToggleEtapa('+i+')" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;cursor:pointer">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-weight:800">'+e+'</span><span style="font-size:20px;font-weight:800;color:'+(p>=70?'var(--green)':p>=40?'#d97706':'var(--red)')+'">'+p+'%</span></div>';
+    html+='<div style="background:var(--border2);border-radius:99px;height:10px;overflow:hidden;margin-bottom:8px"><div style="background:#4f46e5;width:'+p+'%;height:100%;border-radius:99px"></div></div>';
+    html+='<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)"><span>'+pag.length+'/'+cl.length+' lotes</span><span style="color:var(--green);font-weight:700">'+fmtPeso($c)+'</span></div>';
+    html+='<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>pendiente</span><span style="color:#d97706;font-weight:700">'+fmtPeso($p)+'</span></div>';
+    html+='<div id="duenos-etapa-'+i+'" style="display:none;margin-top:8px;border-top:1px dashed var(--border);padding-top:6px">';
+    // por manzana
+    const mzs={};
+    cl.forEach(c=>{
+      const mz=String(c.mz).toUpperCase();
+      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],agrPend:[],efec:0,pend$:0};
+      mzs[mz].t++;
+      if(c.pago){
+        mzs[mz].p++;
+        // Efectivo esperado: cuota de lista de los pagados en pesos que NO transfirieron (los transferidos no son efectivo)
+        if(c.moneda!=='USD'&&!_transfIds.has(c.id)) mzs[mz].efec+=montoCobrable(c).total;
+        // Si pagó el TOTAL por transferencia: no es efectivo → va al pendiente y aparece como chip
+        if(_transfIds.has(c.id)){
+          if(c.moneda!=='USD') mzs[mz].pend$+=montoCobrable(c).total;
+          mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,transf:true,usd:c.moneda==='USD'});
+        }
+      }
+      else {
+        if(c.moneda!=='USD') mzs[mz].pend$+=montoCobrable(c).total;
+        mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,mora:calcInteresAuto(montoCobrable(c).total).interes>0,usd:c.moneda==='USD'});
+      }
+    });
+    // Agrimensores impagos de esta etapa (no cuentan en % ni en plata, pero se ordenan junto al resto)
+    agrim.filter(c=>getEtapa(c.mz)===e&&!c.pago).forEach(c=>{
+      const mz=String(c.mz).toUpperCase();
+      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],efec:0,pend$:0};
+      mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,agr:true,usd:c.moneda==='USD'});
+    });
+    Object.values(mzs).forEach(m=>{
+      m.pend.sort((a,b)=>{
+        const n=(s)=>{const mm=String(s).match(/^(\d+)(.*)/);return mm?[+mm[1],mm[2]]:[999,String(s)];};
+        const[an,al]=n(a.lote);const[bn,bl]=n(b.lote);
+        return an!==bn?an-bn:al.localeCompare(bl);
+      });
+    });
+    Object.keys(mzs).sort().forEach(mz=>{
+      const m=mzs[mz];const pp=Math.round(m.p/m.t*100);
+      html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:11px">';
+      html+='<span style="width:70px;color:var(--text2)">'+mz+'</span>';
+      html+='<div style="flex:1;background:var(--border2);border-radius:99px;height:6px;overflow:hidden"><div style="background:#4f46e5;width:'+pp+'%;height:100%"></div></div>';
+      html+='<span style="width:44px;text-align:right;font-weight:700">'+m.p+'/'+m.t+'</span></div>';
+      if(m.efec>0||m.pend$>0){
+        html+='<div style="margin:0 0 6px 76px;font-size:10px;display:flex;gap:10px;flex-wrap:wrap">';
+        if(m.efec>0) html+='<span style="color:var(--green);font-weight:700">💵 Efectivo: '+fmtPeso(m.efec)+'</span>';
+        if(m.pend$>0) html+='<span style="color:#d97706;font-weight:700">⏳ Falta: '+fmtPeso(m.pend$)+'</span>';
+        html+='</div>';
+      }
+      if(m.pend.length){
+        html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin:0 0 8px 76px">';
+        m.pend.forEach(p=>{
+          let bg,col,bd,pre='';
+          if(p.agr){bg='#f97316';col='#fff';bd='#f97316';pre='⚖️ ';}
+          else if(p.transf){bg='linear-gradient(90deg,rgba(22,163,74,.22) 0%,rgba(22,163,74,.22) 50%,rgba(124,58,237,.22) 50%,rgba(124,58,237,.22) 100%)';col='#a78bfa';bd='#a78bfa';pre='🏦 ';}
+          else if(p.usd){bg='rgba(76,175,130,.15)';col='#4caf82';bd='rgba(76,175,130,.5)';pre='💵 ';}
+          else if(p.mora){bg='var(--red-bg)';col='var(--red)';bd='#fca5a5';}
+          else {bg='rgba(217,119,6,.12)';col='#d97706';bd='rgba(217,119,6,.4)';}
+          html+='<span title="'+(()=>{const dc=data.find(x=>x.id===p.id);if(!dc)return p.lote;const cuota=montoCobrable(dc).total;const cur=dc.moneda==='USD'?'USD ':'$';const saf=(Number(dc.saldo)||0);const safTxt=saf>0?(' | Saldo a favor: '+cur+fmtPeso(saf)):(saf<0?(' | Saldo en contra: '+cur+fmtPeso(Math.abs(saf))):'');const precioTotal=cuota*(Number(dc.ct)||0);return (dc.titular||'').replace(/"/g,'&quot;')+' — '+formatLoteTag(dc.mz,dc.lote)+' | Cuota '+(dc.ca||'?')+'/'+(dc.ct||'?')+' | Cuota del mes: '+cur+fmtPeso(cuota)+' | Precio total aprox: '+cur+fmtPeso(precioTotal)+safTxt+(p.transf?' | 🏦 Pagó por transferencia':'')+(p.agr?' | ⚖️ Agrimensor':'');})()+'" onclick="event.stopPropagation();mostrarAdminDet(\''+p.id+'\')" style="background:'+bg+';color:'+col+';border:1px solid '+bd+';padding:1px 7px;border-radius:99px;font-size:10px;font-weight:'+(p.agr?'800':'700')+';cursor:pointer">'+pre+p.lote+(p.transf?' ✓':'')+(p.mora&&!p.agr?' ⚠':'')+'</span>';
+        });
+        html+='</div>';
+      }
+    });
+    html+='<div style="font-size:10px;color:var(--text3);margin-top:4px">Los lotes marcados son los que aún no tenés el efectivo. ⚠ = ya acumulan interés. 💵 verde = dólares. 🏦 verde+violeta = pagó por transferencia (plata no en efectivo). ⚖️ naranja = agrimensor (no suma en % ni plata). Tocá uno para abrirlo.</div>';
+    html+='</div></div>';
+  });
+  html+='</div>';
   // ── Composición de lotes (movido desde Inicio, v1.0410) ──
   {
     const _all=data, _act=data.filter(c=>c.est==='activo'), _fin=data.filter(c=>c.est==='finalizado');
@@ -7977,6 +8059,11 @@ function renderStats(){
 function statsToggleEtapa(i){
   event.stopPropagation();
   const d=document.getElementById('stats-etapa-'+i);
+  if(d) d.style.display=d.style.display==='none'?'block':'none';
+}
+function duenosToggleEtapa(i){
+  event.stopPropagation();
+  const d=document.getElementById('duenos-etapa-'+i);
   if(d) d.style.display=d.style.display==='none'?'block':'none';
 }
 
