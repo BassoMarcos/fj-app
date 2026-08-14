@@ -912,6 +912,19 @@ function reactivarLoteMora(clienteId){
   const r=loadMoraRendidos(); delete r[clienteId]; saveMoraRendidos(r);
   renderPanelMora(); actualizarBadgeMora();
 }
+// ── Rendidos de la CAJA DE MORA (Balances): archiva los cobros de un lote para que no sumen ──
+function loadCajaMoraRendidos(){try{return JSON.parse(localStorage.getItem('fj_cajamora_rendidos')||'{}');}catch(e){return {};}}
+function saveCajaMoraRendidos(o){localStorage.setItem('fj_cajamora_rendidos',JSON.stringify(o||{}));}
+function rendirCajaMora(loteId){
+  if(!loteId) return;
+  if(!confirm('¿Marcar este lote como RENDIDO en la Caja de Mora? Se archiva y deja de sumar en los totales de esta caja.')) return;
+  const r=loadCajaMoraRendidos(); r[loteId]=new Date().toISOString(); saveCajaMoraRendidos(r);
+  renderBalances('mora');
+}
+function reactivarCajaMora(loteId){
+  const r=loadCajaMoraRendidos(); delete r[loteId]; saveCajaMoraRendidos(r);
+  renderBalances('mora');
+}
 function loadPendientesAprobacion(){try{return JSON.parse(localStorage.getItem('fj_pendientes_aprobacion')||'[]');}catch(e){return [];}}
 function savePendientesAprobacion(v){localStorage.setItem('fj_pendientes_aprobacion',JSON.stringify(v));sheetsSet('Pendientes',v);window._fbSet('pendientesAprobacion',v).catch(e=>console.warn('FB pend error:',e));}
 function loadUltimaVistaMora(){return localStorage.getItem('fj_mora_vista')||'0';}
@@ -1259,7 +1272,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0579';
+  datos['_version']='v1.0580';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6520,7 +6533,10 @@ function renderBalances(seccion){
     const dp=getDistPct();const dp2=100-dp;
     saveUltimaVistaMora();
     actualizarBadgeMora();
-    const mora=loadMora();
+    const _cmRendidos=loadCajaMoraRendidos();
+    const _moraTodos=loadMora();
+    const mora=_moraTodos.filter(p=>!_cmRendidos[p.id]);
+    const _moraRendidosCaja=_moraTodos.filter(p=>_cmRendidos[p.id]);
     const pesos=mora.filter(p=>p.moneda!=='USD');
     const usd=mora.filter(p=>p.moneda==='USD');
     const totalCuotaP=pesos.reduce((s,p)=>s+(p.cuota||0),0);
@@ -6576,6 +6592,7 @@ function renderBalances(seccion){
           +'<div style="color:var(--red);font-size:11px">Interés: <b>'+cur+fmtPeso(g.interes)+'</b></div>'
           +'<div style="font-weight:700">'+cur+fmtPeso(g.cuota+g.interes)+'</div>'
           +(g.items.some(p=>p.interes&&!p.interesEnExtras)?'<button data-id="'+g.id+'" onclick="event.stopPropagation();pasarInteresesGrupo(this.dataset.id)" style="background:none;border:1px solid #c7d2fe;color:#4f46e5;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-top:3px">→ Pasar intereses a Extras</button>':'')
+          +'<button data-id="'+g.id+'" onclick="event.stopPropagation();rendirCajaMora(this.dataset.id)" style="display:block;background:#2d6a50;color:#d0f0e0;border:none;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-top:3px;margin-left:auto">✓ Rendir</button>'
           +'</div></div>'
           +'<div style="display:'+(abierto?'block':'none')+'">'+detalle+'</div>'
           +'</div>';
@@ -6702,6 +6719,31 @@ function renderBalances(seccion){
       moraHtml+='<div style="background:none;border:none;padding:4px 8px;text-align:right"><span style="font-size:11px;color:var(--text2)">Intereses USD: </span><span style="font-size:11px;font-weight:600;color:var(--red)">USD '+fmtPeso(totalInteresU)+'</span></div>';
       moraHtml+='</div>';
       moraHtml+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem">'+renderMoraList(usd,true)+'</div>';
+    }
+
+    // ── Carpeta de lotes RENDIDOS en la Caja de Mora (archivados, no suman) ──
+    {
+      const gruposR={};
+      _moraRendidosCaja.forEach(p=>{
+        if(!gruposR[p.id]) gruposR[p.id]={id:p.id,mz:p.mz,lote:p.lote,titular:p.titular,moneda:p.moneda,cuota:0,interes:0,n:0};
+        const g=gruposR[p.id]; g.cuota+=(p.cuotaAgrimensor||p.cuota||0); g.interes+=(p.interes||0); g.n++;
+      });
+      const rendArr=Object.values(gruposR);
+      if(rendArr.length){
+        const ver=!!window._cajaMoraVerRendidos;
+        moraHtml+='<div style="margin-top:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">';
+        moraHtml+='<div onclick="window._cajaMoraVerRendidos=!window._cajaMoraVerRendidos;renderBalances(\'mora\')" style="padding:.875rem 1rem;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;align-items:center;'+(ver?'border-bottom:1px solid var(--border)':'')+'"><span>'+(ver?'▼':'▶')+' 📁 Rendidos ('+rendArr.length+')</span><span style="font-size:11px;color:var(--text2)">tocá para '+(ver?'ocultar':'ver')+'</span></div>';
+        if(ver){
+          rendArr.forEach(g=>{
+            const cur=g.moneda==='USD'?'USD ':'';
+            moraHtml+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 1rem;border-bottom:1px solid var(--border);font-size:12px;opacity:.85;flex-wrap:wrap;gap:8px">'
+              +'<div><span style="font-weight:700">'+formatLoteTag(g.mz,g.lote)+'</span> <span style="color:var(--text2)">'+String(g.titular||'').slice(0,26)+'</span> <span style="font-size:10px;color:var(--text3)">· '+g.n+' cobro'+(g.n!==1?'s':'')+'</span></div>'
+              +'<div style="display:flex;align-items:center;gap:10px"><span style="font-weight:700;color:var(--text2)">'+cur+fmtPeso(g.cuota+g.interes)+'</span>'
+              +'<button data-id="'+g.id+'" onclick="reactivarCajaMora(this.dataset.id)" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer">↩ Reactivar</button></div></div>';
+          });
+        }
+        moraHtml+='</div>';
+      }
     }
 
     el.innerHTML=moraHtml;
