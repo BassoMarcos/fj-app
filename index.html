@@ -1246,7 +1246,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0577';
+  datos['_version']='v1.0578';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7975,14 +7975,18 @@ function renderStats(){
   html+='<div style="border-top:2px solid var(--border);margin:1.5rem 0 1rem;padding-top:1rem"></div>';
   html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:8px">🧾 RENDICIÓN DE CUENTAS PARA DUEÑOS <span style="font-weight:400;font-size:11px">(tocá una para ver por manzana)</span></div>';
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:6px">';
+  // Para Dueños: incluir préstamos (autopago) como pagados en efectivo, y contar las transferencias totales como efectivo
+  // (la empresa repone esa plata al rendir). Por eso _transfIdsD queda vacío: acá nada se trata como "no efectivo".
+  const cobrablesD=data.filter(c=>(c.est==='activo'||(c.est==='finalizado'&&c.autopago))&&!esAgrimensor(c.id)&&!c.empresaPaga&&!esPrimeraCuotaFutura(c));
+  const _transfIdsD=new Set();
   etapas.forEach((e,i)=>{
-    const cl=cobrables.filter(c=>getEtapa(c.mz)===e);
+    const cl=cobrablesD.filter(c=>getEtapa(c.mz)===e);
     if(!cl.length) return;
     const pag=cl.filter(c=>c.pago);
     const p=Math.round(pag.length/cl.length*100);
     // Efectivo real: los que pagaron pero transfirieron NO son efectivo (van al pendiente). El % de arriba no se toca.
-    const $c=sum(cl.filter(c=>c.pago&&!_transfIds.has(c.id)));
-    const $p=sum(cl.filter(c=>!c.pago||_transfIds.has(c.id)));
+    const $c=sum(cl.filter(c=>c.pago&&!_transfIdsD.has(c.id)));
+    const $p=sum(cl.filter(c=>!c.pago||_transfIdsD.has(c.id)));
     html+='<div onclick="duenosToggleEtapa('+i+')" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;cursor:pointer">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-weight:800">'+e+'</span><span style="font-size:20px;font-weight:800;color:'+(p>=70?'var(--green)':p>=40?'#d97706':'var(--red)')+'">'+p+'%</span></div>';
     html+='<div style="background:var(--border2);border-radius:99px;height:10px;overflow:hidden;margin-bottom:8px"><div style="background:#4f46e5;width:'+p+'%;height:100%;border-radius:99px"></div></div>';
@@ -7998,9 +8002,9 @@ function renderStats(){
       if(c.pago){
         mzs[mz].p++;
         // Efectivo esperado: cuota de lista de los pagados en pesos que NO transfirieron (los transferidos no son efectivo)
-        if(c.moneda!=='USD'&&!_transfIds.has(c.id)) mzs[mz].efec+=montoCobrable(c).total;
+        if(c.moneda!=='USD'&&!_transfIdsD.has(c.id)) mzs[mz].efec+=montoCobrable(c).total;
         // Si pagó el TOTAL por transferencia: no es efectivo → va al pendiente y aparece como chip
-        if(_transfIds.has(c.id)){
+        if(_transfIdsD.has(c.id)){
           if(c.moneda!=='USD') mzs[mz].pend$+=montoCobrable(c).total;
           mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,transf:true,usd:c.moneda==='USD'});
         }
