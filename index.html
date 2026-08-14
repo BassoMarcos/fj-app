@@ -1274,7 +1274,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0582';
+  datos['_version']='v1.0583';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5869,11 +5869,12 @@ function renderBalances(seccion){
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
         ${(()=>{
           const totalAgri=(bal.agrimensores||[]).reduce((s,p)=>s+(p.monto||0),0);
-          const mora=loadMora();
-          const ex=loadExtras();
+          const _cmRend=loadCajaMoraRendidos();
+          const mora=loadMora().filter(m=>!_cmRend[m.id]);
+          const ex=loadExtras().filter(e=>!e.rendido);
           const netoExtra=ex.filter(e=>e.tipo==='ingreso').reduce((s,e)=>s+e.monto,0)-ex.filter(e=>e.tipo==='gasto').reduce((s,e)=>s+e.monto,0);
-          // lotes únicos que pagaron mora / que adelantaron
-          const lotesMora=new Set(mora.map(m=>m.id)).size;
+          // lotes únicos que pagaron mora DE CUOTAS (no los de solo interés del mes) / que adelantaron
+          const lotesMora=new Set(mora.filter(m=>!m.esInteresMes).map(m=>m.id)).size;
           const lotesAdel=new Set(aprobados.map(a=>a.id)).size;
 
           // Paleta suave (tonos apagados, elegantes)
