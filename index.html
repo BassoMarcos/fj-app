@@ -1274,7 +1274,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0584';
+  datos['_version']='v1.0585';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -8122,7 +8122,7 @@ function renderStats(){
         html+='</div>';
       }
     });
-    html+='<div style="font-size:10px;color:var(--text3);margin-top:4px">Los lotes marcados son los que aún no tenés el efectivo. ⚠ = ya acumulan interés. 💵 verde = dólares. 🏦 verde+violeta = pagó por transferencia (plata no en efectivo). ⚖️ naranja = agrimensor (no suma en % ni plata). Tocá uno para abrirlo.</div>';
+    html+='<div style="font-size:10px;color:var(--text3);margin-top:4px">Los lotes marcados son los que faltan cobrar. 💵 verde = dólares. ⚖️ naranja = agrimensor. Tocá uno para abrirlo.</div>';
     html+='</div></div>';
   });
   html+='</div>';
