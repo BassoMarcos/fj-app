@@ -1274,7 +1274,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0585';
+  datos['_version']='v1.0586';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -8036,7 +8036,7 @@ function renderStats(){
   // ── RENDICIÓN DE CUENTAS PARA DUEÑOS (duplicado de POR ETAPA, v1.0576) ──
   html+='<div style="border-top:2px solid var(--border);margin:1.5rem 0 1rem;padding-top:1rem"></div>';
   html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:8px">🧾 RENDICIÓN DE CUENTAS PARA DUEÑOS <span style="font-weight:400;font-size:11px">(tocá una para ver por manzana)</span></div>';
-  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:6px">';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:10px;margin-bottom:6px">';
   // Para Dueños: incluir préstamos (autopago) como pagados en efectivo, y contar las transferencias totales como efectivo
   // (la empresa repone esa plata al rendir). Por eso _transfIdsD queda vacío: acá nada se trata como "no efectivo".
   const cobrablesD=data.filter(c=>(c.est==='activo'||(c.est==='finalizado'&&c.autopago))&&!esAgrimensor(c.id)&&!c.empresaPaga&&!esPrimeraCuotaFutura(c));
@@ -8057,7 +8057,7 @@ function renderStats(){
     html+='<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);border-bottom:1px dashed var(--border);padding-bottom:4px;margin-bottom:4px"><span style="font-weight:700">Total a cobrar</span><span style="color:var(--text);font-weight:800">'+fmtPeso($total)+'</span></div>';
     html+='<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)"><span>'+pag.length+'/'+cl.length+' lotes</span><span style="color:var(--green);font-weight:700">'+fmtPeso($c)+'</span></div>';
     html+='<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>pendiente</span><span style="color:#d97706;font-weight:700">'+fmtPeso($p)+'</span></div>';
-    html+='<div id="duenos-etapa-'+i+'" style="display:none;margin-top:8px;border-top:1px dashed var(--border);padding-top:6px">';
+    html+='<div id="duenos-etapa-'+i+'" style="display:none;margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px 16px" class="duenos-mz-grid">';
     // por manzana
     const mzs={};
     cl.forEach(c=>{
@@ -8095,6 +8095,7 @@ function renderStats(){
     });
     Object.keys(mzs).sort().forEach(mz=>{
       const m=mzs[mz];const pp=Math.round(m.p/m.t*100);
+      html+='<div style="min-width:0">';
       html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:11px">';
       html+='<span style="width:70px;color:var(--text2)">'+mz+'</span>';
       html+='<div style="flex:1;background:var(--border2);border-radius:99px;height:6px;overflow:hidden"><div style="background:#4f46e5;width:'+pp+'%;height:100%"></div></div>';
@@ -8121,6 +8122,7 @@ function renderStats(){
         });
         html+='</div>';
       }
+      html+='</div>';
     });
     html+='<div style="font-size:10px;color:var(--text3);margin-top:4px">Los lotes marcados son los que faltan cobrar. 💵 verde = dólares. ⚖️ naranja = agrimensor. Tocá uno para abrirlo.</div>';
     html+='</div></div>';
@@ -8137,7 +8139,7 @@ function statsToggleEtapa(i){
 function duenosToggleEtapa(i){
   event.stopPropagation();
   const d=document.getElementById('duenos-etapa-'+i);
-  if(d) d.style.display=d.style.display==='none'?'block':'none';
+  if(d) d.style.display=d.style.display==='none'?'grid':'none';
 }
 
 function toggleHistFin(){
