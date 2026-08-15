@@ -1274,7 +1274,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0586';
+  datos['_version']='v1.0587';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -8036,7 +8036,7 @@ function renderStats(){
   // ── RENDICIÓN DE CUENTAS PARA DUEÑOS (duplicado de POR ETAPA, v1.0576) ──
   html+='<div style="border-top:2px solid var(--border);margin:1.5rem 0 1rem;padding-top:1rem"></div>';
   html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:8px">🧾 RENDICIÓN DE CUENTAS PARA DUEÑOS <span style="font-weight:400;font-size:11px">(tocá una para ver por manzana)</span></div>';
-  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:10px;margin-bottom:6px">';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:6px">';
   // Para Dueños: incluir préstamos (autopago) como pagados en efectivo, y contar las transferencias totales como efectivo
   // (la empresa repone esa plata al rendir). Por eso _transfIdsD queda vacío: acá nada se trata como "no efectivo".
   const cobrablesD=data.filter(c=>(c.est==='activo'||(c.est==='finalizado'&&c.autopago))&&!esAgrimensor(c.id)&&!c.empresaPaga&&!esPrimeraCuotaFutura(c));
