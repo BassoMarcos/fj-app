@@ -1274,7 +1274,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0590';
+  datos['_version']='v1.0591';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -8051,6 +8051,31 @@ function renderStats(){
     html+='<div style="display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap">';
     html+='<div style="text-align:center"><div style="font-size:11px;color:var(--text2)">💰 Pesos</div><div style="font-size:24px;font-weight:800;color:var(--green)">'+fmtPeso(_dtA)+'</div><div style="font-size:10px;color:var(--text3)">'+_dARS.length+' lotes</div></div>';
     html+='<div style="text-align:center"><div style="font-size:11px;color:var(--text2)">💵 Dólares</div><div style="font-size:24px;font-weight:800;color:var(--green)">USD '+fmtPeso(_dtU)+'</div><div style="font-size:10px;color:var(--text3)">'+_dUSD.length+' lotes</div></div>';
+    html+='</div>';
+    html+='<button onclick="const d=document.getElementById(\'duenos-etotales\');d.style.display=d.style.display===\'none\'?\'block\':\'none\';this.textContent=d.style.display===\'none\'?\'▼ Ver por etapa y manzana\':\'▲ Ocultar detalle\'" style="width:100%;margin-top:10px;padding:7px;background:none;border:1px dashed var(--border2);color:var(--text2);border-radius:8px;font-size:12px;cursor:pointer">▼ Ver por etapa y manzana</button>';
+    html+='<div id="duenos-etotales" style="display:none;margin-top:8px">';
+    const gruposD={};
+    cobrablesD.forEach(c=>{
+      const et=getEtapa(c.mz), mz=String(c.mz).toUpperCase();
+      if(!gruposD[et]) gruposD[et]={mzs:{},totARS:0,totUSD:0,n:0};
+      if(!gruposD[et].mzs[mz]) gruposD[et].mzs[mz]={ars:0,usd:0,n:0};
+      const mm=montoCobrable(c).total;
+      if(c.moneda==='USD'){gruposD[et].mzs[mz].usd+=mm;gruposD[et].totUSD+=mm;}
+      else {gruposD[et].mzs[mz].ars+=mm;gruposD[et].totARS+=mm;}
+      gruposD[et].mzs[mz].n++;gruposD[et].n++;
+    });
+    const ordenEtD=['Etapa 1','Etapa 2','Etapa 3','Etapa 4','Otra'].filter(e=>gruposD[e]);
+    html+=ordenEtD.map(et=>{
+      const g=gruposD[et]; const mzKeys=Object.keys(g.mzs).sort();
+      return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden">'
+        +'<div style="display:flex;justify-content:space-between;padding:8px 12px;background:var(--hov);font-weight:800;font-size:13px">'
+        +'<span>'+et+' <span style="font-weight:400;color:var(--text2);font-size:11px">('+g.n+' lotes)</span></span>'
+        +'<span style="color:var(--green)">'+(g.totARS?fmtPeso(g.totARS):'')+(g.totARS&&g.totUSD?' · ':'')+(g.totUSD?'USD '+fmtPeso(g.totUSD):'')+'</span></div>'
+        +mzKeys.map(mz=>'<div style="display:flex;justify-content:space-between;padding:5px 12px 5px 24px;border-top:1px solid var(--border);font-size:12px">'
+          +'<span style="color:var(--text2)">'+mz+' <span style="font-size:10px">('+g.mzs[mz].n+')</span></span>'
+          +'<span style="font-weight:600">'+(g.mzs[mz].ars?fmtPeso(g.mzs[mz].ars):'')+(g.mzs[mz].ars&&g.mzs[mz].usd?' · ':'')+(g.mzs[mz].usd?'USD '+fmtPeso(g.mzs[mz].usd):'')+'</span></div>').join('')
+        +'</div>';
+    }).join('')||'<div style="font-size:12px;color:var(--text2)">Sin lotes cobrables</div>';
     html+='</div></div>';
   }
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:6px">';
