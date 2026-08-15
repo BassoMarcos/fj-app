@@ -1274,7 +1274,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0591';
+  datos['_version']='v1.0592';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6321,8 +6321,8 @@ function renderBalances(seccion){
     const sumTransfU=cierresTransf.reduce((s,c)=>s+(c.totalUSD||0),0);
 
     const cierreEstados=getCierreEstados();
-    const renderCierreList=(lista,offset)=>lista.length?lista.slice().reverse().map((ci,i)=>{
-      const globalIdx=offset+(lista.length-1-i);
+    const renderCierreList=(lista,offset)=>lista.length?lista.map((ci,origI)=>({ci,origI})).sort((a,b)=>{const ta=new Date(a.ci.ts||0).getTime(),tb=new Date(b.ci.ts||0).getTime();return tb-ta;}).map(({ci,origI})=>{
+      const globalIdx=offset+origI;
       const est=cierreEstados[globalIdx]||{};
       const hora=ci.ts?new Date(ci.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
       const isUSD=ci.moneda==='USD';const t=ci.total||0;
