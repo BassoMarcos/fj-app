@@ -1274,7 +1274,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0589';
+  datos['_version']='v1.0590';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -8036,11 +8036,24 @@ function renderStats(){
   // ── RENDICIÓN DE CUENTAS PARA DUEÑOS (duplicado de POR ETAPA, v1.0576) ──
   html+='<div style="border-top:2px solid var(--border);margin:1.5rem 0 1rem;padding-top:1rem"></div>';
   html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:8px">🧾 RENDICIÓN DE CUENTAS PARA DUEÑOS <span style="font-weight:400;font-size:11px">(tocá una para ver por manzana)</span></div>';
-  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:6px">';
   // Para Dueños: incluir préstamos (autopago) como pagados en efectivo, y contar las transferencias totales como efectivo
   // (la empresa repone esa plata al rendir). Por eso _transfIdsD queda vacío: acá nada se trata como "no efectivo".
   const cobrablesD=data.filter(c=>(c.est==='activo'||(c.est==='finalizado'&&c.autopago))&&!esAgrimensor(c.id)&&!c.empresaPaga&&!esPrimeraCuotaFutura(c));
   const _transfIdsD=new Set();
+  // Total a cobrar este mes (incluye préstamos)
+  {
+    const _dARS=cobrablesD.filter(c=>c.moneda!=='USD');
+    const _dUSD=cobrablesD.filter(c=>c.moneda==='USD');
+    const _dtA=_dARS.reduce((s,c)=>s+montoCobrable(c).total,0);
+    const _dtU=_dUSD.reduce((s,c)=>s+montoCobrable(c).total,0);
+    html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem">';
+    html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:10px">🎯 TOTAL A COBRAR ESTE MES <span style="font-weight:400;font-size:11px">(incluye préstamos)</span></div>';
+    html+='<div style="display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap">';
+    html+='<div style="text-align:center"><div style="font-size:11px;color:var(--text2)">💰 Pesos</div><div style="font-size:24px;font-weight:800;color:var(--green)">'+fmtPeso(_dtA)+'</div><div style="font-size:10px;color:var(--text3)">'+_dARS.length+' lotes</div></div>';
+    html+='<div style="text-align:center"><div style="font-size:11px;color:var(--text2)">💵 Dólares</div><div style="font-size:24px;font-weight:800;color:var(--green)">USD '+fmtPeso(_dtU)+'</div><div style="font-size:10px;color:var(--text3)">'+_dUSD.length+' lotes</div></div>';
+    html+='</div></div>';
+  }
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:6px">';
   etapas.forEach((e,i)=>{
     const cl=cobrablesD.filter(c=>getEtapa(c.mz)===e);
     if(!cl.length) return;
