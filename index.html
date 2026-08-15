@@ -1274,7 +1274,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0588';
+  datos['_version']='v1.0589';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -8105,7 +8105,7 @@ function renderStats(){
         if(m.total>0) partes.push('<span style="color:var(--text2)"><b>Total:</b> '+fmtPeso(m.total)+'</span>');
         if(m.efec>0) partes.push('<span style="color:var(--green);font-weight:700">💵 '+fmtPeso(m.efec)+'</span>');
         if(m.pend$>0) partes.push('<span style="color:#d97706;font-weight:700">⏳ '+fmtPeso(m.pend$)+'</span>');
-        if(partes.length) html+='<div style="margin:0 0 4px 58px;font-size:10px;display:flex;gap:8px;flex-wrap:wrap">'+partes.join('')+'</div>';
+        if(partes.length) html+='<div style="margin:0 0 4px 0;font-size:10px;display:flex;gap:8px;flex-wrap:wrap">'+partes.join('')+'</div>';
       }
       if(false){
         html+='<div style="margin:0 0 3px 76px;font-size:10px;color:var(--text2)"><span style="font-weight:700">Total a cobrar: </span>'+fmtPeso(m.total)+'</div>';
@@ -8117,7 +8117,7 @@ function renderStats(){
         html+='</div>';
       }
       if(m.pend.length){
-        html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin:0 0 6px 58px">';
+        html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin:0 0 6px 0">';
         m.pend.forEach(p=>{
           let bg,col,bd,pre='';
           if(p.agr){bg='#f97316';col='#fff';bd='#f97316';pre='⚖️ ';}
