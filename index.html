@@ -1274,7 +1274,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0583';
+  datos['_version']='v1.0584';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -8049,9 +8049,12 @@ function renderStats(){
     // Efectivo real: los que pagaron pero transfirieron NO son efectivo (van al pendiente). El % de arriba no se toca.
     const $c=sum(cl.filter(c=>c.pago&&!_transfIdsD.has(c.id)));
     const $p=sum(cl.filter(c=>!c.pago||_transfIdsD.has(c.id)));
+    // Total a cobrar si pagan TODOS (incluye préstamos, en pesos)
+    const $total=sum(cl.filter(c=>c.moneda!=='USD'));
     html+='<div onclick="duenosToggleEtapa('+i+')" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;cursor:pointer">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-weight:800">'+e+'</span><span style="font-size:20px;font-weight:800;color:'+(p>=70?'var(--green)':p>=40?'#d97706':'var(--red)')+'">'+p+'%</span></div>';
     html+='<div style="background:var(--border2);border-radius:99px;height:10px;overflow:hidden;margin-bottom:8px"><div style="background:#4f46e5;width:'+p+'%;height:100%;border-radius:99px"></div></div>';
+    html+='<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);border-bottom:1px dashed var(--border);padding-bottom:4px;margin-bottom:4px"><span style="font-weight:700">Total a cobrar</span><span style="color:var(--text);font-weight:800">'+fmtPeso($total)+'</span></div>';
     html+='<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)"><span>'+pag.length+'/'+cl.length+' lotes</span><span style="color:var(--green);font-weight:700">'+fmtPeso($c)+'</span></div>';
     html+='<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>pendiente</span><span style="color:#d97706;font-weight:700">'+fmtPeso($p)+'</span></div>';
     html+='<div id="duenos-etapa-'+i+'" style="display:none;margin-top:8px;border-top:1px dashed var(--border);padding-top:6px">';
@@ -8059,8 +8062,9 @@ function renderStats(){
     const mzs={};
     cl.forEach(c=>{
       const mz=String(c.mz).toUpperCase();
-      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],agrPend:[],efec:0,pend$:0};
+      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],agrPend:[],efec:0,pend$:0,total:0};
       mzs[mz].t++;
+      if(c.moneda!=='USD') mzs[mz].total+=montoCobrable(c).total;
       if(c.pago){
         mzs[mz].p++;
         // Efectivo esperado: cuota de lista de los pagados en pesos que NO transfirieron (los transferidos no son efectivo)
@@ -8079,7 +8083,7 @@ function renderStats(){
     // Agrimensores impagos de esta etapa (no cuentan en % ni en plata, pero se ordenan junto al resto)
     agrim.filter(c=>getEtapa(c.mz)===e&&!c.pago).forEach(c=>{
       const mz=String(c.mz).toUpperCase();
-      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],efec:0,pend$:0};
+      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],efec:0,pend$:0,total:0};
       mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,agr:true,usd:c.moneda==='USD'});
     });
     Object.values(mzs).forEach(m=>{
@@ -8095,6 +8099,9 @@ function renderStats(){
       html+='<span style="width:70px;color:var(--text2)">'+mz+'</span>';
       html+='<div style="flex:1;background:var(--border2);border-radius:99px;height:6px;overflow:hidden"><div style="background:#4f46e5;width:'+pp+'%;height:100%"></div></div>';
       html+='<span style="width:44px;text-align:right;font-weight:700">'+m.p+'/'+m.t+'</span></div>';
+      if(m.total>0){
+        html+='<div style="margin:0 0 3px 76px;font-size:10px;color:var(--text2)"><span style="font-weight:700">Total a cobrar: </span>'+fmtPeso(m.total)+'</div>';
+      }
       if(m.efec>0||m.pend$>0){
         html+='<div style="margin:0 0 6px 76px;font-size:10px;display:flex;gap:10px;flex-wrap:wrap">';
         if(m.efec>0) html+='<span style="color:var(--green);font-weight:700">💵 Efectivo: '+fmtPeso(m.efec)+'</span>';
