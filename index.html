@@ -474,6 +474,7 @@ tr:hover td{background:var(--bg)}
       <button class="tab-btn" onclick="adminTab('morapanel')" id="tab-btn-mora">⚠️ Mora</button>
       <button class="tab-btn" onclick="adminTab('terminados')" id="tab-btn-terminados">🏁 Lotes Finalizados</button>
       <button class="tab-btn" onclick="adminTab('vistaclient')">👁 Vista Cliente</button>
+      <button class="tab-btn" onclick="window.open('mapa.html','_blank')" title="Mapa de arquitectura FJ App + MasterPlan">🧠 Mapa</button>
     </div>
     <div class="tab-content-area">
     <div id="atab-inicio" style="display:none"><div class="main" id="a-inicio-content" style="padding-top:1rem"></div></div>
@@ -1274,7 +1275,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0592';
+  datos['_version']='v1.0593';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
