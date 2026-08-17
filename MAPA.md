@@ -154,3 +154,10 @@ Rediseño basado en la lógica real del negocio, conversada y confirmada con el 
 - `showConfirmModal` ahora acepta `btnLabel`/`btnColor` configurables.
 - Nueva `gestionMarcarTodosConfirm` — aviso + contraseña admin antes de marcar/desmarcar todos los pagos en bloque.
 - Sistema de 10 temas con selector en navbar; fixes de contraste para tema oscuro en mora/ICC/adelantos/gastos.
+
+## Mapa de arquitectura (🧠 cerebro) — v1.0593+
+
+- **`mapa.html`** en la raíz del repo (`bassomarcos.github.io/fj-app/mapa.html`): visualización tipo red neuronal de FJ App + MasterPlan y sus conexiones. Botón **"🧠 Mapa"** en la navbar admin (abre en pestaña nueva).
+- Datos NO hardcodeados: lee `mapa-data.json` por raw de GitHub desde el repo de MasterPlan (`raw.githubusercontent.com/BassoMarcos/masterplan-management/main/mapa-data.json`). **Fuente única** — editar ahí y se actualiza en ambas apps.
+- Mismo `mapa.html` está en MasterPlan (`public/mapa.html`, botón en modal ⚙️ Ajustes). firebase.json tiene rewrite exception para servirlo directo.
+- Para agregar/quitar módulos del cerebro: editar `mapa-data.json` (nodos + aristas + grupos). NO tocar `mapa.html`.
