@@ -1275,7 +1275,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0596';
+  datos['_version']='v1.0597';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6509,9 +6509,9 @@ function renderBalances(seccion){
     const _moraRendidosCaja=_moraTodos.filter(p=>_cmRendidos[p.id]);
     const pesos=mora.filter(p=>p.moneda!=='USD');
     const usd=mora.filter(p=>p.moneda==='USD');
-    const totalCuotaP=pesos.reduce((s,p)=>s+(p.cuota||0)+(p.cuotaAgrimensor||0),0);
+    const totalCuotaP=pesos.reduce((s,p)=>s+(p.cuota||0),0);
     const totalInteresP=pesos.reduce((s,p)=>s+(p.interes||0),0);
-    const totalCuotaU=usd.reduce((s,p)=>s+(p.cuota||0)+(p.cuotaAgrimensor||0),0);
+    const totalCuotaU=usd.reduce((s,p)=>s+(p.cuota||0),0);
     const totalInteresU=usd.reduce((s,p)=>s+(p.interes||0),0);
     // Intereses del mes (de días) pendientes de pasar a Extras — para juntarlos todos
     const intMesPend=mora.filter(p=>p.esInteresMes&&p.interes&&!p.interesEnExtras);
@@ -6555,6 +6555,7 @@ function renderBalances(seccion){
         return '<div style="border-bottom:1px solid var(--border)">'
           +'<div data-k="'+key+'" onclick="toggleMoraCajaGrupo(this.dataset.k)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:13px;cursor:pointer">'
           +'<div><div style="font-weight:700">'+(abierto?'▼':'▶')+' '+formatLoteTag(g.mz,g.lote)+' — '+g.titular
+          +(esAgrimensor(g.id)?' <span title="Cuota de agrimensor — separar" style="background:rgba(147,51,234,.12);color:var(--acc2,#9333ea);border:1px solid rgba(147,51,234,.4);font-size:10px;font-weight:700;border-radius:6px;padding:1px 7px;margin-left:4px;white-space:nowrap">⚖️ Agrimensor</span>':'')
           +(g.items.length>1?' <span style="background:var(--red-bg);color:var(--red);border:1px solid #fca5a5;font-size:10px;font-weight:700;border-radius:6px;padding:1px 7px;margin-left:4px">'+g.items.length+' cuotas</span>':'')+'</div>'
           +'<div style="font-size:11px;color:var(--text2)">'+fechas+'</div></div>'
           +'<div style="text-align:right">'
