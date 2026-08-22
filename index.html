@@ -1275,7 +1275,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0597';
+  datos['_version']='v1.0598';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -10793,8 +10793,7 @@ function borrarCierreFinalYReaplicar(){
       const yaEnHist=c.hist.some(h=>h.mes===mesNombre&&h.cuota===c.ca);
       if(!yaEnHist) c.hist.push({cuota:c.ca, monto:montoPuroHist(c), mes:mesNombre, ts:ts, pagada:!!c.pago});
       if(c.ca < c.ct) c.ca=c.ca+1;
-      // Finalizar de verdad solo si es un lote activo que completó (los absorbidos ya están finalizados)
-      if(c.ct>0 && c.ca>=c.ct && c.est==='activo'){ c.est='finalizado'; c.monto=0; c.saldo=0; _finalizadosEnCierre.push(c.id); }
+      // v1.0598: el cierre ya no finaliza lotes (lo hace el cobro en marcarPago).
       c.pago=false; c.pagoTs=null;
       avanzados++;
     });
@@ -11102,7 +11101,10 @@ function ejecutarCierreFinal(){
       }
       if(!esPrimeraCuotaFutura(c)){
         if(c.ca<c.ct) c.ca=c.ca+1;
-        if(c.ct>0 && c.ca>=c.ct && c.est==='activo'){ c.est='finalizado'; c.monto=0; c.saldo=0; _finalizadosEnCierre.push(c.id); }
+        // v1.0598: el cierre YA NO finaliza lotes. La finalización la maneja el cobro
+        // (marcarPago) cuando se paga la última cuota. Así un lote que llega a su última
+        // cuota pero todavía no la pagó (ej. avanza a 35/35) queda ACTIVO esperando el pago,
+        // en vez de finalizarse en falso y perderse de cobranza.
         avanzados++;
       }
       c.pago=false; c.pagoTs=null;
