@@ -1275,7 +1275,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0595';
+  datos['_version']='v1.0596';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6509,9 +6509,9 @@ function renderBalances(seccion){
     const _moraRendidosCaja=_moraTodos.filter(p=>_cmRendidos[p.id]);
     const pesos=mora.filter(p=>p.moneda!=='USD');
     const usd=mora.filter(p=>p.moneda==='USD');
-    const totalCuotaP=pesos.reduce((s,p)=>s+(p.cuota||0),0);
+    const totalCuotaP=pesos.reduce((s,p)=>s+(p.cuota||0)+(p.cuotaAgrimensor||0),0);
     const totalInteresP=pesos.reduce((s,p)=>s+(p.interes||0),0);
-    const totalCuotaU=usd.reduce((s,p)=>s+(p.cuota||0),0);
+    const totalCuotaU=usd.reduce((s,p)=>s+(p.cuota||0)+(p.cuotaAgrimensor||0),0);
     const totalInteresU=usd.reduce((s,p)=>s+(p.interes||0),0);
     // Intereses del mes (de días) pendientes de pasar a Extras — para juntarlos todos
     const intMesPend=mora.filter(p=>p.esInteresMes&&p.interes&&!p.interesEnExtras);
