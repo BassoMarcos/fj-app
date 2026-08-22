@@ -1275,7 +1275,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0594';
+  datos['_version']='v1.0595';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7549,35 +7549,66 @@ function pasarInteresesGrupo(id){
   });
 }
 
+function _pimNum(el){ return parseFloat(String(el&&el.value||'').replace(/[^\d]/g,''))||0; }
+function _pimFmt(el){
+  const d=String(el.value||'').replace(/[^\d]/g,'');
+  el.value=d===''?'':'$'+Number(d).toLocaleString('es-AR');
+}
 function pasarInteresMora(id, ts){
-  confirmarConClave(()=>{
-    const mora=loadMora();
-    const p=mora.find(x=>x.id===id&&x.ts===ts);
-    if(!p||!p.interes){alert('No hay interés para pasar');return;}
-    const entrada=prompt('Monto a enviar a Extras\nInterés registrado: '+fmtPeso(p.interes)+'\n\nEditá el monto según lo que realmente entró (el faltante queda como saldo en contra):', String(p.interes));
-    if(entrada===null) return;
-    const monto=Math.round(Number(String(entrada).replace(/[^\d.-]/g,'')));
+  const mora=loadMora();
+  const p=mora.find(x=>x.id===id&&x.ts===ts);
+  if(!p||!p.interes){alert('No hay interés para pasar');return;}
+  const ov=document.createElement('div');
+  ov.id='pim-modal';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:99999;padding:1rem';
+  ov.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:400px;width:100%;padding:1.25rem;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <div style="font-size:16px;font-weight:800;margin-bottom:4px">Pasar interés a Extras</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:2px">${formatLoteTag(p.mz,p.lote)} — ${p.titular}</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px">Interés registrado: <b style="color:var(--text)">${fmtPeso(p.interes)}</b></div>
+    <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">MONTO A ENVIAR</div>
+    <input type="text" inputmode="numeric" id="pim-input" value="$${(Math.round(p.interes)||0).toLocaleString('es-AR')}" style="width:100%;box-sizing:border-box;padding:11px 12px;border:2px solid var(--border2);border-radius:9px;font-size:18px;font-weight:800;background:var(--bg);color:var(--text)">
+    <div style="font-size:11px;color:var(--text2);margin-top:6px;line-height:1.4">Editá el monto según lo que realmente entró. El faltante queda como saldo en contra.</div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button id="pim-cancel" style="flex:1;background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:9px;padding:11px;font-size:14px;font-weight:700;cursor:pointer">Cancelar</button>
+      <button id="pim-ok" style="flex:2;background:#4f46e5;border:none;color:#fff;border-radius:9px;padding:11px;font-size:14px;font-weight:800;cursor:pointer">Confirmar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  const inp=ov.querySelector('#pim-input');
+  inp.oninput=()=>_pimFmt(inp);
+  setTimeout(()=>{inp.focus();inp.select();},50);
+  const cerrar=()=>ov.remove();
+  ov.querySelector('#pim-cancel').onclick=cerrar;
+  ov.addEventListener('click',e=>{if(e.target===ov)cerrar();});
+  ov.querySelector('#pim-ok').onclick=()=>{
+    const monto=_pimNum(inp);
     if(!isFinite(monto)||monto<0){alert('Monto inválido.');return;}
-    const extras=loadExtras();
-    if(monto>0){
-      extras.push({
-        id:Date.now().toString(),
-        tipo:'ingreso',
-        desc:`Interés mora — ${formatLoteTag(p.mz,p.lote)} ${p.titular}`,
-        monto:monto,
-        fecha:p.fecha,
-        ts:new Date().toISOString(),
-        moraId:id,
-        moraTs:ts
-      });
-      saveExtras(extras);
-    }
-    p.interesEnExtras=true;
-    saveMora(mora);
-  actualizarBadgeMora();
-    renderBalances('mora');
-    alert(monto>0?('✓ '+fmtPeso(monto)+' enviado a Gastos e Ingresos Extras'):'✓ Ítem resuelto (no se envió monto a Extras).');
-  });
+    cerrar();
+    confirmarConClave(()=>{
+      const mora2=loadMora();
+      const p2=mora2.find(x=>x.id===id&&x.ts===ts);
+      if(!p2){renderBalances('mora');return;}
+      if(monto>0){
+        const extras=loadExtras();
+        extras.push({
+          id:Date.now().toString(),
+          tipo:'ingreso',
+          desc:`Interés mora — ${formatLoteTag(p2.mz,p2.lote)} ${p2.titular}`,
+          monto:monto,
+          fecha:p2.fecha,
+          ts:new Date().toISOString(),
+          moraId:id,
+          moraTs:ts
+        });
+        saveExtras(extras);
+      }
+      p2.interesEnExtras=true;
+      saveMora(mora2);
+      actualizarBadgeMora();
+      renderBalances('mora');
+      alert(monto>0?('✓ '+fmtPeso(monto)+' enviado a Gastos e Ingresos Extras'):'✓ Ítem resuelto (no se envió monto a Extras).');
+    });
+  };
 }
 
 function resetAdelantos(){
