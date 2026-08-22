@@ -1275,7 +1275,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0593';
+  datos['_version']='v1.0594';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7554,23 +7554,29 @@ function pasarInteresMora(id, ts){
     const mora=loadMora();
     const p=mora.find(x=>x.id===id&&x.ts===ts);
     if(!p||!p.interes){alert('No hay interés para pasar');return;}
+    const entrada=prompt('Monto a enviar a Extras\nInterés registrado: '+fmtPeso(p.interes)+'\n\nEditá el monto según lo que realmente entró (el faltante queda como saldo en contra):', String(p.interes));
+    if(entrada===null) return;
+    const monto=Math.round(Number(String(entrada).replace(/[^\d.-]/g,'')));
+    if(!isFinite(monto)||monto<0){alert('Monto inválido.');return;}
     const extras=loadExtras();
-    extras.push({
-      id:Date.now().toString(),
-      tipo:'ingreso',
-      desc:`Interés mora — ${formatLoteTag(p.mz,p.lote)} ${p.titular}`,
-      monto:p.interes,
-      fecha:p.fecha,
-      ts:new Date().toISOString(),
-      moraId:id,
-      moraTs:ts
-    });
-    saveExtras(extras);
+    if(monto>0){
+      extras.push({
+        id:Date.now().toString(),
+        tipo:'ingreso',
+        desc:`Interés mora — ${formatLoteTag(p.mz,p.lote)} ${p.titular}`,
+        monto:monto,
+        fecha:p.fecha,
+        ts:new Date().toISOString(),
+        moraId:id,
+        moraTs:ts
+      });
+      saveExtras(extras);
+    }
     p.interesEnExtras=true;
     saveMora(mora);
   actualizarBadgeMora();
     renderBalances('mora');
-    alert('✓ Interés enviado a Gastos e Ingresos Extras');
+    alert(monto>0?('✓ '+fmtPeso(monto)+' enviado a Gastos e Ingresos Extras'):'✓ Ítem resuelto (no se envió monto a Extras).');
   });
 }
 
