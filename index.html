@@ -1280,7 +1280,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0599';
+  datos['_version']='v1.0600';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11098,10 +11098,10 @@ function simularCierre(){
   try{
     const adel=loadAdelantos();
     adelantos=adel.filter(a=>a.estado==='aprobado').map(a=>{
-      const c=data.find(x=>x.id===a.clienteId)||{};
-      return {clienteId:a.clienteId, mz:c.mz, lote:c.lote, titular:c.titular,
+      const c=data.find(x=>x.id===a.id)||{};
+      return {clienteId:a.id, mz:a.mz||c.mz, lote:a.lote||c.lote, titular:a.titular||c.titular,
         cuotas:Array.isArray(a.cuotas)?a.cuotas.length:(a.cuotas||0),
-        proxima:(c.ca!=null?c.ca:'?'), ct:c.ct};
+        proxima:(c.ca!=null?c.ca:'?'), ct:(c.ct!=null?c.ct:'?')};
     });
   }catch(e){adelantos=[];}
 
@@ -11171,7 +11171,7 @@ function abrirVerificacionCierre(){
   if(s.adelantos.length){
     html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">';
     html+='<div style="font-size:13px;font-weight:700;margin-bottom:8px">⏩ Adelantos aprobados ('+s.adelantos.length+') — el cierre NO los toca</div>';
-    s.adelantos.forEach(a=>{ html+='<div style="font-size:12px;color:var(--text2);padding:2px 0">· '+formatLoteTag(a.mz,a.lote)+' — '+(a.titular||'')+' · '+a.cuotas+' cuota(s) adelantada(s) · próxima: '+a.proxima+'/'+a.ct+'</div>'; });
+    s.adelantos.forEach(a=>{ html+='<div style="font-size:12px;color:var(--text2);padding:2px 0">· '+formatLoteTag(a.mz,a.lote)+' — '+(a.titular||'')+' · <b>'+a.cuotas+'</b> cuota(s) adelantada(s) · total actual del lote: '+a.proxima+'/'+a.ct+'</div>'; });
     html+='</div>';
   }
 
