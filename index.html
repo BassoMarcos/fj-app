@@ -1280,7 +1280,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0607';
+  datos['_version']='v1.0608';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11122,16 +11122,42 @@ function simularCierre(){
     });
   }catch(e){adelantos=[];}
 
-  // ── Trimestres (cuota pura ARS de activos + préstamos) ──
-  // El cierre NO toca monto ni tri, así que estos totales deben quedar IGUALES post-cierre.
+  // ── Trimestres: ANTES vs DESPUÉS del cierre simulado ──
+  // Construimos el estado "después" (copia con cuotas avanzadas) y recalculamos.
+  // El cierre NO toca monto ni tri, así que deben dar IGUAL. Si cambian, algo se movió mal.
+  function calcTris(arr){
+    const t={};
+    arr.forEach(c=>{
+      if((c.moneda||'ARS')==='USD') return;
+      if(!(c.est==='activo' || (c.est==='finalizado'&&c.autopago))) return;
+      const k=c.tri||'(sin trimestre)';
+      if(!t[k]) t[k]={monto:0, n:0};
+      t[k].monto+=(c.monto||0);
+      t[k].n++;
+    });
+    return t;
+  }
+  const trisAntes = calcTris(data);
+  // estado "después": copia profunda con el avance aplicado (mismo criterio que arriba)
+  const dataDespues = JSON.parse(JSON.stringify(data));
+  dataDespues.forEach(c=>{
+    const esPrestamoAbsorbido = (c.est==='finalizado' && c.autopago && c.ca < c.ct);
+    if(c.est!=='activo' && !esPrestamoAbsorbido) return;
+    if(esPrimeraCuotaFutura(c)) return;
+    if(c.ca<c.ct) c.ca=c.ca+1;
+  });
+  const trisDespues = calcTris(dataDespues);
+  // unificar en una estructura comparable
   const tris={};
-  data.forEach(c=>{
-    if((c.moneda||'ARS')==='USD') return;
-    if(!(c.est==='activo' || (c.est==='finalizado'&&c.autopago))) return;
-    const t=c.tri||'(sin trimestre)';
-    if(!tris[t]) tris[t]={monto:0, n:0};
-    tris[t].monto+=(c.monto||0);
-    tris[t].n++;
+  const todasClaves=new Set([...Object.keys(trisAntes),...Object.keys(trisDespues)]);
+  todasClaves.forEach(k=>{
+    const a=trisAntes[k]||{monto:0,n:0};
+    const d=trisDespues[k]||{monto:0,n:0};
+    tris[k]={
+      monto:d.monto, n:d.n,
+      montoAntes:a.monto, nAntes:a.n,
+      cambio:(a.monto!==d.monto || a.n!==d.n)
+    };
   });
 
   avanzan.sort(_cmpLote);
@@ -11186,16 +11212,27 @@ function abrirVerificacionCierre(){
     html+='</div>';
   }
 
-  // Trimestres
+  // Trimestres — comparación ANTES vs DESPUÉS
+  const hayCambioTri = trisEntries.some(([t,o])=>o.cambio);
   html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">';
-  html+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">📊 Trimestres — total post-cierre (cuota pura ARS)</div>';
-  html+='<div style="font-size:11px;color:var(--text2);margin-bottom:10px">El cierre NO cambia montos ni trimestres, así que estos totales deben quedar <b>idénticos</b> antes y después de cerrar. Si tras el cierre alguno cambia (fuera del ICC), es señal de que algo se movió mal.</div>';
-  let _triTotal=0, _triN=0;
+  html+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">📊 Trimestres — ANTES vs DESPUÉS del cierre (cuota pura ARS)</div>';
+  if(hayCambioTri){
+    html+='<div style="background:rgba(239,68,68,.12);border:1px solid #ef4444;border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:#ef4444;font-weight:700">🚩 Un trimestre cambió con el cierre. No debería pasar (el cierre no toca montos). Revisá.</div>';
+  } else {
+    html+='<div style="background:rgba(16,185,129,.12);border:1px solid #10b981;border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:#10b981;font-weight:700">✅ Los 3 trimestres quedan iguales tras el cierre, como debe ser.</div>';
+  }
+  html+='<div style="display:grid;grid-template-columns:2fr 1.3fr 1.3fr;gap:4px;font-size:11px;color:var(--text3);font-weight:700;padding-bottom:4px;border-bottom:1px solid var(--border)"><span>Trimestre</span><span style="text-align:right">Antes</span><span style="text-align:right">Después</span></div>';
+  let _tA=0,_tD=0;
   trisEntries.forEach(([t,o])=>{
-    _triTotal+=o.monto; _triN+=o.n;
-    html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border)"><span style="color:var(--text)">'+t+' <span style="color:var(--text3);font-size:11px">('+o.n+' lotes)</span></span><b style="color:var(--text)">'+fmt(o.monto)+'</b></div>';
+    _tA+=o.montoAntes; _tD+=o.monto;
+    const col = o.cambio?'#ef4444':'var(--text)';
+    html+='<div style="display:grid;grid-template-columns:2fr 1.3fr 1.3fr;gap:4px;padding:5px 0;font-size:12px;border-bottom:1px solid var(--border);align-items:center">'
+      +'<span style="color:'+col+'">'+(o.cambio?'🚩 ':'')+t+' <span style="color:var(--text3);font-size:10px">('+o.n+')</span></span>'
+      +'<span style="text-align:right;color:var(--text2)">'+fmt(o.montoAntes)+'</span>'
+      +'<span style="text-align:right;font-weight:700;color:'+col+'">'+fmt(o.monto)+'</span></div>';
   });
-  html+='<div style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:13px;font-weight:800"><span style="color:var(--text)">TOTAL ('+_triN+' lotes)</span><span style="color:var(--text)">'+fmt(_triTotal)+'</span></div></div>';
+  html+='<div style="display:grid;grid-template-columns:2fr 1.3fr 1.3fr;gap:4px;padding:8px 0 0;font-size:12px;font-weight:800"><span style="color:var(--text)">TOTAL</span><span style="text-align:right;color:var(--text)">'+fmt(_tA)+'</span><span style="text-align:right;color:var(--text)">'+fmt(_tD)+'</span></div>';
+  html+='<div style="font-size:10px;color:var(--text3);margin-top:8px">Después de aplicar ICC, volvé acá: solo el trimestre que corresponde debe subir; los otros dos, iguales.</div></div>';
 
   // Adelantos
   if(s.adelantos.length){
@@ -11205,16 +11242,36 @@ function abrirVerificacionCierre(){
     html+='</div>';
   }
 
-  // Lista de avance (colapsable)
-  html+='<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:700;margin-bottom:6px;cursor:pointer" onclick="var e=document.getElementById(\'verif-lista\');e.style.display=e.style.display===\'none\'?\'block\':\'none\'">📋 Ver lista completa de avance ('+s.avanzan.length+') ▼</div>';
-  html+='<div id="verif-lista" style="display:none;max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">';
-  html+='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--surface);position:sticky;top:0"><th style="text-align:left;padding:6px 8px">Lote</th><th style="text-align:left;padding:6px 8px">Titular</th><th style="text-align:center;padding:6px 8px">Ahora</th><th style="text-align:center;padding:6px 8px">Después</th></tr></thead><tbody>';
-  s.avanzan.forEach(a=>{
-    html+='<tr style="border-top:1px solid var(--border)">'
-      +'<td style="padding:5px 8px">'+formatLoteTag(a.mz,a.lote)+(a.esPrestamo?' <span style="color:#059669;font-size:10px">💰</span>':'')+'</td>'
-      +'<td style="padding:5px 8px">'+(a.titular||'')+'</td>'
+  // ── Verificador automático: detecta lotes que NO cumplen el patrón (avanzar +1) ──
+  const conEstado = s.avanzan.map(a=>{
+    const d=a.cuotaNueva-a.cuotaActual;
+    const ok=(d===1) || (d===0 && a.cuotaActual===a.ct); // +1 normal, o quieto si ya está en la última
+    return {...a, _ok:ok};
+  });
+  const malos = conEstado.filter(a=>!a._ok);
+  // sospechosos primero, después el resto (ambos ya venían ordenados por lote)
+  const ordenada = [...malos, ...conEstado.filter(a=>a._ok)];
+
+  if(malos.length>0){
+    html+='<div style="background:rgba(239,68,68,.12);border:1px solid #ef4444;border-radius:10px;padding:12px 14px;margin-bottom:12px"><div style="font-size:14px;font-weight:800;color:#ef4444">🚩 '+malos.length+' lote(s) NO cumplen el patrón</div><div style="font-size:12px;color:var(--text2)">Lo normal es +1 cuota. Estos están marcados en rojo y aparecen primeros en la lista. Revisalos antes de cerrar.</div></div>';
+  } else {
+    html+='<div style="background:rgba(16,185,129,.12);border:1px solid #10b981;border-radius:10px;padding:12px 14px;margin-bottom:12px"><div style="font-size:14px;font-weight:800;color:#10b981">✅ Los '+conEstado.length+' lotes avanzan +1 correctamente</div><div style="font-size:12px;color:var(--text2)">Ningún salto raro. El cierre debería salir limpio.</div></div>';
+  }
+
+  // Lista (sospechosos arriba, marcados en rojo)
+  html+='<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;cursor:pointer" onclick="var e=document.getElementById(\'verif-lista\');e.style.display=e.style.display===\'none\'?\'block\':\'none\'">📋 Ver lista: HOY → después ('+s.avanzan.length+')'+(malos.length?' · <span style=\"color:#ef4444\">'+malos.length+' en rojo</span>':'')+' ▼</div>';
+  html+='<div id="verif-lista" style="display:'+(malos.length?'block':'none')+';max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">';
+  html+='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--surface);position:sticky;top:0"><th style="text-align:center;padding:6px 8px;color:var(--text2)">✓</th><th style="text-align:left;padding:6px 8px;color:var(--text2)">Lote</th><th style="text-align:left;padding:6px 8px;color:var(--text2)">Titular</th><th style="text-align:center;padding:6px 8px;color:var(--text2)">HOY</th><th style="text-align:center;padding:6px 8px;color:var(--text2)">Después</th></tr></thead><tbody>';
+  ordenada.forEach(a=>{
+    const raro=!a._ok;
+    const marca = raro?'<span style="color:#ef4444">🚩</span>':'<span style="color:#10b981">✅</span>';
+    const bg = raro?'background:rgba(239,68,68,.12)':'';
+    html+='<tr style="border-top:1px solid var(--border);'+bg+'">'
+      +'<td style="padding:5px 8px;text-align:center">'+marca+'</td>'
+      +'<td style="padding:5px 8px;color:'+(raro?'#ef4444':'var(--text)')+';font-weight:'+(raro?'700':'400')+'">'+formatLoteTag(a.mz,a.lote)+(a.esPrestamo?' <span style="color:#10b981;font-size:10px">💰</span>':'')+'</td>'
+      +'<td style="padding:5px 8px;color:'+(raro?'#ef4444':'var(--text)')+'">'+(a.titular||'')+'</td>'
       +'<td style="padding:5px 8px;text-align:center;color:var(--text2)">'+a.cuotaActual+'/'+a.ct+'</td>'
-      +'<td style="padding:5px 8px;text-align:center;font-weight:700;color:#4f46e5">'+a.cuotaNueva+'/'+a.ct+'</td></tr>';
+      +'<td style="padding:5px 8px;text-align:center;font-weight:700;color:'+(raro?'#ef4444':'#8b5cf6')+'">'+a.cuotaNueva+'/'+a.ct+'</td></tr>';
   });
   html+='</tbody></table></div></div>';
 
