@@ -1280,7 +1280,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0600';
+  datos['_version']='v1.0601';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11051,6 +11051,23 @@ function _syncBloqueaOperacion(nombre){
 }
 
 // ══════ SIMULACIÓN DEL CIERRE (v1.0599) ══════
+// Orden lógico de manzanas/etapas para las listas de la simulación
+function _ordenMz(mz){
+  const M={'M1':1,'M2':2,'M3':3,'M4':4,'ETAPA 2':5,'ETAPA 3':6,'E4-M1':7,'E4-M2':8,'E4-M3':9,'E4-M4':10,'E4-M5':11};
+  return M[String(mz||'').toUpperCase()]||99;
+}
+function _ordenLoteKey(o){
+  const m=String(o.lote||'').match(/^(\d+)(.*)$/);
+  const num=m?parseInt(m[1],10):9999;
+  const suf=m?m[2]:String(o.lote||'');
+  return [_ordenMz(o.mz), num, suf];
+}
+function _cmpLote(a,b){
+  const ka=_ordenLoteKey(a), kb=_ordenLoteKey(b);
+  if(ka[0]!==kb[0]) return ka[0]-kb[0];
+  if(ka[1]!==kb[1]) return ka[1]-kb[1];
+  return String(ka[2]).localeCompare(String(kb[2]));
+}
 // Replica EXACTAMENTE la lógica de ejecutarCierreFinal pero SIN ejecutar nada.
 // Devuelve un objeto con los conceptos para verificar ANTES de cerrar.
 // Si el cierre cambia, esta simulación debe reflejar el mismo criterio.
@@ -11113,6 +11130,11 @@ function simularCierre(){
     const t=c.tri||'(sin trimestre)';
     tris[t]=(tris[t]||0)+(c.monto||0);
   });
+
+  avanzan.sort(_cmpLote);
+  mora.sort(_cmpLote);
+  esperan.sort(_cmpLote);
+  adelantos.sort(_cmpLote);
 
   return {
     mesNombre, mes, anio,
