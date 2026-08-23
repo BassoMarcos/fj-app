@@ -1280,7 +1280,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0602';
+  datos['_version']='v1.0603';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11146,64 +11146,55 @@ function simularCierre(){
 }
 
 // ══════ PANEL VISUAL DE VERIFICACIÓN DE CIERRE (v1.0599) ══════
-// ══════ BLOQUE 3: guardar predicción y verificar post-cierre (v1.0602) ══════
-function guardarSimulacion(){
-  const s=simularCierre();
-  const snap={
-    ts:new Date().toISOString(),
-    fecha:new Date().toLocaleDateString('es-AR'),
-    hora:new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}),
-    mesNombre:s.mesNombre,
-    pred:s.avanzan.map(a=>({id:a.id, mz:a.mz, lote:a.lote, titular:a.titular, cuotaActual:a.cuotaActual, cuotaNueva:a.cuotaNueva, ct:a.ct})),
-    totalAvanzan:s.totalAvanzan, totalMora:s.totalMora, totalEsperan:s.totalEsperan
-  };
-  _lsSet(dKey('sim_cierre'), JSON.stringify(snap));
-  try{ window._fbSet && window._fbSet('simCierre', snap).catch(()=>{}); }catch(e){}
-  alert('✓ Simulación guardada ('+snap.fecha+' '+snap.hora+')\n\nDespués de cerrar, tocá "Verificar resultado" para comprobar que todo avanzó como se predijo.');
-  abrirVerificacionCierre();
-}
-function loadSimulacionGuardada(){
-  try{ return JSON.parse(_lsGet(dKey('sim_cierre'))||'null'); }catch(e){ return null; }
-}
+// ══════ BLOQUE 3: verificar post-cierre usando el snapshot automático (v1.0603) ══════
+// No requiere guardar nada a mano: usa la foto que la app toma sola antes de cada cierre.
 function verificarPostCierre(){
-  const snap=loadSimulacionGuardada();
-  if(!snap){ alert('No hay simulación guardada. Guardá una ANTES de cerrar.'); return null; }
-  const data=loadData();
+  const snap=loadSnapshot();
+  if(!snap || !snap.data){ alert('No hay foto pre-cierre disponible.\n\nLa app la toma automáticamente al ejecutar el cierre. Si todavía no cerraste, no hay nada que verificar aún.'); return null; }
+  let dataAntes;
+  try{ dataAntes = JSON.parse(snap.data); }catch(e){ alert('No se pudo leer la foto pre-cierre.'); return null; }
+  if(!Array.isArray(dataAntes)) dataAntes = Object.values(dataAntes||{});
+  const dataAhora=loadData();
+
   const res=[];
-  snap.pred.forEach(p=>{
-    const c=data.find(x=>x.id===p.id);
+  dataAntes.forEach(cAntes=>{
+    // Solo lotes que el cierre debía avanzar: activos o préstamos absorbidos, no primera cuota futura
+    const esPrestAbs=(cAntes.est==='finalizado' && cAntes.autopago && cAntes.ca<cAntes.ct);
+    if(cAntes.est!=='activo' && !esPrestAbs) return;
+    // (esperados = los que NO eran primera cuota futura en el momento del cierre)
+    const cAhora=dataAhora.find(x=>x.id===cAntes.id);
+    const esperada = (cAntes.ca<cAntes.ct)? cAntes.ca+1 : cAntes.ca;
     let estado='ok', detalle='';
-    if(!c){ estado='falta'; detalle='El lote ya no está en los datos'; }
-    else if(c.ca===p.cuotaNueva){ estado='ok'; detalle='Avanzó a '+c.ca+'/'+c.ct; }
-    else if(c.ca===p.cuotaActual){ estado='no_avanzo'; detalle='NO avanzó — sigue en '+c.ca+'/'+c.ct; }
-    else if(c.ca>p.cuotaNueva){ estado='avanzo_mas'; detalle='Avanzó DE MÁS — está en '+c.ca+' (se esperaba '+p.cuotaNueva+')'; }
-    else { estado='distinto'; detalle='Quedó en '+c.ca+' (se esperaba '+p.cuotaNueva+')'; }
-    res.push({...p, caActualReal:(c?c.ca:null), estado, detalle});
+    if(!cAhora){ estado='falta'; detalle='El lote ya no está'; }
+    else if(cAhora.ca===esperada){ estado='ok'; detalle='Avanzó a '+cAhora.ca+'/'+cAhora.ct; }
+    else if(cAhora.ca===cAntes.ca){ estado='no_avanzo'; detalle='NO avanzó — sigue en '+cAhora.ca+'/'+cAhora.ct+' (se esperaba '+esperada+')'; }
+    else if(cAhora.ca>esperada){ estado='avanzo_mas'; detalle='Avanzó DE MÁS — está en '+cAhora.ca+' (se esperaba '+esperada+')'; }
+    else { estado='distinto'; detalle='Quedó en '+cAhora.ca+' (se esperaba '+esperada+')'; }
+    res.push({id:cAntes.id, mz:cAntes.mz, lote:cAntes.lote, titular:cAntes.titular,
+      cuotaAntes:cAntes.ca, esperada, ct:cAntes.ct, caReal:(cAhora?cAhora.ca:null), estado, detalle});
   });
-  return {snap, res};
+  res.sort(_cmpLote);
+  return {snapTs:snap.ts, res};
 }
 function abrirVerificacionResultado(){
   const v=verificarPostCierre();
   if(!v) return;
   const problemas=v.res.filter(r=>r.estado!=='ok');
   const ok=v.res.length-problemas.length;
+  const fechaSnap = v.snapTs ? new Date(v.snapTs).toLocaleString('es-AR') : '';
   let html='<div style="max-width:900px;margin:0 auto">';
   html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
     +'<div style="font-size:20px;font-weight:800">✅ Verificación post-cierre</div>'
     +'<button onclick="cerrarModalVerif()" style="background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer">✕ Cerrar</button></div>';
-  html+='<div style="font-size:12px;color:var(--text2);margin-bottom:14px">Comparando lo que se predijo (guardado el '+v.snap.fecha+' '+v.snap.hora+' · '+v.snap.mesNombre+') con el estado actual.</div>';
-  // Resumen
+  html+='<div style="font-size:12px;color:var(--text2);margin-bottom:14px">Comparando la foto tomada antes del cierre'+(fechaSnap?' ('+fechaSnap+')':'')+' con el estado actual.</div>';
   if(problemas.length===0){
-    html+='<div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:10px;padding:16px;text-align:center;margin-bottom:16px"><div style="font-size:32px">✅</div><div style="font-size:16px;font-weight:800;color:#059669">Todo salió como se predijo</div><div style="font-size:13px;color:#065f46">'+ok+' lotes avanzaron correctamente</div></div>';
+    html+='<div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:10px;padding:16px;text-align:center;margin-bottom:16px"><div style="font-size:32px">✅</div><div style="font-size:16px;font-weight:800;color:#059669">Todo avanzó correctamente</div><div style="font-size:13px;color:#065f46">'+ok+' lotes avanzaron como se esperaba</div></div>';
   } else {
-    html+='<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:16px;margin-bottom:16px"><div style="font-size:16px;font-weight:800;color:#dc2626">🚩 '+problemas.length+' diferencia(s) detectada(s)</div><div style="font-size:13px;color:#991b1b">'+ok+' avanzaron bien · '+problemas.length+' con problema. Revisá abajo.</div></div>';
+    html+='<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:16px;margin-bottom:16px"><div style="font-size:16px;font-weight:800;color:#dc2626">🚩 '+problemas.length+' diferencia(s)</div><div style="font-size:13px;color:#991b1b">'+ok+' avanzaron bien · '+problemas.length+' con problema.</div></div>';
     html+='<div style="margin-bottom:16px">';
-    problemas.forEach(p=>{
-      html+='<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:10px 12px;margin-bottom:6px"><b>'+formatLoteTag(p.mz,p.lote)+' — '+(p.titular||'')+'</b><div style="font-size:12px;color:#9a3412">'+p.detalle+'</div></div>';
-    });
+    problemas.forEach(p=>{ html+='<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:10px 12px;margin-bottom:6px"><b>'+formatLoteTag(p.mz,p.lote)+' — '+(p.titular||'')+'</b><div style="font-size:12px;color:#9a3412">'+p.detalle+'</div></div>'; });
     html+='</div>';
   }
-  // Lista completa con marca
   html+='<div><div style="font-size:13px;font-weight:700;margin-bottom:6px;cursor:pointer" onclick="var e=document.getElementById(\'verif-res-lista\');e.style.display=e.style.display===\'none\'?\'block\':\'none\'">📋 Ver lista completa ('+v.res.length+') ▼</div>';
   html+='<div id="verif-res-lista" style="display:none;max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">';
   html+='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--surface);position:sticky;top:0"><th style="text-align:center;padding:6px 8px">✓</th><th style="text-align:left;padding:6px 8px">Lote</th><th style="text-align:left;padding:6px 8px">Titular</th><th style="text-align:center;padding:6px 8px">Esperado</th><th style="text-align:center;padding:6px 8px">Real</th></tr></thead><tbody>';
@@ -11214,8 +11205,8 @@ function abrirVerificacionResultado(){
       +'<td style="padding:5px 8px;text-align:center">'+marca+'</td>'
       +'<td style="padding:5px 8px">'+formatLoteTag(r.mz,r.lote)+'</td>'
       +'<td style="padding:5px 8px">'+(r.titular||'')+'</td>'
-      +'<td style="padding:5px 8px;text-align:center;color:var(--text2)">'+r.cuotaNueva+'/'+r.ct+'</td>'
-      +'<td style="padding:5px 8px;text-align:center;font-weight:700;color:'+(r.estado==='ok'?'#059669':'#dc2626')+'">'+(r.caActualReal!=null?r.caActualReal+'/'+r.ct:'—')+'</td></tr>';
+      +'<td style="padding:5px 8px;text-align:center;color:var(--text2)">'+r.esperada+'/'+r.ct+'</td>'
+      +'<td style="padding:5px 8px;text-align:center;font-weight:700;color:'+(r.estado==='ok'?'#059669':'#dc2626')+'">'+(r.caReal!=null?r.caReal+'/'+r.ct:'—')+'</td></tr>';
   });
   html+='</tbody></table></div></div></div>';
 
@@ -11242,7 +11233,6 @@ function abrirVerificacionCierre(){
   html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
     +'<div style="font-size:20px;font-weight:800">🔮 Simulación del cierre</div>'
     +'<div style="display:flex;gap:6px">'
-    +'<button onclick="guardarSimulacion()" style="background:#4f46e5;border:none;color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer" title="Guardá la predicción ANTES de cerrar">💾 Guardar</button>'
     +'<button onclick="abrirVerificacionResultado()" style="background:#059669;border:none;color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer" title="Después de cerrar, comprobá que todo avanzó bien">✅ Verificar resultado</button>'
     +'<button onclick="cerrarModalVerif()" style="background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer">✕ Cerrar</button>'
     +'</div></div>';
