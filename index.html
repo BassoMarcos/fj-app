@@ -1280,7 +1280,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0608';
+  datos['_version']='v1.0609';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11245,8 +11245,16 @@ function abrirVerificacionCierre(){
   // ── Verificador automático: detecta lotes que NO cumplen el patrón (avanzar +1) ──
   const conEstado = s.avanzan.map(a=>{
     const d=a.cuotaNueva-a.cuotaActual;
-    const ok=(d===1) || (d===0 && a.cuotaActual===a.ct); // +1 normal, o quieto si ya está en la última
-    return {...a, _ok:ok};
+    const ok=(d===1); // patrón lógico: SOLO avanzar exactamente +1. Todo lo demás se marca.
+    let motivo='';
+    if(!ok){
+      if(d===0 && a.cuotaActual===a.ct) motivo='En su última cuota — no avanza (¿terminó/adelanto?)';
+      else if(d===0) motivo='NO avanza (quedó igual)';
+      else if(d>1) motivo='Avanza '+d+' cuotas (se esperaba 1)';
+      else if(d<0) motivo='Retrocede (revisar)';
+      else motivo='Avance fuera de patrón';
+    }
+    return {...a, _ok:ok, _motivo:motivo};
   });
   const malos = conEstado.filter(a=>!a._ok);
   // sospechosos primero, después el resto (ambos ya venían ordenados por lote)
@@ -11269,7 +11277,7 @@ function abrirVerificacionCierre(){
     html+='<tr style="border-top:1px solid var(--border);'+bg+'">'
       +'<td style="padding:5px 8px;text-align:center">'+marca+'</td>'
       +'<td style="padding:5px 8px;color:'+(raro?'#ef4444':'var(--text)')+';font-weight:'+(raro?'700':'400')+'">'+formatLoteTag(a.mz,a.lote)+(a.esPrestamo?' <span style="color:#10b981;font-size:10px">💰</span>':'')+'</td>'
-      +'<td style="padding:5px 8px;color:'+(raro?'#ef4444':'var(--text)')+'">'+(a.titular||'')+'</td>'
+      +'<td style="padding:5px 8px;color:'+(raro?'#ef4444':'var(--text)')+'">'+(a.titular||'')+(raro&&a._motivo?'<div style="font-size:10px;color:#ef4444;font-weight:600">'+a._motivo+'</div>':'')+'</td>'
       +'<td style="padding:5px 8px;text-align:center;color:var(--text2)">'+a.cuotaActual+'/'+a.ct+'</td>'
       +'<td style="padding:5px 8px;text-align:center;font-weight:700;color:'+(raro?'#ef4444':'#8b5cf6')+'">'+a.cuotaNueva+'/'+a.ct+'</td></tr>';
   });
