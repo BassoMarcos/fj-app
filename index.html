@@ -1285,7 +1285,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0619';
+  datos['_version']='v1.0620';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11013,6 +11013,106 @@ function archivarInformeMes(){
 // ══════════ FOTO NAVEGABLE DEL MES (v1.0614) ══════════
 // Genera un HTML independiente y OFFLINE con los datos del mes.
 // Seguridad por diseño: sin Firebase, sin escritura a localStorage real, archivo local aislado.
+
+// ══════ FOTOS EN LA NUBE (comprimidas, sin pérdida) v1.0620 ══════
+// Comprime con gzip (CompressionStream), verifica que descomprime idéntico, y guarda en Firebase.
+async function _gzipComprimir(texto){
+  const enc = new TextEncoder().encode(texto);
+  const cs = new CompressionStream('gzip');
+  const writer = cs.writable.getWriter();
+  writer.write(enc); writer.close();
+  const comprimido = new Uint8Array(await new Response(cs.readable).arrayBuffer());
+  return comprimido;
+}
+async function _gzipDescomprimir(bytes){
+  const ds = new DecompressionStream('gzip');
+  const writer = ds.writable.getWriter();
+  writer.write(bytes); writer.close();
+  const buf = await new Response(ds.readable).arrayBuffer();
+  return new TextDecoder().decode(buf);
+}
+function _bytesABase64(bytes){
+  let bin=''; const chunk=8192;
+  for(let i=0;i<bytes.length;i+=chunk){ bin+=String.fromCharCode.apply(null, bytes.subarray(i,i+chunk)); }
+  return btoa(bin);
+}
+function _base64ABytes(b64){
+  const bin=atob(b64); const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  return bytes;
+}
+
+// Guarda una foto (HTML) comprimida en Firebase, con verificación de integridad
+async function guardarFotoEnNube(mesNombre, htmlCompleto){
+  if(typeof CompressionStream==='undefined'){
+    alert('Tu navegador no soporta compresión. La foto se descargó igual a tu compu, pero no se guardó en la nube.');
+    return false;
+  }
+  // 1) comprimir
+  const comprimido = await _gzipComprimir(htmlCompleto);
+  // 2) VERIFICACIÓN DE INTEGRIDAD: descomprimir y comparar con el original
+  const verif = await _gzipDescomprimir(comprimido);
+  if(verif !== htmlCompleto){
+    alert('⚠️ La verificación de integridad falló. Por seguridad, NO se guardó la foto en la nube (el archivo en tu compu está bien). Avisá para revisarlo.');
+    return false;
+  }
+  // 3) a base64 y guardar en Firebase por PUT directo
+  const b64 = _bytesABase64(comprimido);
+  const key = mesNombre.replace(/\s+/g,'_');
+  const payload = {
+    mesNombre: mesNombre,
+    ts: new Date().toISOString(),
+    fecha: new Date().toLocaleDateString('es-AR'),
+    hora: new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}),
+    tamOriginal: htmlCompleto.length,
+    tamComprimido: comprimido.length,
+    gzipB64: b64
+  };
+  const resp = await fetch('https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/fotos_mensuales/'+key+'.json', {
+    method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+  });
+  if(!resp.ok) throw new Error('Firebase respondió '+resp.status);
+  return true;
+}
+
+// Lista las fotos guardadas en la nube
+async function listarFotosNube(){
+  try{
+    const resp = await fetch('https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/fotos_mensuales.json');
+    if(!resp.ok) return {};
+    const data = await resp.json();
+    return data || {};
+  }catch(e){ return {}; }
+}
+
+// Descarga (recupera) una foto de la nube: la descomprime y la baja como HTML
+async function descargarFotoNube(key){
+  try{
+    const resp = await fetch('https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/fotos_mensuales/'+key+'.json');
+    if(!resp.ok){ alert('No se pudo leer la foto de la nube.'); return; }
+    const reg = await resp.json();
+    if(!reg || !reg.gzipB64){ alert('La foto no está en la nube.'); return; }
+    const bytes = _base64ABytes(reg.gzipB64);
+    const html = await _gzipDescomprimir(bytes);
+    const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download='Foto_'+(reg.mesNombre||key).replace(/\s+/g,'_')+'.html';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+  }catch(e){ alert('Error al recuperar la foto: '+(e&&e.message?e.message:e)); }
+}
+
+// Elimina una foto de la nube
+async function eliminarFotoNube(key, mesNombre){
+  if(!confirm('¿Eliminar de la NUBE la foto de "'+mesNombre+'"?\n\nEsta acción no se puede deshacer.')) return;
+  try{
+    const resp = await fetch('https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/fotos_mensuales/'+key+'.json', {method:'DELETE'});
+    if(!resp.ok){ alert('No se pudo eliminar.'); return; }
+    if(typeof abrirInformesMensuales==='function') abrirInformesMensuales();
+  }catch(e){ alert('Error al eliminar: '+(e&&e.message?e.message:e)); }
+}
+
 async function generarFotoMes(){
   const mesActualNombre = (function(){
     const cf=loadCierreFinal();
@@ -11130,10 +11230,21 @@ async function generarFotoMes(){
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(url),2000);
 
-    if(btnMsg) btnMsg.textContent='✓ Foto de '+mesActualNombre+' generada y descargada.';
+    if(btnMsg) btnMsg.textContent='✓ Descargada. Guardando en la nube…';
     try{ registrarFotoGenerada(mesActualNombre); }catch(e){}
-    if(typeof abrirInformesMensuales==='function') setTimeout(abrirInformesMensuales,300);
-    alert('✓ Foto de '+mesActualNombre+' generada.\n\nSe descargó el archivo "Foto_'+mesActualNombre.replace(/\s+/g,'_')+'.html".\n\nGuardalo en tu compu. Cuando lo abras (doble clic), vas a ver la app con los datos de este mes, navegable y sin conexión.');
+
+    // Guardar en la nube (comprimida, con verificación de integridad)
+    let nubeOk=false;
+    try{
+      nubeOk = await guardarFotoEnNube(mesActualNombre, codigo);
+    }catch(e){ console.warn('No se pudo guardar en la nube:', e); }
+
+    if(btnMsg) btnMsg.textContent = nubeOk ? '✓ Foto de '+mesActualNombre+' descargada y guardada en la nube.' : '✓ Foto descargada (no se pudo guardar en la nube).';
+    if(typeof abrirInformesMensuales==='function') setTimeout(abrirInformesMensuales,400);
+    alert('✓ Foto de '+mesActualNombre+' lista.\n\n'
+      +'· Se descargó a tu compu.\n'
+      +(nubeOk?'· Se guardó en la nube (comprimida y verificada) — la podés recuperar desde cualquier dispositivo.':'· ⚠️ No se pudo guardar en la nube esta vez. El archivo en tu compu está bien.')
+      +'\n\nAl abrirla vas a ver la app con los datos de este mes, navegable y sin conexión.');
   }catch(err){
     console.error(err);
     if(btnMsg) btnMsg.textContent='';
@@ -11160,27 +11271,8 @@ function abrirInformesMensuales(){
   html+='<div id="foto-status" style="font-size:11px;color:var(--text2);text-align:center;margin-top:6px"></div>';
   html+='<div style="font-size:11px;color:var(--text2);margin-top:6px;text-align:center">Se descarga a tu compu. Guardala — es tu registro navegable del mes.</div></div>';
   // Lista de fotos generadas (solo el registro; el archivo lo tiene el usuario)
-  const fotos=loadFotosGeneradas().slice().reverse();
-  html+='<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:8px">Fotos generadas ('+fotos.length+')</div>';
-  if(!fotos.length){
-    html+='<div style="font-size:13px;color:var(--text2);padding:12px;text-align:center;border:1px dashed var(--border);border-radius:8px">Todavía no generaste ninguna foto.</div>';
-  } else {
-    const todasFotos=loadFotosGeneradas();
-    fotos.forEach((f)=>{
-      const realIdx=todasFotos.findIndex(x=>x.ts===f.ts && x.mesNombre===f.mesNombre);
-      const nombreEsc=(f.mesNombre||'').replace(/'/g,"");
-      html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
-        +'<div style="flex:1"><div style="font-size:14px;font-weight:800;color:var(--text)">📸 '+(f.nota?f.nota:f.mesNombre)+'</div>'
-        +(f.nota?'<div style="font-size:11px;color:var(--text3)">'+f.mesNombre+'</div>':'')
-        +'<div style="font-size:11px;color:var(--text2)">Generada: '+f.fecha+' '+f.hora+'</div></div>'
-        +'<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">'
-        +'<button onclick="regenerarFoto(\''+nombreEsc+'\')" style="background:#7c3aed;border:none;color:#fff;border-radius:6px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer">⬇ Descargar</button>'
-        +'<button onclick="renombrarFoto('+realIdx+')" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer">✏️ Nota</button>'
-        +'<button onclick="eliminarFoto('+realIdx+')" style="background:var(--surface);border:1px solid #ef4444;color:#ef4444;border-radius:6px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer">🗑</button>'
-        +'</div></div></div>';
-    });
-  }
+  html+='<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:8px">☁️ Fotos guardadas en la nube</div>';
+  html+='<div id="fotos-nube-lista"><div style="font-size:13px;color:var(--text2);padding:12px;text-align:center">Cargando fotos de la nube…</div></div>';
   html+='</div>';
   let ov=document.getElementById('verif-modal');
   if(ov) ov.remove();
@@ -11189,8 +11281,48 @@ function abrirInformesMensuales(){
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;overflow-y:auto;padding:2rem 1rem';
   ov.innerHTML='<div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:1.5rem;max-width:940px;margin:0 auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">'+html+'</div>';
   document.body.appendChild(ov);
+  // Cargar fotos de la nube (async)
+  cargarFotosNubeEnLista();
 }
-function verInformeActual(){
+async function cargarFotosNubeEnLista(){
+  const cont=document.getElementById('fotos-nube-lista');
+  if(!cont) return;
+  let data={};
+  try{ data=await listarFotosNube(); }catch(e){ data={}; }
+  const keys=Object.keys(data||{});
+  if(!keys.length){
+    cont.innerHTML='<div style="font-size:13px;color:var(--text2);padding:12px;text-align:center;border:1px dashed var(--border);border-radius:8px">Todavía no hay fotos en la nube. Generá una para guardarla.</div>';
+    return;
+  }
+  // ordenar por ts descendente
+  const items=keys.map(k=>({key:k, ...data[k]})).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+  const fmtKB=n=>n?Math.round(n/1024)+' KB':'';
+  let h='';
+  items.forEach(f=>{
+    const nombreShow=f.nota?f.nota:(f.mesNombre||f.key);
+    const keyEsc=(f.key||'').replace(/'/g,"");
+    const mesEsc=(f.mesNombre||f.key||'').replace(/'/g,"");
+    h+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+      +'<div style="flex:1"><div style="font-size:14px;font-weight:800;color:var(--text)">☁️ '+nombreShow+'</div>'
+      +(f.nota?'<div style="font-size:11px;color:var(--text3)">'+(f.mesNombre||'')+'</div>':'')
+      +'<div style="font-size:11px;color:var(--text2)">Guardada: '+(f.fecha||'')+' '+(f.hora||'')+' · '+fmtKB(f.tamComprimido)+'</div></div>'
+      +'<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">'
+      +'<button onclick="descargarFotoNube(\''+keyEsc+'\')" style="background:#0891b2;border:none;color:#fff;border-radius:6px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer">⬇ Descargar</button>'
+      +'<button onclick="renombrarFotoNube(\''+keyEsc+'\')" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer">✏️ Nota</button>'
+      +'<button onclick="eliminarFotoNube(\''+keyEsc+'\',\''+mesEsc+'\')" style="background:var(--surface);border:1px solid #ef4444;color:#ef4444;border-radius:6px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer">🗑</button>'
+      +'</div></div></div>';
+  });
+  cont.innerHTML=h;
+}
+async function renombrarFotoNube(key){
+  const nota=prompt('Nota / nombre para esta foto (vacío para quitar):','');
+  if(nota===null) return;
+  try{
+    await fetch('https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/fotos_mensuales/'+key+'/nota.json', {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(nota.trim())});
+    cargarFotosNubeEnLista();
+  }catch(e){ alert('No se pudo renombrar: '+(e&&e.message?e.message:e)); }
+}
   const inf=construirInformeMes(null);
   verInformeMes(inf, true);
 }
