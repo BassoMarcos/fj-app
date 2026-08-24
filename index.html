@@ -571,7 +571,7 @@ tr:hover td{background:var(--bg)}
         </div>
         <div style="margin-top:2rem;border-top:1px solid var(--border);padding-top:1.5rem">
           <div style="font-size:15px;font-weight:800;margin-bottom:4px">📅 Informes Mensuales</div>
-          <div style="font-size:12px;color:var(--text2);margin-bottom:12px">El registro de todo lo que pasó cada mes: pagos, mora cobrada, intereses, ICC aplicado. <b>Archivá el informe justo antes de cerrar</b> para guardar la foto del mes, como una hoja de tu Excel.</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Generá una <b>foto navegable</b> del mes: un archivo que abrís cuando quieras para ver toda la app con los datos de ese mes, sin conexión y sin poder modificar nada. Hacela <b>justo antes de cerrar</b>.</div>
           <button onclick="abrirInformesMensuales()" style="background:#0891b2;border:none;color:#fff;padding:10px 16px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">📅 Ver informes mensuales</button>
         </div>
       </div>
@@ -1285,7 +1285,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0616';
+  datos['_version']='v1.0617';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -10851,6 +10851,17 @@ function loadSnapshot(){
 // Archiva "lo que pasó este mes" antes del cierre. Solo lectura de datos existentes.
 function loadInformes(){ try{ return JSON.parse(_lsGet(dKey('informes_mensuales'))||'[]'); }catch(e){ return []; } }
 function saveInformes(arr){ _lsSet(dKey('informes_mensuales'), JSON.stringify(arr)); try{ window._fbSet && window._fbSet('informesMensuales', arr).catch(()=>{}); }catch(e){} }
+function loadFotosGeneradas(){ try{ return JSON.parse(_lsGet(dKey('fotos_generadas'))||'[]'); }catch(e){ return []; } }
+function saveFotosGeneradas(arr){ _lsSet(dKey('fotos_generadas'), JSON.stringify(arr)); try{ window._fbSet && window._fbSet('fotosGeneradas', arr).catch(()=>{}); }catch(e){} }
+function registrarFotoGenerada(mesNombre){
+  const fotos=loadFotosGeneradas();
+  const now=new Date();
+  const reg={ mesNombre, fecha:now.toLocaleDateString('es-AR'), hora:now.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}), ts:now.toISOString() };
+  const idx=fotos.findIndex(f=>f.mesNombre===mesNombre);
+  if(idx>=0) fotos[idx]=reg; else fotos.push(reg);
+  saveFotosGeneradas(fotos);
+}
+function regenerarFoto(mesNombre){ generarFotoMes(); }
 
 // Construye el informe del mes a partir del estado ACTUAL (antes de cerrar) o de una foto.
 // fuente: null = estado actual en vivo; o un objeto snapshot con .data/.balances/etc (strings JSON)
@@ -11075,11 +11086,6 @@ async function generarFotoMes(){
     codigo = codigo.replace('window._esFotoOffline = true;\n  <\/script>',
                             'window._esFotoOffline = true;\n  <\/script>\n'+inyector);
 
-    // ── BARRERA DEFINITIVA: Content-Security-Policy que PROHÍBE toda conexión de red ──
-    // El navegador la aplica antes de ejecutar nada. connect-src 'none' = cero conexiones.
-    var cspMeta = '<meta http-equiv="Content-Security-Policy" content="default-src \'self\' \'unsafe-inline\' data: blob:; connect-src \'none\'; form-action \'none\';">';
-    codigo = codigo.replace(/<head[^>]*>/i, function(m){ return m+'\n'+cspMeta; });
-
     // 5) Descargar el archivo
     const blob = new Blob([codigo], {type:'text/html;charset=utf-8'});
     const url = URL.createObjectURL(blob);
@@ -11089,6 +11095,8 @@ async function generarFotoMes(){
     setTimeout(()=>URL.revokeObjectURL(url),2000);
 
     if(btnMsg) btnMsg.textContent='✓ Foto de '+mesActualNombre+' generada y descargada.';
+    try{ registrarFotoGenerada(mesActualNombre); }catch(e){}
+    if(typeof abrirInformesMensuales==='function') setTimeout(abrirInformesMensuales,300);
     alert('✓ Foto de '+mesActualNombre+' generada.\n\nSe descargó el archivo "Foto_'+mesActualNombre.replace(/\s+/g,'_')+'.html".\n\nGuardalo en tu compu. Cuando lo abras (doble clic), vas a ver la app con los datos de este mes, navegable y sin conexión.');
   }catch(err){
     console.error(err);
@@ -11106,32 +11114,28 @@ function abrirInformesMensuales(){
     +'<div style="font-size:20px;font-weight:800;color:var(--text)">📅 Informes Mensuales</div>'
     +'<button onclick="cerrarModalVerif()" style="background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer">✕ Cerrar</button></div>';
   html+='<div style="background:rgba(8,145,178,.1);border:1px solid #0891b2;border-radius:10px;padding:14px;margin-bottom:16px">';
-  html+='<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px">Mes en curso: '+actual.mesNombre+' <span style="font-size:11px;font-weight:600;color:var(--text2)">(todavía no archivado)</span></div>';
+  html+='<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px">Mes en curso: '+actual.mesNombre+'</div>';
   html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">'
     +'<div style="background:var(--surface);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:800;color:var(--text)">'+actual.pagaron+'</div><div style="font-size:10px;color:var(--text2)">pagos registrados</div></div>'
     +'<div style="background:var(--surface);border-radius:8px;padding:8px;text-align:center"><div style="font-size:15px;font-weight:800;color:#10b981">'+fmt(actual.totalPesos)+'</div><div style="font-size:10px;color:var(--text2)">cobrado (pesos)</div></div>'
     +'<div style="background:var(--surface);border-radius:8px;padding:8px;text-align:center"><div style="font-size:15px;font-weight:800;color:#8b5cf6">'+fmt(actual.totalIntereses)+'</div><div style="font-size:10px;color:var(--text2)">intereses mora</div></div>'
     +'</div>';
-  html+='<button onclick="verInformeActual()" style="background:var(--surface);border:1.5px solid #0891b2;color:#0891b2;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">👁 Ver informe del mes en curso (antes de archivar)</button>';
-  html+='<button onclick="generarFotoMes()" style="background:#7c3aed;border:none;color:#fff;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">📸 Generar foto navegable del mes (archivo offline)</button>';
-  html+='<div id="foto-status" style="font-size:11px;color:var(--text2);text-align:center;margin-bottom:8px"></div>';
-  html+='<button onclick="archivarInformeMes()" style="background:#0891b2;border:none;color:#fff;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📥 Archivar informe de '+actual.mesNombre+'</button>';
-  html+='<div style="font-size:11px;color:var(--text2);margin-top:6px;text-align:center">Hacelo justo antes del cierre para guardar la foto completa del mes.</div></div>';
-  html+='<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:8px">Informes archivados ('+informes.length+')</div>';
-  if(!informes.length){
-    html+='<div style="font-size:13px;color:var(--text2);padding:12px;text-align:center;border:1px dashed var(--border);border-radius:8px">Todavía no archivaste ningún mes.</div>';
+  html+='<button onclick="generarFotoMes()" style="background:#7c3aed;border:none;color:#fff;border-radius:8px;padding:11px 14px;font-size:14px;font-weight:700;cursor:pointer;width:100%">📸 Generar foto navegable de '+actual.mesNombre+'</button>';
+  html+='<div id="foto-status" style="font-size:11px;color:var(--text2);text-align:center;margin-top:6px"></div>';
+  html+='<div style="font-size:11px;color:var(--text2);margin-top:6px;text-align:center">Se descarga a tu compu. Guardala — es tu registro navegable del mes.</div></div>';
+  // Lista de fotos generadas (solo el registro; el archivo lo tiene el usuario)
+  const fotos=loadFotosGeneradas().slice().reverse();
+  html+='<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:8px">Fotos generadas ('+fotos.length+')</div>';
+  if(!fotos.length){
+    html+='<div style="font-size:13px;color:var(--text2);padding:12px;text-align:center;border:1px dashed var(--border);border-radius:8px">Todavía no generaste ninguna foto.</div>';
   } else {
-    const todos=loadInformes();
-    informes.forEach((inf)=>{
-      const realIdx=todos.findIndex(x=>x.mesNombre===inf.mesNombre);
+    fotos.forEach((f)=>{
       html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px">'
         +'<div style="display:flex;justify-content:space-between;align-items:center">'
-        +'<div><div style="font-size:14px;font-weight:800;color:var(--text)">'+inf.mesNombre+'</div>'
-        +'<div style="font-size:11px;color:var(--text2)">'+inf.pagaron+' pagos · '+fmt(inf.totalPesos)+' · '+(inf.moraPend?inf.moraPend.length:0)+' en mora</div></div>'
-        +'<div style="display:flex;gap:6px">'
-        +'<button onclick="verInformeMes('+realIdx+')" style="background:#0891b2;border:none;color:#fff;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer">Ver</button>'
-        +'<button onclick="descargarInformeExcel('+realIdx+')" style="background:#16a34a;border:none;color:#fff;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer">⬇ Excel</button>'
-        +'</div></div></div>';
+        +'<div><div style="font-size:14px;font-weight:800;color:var(--text)">📸 '+f.mesNombre+'</div>'
+        +'<div style="font-size:11px;color:var(--text2)">Generada: '+f.fecha+' '+f.hora+'</div></div>'
+        +'<button onclick="regenerarFoto(\''+f.mesNombre.replace(/'/g,"")+'\')" style="background:#7c3aed;border:none;color:#fff;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer">⬇ Volver a descargar</button>'
+        +'</div></div>';
     });
   }
   html+='</div>';
