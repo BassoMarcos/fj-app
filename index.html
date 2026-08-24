@@ -1285,7 +1285,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0615';
+  datos['_version']='v1.0616';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11074,6 +11074,11 @@ async function generarFotoMes(){
     // insertar el inyector JUSTO DESPUÉS del stub de firebase (usa un marcador único del stub)
     codigo = codigo.replace('window._esFotoOffline = true;\n  <\/script>',
                             'window._esFotoOffline = true;\n  <\/script>\n'+inyector);
+
+    // ── BARRERA DEFINITIVA: Content-Security-Policy que PROHÍBE toda conexión de red ──
+    // El navegador la aplica antes de ejecutar nada. connect-src 'none' = cero conexiones.
+    var cspMeta = '<meta http-equiv="Content-Security-Policy" content="default-src \'self\' \'unsafe-inline\' data: blob:; connect-src \'none\'; form-action \'none\';">';
+    codigo = codigo.replace(/<head[^>]*>/i, function(m){ return m+'\n'+cspMeta; });
 
     // 5) Descargar el archivo
     const blob = new Blob([codigo], {type:'text/html;charset=utf-8'});
