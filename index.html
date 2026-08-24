@@ -569,6 +569,11 @@ tr:hover td{background:var(--bg)}
           <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Mirá qué va a pasar si cerrás ahora — cuotas que avanzan, mora, adelantos y trimestres — <b>antes</b> de ejecutar el cierre. Y después verificá que todo salió bien.</div>
           <button onclick="abrirVerificacionCierre()" style="background:#4f46e5;border:none;color:#fff;padding:10px 16px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">🔮 Ver simulación del cierre</button>
         </div>
+        <div style="margin-top:2rem;border-top:1px solid var(--border);padding-top:1.5rem">
+          <div style="font-size:15px;font-weight:800;margin-bottom:4px">📅 Informes Mensuales</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:12px">El registro de todo lo que pasó cada mes: pagos, mora cobrada, intereses, ICC aplicado. <b>Archivá el informe justo antes de cerrar</b> para guardar la foto del mes, como una hoja de tu Excel.</div>
+          <button onclick="abrirInformesMensuales()" style="background:#0891b2;border:none;color:#fff;padding:10px 16px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">📅 Ver informes mensuales</button>
+        </div>
       </div>
     </div>
     <div id="atab-historial" style="display:none"><div style="max-width:1400px;margin:0 auto;padding:2rem 1.5rem">
@@ -1280,7 +1285,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0610';
+  datos['_version']='v1.0611';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -10827,6 +10832,8 @@ function saveSnapshot(){
       balances: _lsGet(dKey('balances')),
       cierreFinal: localStorage.getItem('fj_cierre_final'),
       mesActual: localStorage.getItem('fj_mes_actual'),
+      icc: _lsGet(dKey('icc')),            // v1.0611: para el informe mensual
+      extras: localStorage.getItem('fj_extras'),  // v1.0611: intereses/extras del mes
       ts: new Date().toISOString()
     };
     _lsSet(dKey('snapshot_cierre'), JSON.stringify(snap));
@@ -10838,6 +10845,216 @@ function loadSnapshot(){
     const s=_lsGet(dKey('snapshot_cierre'));
     return s ? JSON.parse(s) : null;
   }catch(e){ return null; }
+}
+
+// ══════ INFORMES MENSUALES (v1.0611) ══════
+// Archiva "lo que pasó este mes" antes del cierre. Solo lectura de datos existentes.
+function loadInformes(){ try{ return JSON.parse(_lsGet(dKey('informes_mensuales'))||'[]'); }catch(e){ return []; } }
+function saveInformes(arr){ _lsSet(dKey('informes_mensuales'), JSON.stringify(arr)); try{ window._fbSet && window._fbSet('informesMensuales', arr).catch(()=>{}); }catch(e){} }
+
+// Construye el informe del mes a partir del estado ACTUAL (antes de cerrar) o de una foto.
+// fuente: null = estado actual en vivo; o un objeto snapshot con .data/.balances/etc (strings JSON)
+function construirInformeMes(fuente){
+  function parse(v, def){ if(v==null) return def; if(typeof v!=='string') return v; try{ return JSON.parse(v); }catch(e){ return def; } }
+  let data, balances, cuotasMora, icc, extras, cierreFinal;
+  if(fuente){
+    data=parse(fuente.data,[]); balances=parse(fuente.balances,{}); cuotasMora=parse(fuente.cuotasMora,[]);
+    icc=parse(fuente.icc,[]); extras=parse(fuente.extras,[]); cierreFinal=parse(fuente.cierreFinal,null);
+  } else {
+    data=loadData(); balances=loadBalances(); cuotasMora=loadCuotasMora();
+    icc=loadICC(); extras=loadExtras(); cierreFinal=loadCierreFinal();
+  }
+  if(!Array.isArray(data)) data=Object.values(data||{});
+  const hoy=new Date();
+  const mesNombre = (cierreFinal&&cierreFinal.mesNombre) ? cierreFinal.mesNombre : (MESES_NOMBRE[hoy.getMonth()]+' '+hoy.getFullYear());
+
+  // ── Pagos del mes (desde cierres de caja) ──
+  const cierresCaja = (balances && balances.cierres) ? balances.cierres : [];
+  const abiertos = (balances && balances.abierto) ? balances.abierto : [];
+  const pagos=[];
+  cierresCaja.forEach(cc=>{
+    (cc.pagos||[]).forEach(p=>{
+      pagos.push({ id:p.id, mz:p.mz, lote:p.lote, titular:p.titular,
+        cuota:p.cuota, monto:p.monto, moneda:p.moneda||'ARS',
+        fecha:cc.fecha, ts:cc.ts, transf:!!p.transf,
+        interes:p.interes||0, cerrada:true });
+    });
+  });
+  // pagos aún en caja abierta (no cerrados en caja todavía)
+  abiertos.forEach(p=>{
+    pagos.push({ id:p.id, mz:p.mz, lote:p.lote, titular:p.titular,
+      cuota:p.cuota, monto:p.monto, moneda:p.moneda||'ARS',
+      fecha:p.fecha||'', ts:p.ts||'', transf:!!p.transf,
+      interes:p.interes||0, cerrada:false });
+  });
+
+  // ── Extras / intereses de mora pasados ese mes ──
+  const extrasMora = (extras||[]).filter(e=>e && /Interés mora/i.test(e.desc||''));
+  const totalIntereses = extrasMora.reduce((s,e)=>s+(e.monto||0),0);
+
+  // ── Mora acumulada (cuotas morosas registradas) ──
+  const moraPend = (cuotasMora||[]).filter(m=>!m.pagada);
+  const moraPagada = (cuotasMora||[]).filter(m=>m.pagada);
+
+  // ── ICC aplicado (todos los del historial; marcamos el/los de este mes) ──
+  const iccArr = Array.isArray(icc)?icc:[];
+
+  // ── Totales ──
+  const totalPesos = pagos.filter(p=>p.moneda!=='USD').reduce((s,p)=>s+(p.monto||0),0);
+  const totalUSD = pagos.filter(p=>p.moneda==='USD').reduce((s,p)=>s+(p.monto||0),0);
+  const pagaron = new Set(pagos.map(p=>p.id)).size;
+
+  return {
+    mesNombre,
+    generado: new Date().toISOString(),
+    cierreFinal,
+    pagos, totalPesos, totalUSD, pagaron,
+    extrasMora, totalIntereses,
+    moraPend, moraPagada,
+    icc: iccArr,
+    totalLotes: data.length
+  };
+}
+
+function descargarInformeExcel(idx){
+  const informes=loadInformes();
+  const inf=informes[idx];
+  if(!inf){ alert('Informe no encontrado.'); return; }
+  const esc=v=>{ v=(v==null?'':String(v)); return '"'+v.replace(/"/g,'""')+'"'; };
+  let csv='\ufeff'; // BOM para que Excel abra bien los acentos
+  csv+='INFORME MENSUAL — '+inf.mesNombre+'\n';
+  csv+='Generado,'+new Date(inf.generado).toLocaleString('es-AR')+'\n\n';
+  csv+='RESUMEN\n';
+  csv+='Pagos registrados,'+inf.pagaron+'\n';
+  csv+='Cobrado (pesos),'+inf.totalPesos+'\n';
+  csv+='Cobrado (USD),'+inf.totalUSD+'\n';
+  csv+='Intereses por mora,'+inf.totalIntereses+'\n';
+  csv+='Cuotas en mora (pendientes),'+(inf.moraPend?inf.moraPend.length:0)+'\n\n';
+  csv+='PAGOS DEL MES\n';
+  csv+='Mz,Lote,Titular,Cuota,Monto,Moneda,Interes,Fecha,Transferencia\n';
+  inf.pagos.forEach(p=>{
+    csv+=[esc(p.mz),esc(p.lote),esc(p.titular),esc(p.cuota),esc(p.monto),esc(p.moneda||'ARS'),esc(p.interes||0),esc(p.fecha),esc(p.transf?'SI':'NO')].join(',')+'\n';
+  });
+  csv+='\nMORA PENDIENTE\n';
+  csv+='Mz,Lote,Titular,Cuota,Monto,Mes,Anio\n';
+  (inf.moraPend||[]).forEach(m=>{
+    csv+=[esc(m.mz),esc(m.lote),esc(m.titular),esc(m.cuota||m.numeroCuota),esc(m.monto),esc(m.mes),esc(m.anio)].join(',')+'\n';
+  });
+  if(inf.extrasMora && inf.extrasMora.length){
+    csv+='\nINTERESES POR MORA PASADOS A EXTRAS\n';
+    csv+='Descripcion,Monto,Fecha\n';
+    inf.extrasMora.forEach(e=>{ csv+=[esc(e.desc),esc(e.monto),esc(e.fecha)].join(',')+'\n'; });
+  }
+  if(inf.icc && inf.icc.length){
+    csv+='\nICC (historial)\n';
+    csv+='Mes,Porcentaje,Planilla\n';
+    inf.icc.forEach(x=>{ csv+=[esc(x.mes||''),esc(x.pct!=null?x.pct:''),esc(x.planilla||x.tri||'')].join(',')+'\n'; });
+  }
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='Informe_'+inf.mesNombre.replace(/\s+/g,'_')+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+// ── Vista de informes mensuales ──
+function archivarInformeMes(){
+  const inf=construirInformeMes(null);
+  const informes=loadInformes();
+  const idx=informes.findIndex(x=>x.mesNombre===inf.mesNombre);
+  if(idx>=0){
+    if(!confirm('Ya hay un informe archivado de "'+inf.mesNombre+'".\n\n¿Reemplazarlo con la foto actual?')) return;
+    informes[idx]=inf;
+  } else {
+    informes.push(inf);
+  }
+  saveInformes(informes);
+  alert('✓ Informe de '+inf.mesNombre+' archivado.\n\nQuedó guardado en la lista de informes mensuales.');
+  abrirInformesMensuales();
+}
+function abrirInformesMensuales(){
+  const informes=loadInformes().slice().reverse();
+  const actual=construirInformeMes(null);
+  const fmt=n=>'$'+(Math.round(n)||0).toLocaleString('es-AR');
+  let html='<div style="max-width:900px;margin:0 auto">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+    +'<div style="font-size:20px;font-weight:800;color:var(--text)">📅 Informes Mensuales</div>'
+    +'<button onclick="cerrarModalVerif()" style="background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer">✕ Cerrar</button></div>';
+  html+='<div style="background:rgba(8,145,178,.1);border:1px solid #0891b2;border-radius:10px;padding:14px;margin-bottom:16px">';
+  html+='<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px">Mes en curso: '+actual.mesNombre+' <span style="font-size:11px;font-weight:600;color:var(--text2)">(todavía no archivado)</span></div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">'
+    +'<div style="background:var(--surface);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:800;color:var(--text)">'+actual.pagaron+'</div><div style="font-size:10px;color:var(--text2)">pagos registrados</div></div>'
+    +'<div style="background:var(--surface);border-radius:8px;padding:8px;text-align:center"><div style="font-size:15px;font-weight:800;color:#10b981">'+fmt(actual.totalPesos)+'</div><div style="font-size:10px;color:var(--text2)">cobrado (pesos)</div></div>'
+    +'<div style="background:var(--surface);border-radius:8px;padding:8px;text-align:center"><div style="font-size:15px;font-weight:800;color:#8b5cf6">'+fmt(actual.totalIntereses)+'</div><div style="font-size:10px;color:var(--text2)">intereses mora</div></div>'
+    +'</div>';
+  html+='<button onclick="archivarInformeMes()" style="background:#0891b2;border:none;color:#fff;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📥 Archivar informe de '+actual.mesNombre+'</button>';
+  html+='<div style="font-size:11px;color:var(--text2);margin-top:6px;text-align:center">Hacelo justo antes del cierre para guardar la foto completa del mes.</div></div>';
+  html+='<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:8px">Informes archivados ('+informes.length+')</div>';
+  if(!informes.length){
+    html+='<div style="font-size:13px;color:var(--text2);padding:12px;text-align:center;border:1px dashed var(--border);border-radius:8px">Todavía no archivaste ningún mes.</div>';
+  } else {
+    const todos=loadInformes();
+    informes.forEach((inf)=>{
+      const realIdx=todos.findIndex(x=>x.mesNombre===inf.mesNombre);
+      html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center">'
+        +'<div><div style="font-size:14px;font-weight:800;color:var(--text)">'+inf.mesNombre+'</div>'
+        +'<div style="font-size:11px;color:var(--text2)">'+inf.pagaron+' pagos · '+fmt(inf.totalPesos)+' · '+(inf.moraPend?inf.moraPend.length:0)+' en mora</div></div>'
+        +'<div style="display:flex;gap:6px">'
+        +'<button onclick="verInformeMes('+realIdx+')" style="background:#0891b2;border:none;color:#fff;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer">Ver</button>'
+        +'<button onclick="descargarInformeExcel('+realIdx+')" style="background:#16a34a;border:none;color:#fff;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer">⬇ Excel</button>'
+        +'</div></div></div>';
+    });
+  }
+  html+='</div>';
+  let ov=document.getElementById('verif-modal');
+  if(ov) ov.remove();
+  ov=document.createElement('div');
+  ov.id='verif-modal';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;overflow-y:auto;padding:2rem 1rem';
+  ov.innerHTML='<div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:1.5rem;max-width:940px;margin:0 auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">'+html+'</div>';
+  document.body.appendChild(ov);
+}
+function verInformeMes(idx){
+  const informes=loadInformes();
+  const inf=informes[idx];
+  if(!inf){ alert('Informe no encontrado.'); return; }
+  const fmt=n=>'$'+(Math.round(n)||0).toLocaleString('es-AR');
+  let html='<div style="max-width:900px;margin:0 auto">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+    +'<div style="font-size:20px;font-weight:800;color:var(--text)">📄 '+inf.mesNombre+'</div>'
+    +'<div style="display:flex;gap:6px"><button onclick="descargarInformeExcel('+idx+')" style="background:#16a34a;border:none;color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">⬇ Excel</button>'
+    +'<button onclick="abrirInformesMensuales()" style="background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer">← Volver</button></div></div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">'
+    +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:var(--text)">'+inf.pagaron+'</div><div style="font-size:10px;color:var(--text2)">pagos</div></div>'
+    +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center"><div style="font-size:14px;font-weight:800;color:#10b981">'+fmt(inf.totalPesos)+'</div><div style="font-size:10px;color:var(--text2)">cobrado $</div></div>'
+    +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center"><div style="font-size:14px;font-weight:800;color:#8b5cf6">'+fmt(inf.totalIntereses)+'</div><div style="font-size:10px;color:var(--text2)">intereses</div></div>'
+    +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:#ef4444">'+(inf.moraPend?inf.moraPend.length:0)+'</div><div style="font-size:10px;color:var(--text2)">en mora</div></div>'
+    +'</div>';
+  html+='<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:6px">💰 Pagos del mes ('+inf.pagos.length+')</div>';
+  html+='<div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:16px">';
+  html+='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--surface);position:sticky;top:0"><th style="text-align:left;padding:6px 8px;color:var(--text2)">Lote</th><th style="text-align:left;padding:6px 8px;color:var(--text2)">Titular</th><th style="text-align:center;padding:6px 8px;color:var(--text2)">Cuota</th><th style="text-align:right;padding:6px 8px;color:var(--text2)">Monto</th><th style="text-align:center;padding:6px 8px;color:var(--text2)">Fecha</th></tr></thead><tbody>';
+  inf.pagos.forEach(p=>{
+    html+='<tr style="border-top:1px solid var(--border)">'
+      +'<td style="padding:5px 8px;color:var(--text)">'+formatLoteTag(p.mz,p.lote)+(p.transf?' <span style="color:#8b5cf6;font-size:9px">🏦</span>':'')+'</td>'
+      +'<td style="padding:5px 8px;color:var(--text)">'+(p.titular||'')+'</td>'
+      +'<td style="padding:5px 8px;text-align:center;color:var(--text2)">'+(p.cuota||'')+'</td>'
+      +'<td style="padding:5px 8px;text-align:right;font-weight:700;color:var(--text)">'+(p.moneda==='USD'?'USD ':'')+fmt(p.monto)+'</td>'
+      +'<td style="padding:5px 8px;text-align:center;color:var(--text2)">'+(p.fecha||'')+'</td></tr>';
+  });
+  html+='</tbody></table></div>';
+  if(inf.icc && inf.icc.length){
+    html+='<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:6px">📈 ICC (historial)</div>';
+    html+='<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:16px">';
+    inf.icc.slice(-6).forEach(x=>{
+      html+='<div style="font-size:12px;color:var(--text2);padding:2px 0">· '+(x.mes||x.planilla||'')+' — '+(x.pct!=null?x.pct+'%':'')+' — planilla '+(x.planilla||x.tri||'')+'</div>';
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+  let ov=document.getElementById('verif-modal');
+  ov.innerHTML='<div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:1.5rem;max-width:940px;margin:0 auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">'+html+'</div>';
 }
 
 function revertirCierreFinalSeguro(){
