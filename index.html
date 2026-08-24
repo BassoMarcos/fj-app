@@ -1285,7 +1285,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0614';
+  datos['_version']='v1.0615';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11048,6 +11048,18 @@ async function generarFotoMes(){
       try{ Object.defineProperty(window,'localStorage',{value:fake,writable:false,configurable:false}); }
       catch(e){ window.localStorage = fake; }
     }catch(e){ console.warn('No se pudo neutralizar localStorage',e); }
+    // ── BLOQUEO TOTAL DE RED: la foto no puede hablar con ningún servidor ──
+    // Cubre los fetch directos a Firebase (backups, puntos de restauración, etc.)
+    try{
+      window.fetch = function(){ return Promise.reject(new Error('Foto offline: red desactivada')); };
+      if(window.XMLHttpRequest){
+        window.XMLHttpRequest = function(){
+          return { open:function(){}, send:function(){ if(this.onerror) this.onerror(new Error('Foto offline')); },
+                   setRequestHeader:function(){}, abort:function(){}, addEventListener:function(){} };
+        };
+      }
+      if(navigator.sendBeacon) navigator.sendBeacon = function(){ return false; };
+    }catch(e){ console.warn('No se pudo bloquear la red',e); }
     // ── Banner de foto ──
     window.addEventListener('DOMContentLoaded',function(){
       var b=document.createElement('div');
