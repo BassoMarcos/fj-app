@@ -1285,7 +1285,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0617';
+  datos['_version']='v1.0618';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11085,6 +11085,23 @@ async function generarFotoMes(){
     // insertar el inyector JUSTO DESPUÉS del stub de firebase (usa un marcador único del stub)
     codigo = codigo.replace('window._esFotoOffline = true;\n  <\/script>',
                             'window._esFotoOffline = true;\n  <\/script>\n'+inyector);
+
+    // ── BARRERA DEFINITIVA: Content-Security-Policy — el navegador prohíbe TODA conexión de red ──
+    // connect-src 'none' = cero conexiones salientes. Se aplica antes de ejecutar cualquier código.
+    var cspMeta = '<meta http-equiv="Content-Security-Policy" content="default-src \'self\' \'unsafe-inline\' data: blob:; connect-src \'none\'; form-action \'none\';">';
+    if(/<head[^>]*>/i.test(codigo)){
+      codigo = codigo.replace(/<head[^>]*>/i, function(m){ return m + '\n' + cspMeta; });
+    } else if(codigo.indexOf('<!DOCTYPE html>')>=0){
+      codigo = codigo.replace('<!DOCTYPE html>', '<!DOCTYPE html>\n' + cspMeta);
+    } else {
+      codigo = cspMeta + '\n' + codigo;
+    }
+    // Verificación: si la CSP no quedó, ABORTAR (no generar una foto insegura)
+    if(codigo.indexOf('connect-src')<0){
+      if(btnMsg) btnMsg.textContent='';
+      alert('⚠️ No se pudo aplicar la barrera de seguridad (CSP). Por precaución, NO se generó la foto. Avisá para revisarlo.');
+      return;
+    }
 
     // 5) Descargar el archivo
     const blob = new Blob([codigo], {type:'text/html;charset=utf-8'});
