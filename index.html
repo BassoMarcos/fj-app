@@ -1285,7 +1285,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0612';
+  datos['_version']='v1.0613';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -10877,25 +10877,22 @@ function construirInformeMes(fuente){
     mesNombre = MESES_NOMBRE[hoy.getMonth()]+' '+hoy.getFullYear();
   }
 
-  // ── Pagos del mes (desde cierres de caja) ──
+  // ── Pagos del mes (desde cierres de caja + caja abierta) ──
+  // Los pagos guardan solo el id del cliente; hay que cruzar con data para mz/lote/titular.
+  const byId={}; data.forEach(c=>{ byId[c.id]=c; });
   const cierresCaja = (balances && balances.cierres) ? balances.cierres : [];
   const abiertos = (balances && balances.abierto) ? balances.abierto : [];
   const pagos=[];
-  cierresCaja.forEach(cc=>{
-    (cc.pagos||[]).forEach(p=>{
-      pagos.push({ id:p.id, mz:p.mz, lote:p.lote, titular:p.titular,
-        cuota:p.cuota, monto:p.monto, moneda:p.moneda||'ARS',
-        fecha:cc.fecha, ts:cc.ts, transf:!!p.transf,
-        interes:p.interes||0, cerrada:true });
-    });
-  });
-  // pagos aún en caja abierta (no cerrados en caja todavía)
-  abiertos.forEach(p=>{
-    pagos.push({ id:p.id, mz:p.mz, lote:p.lote, titular:p.titular,
-      cuota:p.cuota, monto:p.monto, moneda:p.moneda||'ARS',
-      fecha:p.fecha||'', ts:p.ts||'', transf:!!p.transf,
-      interes:p.interes||0, cerrada:false });
-  });
+  function armarPago(p, fecha, ts, cerrada){
+    const c=byId[p.id]||{};
+    return { id:p.id, mz:c.mz||'', lote:c.lote||'', titular:c.titular||'',
+      cuota:(p.cuotaNum!=null?p.cuotaNum:(c.ca!=null?c.ca:'')),
+      monto:p.monto, moneda:p.moneda||'ARS',
+      fecha:fecha||p.fecha||'', ts:ts||p.ts||'', transf:!!p.transf,
+      adelanto:p.adelanto||0, cerrada:cerrada };
+  }
+  cierresCaja.forEach(cc=>{ (cc.pagos||[]).forEach(p=>{ pagos.push(armarPago(p, cc.fecha, cc.ts, true)); }); });
+  abiertos.forEach(p=>{ pagos.push(armarPago(p, p.fecha, p.ts, false)); });
 
   // ── Extras / intereses de mora pasados ese mes ──
   const extrasMora = (extras||[]).filter(e=>e && /Interés mora/i.test(e.desc||''));
