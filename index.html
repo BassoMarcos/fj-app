@@ -1285,7 +1285,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0613';
+  datos['_version']='v1.0614';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -10979,6 +10979,107 @@ function archivarInformeMes(){
   alert('✓ Informe de '+inf.mesNombre+' archivado.\n\nQuedó guardado en la lista de informes mensuales.');
   abrirInformesMensuales();
 }
+
+// ══════════ FOTO NAVEGABLE DEL MES (v1.0614) ══════════
+// Genera un HTML independiente y OFFLINE con los datos del mes.
+// Seguridad por diseño: sin Firebase, sin escritura a localStorage real, archivo local aislado.
+async function generarFotoMes(){
+  const mesActualNombre = (function(){
+    const cf=loadCierreFinal();
+    const hoy=new Date();
+    if(cf && typeof cf.mes==='number'){
+      const m2=(cf.mes+1)%12; const a2=cf.mes===11?(cf.anio+1):cf.anio;
+      return MESES_NOMBRE[m2]+' '+a2;
+    }
+    return MESES_NOMBRE[hoy.getMonth()]+' '+hoy.getFullYear();
+  })();
+
+  if(!confirm('Se va a generar la FOTO NAVEGABLE de '+mesActualNombre+'.\n\nEs un archivo HTML independiente, sin conexión, que podés abrir cuando quieras para ver la app con los datos de este mes.\n\n¿Continuar?')) return;
+
+  const btnMsg = document.getElementById('foto-status');
+  if(btnMsg) btnMsg.textContent='Generando… (puede tardar unos segundos)';
+
+  try{
+    // 1) Traer el código de la app (el index.html actual)
+    const resp = await fetch('https://raw.githubusercontent.com/BassoMarcos/fj-app/main/index.html?_='+Date.now());
+    let codigo = await resp.text();
+
+    // 2) Reunir TODOS los datos del desarrollo activo (todo lo que hay en localStorage con el prefijo)
+    const D = getDesarrolloActivo();
+    const snapshotDatos = {};
+    try{
+      for(let i=0;i<localStorage.length;i++){
+        const k=localStorage.key(i);
+        if(!k) continue;
+        // guardamos las claves de este desarrollo y las globales fj_
+        if(k.indexOf('fj_')===0){ snapshotDatos[k]=localStorage.getItem(k); }
+      }
+    }catch(e){}
+
+    // 3) Reemplazar el bloque de Firebase por un STUB offline (sin conexión de ningún tipo)
+    const stubFirebase = `  <!-- Firebase DESACTIVADO (foto offline) -->
+  <script>
+    window._firebaseReady = false;
+    window._fbSet = async ()=>{};
+    window._fbGet = async ()=>null;
+    window._fbListen = ()=>{};
+    window._syncQueue = {};
+    window._syncRender = ()=>{};
+    window._syncFlush = async ()=>{};
+    window._esFotoOffline = true;
+  <\/script>`;
+    // el bloque original va desde "<!-- Firebase -->" hasta el cierre del script module
+    codigo = codigo.replace(/<!-- Firebase -->[\s\S]*?<\/script>/, stubFirebase);
+
+    // 4) Bloque inyector: neutraliza localStorage (solo memoria) y precarga los datos del mes
+    const inyector = `<script>
+  (function(){
+    // ── NEUTRALIZAR localStorage: la foto NO escribe nada real, solo memoria ──
+    var _mem = ${JSON.stringify(snapshotDatos)};
+    try{
+      var fake = {
+        getItem:function(k){ return (k in _mem)? _mem[k] : null; },
+        setItem:function(k,v){ _mem[k]=String(v); },   // se queda en memoria, se pierde al cerrar
+        removeItem:function(k){ delete _mem[k]; },
+        clear:function(){ for(var k in _mem) delete _mem[k]; },
+        key:function(i){ return Object.keys(_mem)[i]||null; },
+        get length(){ return Object.keys(_mem).length; }
+      };
+      try{ Object.defineProperty(window,'localStorage',{value:fake,writable:false,configurable:false}); }
+      catch(e){ window.localStorage = fake; }
+    }catch(e){ console.warn('No se pudo neutralizar localStorage',e); }
+    // ── Banner de foto ──
+    window.addEventListener('DOMContentLoaded',function(){
+      var b=document.createElement('div');
+      b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#0891b2;color:#fff;text-align:center;padding:6px 10px;font-size:13px;font-weight:800;font-family:sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.3)';
+      b.textContent='👁 FOTO DE ${mesActualNombre.replace(/'/g,"")} — solo lectura · archivo aislado · sin conexión';
+      document.body.appendChild(b);
+      document.body.style.paddingTop='34px';
+    });
+  })();
+<\/script>`;
+
+    // insertar el inyector JUSTO DESPUÉS del stub de firebase (usa un marcador único del stub)
+    codigo = codigo.replace('window._esFotoOffline = true;\n  <\/script>',
+                            'window._esFotoOffline = true;\n  <\/script>\n'+inyector);
+
+    // 5) Descargar el archivo
+    const blob = new Blob([codigo], {type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href=url; a.download='Foto_'+mesActualNombre.replace(/\s+/g,'_')+'.html';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+
+    if(btnMsg) btnMsg.textContent='✓ Foto de '+mesActualNombre+' generada y descargada.';
+    alert('✓ Foto de '+mesActualNombre+' generada.\n\nSe descargó el archivo "Foto_'+mesActualNombre.replace(/\s+/g,'_')+'.html".\n\nGuardalo en tu compu. Cuando lo abras (doble clic), vas a ver la app con los datos de este mes, navegable y sin conexión.');
+  }catch(err){
+    console.error(err);
+    if(btnMsg) btnMsg.textContent='';
+    alert('No se pudo generar la foto: '+(err&&err.message?err.message:err));
+  }
+}
+
 function abrirInformesMensuales(){
   const informes=loadInformes().slice().reverse();
   const actual=construirInformeMes(null);
@@ -10995,6 +11096,8 @@ function abrirInformesMensuales(){
     +'<div style="background:var(--surface);border-radius:8px;padding:8px;text-align:center"><div style="font-size:15px;font-weight:800;color:#8b5cf6">'+fmt(actual.totalIntereses)+'</div><div style="font-size:10px;color:var(--text2)">intereses mora</div></div>'
     +'</div>';
   html+='<button onclick="verInformeActual()" style="background:var(--surface);border:1.5px solid #0891b2;color:#0891b2;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">👁 Ver informe del mes en curso (antes de archivar)</button>';
+  html+='<button onclick="generarFotoMes()" style="background:#7c3aed;border:none;color:#fff;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">📸 Generar foto navegable del mes (archivo offline)</button>';
+  html+='<div id="foto-status" style="font-size:11px;color:var(--text2);text-align:center;margin-bottom:8px"></div>';
   html+='<button onclick="archivarInformeMes()" style="background:#0891b2;border:none;color:#fff;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📥 Archivar informe de '+actual.mesNombre+'</button>';
   html+='<div style="font-size:11px;color:var(--text2);margin-top:6px;text-align:center">Hacelo justo antes del cierre para guardar la foto completa del mes.</div></div>';
   html+='<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:8px">Informes archivados ('+informes.length+')</div>';
