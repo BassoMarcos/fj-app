@@ -1285,7 +1285,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0621';
+  datos['_version']='v1.0622';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11605,6 +11605,182 @@ function _cmpLote(a,b){
 // Replica EXACTAMENTE la lógica de ejecutarCierreFinal pero SIN ejecutar nada.
 // Devuelve un objeto con los conceptos para verificar ANTES de cerrar.
 // Si el cierre cambia, esta simulación debe reflejar el mismo criterio.
+
+// ══════════ MOTOR DE FUTURO REAL (v1.0622) ══════════
+// Corre el CIERRE REAL dentro de un iframe sandbox AISLADO (sin allow-same-origin),
+// mide los trimestres antes/después, y devuelve SOLO los números por postMessage.
+// El navegador garantiza que el iframe NO puede tocar los datos reales de la app.
+// NO modifica ejecutarCierreFinal ni ningún dato real: solo lee y ejecuta en aislamiento.
+function calcularFuturoRealEnIframe(){
+  return new Promise(async (resolve, reject)=>{
+    let timeout=null, iframe=null, listener=null;
+    function limpiar(){
+      try{ if(listener) window.removeEventListener('message', listener); }catch(e){}
+      try{ if(iframe && iframe.parentNode) iframe.parentNode.removeChild(iframe); }catch(e){}
+      try{ if(timeout) clearTimeout(timeout); }catch(e){}
+    }
+    try{
+      // 1) Traer el código de la app
+      const resp = await fetch('https://raw.githubusercontent.com/BassoMarcos/fj-app/main/index.html?_='+Date.now());
+      let codigo = await resp.text();
+
+      // 2) Reunir los datos actuales (los del desarrollo activo)
+      const snapshotDatos = {};
+      try{
+        for(let i=0;i<localStorage.length;i++){
+          const k=localStorage.key(i);
+          if(k && k.indexOf('fj_')===0) snapshotDatos[k]=localStorage.getItem(k);
+        }
+      }catch(e){}
+
+      // 3) Stub de Firebase (sin conexión)
+      const stub = `  <!-- Firebase DESACTIVADO (motor futuro) -->
+  <script>
+    window._firebaseReady=false; window._fbSet=async()=>{}; window._fbGet=async()=>null;
+    window._fbListen=()=>{}; window._syncQueue={}; window._syncRender=()=>{}; window._syncFlush=async()=>{};
+    window._esFotoOffline=true; window._esMotorFuturo=true;
+  <\/script>`;
+      codigo = codigo.replace(/<!-- Firebase -->[\s\S]*?<\/script>/, stub);
+
+      // 4) Inyector: neutraliza localStorage (memoria), precarga datos, y AL CARGAR corre el cierre
+      const datosJSON = JSON.stringify(snapshotDatos);
+      const inyector = `<script>
+  (function(){
+    var _mem = ${datosJSON};
+    var fake = { getItem:function(k){ return (k in _mem)? _mem[k] : null; }, setItem:function(k,v){ _mem[k]=String(v); },
+      removeItem:function(k){ delete _mem[k]; }, clear:function(){ for(var k in _mem) delete _mem[k]; },
+      key:function(i){ return Object.keys(_mem)[i]||null; }, get length(){ return Object.keys(_mem).length; } };
+    try{ Object.defineProperty(window,'localStorage',{value:fake,writable:false,configurable:false}); }catch(e){ window.localStorage=fake; }
+    // bloquear red por completo
+    try{ window.fetch=function(){ return Promise.reject(new Error('aislado')); };
+      window.XMLHttpRequest=function(){ return {open:function(){},send:function(){},setRequestHeader:function(){},abort:function(){},addEventListener:function(){}}; };
+    }catch(e){}
+
+    // Cuando la app del iframe esté lista, correr el cierre y medir
+    function calcularTris(arr){
+      var t={};
+      arr.forEach(function(c){
+        if((c.moneda||'ARS')==='USD') return;
+        if(!(c.est==='activo' || (c.est==='finalizado'&&c.autopago))) return;
+        var k=c.tri||'(sin trimestre)';
+        if(!t[k]) t[k]={monto:0,n:0};
+        t[k].monto+=(c.monto||0); t[k].n++;
+      });
+      return t;
+    }
+    function correrYmedir(){
+      try{
+        // Neutralizar guardas y UI del cierre (solo en este iframe aislado)
+        window.confirmarConClave = function(accion){ if(typeof accion==='function') accion(); };
+        window._syncBloqueaOperacion = function(){ return false; };
+        window.hitoHecho = function(){ return true; };  // saltear respaldo precierre
+        window.alert = function(){}; window.confirm = function(){ return true; };
+        window.renderBalances=function(){}; window.renderAdminTable=function(){}; window.renderColab=function(){};
+
+        // Medir ANTES
+        var dataAntes = loadData();
+        var trisAntes = calcularTris(dataAntes);
+
+        // CORRER EL CIERRE REAL (en este entorno aislado escribe solo en memoria)
+        ejecutarCierreFinal();
+
+        // Medir DESPUÉS (loadData ahora devuelve el estado ya cerrado, desde memoria)
+        var dataDespues = loadData();
+        var trisDespues = calcularTris(dataDespues);
+
+        window.parent.postMessage({ tipo:'futuroReal', ok:true,
+          trisAntes:trisAntes, trisDespues:trisDespues,
+          totalAntes: dataAntes.length, totalDespues: dataDespues.length }, '*');
+      }catch(err){
+        window.parent.postMessage({ tipo:'futuroReal', ok:false, error:(err&&err.message?err.message:String(err)) }, '*');
+      }
+    }
+    // Esperar a que la app cargue (loadData y ejecutarCierreFinal definidos)
+    var intentos=0;
+    var iv=setInterval(function(){
+      intentos++;
+      if(typeof loadData==='function' && typeof ejecutarCierreFinal==='function'){
+        clearInterval(iv); setTimeout(correrYmedir, 200);
+      } else if(intentos>100){ clearInterval(iv);
+        window.parent.postMessage({ tipo:'futuroReal', ok:false, error:'La app no cargó en el iframe' }, '*');
+      }
+    }, 50);
+  })();
+<\/script>`;
+      codigo = codigo.replace('window._esMotorFuturo=true;\n  <\/script>', 'window._esMotorFuturo=true;\n  <\/script>\n'+inyector);
+
+      // 5) CSP (bloqueo de red a nivel navegador)
+      var csp = '<meta http-equiv="Content-Security-Policy" content="default-src \'self\' \'unsafe-inline\' data: blob:; connect-src \'none\';">';
+      if(/<head[^>]*>/i.test(codigo)) codigo = codigo.replace(/<head[^>]*>/i, function(m){ return m+'\n'+csp; });
+
+      // 6) Escuchar el resultado
+      listener = function(ev){
+        if(ev.data && ev.data.tipo==='futuroReal'){
+          limpiar();
+          if(ev.data.ok) resolve(ev.data);
+          else reject(new Error(ev.data.error||'error desconocido'));
+        }
+      };
+      window.addEventListener('message', listener);
+
+      // 7) Crear el iframe AISLADO (sandbox sin allow-same-origin = no toca datos reales)
+      iframe = document.createElement('iframe');
+      iframe.setAttribute('sandbox','allow-scripts');
+      iframe.style.cssText='position:absolute;width:0;height:0;border:0;left:-9999px;top:-9999px';
+      iframe.srcdoc = codigo;
+      document.body.appendChild(iframe);
+
+      // 8) Timeout de seguridad (si algo no responde en 30s)
+      timeout = setTimeout(function(){ limpiar(); reject(new Error('El cálculo tardó demasiado (timeout)')); }, 30000);
+
+    }catch(err){ limpiar(); reject(err); }
+  });
+}
+
+
+// Muestra el futuro real usando el motor aislado
+async function mostrarFuturoReal(){
+  const status=document.getElementById('futuro-real-status');
+  const cont=document.getElementById('futuro-real-resultado');
+  if(status) status.textContent='Calculando en entorno aislado… (unos segundos)';
+  if(cont) cont.innerHTML='';
+  try{
+    const r=await calcularFuturoRealEnIframe();
+    if(status) status.textContent='';
+    const fmt=n=>'$'+(Math.round(n)||0).toLocaleString('es-AR');
+    const claves=new Set([...Object.keys(r.trisAntes||{}), ...Object.keys(r.trisDespues||{})]);
+    const ordenadas=[...claves].sort();
+    let totA=0, totD=0;
+    let filas='';
+    ordenadas.forEach(k=>{
+      const a=r.trisAntes[k]||{monto:0,n:0};
+      const d=r.trisDespues[k]||{monto:0,n:0};
+      totA+=a.monto; totD+=d.monto;
+      const dif=d.monto-a.monto;
+      const col = dif===0?'var(--text)':(dif>0?'#10b981':'#ef4444');
+      const signo = dif>0?'+':'';
+      filas+='<div style="display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1fr;gap:4px;padding:5px 0;font-size:12px;border-bottom:1px solid var(--border);align-items:center">'
+        +'<span style="color:var(--text)">'+k+' <span style="color:var(--text3);font-size:10px">('+a.n+'→'+d.n+')</span></span>'
+        +'<span style="text-align:right;color:var(--text2)">'+fmt(a.monto)+'</span>'
+        +'<span style="text-align:right;font-weight:700;color:var(--text)">'+fmt(d.monto)+'</span>'
+        +'<span style="text-align:right;font-weight:700;color:'+col+'">'+(dif===0?'=':signo+fmt(dif))+'</span></div>';
+    });
+    const difTot=totD-totA;
+    const colTot = difTot===0?'var(--text)':(difTot>0?'#10b981':'#ef4444');
+    let html='<div style="margin-top:12px;border-top:1px dashed var(--border);padding-top:10px">';
+    html+='<div style="font-size:12px;color:#10b981;font-weight:700;margin-bottom:8px">✓ Calculado por el cierre real (entorno aislado). Tus datos no se tocaron.</div>';
+    html+='<div style="display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1fr;gap:4px;font-size:10px;color:var(--text3);font-weight:700;padding-bottom:4px;border-bottom:1px solid var(--border)"><span>Trimestre (lotes)</span><span style="text-align:right">Hoy</span><span style="text-align:right">Post-cierre</span><span style="text-align:right">Dif</span></div>';
+    html+=filas;
+    html+='<div style="display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1fr;gap:4px;padding:8px 0 0;font-size:12px;font-weight:800"><span style="color:var(--text)">TOTAL</span><span style="text-align:right;color:var(--text)">'+fmt(totA)+'</span><span style="text-align:right;color:var(--text)">'+fmt(totD)+'</span><span style="text-align:right;color:'+colTot+'">'+(difTot===0?'=':(difTot>0?'+':'')+fmt(difTot))+'</span></div>';
+    html+='</div>';
+    if(cont) cont.innerHTML=html;
+  }catch(err){
+    if(status) status.textContent='';
+    if(cont) cont.innerHTML='<div style="margin-top:10px;background:rgba(239,68,68,.12);border:1px solid #ef4444;border-radius:8px;padding:10px;font-size:12px;color:#ef4444">No se pudo calcular: '+(err&&err.message?err.message:err)+'</div>';
+  }
+}
+
+
 function simularCierre(){
   const hoy=new Date();
   const anio=hoy.getFullYear();
@@ -11849,6 +12025,15 @@ function abrirVerificacionCierre(){
   });
   html+='<div style="display:grid;grid-template-columns:2fr 1.3fr 1.3fr;gap:4px;padding:8px 0 0;font-size:12px;font-weight:800"><span style="color:var(--text)">TOTAL</span><span style="text-align:right;color:var(--text)">'+fmt(_tA)+'</span><span style="text-align:right;color:var(--text)">'+fmt(_tD)+'</span></div>';
   html+='<div style="font-size:10px;color:var(--text3);margin-top:8px">Después de aplicar ICC, volvé acá: solo el trimestre que corresponde debe subir; los otros dos, iguales.</div></div>';
+
+  // ── FUTURO REAL: corre el cierre real en un entorno aislado y mide los trimestres objetivos ──
+  html+='<div style="background:var(--surface);border:1px solid #7c3aed;border-radius:10px;padding:14px;margin-bottom:16px">';
+  html+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">🔮 Futuro REAL post-cierre</div>';
+  html+='<div style="font-size:11px;color:var(--text2);margin-bottom:10px">Los trimestres de arriba son un cálculo aproximado. Este botón corre el <b>cierre real</b> en un entorno aislado y seguro, y te muestra los trimestres <b>objetivos</b> del mes que viene — con los que terminaron afuera y los nuevos adentro. No toca ningún dato real.</div>';
+  html+='<button onclick="mostrarFuturoReal()" style="background:#7c3aed;border:none;color:#fff;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;width:100%">🔮 Calcular futuro real</button>';
+  html+='<div id="futuro-real-status" style="font-size:11px;color:var(--text2);text-align:center;margin-top:6px"></div>';
+  html+='<div id="futuro-real-resultado"></div>';
+  html+='</div>';
 
   // Adelantos
   if(s.adelantos.length){
