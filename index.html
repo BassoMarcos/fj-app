@@ -1285,7 +1285,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0626';
+  datos['_version']='v1.0627';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -2049,7 +2049,7 @@ function doLogin(){
     setDesarrolloActivo('eucaliptus');
     document.getElementById('page-home').style.display='none';
     showPage(loginRole==='admin'?'admin':'colab');
-    if(loginRole==='admin') setTimeout(()=>adminTab('inicio'),50);
+    if(loginRole==='admin') setTimeout(()=>{ adminTab('inicio'); actualizarBadgeFinalizados(); },50);
   } else {
     document.getElementById('login-err').textContent='Contraseña incorrecta';
   }
@@ -7828,6 +7828,38 @@ function loadLotesCerts(){
   try{ const s=_lsGet(dKey('lotesCerts')); if(s) return JSON.parse(s); }catch(e){}
   return {};
 }
+// ── Burbuja de lotes finalizados en los últimos 30 días (v1.0625) ──
+function contarFinalizadosRecientes(){
+  try{
+    const certs=loadLotesCerts();
+    const data=loadData();
+    const hoy=new Date();
+    const hace30=new Date(hoy.getTime()-30*24*60*60*1000);
+    let n=0;
+    data.forEach(c=>{
+      if(c.est!=='finalizado') return;
+      const cert=certs[c.id];
+      if(!cert || !cert.fecha) return;
+      const f=new Date(cert.fecha+'T12:00:00');
+      if(!isNaN(f) && f>=hace30 && f<=hoy) n++;
+    });
+    return n;
+  }catch(e){ return 0; }
+}
+function actualizarBadgeFinalizados(){
+  try{
+    const btn=document.getElementById('tab-btn-terminados');
+    if(!btn) return;
+    const n=contarFinalizadosRecientes();
+    // texto base sin badge
+    let base='🏁 Lotes Finalizados';
+    if(n>0){
+      btn.innerHTML=base+' <span style="background:#10b981;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;margin-left:4px">'+n+' nuevo'+(n>1?'s':'')+'</span>';
+    } else {
+      btn.textContent=base;
+    }
+  }catch(e){}
+}
 function saveLotesCerts(obj){
   _lsSet(dKey('lotesCerts'),JSON.stringify(obj));
   window._fbSet('lotesCerts',obj).catch(e=>console.warn('FB lotesCerts error:',e));
@@ -11704,16 +11736,11 @@ function calcularFuturoRealEnIframe(){
         dataDespues.forEach(function(c){
           var a = antesById[c.id];
           if(!a) return;
-          // solo lotes que el cierre podía tocar (activos o préstamos absorbidos)
           var relevante = (a.est==='activo') || (a.est==='finalizado' && a.autopago && a.ca < a.ct);
           if(!relevante) return;
-          if(a.ca===c.ca && a.est===c.est) {
-            // no cambió nada: incluirlo igual para verlo (ej: primera cuota futura o última)
-          }
           avance.push({ id:c.id, mz:c.mz, lote:c.lote, titular:c.titular,
             caAntes:a.ca, caDespues:c.ca, ct:c.ct,
-            estAntes:a.est, estDespues:c.est,
-            esPrestamo: !!c.autopago });
+            estAntes:a.est, estDespues:c.est, esPrestamo: !!c.autopago });
         });
 
         window.parent.postMessage({ tipo:'futuroReal', ok:true,
@@ -11779,7 +11806,6 @@ async function mostrarFuturoReal(){
     const fut=r.resumenDespues;
     if(status) status.textContent='';
     if(cont) cont.innerHTML=_renderComparativo(hoy, fut);
-    // Actualizar la lista de avance con los datos REALES del motor
     if(r.avance) _actualizarListaAvanceReal(r.avance);
   }catch(err){
     if(status) status.textContent='';
@@ -12221,49 +12247,10 @@ function abrirVerificacionCierre(){
     html+='</div>';
   }
 
-  // ── Verificador automático: detecta lotes que NO cumplen el patrón (avanzar +1) ──
-  const conEstado = s.avanzan.map(a=>{
-    const d=a.cuotaNueva-a.cuotaActual;
-    const ok=(d===1); // patrón lógico: SOLO avanzar exactamente +1. Todo lo demás se marca.
-    let motivo='';
-    if(!ok){
-      if(d===0 && a.cuotaActual===a.ct) motivo='En su última cuota — no avanza (¿terminó/adelanto?)';
-      else if(d===0) motivo='NO avanza (quedó igual)';
-      else if(d>1) motivo='Avanza '+d+' cuotas (se esperaba 1)';
-      else if(d<0) motivo='Retrocede (revisar)';
-      else motivo='Avance fuera de patrón';
-    }
-    return {...a, _ok:ok, _motivo:motivo};
-  });
-  const malos = conEstado.filter(a=>!a._ok);
-  // sospechosos primero, después el resto (ambos ya venían ordenados por lote)
-  const ordenada = [...malos, ...conEstado.filter(a=>a._ok)];
-
-  // Bloque de avance (se reemplaza con datos reales al calcular futuro real)
+  // ── Lista de avance: se llena SOLO con el motor real (al tocar Calcular futuro real) ──
   html+='<div id="bloque-avance">';
-  html+='<div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-style:italic">Vista rápida (cálculo aproximado). Tocá "🔮 Calcular futuro real" arriba para la versión exacta del cierre.</div>';
-  if(malos.length>0){
-  } else {
-    html+='<div style="background:rgba(16,185,129,.12);border:1px solid #10b981;border-radius:10px;padding:12px 14px;margin-bottom:12px"><div style="font-size:14px;font-weight:800;color:#10b981">✅ Los '+conEstado.length+' lotes avanzan +1 correctamente</div><div style="font-size:12px;color:var(--text2)">Ningún salto raro. El cierre debería salir limpio.</div></div>';
-  }
-
-  // Lista (sospechosos arriba, marcados en rojo)
-  html+='<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;cursor:pointer" onclick="var e=document.getElementById(\'verif-lista\');e.style.display=e.style.display===\'none\'?\'block\':\'none\'">📋 Ver lista: HOY → después ('+s.avanzan.length+')'+(malos.length?' · <span style=\"color:#ef4444\">'+malos.length+' en rojo</span>':'')+' ▼</div>';
-  html+='<div id="verif-lista" style="display:'+(malos.length?'block':'none')+';max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">';
-  html+='<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--surface);position:sticky;top:0"><th style="text-align:center;padding:6px 8px;color:var(--text2)">✓</th><th style="text-align:left;padding:6px 8px;color:var(--text2)">Lote</th><th style="text-align:left;padding:6px 8px;color:var(--text2)">Titular</th><th style="text-align:center;padding:6px 8px;color:var(--text2)">HOY</th><th style="text-align:center;padding:6px 8px;color:var(--text2)">Después</th></tr></thead><tbody>';
-  ordenada.forEach(a=>{
-    const raro=!a._ok;
-    const marca = raro?'<span style="color:#ef4444">🚩</span>':'<span style="color:#10b981">✅</span>';
-    const bg = raro?'background:rgba(239,68,68,.12)':'';
-    html+='<tr style="border-top:1px solid var(--border);'+bg+'">'
-      +'<td style="padding:5px 8px;text-align:center">'+marca+'</td>'
-      +'<td style="padding:5px 8px;color:'+(raro?'#ef4444':'var(--text)')+';font-weight:'+(raro?'700':'400')+'">'+formatLoteTag(a.mz,a.lote)+(a.esPrestamo?' <span style="color:#10b981;font-size:10px">💰</span>':'')+'</td>'
-      +'<td style="padding:5px 8px;color:'+(raro?'#ef4444':'var(--text)')+'">'+(a.titular||'')+(raro&&a._motivo?'<div style="font-size:10px;color:#ef4444;font-weight:600">'+a._motivo+'</div>':'')+'</td>'
-      +'<td style="padding:5px 8px;text-align:center;color:var(--text2)">'+a.cuotaActual+'/'+a.ct+'</td>'
-      +'<td style="padding:5px 8px;text-align:center;font-weight:700;color:'+(raro?'#ef4444':'#8b5cf6')+'">'+a.cuotaNueva+'/'+a.ct+'</td></tr>';
-  });
-  html+='</tbody></table></div></div>';
-  html+='</div>'; // cierre de bloque-avance
+  html+='<div style="background:var(--surface);border:1px dashed var(--border2);border-radius:10px;padding:16px;text-align:center;color:var(--text2);font-size:13px">📋 Tocá <b style="color:#8b5cf6">🔮 Calcular futuro real</b> arriba para ver la lista real de avance (HOY → después) calculada por el cierre.</div>';
+  html+='</div>';
 
   html+='</div>';
 
@@ -15193,6 +15180,7 @@ function marcarPago(id, interesOverride){
     saveLotesCerts(certs);
     // Toast especial
     setTimeout(()=>mostrarToastCobro('🏁 ¡Última cuota! Lote finalizado'),100);
+    try{ actualizarBadgeFinalizados(); }catch(e){}
   }
 
   if(tieneMora){
