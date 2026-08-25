@@ -1285,7 +1285,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0620';
+  datos['_version']='v1.0621';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11323,6 +11323,7 @@ async function renombrarFotoNube(key){
     cargarFotosNubeEnLista();
   }catch(e){ alert('No se pudo renombrar: '+(e&&e.message?e.message:e)); }
 }
+function verInformeActual(){
   const inf=construirInformeMes(null);
   verInformeMes(inf, true);
 }
