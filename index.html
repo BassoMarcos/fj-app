@@ -1285,7 +1285,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0623';
+  datos['_version']='v1.0624';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11686,20 +11686,19 @@ function calcularFuturoRealEnIframe(){
         window.alert = function(){}; window.confirm = function(){ return true; };
         window.renderBalances=function(){}; window.renderAdminTable=function(){}; window.renderColab=function(){};
 
-        // Medir ANTES
+        // Medir ANTES (resumen completo con funciones reales de la app)
         var dataAntes = loadData();
-        var trisAntes = calcularTris(dataAntes);
+        var resumenAntes = calcularResumenCompleto(dataAntes);
 
         // CORRER EL CIERRE REAL (en este entorno aislado escribe solo en memoria)
         ejecutarCierreFinal();
 
         // Medir DESPUÉS (loadData ahora devuelve el estado ya cerrado, desde memoria)
         var dataDespues = loadData();
-        var trisDespues = calcularTris(dataDespues);
+        var resumenDespues = calcularResumenCompleto(dataDespues);
 
         window.parent.postMessage({ tipo:'futuroReal', ok:true,
-          trisAntes:trisAntes, trisDespues:trisDespues,
-          totalAntes: dataAntes.length, totalDespues: dataDespues.length }, '*');
+          resumenAntes:resumenAntes, resumenDespues:resumenDespues }, '*');
       }catch(err){
         window.parent.postMessage({ tipo:'futuroReal', ok:false, error:(err&&err.message?err.message:String(err)) }, '*');
       }
@@ -11751,44 +11750,149 @@ function calcularFuturoRealEnIframe(){
 async function mostrarFuturoReal(){
   const status=document.getElementById('futuro-real-status');
   const cont=document.getElementById('futuro-real-resultado');
-  if(status) status.textContent='Calculando en entorno aislado… (unos segundos)';
+  if(status) status.textContent='Calculando el futuro real en entorno aislado… (unos segundos)';
   if(cont) cont.innerHTML='';
   try{
+    // IZQUIERDA: hoy real (mismas funciones, sobre datos actuales)
+    const hoy=calcularResumenCompleto(loadData());
+    // DERECHA: post-cierre (motor corre el cierre real en iframe aislado)
     const r=await calcularFuturoRealEnIframe();
+    const fut=r.resumenDespues;
     if(status) status.textContent='';
-    const fmt=n=>'$'+(Math.round(n)||0).toLocaleString('es-AR');
-    const claves=new Set([...Object.keys(r.trisAntes||{}), ...Object.keys(r.trisDespues||{})]);
-    const ordenadas=[...claves].sort();
-    let totA=0, totD=0;
-    let filas='';
-    ordenadas.forEach(k=>{
-      const a=r.trisAntes[k]||{monto:0,n:0};
-      const d=r.trisDespues[k]||{monto:0,n:0};
-      totA+=a.monto; totD+=d.monto;
-      const dif=d.monto-a.monto;
-      const col = dif===0?'var(--text)':(dif>0?'#10b981':'#ef4444');
-      const signo = dif>0?'+':'';
-      filas+='<div style="display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1fr;gap:4px;padding:5px 0;font-size:12px;border-bottom:1px solid var(--border);align-items:center">'
-        +'<span style="color:var(--text)">'+k+' <span style="color:var(--text3);font-size:10px">('+a.n+'→'+d.n+')</span></span>'
-        +'<span style="text-align:right;color:var(--text2)">'+fmt(a.monto)+'</span>'
-        +'<span style="text-align:right;font-weight:700;color:var(--text)">'+fmt(d.monto)+'</span>'
-        +'<span style="text-align:right;font-weight:700;color:'+col+'">'+(dif===0?'=':signo+fmt(dif))+'</span></div>';
-    });
-    const difTot=totD-totA;
-    const colTot = difTot===0?'var(--text)':(difTot>0?'#10b981':'#ef4444');
-    let html='<div style="margin-top:12px;border-top:1px dashed var(--border);padding-top:10px">';
-    html+='<div style="font-size:12px;color:#10b981;font-weight:700;margin-bottom:8px">✓ Calculado por el cierre real (entorno aislado). Tus datos no se tocaron.</div>';
-    html+='<div style="display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1fr;gap:4px;font-size:10px;color:var(--text3);font-weight:700;padding-bottom:4px;border-bottom:1px solid var(--border)"><span>Trimestre (lotes)</span><span style="text-align:right">Hoy</span><span style="text-align:right">Post-cierre</span><span style="text-align:right">Dif</span></div>';
-    html+=filas;
-    html+='<div style="display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1fr;gap:4px;padding:8px 0 0;font-size:12px;font-weight:800"><span style="color:var(--text)">TOTAL</span><span style="text-align:right;color:var(--text)">'+fmt(totA)+'</span><span style="text-align:right;color:var(--text)">'+fmt(totD)+'</span><span style="text-align:right;color:'+colTot+'">'+(difTot===0?'=':(difTot>0?'+':'')+fmt(difTot))+'</span></div>';
-    html+='</div>';
-    if(cont) cont.innerHTML=html;
+    if(cont) cont.innerHTML=_renderComparativo(hoy, fut);
   }catch(err){
     if(status) status.textContent='';
     if(cont) cont.innerHTML='<div style="margin-top:10px;background:rgba(239,68,68,.12);border:1px solid #ef4444;border-radius:8px;padding:10px;font-size:12px;color:#ef4444">No se pudo calcular: '+(err&&err.message?err.message:err)+'</div>';
   }
 }
+function _renderComparativo(hoy, fut){
+  const fmt=n=>'$'+(Math.round(n)||0).toLocaleString('es-AR');
+  const dif=(a,b)=>{ const d=b-a; if(d===0) return '<span style="color:var(--text3)">=</span>'; return '<span style="color:'+(d>0?'#10b981':'#ef4444')+'">'+(d>0?'+':'')+fmt(d)+'</span>'; };
+  const difN=(a,b)=>{ const d=b-a; if(d===0) return '<span style="color:var(--text3)">=</span>'; return '<span style="color:'+(d>0?'#10b981':'#ef4444')+'">'+(d>0?'+':'')+d+'</span>'; };
+  let h='<div style="margin-top:12px;border-top:1px dashed var(--border);padding-top:12px">';
+  h+='<div style="font-size:12px;color:#10b981;font-weight:700;margin-bottom:10px">✓ Calculado por el cierre real en entorno aislado. Tus datos no se tocaron.</div>';
 
+  // Encabezado de columnas
+  h+='<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 0.7fr;gap:6px;font-size:11px;font-weight:800;color:var(--text2);padding-bottom:6px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg)">'
+    +'<span></span><span style="text-align:right">HOY (real)</span><span style="text-align:right">POST-CIERRE</span><span style="text-align:right">Dif</span></div>';
+
+  // ── TOTAL A COBRAR ──
+  h+='<div style="font-size:12px;font-weight:800;color:var(--text);margin:12px 0 4px">🎯 Total a cobrar</div>';
+  h+=_fila('Pesos', fmt(hoy.totalCobrar.ars), fmt(fut.totalCobrar.ars), dif(hoy.totalCobrar.ars,fut.totalCobrar.ars));
+  h+=_fila('Lotes ARS', hoy.totalCobrar.nARS, fut.totalCobrar.nARS, difN(hoy.totalCobrar.nARS,fut.totalCobrar.nARS));
+  if(hoy.totalCobrar.usd||fut.totalCobrar.usd){
+    h+=_fila('USD', 'USD '+fmt(hoy.totalCobrar.usd), 'USD '+fmt(fut.totalCobrar.usd), dif(hoy.totalCobrar.usd,fut.totalCobrar.usd));
+    h+=_fila('Lotes USD', hoy.totalCobrar.nUSD, fut.totalCobrar.nUSD, difN(hoy.totalCobrar.nUSD,fut.totalCobrar.nUSD));
+  }
+
+  // ── TRIMESTRES ──
+  h+='<div style="font-size:12px;font-weight:800;color:var(--text);margin:12px 0 4px">📊 Trimestres (cuota pura ARS)</div>';
+  const trisKeys=[...new Set([...Object.keys(hoy.tris),...Object.keys(fut.tris)])].sort();
+  trisKeys.forEach(k=>{
+    const a=hoy.tris[k]||{monto:0,n:0}, b=fut.tris[k]||{monto:0,n:0};
+    h+=_fila(k+' <span style="color:var(--text3);font-size:10px">('+a.n+'→'+b.n+')</span>', fmt(a.monto), fmt(b.monto), dif(a.monto,b.monto));
+  });
+
+  // ── COMPOSICIÓN ──
+  h+='<div style="font-size:12px;font-weight:800;color:var(--text);margin:12px 0 4px">🧩 Composición de lotes</div>';
+  const cA=hoy.composicion, cB=fut.composicion;
+  h+=_fila('Total', cA.total, cB.total, difN(cA.total,cB.total));
+  h+=_fila('Activos', cA.activos, cB.activos, difN(cA.activos,cB.activos));
+  h+=_fila('Finalizados', cA.finalizados, cB.finalizados, difN(cA.finalizados,cB.finalizados));
+  h+=_fila('Préstamos', cA.prestamos, cB.prestamos, difN(cA.prestamos,cB.prestamos));
+  h+=_fila('Primera cuota futura', cA.futuros, cB.futuros, difN(cA.futuros,cB.futuros));
+  h+=_fila('Agrimensores', cA.agrimensores, cB.agrimensores, difN(cA.agrimensores,cB.agrimensores));
+
+  // ── MORA ──
+  h+='<div style="font-size:12px;font-weight:800;color:var(--text);margin:12px 0 4px">⚠️ Mora acumulada</div>';
+  h+=_fila('Total mora', fmt(hoy.mora.total), fmt(fut.mora.total), dif(hoy.mora.total,fut.mora.total));
+  h+=_fila('Lotes con mora', hoy.mora.lotes, fut.mora.lotes, difN(hoy.mora.lotes,fut.mora.lotes));
+
+  // ── FINALIZADOS (los nuevos que aparecen después del cierre) ──
+  const finHoy=new Set(hoy.finalizados.map(f=>f.mz+'-'+f.lote));
+  const nuevosFin=fut.finalizados.filter(f=>!finHoy.has(f.mz+'-'+f.lote));
+  if(nuevosFin.length){
+    h+='<div style="font-size:12px;font-weight:800;color:var(--text);margin:12px 0 4px">🏁 Finalizarían con este cierre ('+nuevosFin.length+')</div>';
+    h+='<div style="background:var(--surface);border-radius:8px;padding:8px">';
+    nuevosFin.forEach(f=>{ h+='<div style="font-size:12px;color:var(--text2);padding:2px 0">· '+formatLoteTag(f.mz,f.lote)+' — '+(f.titular||'')+'</div>'; });
+    h+='</div>';
+  }
+
+  h+='</div>';
+  return h;
+}
+function _fila(label, hoy, fut, dif){
+  return '<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 0.7fr;gap:6px;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border);align-items:center">'
+    +'<span style="color:var(--text)">'+label+'</span>'
+    +'<span style="text-align:right;color:var(--text2)">'+hoy+'</span>'
+    +'<span style="text-align:right;font-weight:700;color:var(--text)">'+fut+'</span>'
+    +'<span style="text-align:right;font-weight:700">'+dif+'</span></div>';
+}
+
+
+
+// ══════ RESUMEN COMPLETO (usa las MISMAS funciones reales de la app) v1.0624 ══════
+// Replica exactamente los cálculos de generarInformeEstadistica, sin inventar reglas.
+// Se usa en dos lados: columna IZQUIERDA (datos de hoy) y motor DERECHA (datos post-cierre).
+function calcularResumenCompleto(data){
+  if(!Array.isArray(data)) data=Object.values(data||{});
+  const _et=e=>({'Etapa 1':1,'Etapa 2':2,'Etapa 3':3,'Etapa 4':4}[e]||9);
+  const _num=s=>parseInt(String(s).replace(/\D/g,''))||0;
+
+  // ── Cobrables (mismo filtro que la app: activo, no agrimensor, no autopago, no empresaPaga, no primera cuota futura) ──
+  const cobrables=data.filter(c=>c.est==='activo' && !esAgrimensor(c.id) && !c.autopago && !c.empresaPaga && !esPrimeraCuotaFutura(c));
+  const cobrARS=cobrables.filter(c=>c.moneda!=='USD'), cobrUSD=cobrables.filter(c=>c.moneda==='USD');
+  const totARS=cobrARS.reduce((s,c)=>s+montoCobrable(c).total,0);
+  const totUSD=cobrUSD.reduce((s,c)=>s+montoCobrable(c).total,0);
+
+  // ── Por etapa/manzana ──
+  const porMz={};
+  cobrables.forEach(c=>{
+    const et=getEtapa(c.mz)||'Otros', mz=String(c.mz).toUpperCase();
+    const k=et+'||'+mz;
+    if(!porMz[k]) porMz[k]={et,mz,lotes:0,totA:0,totU:0};
+    const g=porMz[k], m=montoCobrable(c).total;
+    g.lotes++;
+    if(c.moneda==='USD') g.totU+=m; else g.totA+=m;
+  });
+  const filasMz=Object.values(porMz).sort((a,b)=>_et(a.et)-_et(b.et)||String(a.mz).localeCompare(String(b.mz)));
+
+  // ── Trimestres (cuota pura ARS de cobrables) ──
+  const tris={};
+  cobrables.filter(c=>c.moneda!=='USD').forEach(c=>{
+    const k=c.tri||'(sin trimestre)';
+    if(!tris[k]) tris[k]={monto:0,n:0};
+    tris[k].monto+=montoCobrable(c).total; tris[k].n++;
+  });
+
+  // ── Composición de lotes (misma lógica que la app) ──
+  const _all=data, _act=data.filter(c=>c.est==='activo'), _fin=data.filter(c=>c.est==='finalizado');
+  const _empresa=_all.filter(c=>c.empresaPaga);
+  const _agr=_act.filter(c=>esAgrimensor(c.id));
+  const _pre=_all.filter(c=>c.autopago&&!c.empresaPaga);
+  const _fut=_act.filter(c=>esPrimeraCuotaFutura(c));
+  const _usd=_act.filter(c=>c.moneda==='USD').length;
+
+  // ── Finalizados ──
+  const finalizados=_fin.map(c=>({mz:c.mz, lote:c.lote, titular:c.titular, ct:c.ct}));
+
+  // ── Mora acumulada ──
+  let moraTot=0, moraLotes=0;
+  try{
+    const moraImp=loadCuotasMora().filter(m=>!m.pagada);
+    moraTot=moraImp.reduce((s,m)=>s+(m.monto||0),0);
+    moraLotes=new Set(moraImp.map(m=>m.clienteId)).size;
+  }catch(e){}
+
+  return {
+    totalCobrar:{ ars:totARS, usd:totUSD, nARS:cobrARS.length, nUSD:cobrUSD.length },
+    porMz:filasMz,
+    tris,
+    composicion:{ total:_all.length, activos:_act.length, finalizados:_fin.length, empresa:_empresa.length, agrimensores:_agr.length, prestamos:_pre.length, futuros:_fut.length, usd:_usd },
+    finalizados,
+    mora:{ total:moraTot, lotes:moraLotes }
+  };
+}
 
 function simularCierre(){
   const hoy=new Date();
@@ -12038,8 +12142,8 @@ function abrirVerificacionCierre(){
   // ── FUTURO REAL: corre el cierre real en un entorno aislado y mide los trimestres objetivos ──
   html+='<div style="background:var(--surface);border:1px solid #7c3aed;border-radius:10px;padding:14px;margin-bottom:16px">';
   html+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">🔮 Futuro REAL post-cierre</div>';
-  html+='<div style="font-size:11px;color:var(--text2);margin-bottom:10px">Los trimestres de arriba son un cálculo aproximado. Este botón corre el <b>cierre real</b> en un entorno aislado y seguro, y te muestra los trimestres <b>objetivos</b> del mes que viene — con los que terminaron afuera y los nuevos adentro. No toca ningún dato real.</div>';
-  html+='<button onclick="mostrarFuturoReal()" style="background:#7c3aed;border:none;color:#fff;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;width:100%">🔮 Calcular futuro real</button>';
+  html+='<div style="font-size:11px;color:var(--text2);margin-bottom:10px">Corre el <b>cierre real</b> en un entorno aislado y seguro, y compara <b>HOY vs el mes que viene</b>: total a cobrar, trimestres, composición de lotes, mora y finalizados. Todo con las funciones reales de la app. No toca ningún dato.</div>';
+  html+='<button onclick="mostrarFuturoReal()" style="background:#7c3aed;border:none;color:#fff;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;width:100%">🔮 Calcular futuro real (comparar hoy vs post-cierre)</button>';
   html+='<div id="futuro-real-status" style="font-size:11px;color:var(--text2);text-align:center;margin-top:6px"></div>';
   html+='<div id="futuro-real-resultado"></div>';
   html+='</div>';
