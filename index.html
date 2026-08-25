@@ -1285,7 +1285,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0622';
+  datos['_version']='v1.0623';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11658,13 +11658,22 @@ function calcularFuturoRealEnIframe(){
 
     // Cuando la app del iframe esté lista, correr el cierre y medir
     function calcularTris(arr){
+      // USA LA MISMA LÓGICA QUE LA APP PARA COBRAR (filtro cobrablesD + montoCobrable).
+      // No inventa reglas: cuenta exactamente lo que la app cobraría este mes operativo.
       var t={};
       arr.forEach(function(c){
         if((c.moneda||'ARS')==='USD') return;
-        if(!(c.est==='activo' || (c.est==='finalizado'&&c.autopago))) return;
+        // mismo filtro que usa la app: activo o préstamo absorbido, no agrimensor, no empresaPaga, no primera cuota futura
+        var cobrable = (c.est==='activo' || (c.est==='finalizado'&&c.autopago))
+          && !(typeof esAgrimensor==='function' && esAgrimensor(c.id))
+          && !c.empresaPaga
+          && !(typeof esPrimeraCuotaFutura==='function' && esPrimeraCuotaFutura(c));
+        if(!cobrable) return;
         var k=c.tri||'(sin trimestre)';
         if(!t[k]) t[k]={monto:0,n:0};
-        t[k].monto+=(c.monto||0); t[k].n++;
+        // mismo monto que usa la app al cobrar
+        var m = (typeof montoCobrable==='function') ? montoCobrable(c).total : (c.monto||0);
+        t[k].monto+=m; t[k].n++;
       });
       return t;
     }
