@@ -1285,7 +1285,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0628';
+  datos['_version']='v1.0629';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11878,10 +11878,29 @@ function _renderComparativo(hoy, fut){
 
   // ── TRIMESTRES ──
   h+='<div style="font-size:12px;font-weight:800;color:var(--text);margin:12px 0 4px">📊 Trimestres (cuota pura ARS)</div>';
+  // Determinar qué trimestre sube con el ICC este mes (el que contiene el mes operativo post-cierre)
+  let triQueSube='';
+  try{
+    const mo=getMesOperativoICC();
+    const mesNom=MESES[mo.mesIdx];
+    const triKeysAll=[...new Set([...Object.keys(hoy.tris),...Object.keys(fut.tris)])];
+    triKeysAll.forEach(k=>{
+      // cada key es tipo "Ene-Abr-Jul-Oct"; comparar por las 3 primeras letras del mes
+      const abbr=mesNom.substring(0,3);
+      if(k.toLowerCase().indexOf(abbr.toLowerCase())>=0) triQueSube=k;
+    });
+  }catch(e){}
+  if(triQueSube){
+    h+='<div style="font-size:11px;color:#f59e0b;font-weight:700;margin-bottom:6px">⭐ Este mes sube: <b>'+triQueSube+'</b> (por el ICC). Los otros dos quedan igual.</div>';
+  }
   const trisKeys=[...new Set([...Object.keys(hoy.tris),...Object.keys(fut.tris)])].sort();
   trisKeys.forEach(k=>{
     const a=hoy.tris[k]||{monto:0,n:0}, b=fut.tris[k]||{monto:0,n:0};
-    h+=_fila(k+' <span style="color:var(--text3);font-size:10px">('+a.n+'→'+b.n+')</span>', fmt(a.monto), fmt(b.monto), dif(a.monto,b.monto));
+    const sube=(k===triQueSube);
+    const label=(sube?'⭐ ':'')+k+' <span style="color:var(--text3);font-size:10px">('+a.n+'→'+b.n+')</span>';
+    const filaHtml=_fila(label, fmt(a.monto), fmt(b.monto), dif(a.monto,b.monto));
+    // resaltar la fila del trimestre que sube
+    h+= sube ? filaHtml.replace('padding:4px 0;', 'padding:4px 6px;background:rgba(245,158,11,.10);border-radius:4px;') : filaHtml;
   });
 
   // ── COMPOSICIÓN ──
