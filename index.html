@@ -1287,7 +1287,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0632';
+  datos['_version']='v1.0633';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9116,6 +9116,35 @@ function caSetAdelanto(id,n){
   x.adelantosPorLote[id]=arr;
   renderCobroAgrupadoModal();
 }
+// ══════ Cambiar trimestre manualmente (v1.0633) ══════
+function cambiarTrimestreManual(id){
+  const data=loadData();
+  const c=data.find(x=>x.id===id);
+  if(!c){ alert('No se encontró el lote.'); return; }
+  if(c.moneda==='USD'){ alert('Los lotes en USD no llevan trimestre ICC.'); return; }
+  const OPC=['Ene-Abr-Jul-Oct','Feb-May-Ago-Nov','Mar-Jun-Sep-Dic'];
+  const NOM={'Ene-Abr-Jul-Oct':'Azul','Feb-May-Ago-Nov':'Verde','Mar-Jun-Sep-Dic':'Rosa'};
+  const actual=c.tri||'(sin trimestre)';
+  let msg='Trimestre actual: '+actual+' ('+(NOM[actual]||'?')+')\n\nElegí el nuevo trimestre:\n';
+  OPC.forEach((t,i)=>{ msg+='\n'+(i+1)+') '+t+' ('+NOM[t]+')'; });
+  msg+='\n\nEscribí 1, 2 o 3:';
+  const r=prompt(msg,'');
+  if(r===null) return;
+  const idx=parseInt(r)-1;
+  if(isNaN(idx)||idx<0||idx>2){ alert('Opción inválida. Escribí 1, 2 o 3.'); return; }
+  const nuevo=OPC[idx];
+  if(nuevo===c.tri){ alert('El lote ya está en ese trimestre.'); return; }
+  if(!confirm('¿Cambiar '+formatLoteTag(c.mz,c.lote)+' de "'+actual+'" a "'+nuevo+' ('+NOM[nuevo]+')"?\n\nEsto NO modifica el monto, solo el trimestre.')) return;
+  // Guardar (solo cambia el trimestre)
+  const d2=loadData(); const idx2=d2.findIndex(x=>x.id===id);
+  if(idx2<0){ alert('No se encontró el lote al guardar.'); return; }
+  d2[idx2].tri=nuevo;
+  saveData(d2);
+  try{ addHist('edit','Trimestre cambiado: '+formatLoteTag(c.mz,c.lote)+' '+actual+' → '+nuevo,id); }catch(e){}
+  if(typeof renderAdminDet==='function') renderAdminDet(id);
+  if(typeof renderAdminTable==='function') renderAdminTable();
+}
+
 function renderAdminDet(id){
   const data=loadData();
   const c=data.find(x=>x.id===id);
@@ -9311,9 +9340,7 @@ function renderAdminDet(id){
 
       <!-- 4. Info del cliente -->
       <div class="det-row"><span class="det-label">Cuota N°</span><span class="det-val">${esPrimeraCuotaFutura(c)?'— de '+c.ct:cuotaOperativa(c)+' de '+c.ct}</span></div>
-      <div class="det-row"><span class="det-label">Trimestre</span><span class="det-val">${c.moneda==='USD'?'— (USD, sin ICC)':c.tri}</span></div>
-      <div class="det-row"><span class="det-label">Saldo</span><span class="det-val" style="color:${saldoColor}">${saldoTxt}</span></div>
-      <div class="det-row"><span class="det-label">Próximo incremento</span><span class="det-val">${getProximoIncrementoHtml(c.tri)}</span></div>
+      <div class="det-row"><span class="det-label">Trimestre</span><span class="det-val">${c.moneda==='USD'?'— (USD, sin ICC)':c.tri+' <button onclick="cambiarTrimestreManual(\''+c.id+'\')" style="background:var(--surface);border:1px solid var(--border2);color:var(--acc2);padding:1px 7px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;margin-left:6px">✏️ Cambiar</button>'}</span></div>
       <div class="det-row"><span class="det-label">Teléfono</span><span class="det-val">${c.tel||'<span style="color:var(--text3)">Sin número</span>'}</span></div>
 
       <!-- 5. Últimas 3 cuotas (columna, igual que colab) -->
