@@ -1287,7 +1287,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0631';
+  datos['_version']='v1.0632';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -13794,19 +13794,28 @@ function simularICC(){
   const mesOp=getMesOperativoICC();
   const mesEnCurso=mesOp.mesIdx, anioEnCurso=mesOp.anio;
 
-  // Registrar el % del mes (igual que la app) para poder completar el trimestre
-  registrarIccMensual(mesEnCurso, anioEnCurso, pctMes);
-  const tri1=trimestreCompletoEnLista1(mesEnCurso, anioEnCurso);
-  if(!tri1.completo){
-    const faltan=tri1.meses.filter((_,i)=>tri1.entradas[i]===null).map(({m})=>MESES[m]);
-    cont.innerHTML='<div style="background:rgba(245,158,11,.12);border:1px solid #f59e0b;border-radius:8px;padding:10px;font-size:12px;color:#f59e0b">⚠️ Falta registrar el ICC de: '+faltan.join(', ')+'. Necesitás los 3 meses del trimestre para simular.</div>';
+  // NO registra nada. Solo LEE los 2 meses anteriores ya registrados y suma el % del campo en memoria.
+  const mesesTri=[];
+  for(let i=2;i>=0;i--){ let m=mesEnCurso-i, a=anioEnCurso; if(m<0){m+=12;a--;} mesesTri.push({m,a}); }
+  const entradasTri=mesesTri.map(({m,a})=>{
+    if(m===mesEnCurso && a===anioEnCurso) return {pct:pctMes}; // el mes en curso: uso el % del campo (sin guardar)
+    const reg=getIccMensual(m,a);
+    if(reg) return {pct:Number(reg.pct)};
+    // si no está registrado, intento leerlo del histórico (sin registrar)
+    const h=(typeof getIccDeHistorial==='function')?getIccDeHistorial(m):null;
+    if(h && Number(h.pct)>0) return {pct:Number(h.pct)};
+    return null;
+  });
+  if(entradasTri.some(e=>e===null)){
+    const faltan=mesesTri.filter((_,i)=>entradasTri[i]===null).map(({m})=>MESES[m]);
+    cont.innerHTML='<div style="background:rgba(245,158,11,.12);border:1px solid #f59e0b;border-radius:8px;padding:10px;font-size:12px;color:#f59e0b">⚠️ Falta el ICC de: '+faltan.join(', ')+'. Necesitás los 3 meses del trimestre para simular. (El simulador no registra nada — cargalo en la app si falta.)</div>';
     return;
   }
 
   const info=ICC_MAP[mesEnCurso];
   if(!info){ cont.innerHTML='No se pudo determinar la planilla.'; return; }
   const planilla=info.planillaVal;
-  const totalTri=parseFloat(tri1.entradas.reduce((s,e)=>s+(Number(e.pct)||0),0).toFixed(2));
+  const totalTri=parseFloat(entradasTri.reduce((s,e)=>s+(Number(e.pct)||0),0).toFixed(2));
 
   // Calcular los 3 trimestres ANTES y DESPUÉS (mismo cálculo real: monto*(1+totalTri/100) al que corresponde)
   const data=loadData();
