@@ -1285,7 +1285,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0627';
+  datos['_version']='v1.0628';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -12176,9 +12176,6 @@ function abrirVerificacionCierre(){
   const cf=loadCierreFinal&&loadCierreFinal();
   const cierreVigente=cf?(cf.mesNombre||(cf.fecha+' '+cf.hora)):'ninguno';
 
-  // Nombres de trimestres ordenados
-  const trisEntries=Object.entries(s.tris).sort((a,b)=>a[0].localeCompare(b[0]));
-
   let html='<div style="max-width:900px;margin:0 auto">';
   // Encabezado
   html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
@@ -12193,42 +12190,6 @@ function abrirVerificacionCierre(){
   html+='<div style="background:rgba(251,191,36,.12);border:1px solid var(--amber,#f59e0b);border-radius:10px;padding:12px 14px;margin-bottom:16px">'
     +'<div style="font-size:12px;color:var(--text)"><b>⚠️ Verificá el mes:</b> el cierre vigente es <b>'+cierreVigente+'</b>. '
     +'Al cerrar, se registrará como <b style="font-size:14px">'+s.mesNombre+'</b>. Si ese no es el mes que estás cerrando, NO cierres.</div></div>';
-
-  // Contadores
-  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">';
-  html+='<div style="background:rgba(16,185,129,.12);border:1px solid #10b981;border-radius:10px;padding:14px;text-align:center"><div style="font-size:28px;font-weight:800;color:#10b981">'+s.totalAvanzan+'</div><div style="font-size:12px;color:var(--text2);font-weight:600">avanzan +1 cuota</div></div>';
-  html+='<div style="background:rgba(239,68,68,.12);border:1px solid #ef4444;border-radius:10px;padding:14px;text-align:center"><div style="font-size:28px;font-weight:800;color:#ef4444">'+s.totalMora+'</div><div style="font-size:12px;color:var(--text2);font-weight:600">entran en mora</div></div>';
-  html+='<div style="background:rgba(139,92,246,.12);border:1px solid #8b5cf6;border-radius:10px;padding:14px;text-align:center"><div style="font-size:28px;font-weight:800;color:#8b5cf6">'+s.totalEsperan+'</div><div style="font-size:12px;color:var(--text2);font-weight:600">esperan (futura)</div></div>';
-  html+='</div>';
-
-  // Esperan (detalle)
-  if(s.esperan.length){
-    html+='<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:700;margin-bottom:6px">⏳ NO avanzan (primera cuota futura):</div>';
-    s.esperan.forEach(e=>{ html+='<div style="font-size:12px;color:var(--text2);padding:3px 0">· '+formatLoteTag(e.mz,e.lote)+' — '+e.titular+' <span style="color:var(--text3)">(arranca '+e.arranca+')</span></div>'; });
-    html+='</div>';
-  }
-
-  // Trimestres — comparación ANTES vs DESPUÉS
-  const hayCambioTri = trisEntries.some(([t,o])=>o.cambio);
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">';
-  html+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">📊 Trimestres — ANTES vs DESPUÉS del cierre (cuota pura ARS)</div>';
-  if(hayCambioTri){
-    html+='<div style="background:rgba(239,68,68,.12);border:1px solid #ef4444;border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:#ef4444;font-weight:700">🚩 Un trimestre cambió con el cierre. No debería pasar (el cierre no toca montos). Revisá.</div>';
-  } else {
-    html+='<div style="background:rgba(16,185,129,.12);border:1px solid #10b981;border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:#10b981;font-weight:700">✅ Los 3 trimestres quedan iguales tras el cierre, como debe ser.</div>';
-  }
-  html+='<div style="display:grid;grid-template-columns:2fr 1.3fr 1.3fr;gap:4px;font-size:11px;color:var(--text3);font-weight:700;padding-bottom:4px;border-bottom:1px solid var(--border)"><span>Trimestre</span><span style="text-align:right">Antes</span><span style="text-align:right">Después</span></div>';
-  let _tA=0,_tD=0;
-  trisEntries.forEach(([t,o])=>{
-    _tA+=o.montoAntes; _tD+=o.monto;
-    const col = o.cambio?'#ef4444':'var(--text)';
-    html+='<div style="display:grid;grid-template-columns:2fr 1.3fr 1.3fr;gap:4px;padding:5px 0;font-size:12px;border-bottom:1px solid var(--border);align-items:center">'
-      +'<span style="color:'+col+'">'+(o.cambio?'🚩 ':'')+t+' <span style="color:var(--text3);font-size:10px">('+o.n+')</span></span>'
-      +'<span style="text-align:right;color:var(--text2)">'+fmt(o.montoAntes)+'</span>'
-      +'<span style="text-align:right;font-weight:700;color:'+col+'">'+fmt(o.monto)+'</span></div>';
-  });
-  html+='<div style="display:grid;grid-template-columns:2fr 1.3fr 1.3fr;gap:4px;padding:8px 0 0;font-size:12px;font-weight:800"><span style="color:var(--text)">TOTAL</span><span style="text-align:right;color:var(--text)">'+fmt(_tA)+'</span><span style="text-align:right;color:var(--text)">'+fmt(_tD)+'</span></div>';
-  html+='<div style="font-size:10px;color:var(--text3);margin-top:8px">Después de aplicar ICC, volvé acá: solo el trimestre que corresponde debe subir; los otros dos, iguales.</div></div>';
 
   // ── FUTURO REAL: corre el cierre real en un entorno aislado y mide los trimestres objetivos ──
   html+='<div style="background:var(--surface);border:1px solid #7c3aed;border-radius:10px;padding:14px;margin-bottom:16px">';
