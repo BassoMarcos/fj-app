@@ -610,9 +610,11 @@ tr:hover td{background:var(--bg)}
         <div id="icc-preview-tri" style="display:none;background:var(--brand-light);border:1px solid var(--blue-border);border-radius:var(--r);padding:10px 14px;margin-bottom:10px;font-size:13px"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary" id="icc-apply-btn" onclick="aplicarICC()">&#10003; Confirmar y aplicar</button>
+          <button class="btn" id="icc-sim-btn" onclick="simularICC()" style="background:#7c3aed;color:#fff;border:none">&#128302; Simular (ver 3 trimestres)</button>
           <button class="btn" id="icc-fetch-btn" onclick="buscarICCIndec()" title="Requiere conexión — usa API pública del gobierno">&#127758; Buscar (API)</button>
           
         </div>
+        <div id="icc-sim-resultado" style="margin-top:12px"></div>
         <div id="icc-fetch-msg" style="font-size:13px;margin-top:10px;color:var(--text2)"></div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;margin-bottom:8px">
@@ -1285,7 +1287,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0630';
+  datos['_version']='v1.0631';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -13782,6 +13784,77 @@ function renderIccHist(){
     <div style="color:var(--text2);font-size:12px">${fmtDate(e.ts)} · ${e.cnt} clientes</div>
   </div>`).join('');
 }
+// ══════ SIMULADOR DE ICC: muestra los 3 trimestres antes/después (sin aplicar nada) v1.0631 ══════
+function simularICC(){
+  const cont=document.getElementById('icc-sim-resultado');
+  if(!cont) return;
+  const pctMes=parseFloat(document.getElementById('icc-pct').value);
+  if(isNaN(pctMes)||pctMes<=0){ cont.innerHTML='<div style="background:rgba(239,68,68,.12);border:1px solid #ef4444;border-radius:8px;padding:10px;font-size:12px;color:#ef4444">Ingresá primero el porcentaje del mes actual.</div>'; return; }
+
+  const mesOp=getMesOperativoICC();
+  const mesEnCurso=mesOp.mesIdx, anioEnCurso=mesOp.anio;
+
+  // Registrar el % del mes (igual que la app) para poder completar el trimestre
+  registrarIccMensual(mesEnCurso, anioEnCurso, pctMes);
+  const tri1=trimestreCompletoEnLista1(mesEnCurso, anioEnCurso);
+  if(!tri1.completo){
+    const faltan=tri1.meses.filter((_,i)=>tri1.entradas[i]===null).map(({m})=>MESES[m]);
+    cont.innerHTML='<div style="background:rgba(245,158,11,.12);border:1px solid #f59e0b;border-radius:8px;padding:10px;font-size:12px;color:#f59e0b">⚠️ Falta registrar el ICC de: '+faltan.join(', ')+'. Necesitás los 3 meses del trimestre para simular.</div>';
+    return;
+  }
+
+  const info=ICC_MAP[mesEnCurso];
+  if(!info){ cont.innerHTML='No se pudo determinar la planilla.'; return; }
+  const planilla=info.planillaVal;
+  const totalTri=parseFloat(tri1.entradas.reduce((s,e)=>s+(Number(e.pct)||0),0).toFixed(2));
+
+  // Calcular los 3 trimestres ANTES y DESPUÉS (mismo cálculo real: monto*(1+totalTri/100) al que corresponde)
+  const data=loadData();
+  const cobrables=data.filter(c=>c.moneda!=='USD' && (c.est==='activo'||(c.est==='finalizado'&&c.autopago)) && !esAgrimensor(c.id) && !c.empresaPaga && !esPrimeraCuotaFutura(c));
+  const tris={};
+  cobrables.forEach(c=>{
+    const k=c.tri||'(sin trimestre)';
+    if(!tris[k]) tris[k]={antes:0,despues:0,n:0};
+    const base=montoCobrable(c).total;
+    tris[k].antes+=base; tris[k].n++;
+    // el que corresponde: aplicar el incremento sobre el monto base (igual que aplicarICC hace c.monto*(1+totalTri/100))
+    if(c.tri===planilla){
+      const nuevoMonto=Math.round(c.monto*(1+totalTri/100));
+      // recalcular el cobrable con el nuevo monto (base nuevo + escalonado si sigue activo)
+      const cSim=Object.assign({},c,{monto:nuevoMonto});
+      tris[k].despues+=montoCobrable(cSim).total;
+    } else {
+      tris[k].despues+=base;
+    }
+  });
+
+  const fmt=n=>'$'+(Math.round(n)||0).toLocaleString('es-AR');
+  const keys=Object.keys(tris).sort();
+  let totA=0, totD=0;
+  let filas='';
+  keys.forEach(k=>{
+    const t=tris[k];
+    totA+=t.antes; totD+=t.despues;
+    const sube=(k===planilla);
+    const dif=t.despues-t.antes;
+    const col=dif===0?'var(--text3)':'#10b981';
+    filas+='<div style="display:grid;grid-template-columns:1.6fr 1.1fr 1.1fr 0.9fr;gap:6px;padding:6px '+(sube?'8px':'0')+';font-size:12px;border-bottom:1px solid var(--border);align-items:center;'+(sube?'background:rgba(245,158,11,.12);border-radius:6px':'')+'">'
+      +'<span style="color:var(--text)">'+(sube?'⭐ ':'')+k+' <span style="color:var(--text3);font-size:10px">('+t.n+')</span></span>'
+      +'<span style="text-align:right;color:var(--text2)">'+fmt(t.antes)+'</span>'
+      +'<span style="text-align:right;font-weight:700;color:var(--text)">'+fmt(t.despues)+'</span>'
+      +'<span style="text-align:right;font-weight:700;color:'+col+'">'+(dif===0?'=':'+'+fmt(dif))+'</span></div>';
+  });
+
+  let html='<div style="background:var(--surface);border:1px solid #7c3aed;border-radius:10px;padding:14px">';
+  html+='<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">🔮 Simulación del ICC — 3 trimestres</div>';
+  html+='<div style="font-size:11px;color:var(--text2);margin-bottom:10px">Con el <b>'+totalTri+'%</b> del trimestre (suma de los 3 meses), solo sube <b>'+planilla+' ('+info.planillaNombre+')</b>. Los otros dos quedan igual. Esto es una simulación — no aplica nada.</div>';
+  html+='<div style="display:grid;grid-template-columns:1.6fr 1.1fr 1.1fr 0.9fr;gap:6px;font-size:10px;color:var(--text3);font-weight:700;padding-bottom:4px;border-bottom:1px solid var(--border)"><span>Trimestre</span><span style="text-align:right">Antes</span><span style="text-align:right">Después</span><span style="text-align:right">Dif</span></div>';
+  html+=filas;
+  html+='<div style="display:grid;grid-template-columns:1.6fr 1.1fr 1.1fr 0.9fr;gap:6px;padding:8px 0 0;font-size:12px;font-weight:800"><span style="color:var(--text)">TOTAL</span><span style="text-align:right;color:var(--text)">'+fmt(totA)+'</span><span style="text-align:right;color:var(--text)">'+fmt(totD)+'</span><span style="text-align:right;color:#10b981">+'+fmt(totD-totA)+'</span></div>';
+  html+='</div>';
+  cont.innerHTML=html;
+}
+
 function aplicarICC(){
   if(modoConsultaActivo()){ alert("👁️ Modo consulta: solo lectura. No se pueden hacer cambios."); return; }
   if(_syncBloqueaOperacion('APLICAR EL ICC')) return;
