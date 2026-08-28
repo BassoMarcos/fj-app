@@ -1313,7 +1313,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0635';
+  datos['_version']='v1.0636';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9676,6 +9676,16 @@ function abrirDiagnosticoHist(){
       }
     }
     if(nums.some(n=>n<1)) issues.push('cuota con número inválido (<1)');
+    // v1.0636: detectar desfase oculto entre el historial y la cuota actual (ca).
+    // En lotes sanos, el último número del hist es ca-1. Si es menor, el hist está atrasado.
+    if(nums.length && typeof c.ca==='number' && c.ca>0){
+      const ultimoHist=nums[nums.length-1];
+      const esperado=c.ca-1;
+      if(ultimoHist < esperado){
+        const faltan=esperado-ultimoHist;
+        issues.push('historial atrasado: termina en cuota '+ultimoHist+' pero la cuota actual es '+c.ca+' (faltan '+faltan+' cuota'+(faltan!==1?'s':'')+' para ponerse al día)');
+      }
+    }
     if(issues.length) problemas.push({id:c.id, ca:c.ca, titular:c.titular||'', moneda:c.moneda||'ARS', issues});
   });
   const fila=(p)=>`<div style="padding:8px 12px;border-bottom:1px solid var(--border)">
