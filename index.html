@@ -940,6 +940,32 @@ function reactivarCajaMora(loteId){
   const r=loadCajaMoraRendidos(); delete r[loteId]; saveCajaMoraRendidos(r);
   renderBalances('mora');
 }
+// v1.0634: Limpiar (borrar definitivamente) los rendidos de la Caja de Mora. Solo toca lo rendido.
+function limpiarCajaMoraRendidos(){
+  const r=loadCajaMoraRendidos();
+  const idsRendidos=Object.keys(r).filter(k=>r[k]);
+  if(!idsRendidos.length){ alert('No hay rendidos para limpiar en la Caja de Mora.'); return; }
+  const mora=loadMora();
+  const aBorrar=mora.filter(p=>r[p.id]).length;
+  if(!confirm('¿Limpiar los rendidos de la Caja de Mora?\n\nSe van a BORRAR definitivamente '+idsRendidos.length+' lote(s) rendido(s) ('+aBorrar+' cobro/s).\n\nEsto NO toca los cobros activos (no rendidos). No se puede deshacer.')) return;
+  // Borrar de fj_mora los cobros marcados como rendidos, y limpiar las marcas
+  const moraNueva=mora.filter(p=>!r[p.id]);
+  saveMora(moraNueva);
+  saveCajaMoraRendidos({});
+  renderBalances('mora');
+  alert('✓ Rendidos de la Caja de Mora limpiados. Lo activo quedó intacto.');
+}
+// v1.0634: Limpiar (borrar definitivamente) los extras rendidos. Solo toca lo rendido.
+function limpiarExtrasRendidos(){
+  const extras=loadExtras();
+  const rendidos=extras.filter(e=>e.rendido);
+  if(!rendidos.length){ alert('No hay extras rendidos para limpiar.'); return; }
+  if(!confirm('¿Limpiar los extras rendidos?\n\nSe van a BORRAR definitivamente '+rendidos.length+' movimiento(s) rendido(s) (gastos/ingresos).\n\nEsto NO toca los extras activos (no rendidos). No se puede deshacer.')) return;
+  const extrasNuevos=extras.filter(e=>!e.rendido);
+  saveExtras(extrasNuevos);
+  renderBalances('extras');
+  alert('✓ Extras rendidos limpiados. Lo activo quedó intacto.');
+}
 function loadPendientesAprobacion(){try{return JSON.parse(localStorage.getItem('fj_pendientes_aprobacion')||'[]');}catch(e){return [];}}
 function savePendientesAprobacion(v){localStorage.setItem('fj_pendientes_aprobacion',JSON.stringify(v));sheetsSet('Pendientes',v);window._fbSet('pendientesAprobacion',v).catch(e=>console.warn('FB pend error:',e));}
 function loadUltimaVistaMora(){return localStorage.getItem('fj_mora_vista')||'0';}
@@ -1287,7 +1313,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0633';
+  datos['_version']='v1.0634';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6721,6 +6747,7 @@ function renderBalances(seccion){
         moraHtml+='<div style="margin-top:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">';
         moraHtml+='<div onclick="window._cajaMoraVerRendidos=!window._cajaMoraVerRendidos;renderBalances(\'mora\')" style="padding:.875rem 1rem;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;align-items:center;'+(ver?'border-bottom:1px solid var(--border)':'')+'"><span>'+(ver?'▼':'▶')+' 📁 Rendidos ('+rendArr.length+')</span><span style="font-size:11px;color:var(--text2)">tocá para '+(ver?'ocultar':'ver')+'</span></div>';
         if(ver){
+          moraHtml+='<div style="padding:8px 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:flex-end"><button onclick="event.stopPropagation();limpiarCajaMoraRendidos()" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer">🗑️ Limpiar rendidos</button></div>';
           rendArr.forEach(g=>{
             const cur=g.moneda==='USD'?'USD ':'';
             moraHtml+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 1rem;border-bottom:1px solid var(--border);font-size:12px;opacity:.85;flex-wrap:wrap;gap:8px">'
@@ -6831,7 +6858,7 @@ function renderBalances(seccion){
       +'</div></div>'
       +((!window._extrasColView&&!window._extrasEditMode&&extras.length)?'<div style="padding:8px 1rem;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--hov)"><span style="font-size:11px;color:var(--text2)">Tildá los que quieras separar y marcalos como rendidos:</span><button onclick="marcarExtrasRendidos()" style="background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer">✓ Marcar rendidos</button></div>':'')
       +(window._extrasColView?colsHtml:histHtml+'</div>')
-      +(rendidos.length?'<div style="margin-top:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden"><div onclick="window._extrasVerRendidos=!window._extrasVerRendidos;renderBalances(\'extras\')" style="padding:.875rem 1rem;font-weight:700;border-bottom:'+(verRendidos?'1px solid var(--border)':'none')+';cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span>'+(verRendidos?'▼':'▶')+' 📁 Rendidos ('+rendidos.length+')</span><span style="font-size:11px;color:var(--text2)">tocá para '+(verRendidos?'ocultar':'ver')+'</span></div>'+(verRendidos?rendidos.slice().reverse().map(e=>{const isIng=e.tipo==='ingreso';return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 1rem;border-bottom:1px solid var(--border);font-size:12px;opacity:.8"><div><span style="background:'+(isIng?'#dcfce7':'#fee2e2')+';color:'+(isIng?'#16a34a':'#dc2626')+';padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700;margin-right:6px">'+(isIng?'💰':'📤')+'</span><span style="font-weight:600">'+e.desc+'</span> <span style="font-size:10px;color:var(--text2)">'+fmtDate(e.fecha||e.ts||'')+'</span></div><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;color:'+(isIng?'#16a34a':'#dc2626')+'">'+(isIng?'+':'-')+fmtPeso(e.monto)+'</span><button onclick="desmarcarExtraRendido(\''+e.id+'\')" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer">↩ Reactivar</button></div></div>';}).join(''):'')+'</div>':'');
+      +(rendidos.length?'<div style="margin-top:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden"><div onclick="window._extrasVerRendidos=!window._extrasVerRendidos;renderBalances(\'extras\')" style="padding:.875rem 1rem;font-weight:700;border-bottom:'+(verRendidos?'1px solid var(--border)':'none')+';cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span>'+(verRendidos?'▼':'▶')+' 📁 Rendidos ('+rendidos.length+')</span><span style="font-size:11px;color:var(--text2)">tocá para '+(verRendidos?'ocultar':'ver')+'</span></div>'+(verRendidos?('<div style="padding:8px 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:flex-end"><button onclick="event.stopPropagation();limpiarExtrasRendidos()" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer">🗑️ Limpiar rendidos</button></div>'+rendidos.slice().reverse().map(e=>{const isIng=e.tipo==='ingreso';return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 1rem;border-bottom:1px solid var(--border);font-size:12px;opacity:.8"><div><span style="background:'+(isIng?'#dcfce7':'#fee2e2')+';color:'+(isIng?'#16a34a':'#dc2626')+';padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700;margin-right:6px">'+(isIng?'💰':'📤')+'</span><span style="font-weight:600">'+e.desc+'</span> <span style="font-size:10px;color:var(--text2)">'+fmtDate(e.fecha||e.ts||'')+'</span></div><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;color:'+(isIng?'#16a34a':'#dc2626')+'">'+(isIng?'+':'-')+fmtPeso(e.monto)+'</span><button onclick="desmarcarExtraRendido(\''+e.id+'\')" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer">↩ Reactivar</button></div></div>';}).join('')):'')+'</div>':'');
 
     window._extraTipo = window._extraTipo || 'ingreso';
     setExtraTipo(window._extraTipo);
