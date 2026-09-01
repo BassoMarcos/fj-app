@@ -1380,7 +1380,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0638';
+  datos['_version']='v1.0639';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -10008,19 +10008,6 @@ function abrirHistorialCuotas(id){
       if(vistos.has(key)) return; vistos.add(key);
       registros.push({fecha:a.fecha, ts:a.ts, cuotas:(a.cuotas||[]).map(q=>'C'+q.num).join(', '), total:a.total||0, estado:a.estado==='aprobado'?'aplicado':'pendiente'});
     });
-    // 3) Registros viejos del historial general (sin cid — matchear por mz+lote en el texto)
-    try{
-      const tag=c.mz+' Lote '+c.lote;
-      loadHist().filter(x=>x.tipo==='adelanto' && String(x.desc||'').includes(tag)).forEach(x=>{
-        const key=(x.ts||'')+'|old';
-        if(vistos.has(key)) return; vistos.add(key);
-        const mMonto=String(x.desc||'').match(/\$\s?([\d.,]+)\s*$/);
-        const mCuotas=String(x.desc||'').match(/(\d+)\s*cuota/);
-        registros.push({fecha:new Date(x.ts).toLocaleDateString('es-AR'), ts:x.ts,
-          cuotas:mCuotas?(mCuotas[1]+' cuota'+(mCuotas[1]!=='1'?'s':'')):'—',
-          total:0, montoTxt:mMonto?('$'+mMonto[1]):'', estado:'aplicado'});
-      });
-    }catch(e){}
     registros.sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
     if(registros.length){
       const filas=registros.map(r=>{
