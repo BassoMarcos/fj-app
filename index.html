@@ -968,6 +968,73 @@ function limpiarExtrasRendidos(){
 }
 function loadPendientesAprobacion(){try{return JSON.parse(localStorage.getItem('fj_pendientes_aprobacion')||'[]');}catch(e){return [];}}
 function savePendientesAprobacion(v){localStorage.setItem('fj_pendientes_aprobacion',JSON.stringify(v));sheetsSet('Pendientes',v);window._fbSet('pendientesAprobacion',v).catch(e=>console.warn('FB pend error:',e));}
+// v1.0637: Notificaciones de mora (avisos, sin aprobación). Reemplaza el sistema de pendientes.
+function loadNotifMora(){try{return JSON.parse(localStorage.getItem('fj_notif_mora')||'[]');}catch(e){return [];}}
+function saveNotifMora(v){localStorage.setItem('fj_notif_mora',JSON.stringify(v));window._fbSet('notifMora',v).catch(e=>console.warn('FB notifMora error:',e));}
+function agregarNotifMora(n){ const arr=loadNotifMora(); arr.push(n); saveNotifMora(arr); }
+function limpiarNotifMora(){
+  const arr=loadNotifMora();
+  const pend=loadPendientesAprobacion();
+  if(!arr.length && !pend.length){ alert('No hay notificaciones para limpiar.'); return; }
+  if(!confirm('¿Limpiar todas las notificaciones de mora?\n\nSon avisos, no afectan cobros ni cajas. Se van a borrar '+(arr.length+pend.length)+' aviso(s).')) return;
+  saveNotifMora([]);
+  if(pend.length) savePendientesAprobacion([]); // limpiar también los viejos pendientes pegados
+  actualizarBadgeMora();
+  renderPanelMora();
+}
+// Genera notificación si se cobró mora de un mes ANTERIOR al mes operativo actual
+function notificarSiMoraAtrasada(clienteId, cuotaMora, contexto){
+  try{
+    if(!cuotaMora || typeof cuotaMora.mes!=='number' || typeof cuotaMora.anio!=='number') return;
+    const mo=getMesOperativoICC();
+    const valCuota=cuotaMora.anio*12+cuotaMora.mes;
+    const valOperativo=mo.anio*12+mo.mesIdx;
+    if(valCuota < valOperativo){
+      const c=loadData().find(x=>x.id===clienteId)||{};
+      agregarNotifMora({
+        id:new Date().toISOString()+'-'+clienteId+'-'+cuotaMora.numeroCuota,
+        tipo:'mora_atrasada',
+        clienteId, mz:c.mz||cuotaMora.mz, lote:c.lote||cuotaMora.lote, titular:c.titular||cuotaMora.titular||'',
+        mesCuota:cuotaMora.mesNombre||(MESES[cuotaMora.mes]+' '+cuotaMora.anio),
+        numeroCuota:cuotaMora.numeroCuota, monto:cuotaMora.monto||0,
+        ctx:contexto||'', ts:new Date().toISOString(),
+        fecha:new Date().toLocaleDateString('es-AR'), hora:new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})
+      });
+    }
+  }catch(e){ console.warn('notificarSiMoraAtrasada error:',e); }
+}
+// Render de la sección de notificaciones (avisos + pendientes viejos), sin botones de aprobar
+function _renderNotifMoraHtml(){
+  const notifs=loadNotifMora();
+  const viejos=loadPendientesAprobacion();
+  const total=notifs.length+viejos.length;
+  if(!total) return '';
+  let h='<div style="background:var(--amber-bg);border:2px solid #fde68a;border-radius:var(--rlg);margin-bottom:1.5rem;overflow:hidden">'
+    +'<div style="background:var(--amber-bg);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px">'
+    +'<div style="font-size:15px;font-weight:800;color:#854d0e">🔔 Notificaciones de mora ('+total+')</div>'
+    +'<button onclick="limpiarNotifMora()" style="background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer">🗑️ Limpiar</button>'
+    +'</div>';
+  // Notificaciones nuevas (mora atrasada cobrada por colaborador)
+  notifs.slice().reverse().forEach(n=>{
+    const cur2=n.moneda==='USD'?'USD ':'';
+    h+='<div style="padding:12px 16px;border-bottom:1px solid #fde68a">'
+      +'<div style="font-size:13px;font-weight:700">'+(n.mz||'')+' — Lote '+(n.lote||'')+' <span style="font-size:11px;color:#b45309;font-weight:700">· mora atrasada</span></div>'
+      +'<div style="font-size:12px;color:var(--text2)">'+(n.titular||'')+'</div>'
+      +'<div style="font-size:11px;color:var(--amber);margin-top:2px">Cobró cuota '+(n.numeroCuota||'?')+' de '+(n.mesCuota||'?')+' · '+cur2+fmtPeso(n.monto||0)+' · '+n.fecha+' '+n.hora+'</div>'
+      +'</div>';
+  });
+  // Pendientes viejos (compat) — solo aviso, sin aprobar
+  viejos.slice().reverse().forEach(p=>{
+    const cur2=p.moneda==='USD'?'USD ':'';
+    h+='<div style="padding:12px 16px;border-bottom:1px solid #fde68a">'
+      +'<div style="font-size:13px;font-weight:700">'+(p.mz||'')+' — Lote '+(p.lote||'')+' <span style="font-size:11px;color:var(--text3)">· aviso antiguo</span></div>'
+      +'<div style="font-size:12px;color:var(--text2)">'+(p.titular||'')+'</div>'
+      +'<div style="font-size:11px;color:var(--amber);margin-top:2px">'+p.fecha+' '+p.hora+' · '+cur2+fmtPeso(p.total)+'</div>'
+      +'</div>';
+  });
+  h+='</div>';
+  return h;
+}
 function loadUltimaVistaMora(){return localStorage.getItem('fj_mora_vista')||'0';}
 function saveUltimaVistaMora(){localStorage.setItem('fj_mora_vista',new Date().toISOString());}
 function getMoraNoVistos(){
@@ -1313,7 +1380,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0636';
+  datos['_version']='v1.0637';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -3614,27 +3681,11 @@ function renderPanelMora(){
   const hoy=new Date();
   actualizarBadgeMora();
 
-  // Pendientes de aprobación — cargar ANTES del early return
-  const _pendientesEarly=loadPendientesAprobacion();
+  // Notificaciones de mora — cargar ANTES del early return
+  const _notifEarly=_renderNotifMoraHtml();
   if(!cuotasMora.length){
-    if(_pendientesEarly.length){
-      // Hay pendientes pero no mora activa — mostrar solo pendientes
-      let _ph='<div style="background:var(--amber-bg);border:2px solid #fde68a;border-radius:var(--rlg);margin-bottom:1.5rem;overflow:hidden">'
-        +'<div style="background:var(--amber-bg);padding:12px 16px"><div style="font-size:15px;font-weight:800;color:#854d0e">⏳ Pendientes de aprobación ('+_pendientesEarly.length+')</div></div>';
-      _pendientesEarly.forEach(p=>{
-        const cur2=p.moneda==='USD'?'USD ':'';
-        _ph+='<div style="padding:12px 16px;border-bottom:1px solid #fde68a;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
-          +'<div><div style="font-size:13px;font-weight:700">'+p.mz+' — Lote '+p.lote+'</div>'
-          +'<div style="font-size:12px;color:var(--text2)">'+p.titular+'</div>'
-          +'<div style="font-size:11px;color:var(--amber);margin-top:2px">'+p.fecha+' '+p.hora+' · Capital: '+cur2+fmtPeso(p.totalMonto)+' · Interés: '+cur2+fmtPeso(p.interes)+'</div></div>'
-          +'<div style="display:flex;gap:6px;align-items:center">'
-          +'<div style="font-size:14px;font-weight:800;color:var(--amber)">'+cur2+fmtPeso(p.total)+'</div>'
-          +'<button data-pid="'+p.id+'" onclick="aprobarPendiente(this.dataset.pid)" style="background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">✓ Aprobar</button>'
-          +'<button data-pid="'+p.id+'" onclick="rechazarPendiente(this.dataset.pid)" style="background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">✗ Rechazar</button>'
-          +'</div></div>';
-      });
-      _ph+='</div>';
-      el.innerHTML=_ph;
+    if(_notifEarly){
+      el.innerHTML=_notifEarly;
     } else {
       el.innerHTML='<div style="text-align:center;padding:3rem;color:var(--text2)"><div style="font-size:48px">✅</div><div style="font-weight:700;font-size:18px;margin-top:1rem">Sin cuotas en mora</div><div style="font-size:13px;margin-top:6px">Todos los clientes estan al dia</div></div>';
     }
@@ -3698,31 +3749,8 @@ function renderPanelMora(){
   cuotasMora.forEach(c=>{const cp=montoCobrable(c).total;if(c.moneda==='USD') totalGeneralUSD+=cp; else totalGeneralARS+=cp;});
   const totalGeneral=totalGeneralARS+totalGeneralUSD;
 
-  // Pendientes de aprobación
-  const pendientes=loadPendientesAprobacion();
-  let pendientesHtml='';
-  if(pendientes.length){
-    pendientesHtml='<div style="background:var(--amber-bg);border:2px solid #fde68a;border-radius:var(--rlg);margin-bottom:1.5rem;overflow:hidden">'
-      +'<div style="background:var(--amber-bg);padding:12px 16px;display:flex;align-items:center;justify-content:space-between">'
-      +'<div style="font-size:15px;font-weight:800;color:#854d0e">⏳ Pendientes de aprobación ('+pendientes.length+')</div>'
-      +'</div>';
-    pendientes.forEach(p=>{
-      const cur2=p.moneda==='USD'?'USD ':'';
-      pendientesHtml+='<div style="padding:12px 16px;border-bottom:1px solid #fde68a;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
-        +'<div>'
-        +'<div style="font-size:13px;font-weight:700">'+p.mz+' — Lote '+p.lote+'</div>'
-        +'<div style="font-size:12px;color:var(--text2)">'+p.titular+'</div>'
-        +'<div style="font-size:11px;color:var(--amber);margin-top:2px">'+p.fecha+' '+p.hora+' · Capital: '+cur2+fmtPeso(p.totalMonto)+' · Interés: '+cur2+fmtPeso(p.interes)+'</div>'
-        +'</div>'
-        +'<div style="display:flex;gap:6px;align-items:center">'
-        +'<div style="font-size:14px;font-weight:800;color:var(--amber)">'+cur2+fmtPeso(p.total)+'</div>'
-        +'<button data-pid="'+p.id+'" onclick="aprobarPendiente(this.dataset.pid)" style="background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">✓ Aprobar</button>'
-        +'<button data-pid="'+p.id+'" onclick="rechazarPendiente(this.dataset.pid)" style="background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">✗ Rechazar</button>'
-        +'</div>'
-        +'</div>';
-    });
-    pendientesHtml+='</div>';
-  }
+  // Notificaciones de mora (avisos, sin aprobación)
+  const pendientesHtml=_renderNotifMoraHtml();
 
   let html=`
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:1.5rem">
@@ -5165,6 +5193,8 @@ function cobrarMoraSeleccionadas(clienteId){
       // Marcar como pagada en cuotas mora
       const idx=cuotasMoraAll.findIndex(cm=>cm.clienteId===c.clienteId&&cm.mes===c.mes&&cm.anio===c.anio);
       if(idx>=0){cuotasMoraAll[idx].pagada=true;cuotasMoraAll[idx].pagoTs=ts;}
+      // v1.0637: si la cuota es de un mes anterior al operativo, notificar (mora atrasada)
+      notificarSiMoraAtrasada(c.clienteId, c, 'mora');
       // Registrar en mora (caja de mora), con routing especial para agrimensores
       registrarCobroCuotaMora(mora, c, c.interes, ts, fecha);
       // Avanzar ca del cliente si corresponde
@@ -5301,6 +5331,8 @@ function cobrarColabMoraSeleccionadas(clienteId){
       // Marcar como pagada
       const idx=cuotasMoraAll.findIndex(cm=>cm.clienteId===c.clienteId&&cm.mes===c.mes&&cm.anio===c.anio);
       if(idx>=0){cuotasMoraAll[idx].pagada=true;cuotasMoraAll[idx].pagoTs=ts;}
+      // v1.0637: notificar si es mora atrasada (mes anterior al operativo)
+      notificarSiMoraAtrasada(c.clienteId, c, 'mora');
       // Registrar en caja mora
       registrarCobroCuotaMora(mora, c, c.interes, ts, fecha);
       // Avanzar ca si corresponde
@@ -15025,7 +15057,7 @@ function renderDetColab(id){
 // ══════ v1.0394: PUNTOS DE RESTAURACIÓN VALIDADOS ══════
 // Guarda una foto COMPLETA de la app cuando el usuario verifica que los números están bien.
 const FB_CLAVES=['data','cuotasMora','pagoStore','mora','balances','extras','adelantos','icc','iccMensual',
-  'cierreFinal','mesActual','agrimensorLotes','lotesCerts','hist','pendientesAprobacion','notasMora',
+  'cierreFinal','mesActual','agrimensorLotes','lotesCerts','hist','pendientesAprobacion','notifMora','notasMora',
   'cierreEstados','distPct','moraDesactivada','lotesLibresE123'];
 
 function _totalesActuales(){
@@ -15569,6 +15601,7 @@ async function init(){
       window._fbListen('cierreFinal', (d) => { if(d) localStorage.setItem('fj_cierre_final', JSON.stringify(d)); });
       window._fbListen('hist', (d) => { if(d){ let l=[]; try{l=JSON.parse(_lsGet(dKey('hist'))||'[]');}catch(e){} if(d.length>=l.length) _lsSet(dKey('hist'), JSON.stringify(d)); } });
       window._fbListen('pendientesAprobacion', (d) => { if(d) localStorage.setItem('fj_pendientes_aprobacion', JSON.stringify(d)); });
+      window._fbListen('notifMora', (d) => { if(d) localStorage.setItem('fj_notif_mora', JSON.stringify(d)); });
       window._fbListen('cierreEstados', (d) => { if(d) localStorage.setItem('fj_cierre_estados', JSON.stringify(d)); });
       window._fbListen('distPct', (d) => { if(d) localStorage.setItem('fj_dist_pct', d); });
       setTimeout(backupDiarioAuto, 12000);
