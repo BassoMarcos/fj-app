@@ -1380,7 +1380,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0637';
+  datos['_version']='v1.0638';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9990,6 +9990,68 @@ function abrirHistorialCuotas(id){
       ⚠️ Faltan cuotas en la secuencia: <b>${huecos.join(', ')}</b>. Usá "➕ Agregar cuota" para completarlas.
     </div>`:'';
 
+  // v1.0638: Apartado de historial de adelantos del cliente (fuentes permanentes)
+  let adelHtml='';
+  try{
+    const registros=[];
+    const vistos=new Set();
+    // 1) Registro permanente nuevo (adelantosHist)
+    let ah=[]; try{ ah=JSON.parse(_lsGet(dKey('adelantosHist'))||'[]'); }catch(e){}
+    ah.filter(a=>a.id===id).forEach(a=>{
+      const key=(a.ts||'')+'|'+(a.total||0);
+      if(vistos.has(key)) return; vistos.add(key);
+      registros.push({fecha:a.fecha, ts:a.ts, cuotas:(a.cuotas||[]).map(n=>'C'+n).join(', '), total:a.total||0, estado:'aplicado'});
+    });
+    // 2) Adelantos del mes actual (loadAdelantos) aún no cerrados
+    loadAdelantos().filter(a=>a.id===id && a.estado!=='rechazado').forEach(a=>{
+      const key=(a.ts||'')+'|'+(a.total||0);
+      if(vistos.has(key)) return; vistos.add(key);
+      registros.push({fecha:a.fecha, ts:a.ts, cuotas:(a.cuotas||[]).map(q=>'C'+q.num).join(', '), total:a.total||0, estado:a.estado==='aprobado'?'aplicado':'pendiente'});
+    });
+    // 3) Registros viejos del historial general (sin cid — matchear por mz+lote en el texto)
+    try{
+      const tag=c.mz+' Lote '+c.lote;
+      loadHist().filter(x=>x.tipo==='adelanto' && String(x.desc||'').includes(tag)).forEach(x=>{
+        const key=(x.ts||'')+'|old';
+        if(vistos.has(key)) return; vistos.add(key);
+        const mMonto=String(x.desc||'').match(/\$\s?([\d.,]+)\s*$/);
+        const mCuotas=String(x.desc||'').match(/(\d+)\s*cuota/);
+        registros.push({fecha:new Date(x.ts).toLocaleDateString('es-AR'), ts:x.ts,
+          cuotas:mCuotas?(mCuotas[1]+' cuota'+(mCuotas[1]!=='1'?'s':'')):'—',
+          total:0, montoTxt:mMonto?('$'+mMonto[1]):'', estado:'aplicado'});
+      });
+    }catch(e){}
+    registros.sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
+    if(registros.length){
+      const filas=registros.map(r=>{
+        const est=r.estado==='aplicado'?'<span style="color:var(--green);font-weight:700">✓ aplicado</span>':'<span style="color:var(--amber);font-weight:700">⏳ pendiente</span>';
+        const montoCell=r.total>0?(cur+fmtPeso(r.total).replace('$','')):(r.montoTxt||'—');
+        return `<tr style="border-top:1px solid var(--border)">
+          <td style="padding:7px 10px;font-size:12px;color:var(--text2)">${r.fecha||'—'}</td>
+          <td style="padding:7px 10px;font-size:12px;font-weight:700">${r.cuotas||'—'}</td>
+          <td style="padding:7px 10px;font-size:12px;text-align:right">${montoCell}</td>
+          <td style="padding:7px 10px;text-align:center;font-size:11px">${est}</td>
+        </tr>`;
+      }).join('');
+      const totalAplic=registros.filter(r=>r.estado==='aplicado'&&r.total>0).reduce((s,r)=>s+r.total,0);
+      adelHtml=`<div style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:8px">⏭ Historial de adelantos (${registros.length})</div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+          <table style="width:100%;border-collapse:collapse">
+            <tr style="color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:.03em;background:var(--bg)">
+              <th style="padding:7px 10px;text-align:left">Fecha</th>
+              <th style="padding:7px 10px;text-align:left">Cuotas</th>
+              <th style="padding:7px 10px;text-align:right">Monto</th>
+              <th style="padding:7px 10px;text-align:center">Estado</th>
+            </tr>
+            ${filas}
+          </table>
+        </div>
+        ${totalAplic>0?`<div style="font-size:11px;color:var(--text2);text-align:right;margin-top:5px">Total adelantado: <b>${cur}${fmtPeso(totalAplic).replace('$','')}</b></div>`:''}
+      </div>`;
+    }
+  }catch(e){ console.warn('adelHtml error:',e); }
+
   const ov=document.createElement('div');
   ov.id='hist-cuotas-modal';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
@@ -10015,6 +10077,7 @@ function abrirHistorialCuotas(id){
         ${cuerpo}
       </table>
     </div>
+    ${adelHtml}
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button onclick="_agregarCuotaHist('${id}')" style="flex:1;min-width:150px;background:#5a9e78;color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">➕ Agregar cuota</button>
       <button onclick="document.getElementById('hist-cuotas-modal').remove()" style="background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:8px;padding:11px 16px;font-size:13px;font-weight:700;cursor:pointer">Cerrar</button>
@@ -14436,6 +14499,15 @@ function registrarAdelanto(id, cuotas){
     estado: 'pendiente' // pendiente | aprobado | rechazado
   });
   saveAdelantos(adelantos);
+  // v1.0638: registro PERMANENTE de adelantos por cliente (no se borra en el cierre)
+  try{
+    const ah=JSON.parse(_lsGet(dKey('adelantosHist'))||'[]');
+    ah.push({ id, mz:c.mz, lote:c.lote, titular:c.titular,
+      cuotas: cuotas.map(q=>q.num), total: cuotas.reduce((s,q)=>s+q.monto,0),
+      ts, fecha: new Date().toLocaleDateString('es-AR') });
+    _lsSet(dKey('adelantosHist'), JSON.stringify(ah));
+    window._fbSet('adelantosHist', ah).catch(e=>{});
+  }catch(e){ console.warn('adelantosHist error:',e); }
   addHist('adelanto', `Adelanto pendiente — ${c.mz} Lote ${c.lote} — ${c.titular} — ${cuotas.length} cuota${cuotas.length>1?'s':''} — ${fmtPeso(cuotas.reduce((s,q)=>s+q.monto,0))}`, id);
 }
 
@@ -15602,6 +15674,7 @@ async function init(){
       window._fbListen('hist', (d) => { if(d){ let l=[]; try{l=JSON.parse(_lsGet(dKey('hist'))||'[]');}catch(e){} if(d.length>=l.length) _lsSet(dKey('hist'), JSON.stringify(d)); } });
       window._fbListen('pendientesAprobacion', (d) => { if(d) localStorage.setItem('fj_pendientes_aprobacion', JSON.stringify(d)); });
       window._fbListen('notifMora', (d) => { if(d) localStorage.setItem('fj_notif_mora', JSON.stringify(d)); });
+      window._fbListen('adelantosHist', (d) => { if(d) _lsSet(dKey('adelantosHist'), JSON.stringify(d)); });
       window._fbListen('cierreEstados', (d) => { if(d) localStorage.setItem('fj_cierre_estados', JSON.stringify(d)); });
       window._fbListen('distPct', (d) => { if(d) localStorage.setItem('fj_dist_pct', d); });
       setTimeout(backupDiarioAuto, 12000);
