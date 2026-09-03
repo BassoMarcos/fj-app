@@ -1380,7 +1380,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0639';
+  datos['_version']='v1.0640';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6979,6 +6979,12 @@ function renderBalances(seccion){
     };
     const totalMoraAgrCuota=agrMora.reduce((s,p)=>s+(p.monto||0),0);
     const totalMoraAgrInt=agrMora.reduce((s,p)=>s+(p.interes||0),0);
+    // v1.0640: separar mora de agrimensores rendida (marcada en el panel de Mora) para que no sume
+    const _cmRend=(typeof loadCajaMoraRendidos==='function')?loadCajaMoraRendidos():{};
+    const agrMoraActiva=agrMora.filter(p=>!_cmRend[p.id]);
+    const agrMoraRendida=agrMora.filter(p=>_cmRend[p.id]);
+    const totMoraActCuota=agrMoraActiva.reduce((s,p)=>s+(p.monto||0),0);
+    const totMoraActInt=agrMoraActiva.reduce((s,p)=>s+(p.interes||0),0);
 
     el.innerHTML=backBtn+`
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
@@ -7025,9 +7031,12 @@ function renderBalances(seccion){
       <div style="background:var(--surface);border:1px solid #fca5a5;border-radius:var(--r);margin-bottom:10px;overflow:hidden">
         <div style="padding:.875rem 1rem;font-weight:700;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
           <span>⚖️ Mora de agrimensores</span>
-          ${agrMora.length?`<span style="font-size:12px;font-weight:600;color:var(--text2)">Cuotas: <b>${fmtPeso(totalMoraAgrCuota)}</b> · Interés: <b style="color:var(--red)">${fmtPeso(totalMoraAgrInt)}</b></span>`:''}
+          ${agrMoraActiva.length?`<span style="font-size:12px;font-weight:600;color:var(--text2)">Cuotas: <b>${fmtPeso(totMoraActCuota)}</b> · Interés: <b style="color:var(--red)">${fmtPeso(totMoraActInt)}</b></span>`:''}
         </div>
-        <div style="padding:1rem">${renderMoraAgr(agrMora)}</div>
+        <div style="padding:1rem">${renderMoraAgr(agrMoraActiva)}</div>
+        ${agrMoraRendida.length?`
+        <div onclick="window._agrMoraVerRend=!window._agrMoraVerRend;renderBalances('agrimensores')" style="padding:.75rem 1rem;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);background:var(--hov)"><span>${window._agrMoraVerRend?'▼':'▶'} 📁 Rendidos (${agrMoraRendida.length})</span><span style="font-size:11px;color:var(--text2)">ya rendidos en Mora · no suman</span></div>
+        ${window._agrMoraVerRend?`<div style="padding:1rem;opacity:.7">${renderMoraAgr(agrMoraRendida)}</div>`:''}`:''}
       </div>
 
       <!-- Adelantos agrimensores -->
