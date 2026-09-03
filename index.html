@@ -1380,7 +1380,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0640';
+  datos['_version']='v1.0641';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5939,8 +5939,10 @@ function renderBalances(seccion){
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
         ${(()=>{
-          const totalAgri=(bal.agrimensores||[]).reduce((s,p)=>s+(p.monto||0),0);
           const _cmRend=loadCajaMoraRendidos();
+          // v1.0641: no contar en el resumen la mora de agrimensores ya rendida en el panel de Mora
+          const _agrList=(bal.agrimensores||[]).filter(p=>!(p.esMora && _cmRend[p.id]));
+          const totalAgri=_agrList.reduce((s,p)=>s+(p.monto||0),0);
           const mora=loadMora().filter(m=>!_cmRend[m.id]);
           const ex=loadExtras().filter(e=>!e.rendido);
           const netoExtra=ex.filter(e=>e.tipo==='ingreso').reduce((s,e)=>s+e.monto,0)-ex.filter(e=>e.tipo==='gasto').reduce((s,e)=>s+e.monto,0);
@@ -5982,7 +5984,7 @@ function renderBalances(seccion){
             card({icon:'⏳',titulo:'Caja del día',sub:abierto.length+' pago'+(abierto.length!==1?'s':'')+' sin cerrar',valor:fmtPeso(totalAbierto),color:'#c68a4e',onclick:"renderBalances('caja')",limpiarBtn:abierto.length?'resetCajaAbierta()':''}),
             card({icon:'✅',titulo:'Cierres',sub:cierres.length+' cierre'+(cierres.length!==1?'s':'')+' registrado'+(cierres.length!==1?'s':''),valor:fmtPeso(totalCierresEfectivo),valorSub:'💵 efectivo'+(totalCierresTransf?(' · 🏦 transf. '+fmtPeso(totalCierresTransf)):''),subMonto:totalCierresUSD?('USD '+fmtPeso(totalCierresUSD).replace('$','')):'',color:'#5a9e78',onclick:"renderBalances('cierres')",limpiarBtn:cierres.length?'resetCierres()':''}),
             card({icon:'⏭',titulo:'Adelantos',sub:'Lotes que adelantaron',valor:String(lotesAdel),valorSub:'lote'+(lotesAdel!==1?'s':''),color:'#6591c4',onclick:"renderBalances('adelantos')",limpiarBtn:adelantos.length?'resetAdelantos()':'',badge:pendientes.length?{txt:'⏳ '+pendientes.length+' pend.',bg:'var(--amber-bg)',col:'var(--amber)',bd:'var(--amber-border)'}:null}),
-            card({icon:'⚖️',titulo:'Agrimensores',sub:(bal.agrimensores||[]).length+' pago'+((bal.agrimensores||[]).length!==1?'s':'')+' sin cerrar',valor:fmtPeso(totalAgri),color:'#c08a5e',onclick:"renderBalances('agrimensores')",limpiarBtn:(bal.agrimensores||[]).length?'resetAgrimensores()':''}),
+            card({icon:'⚖️',titulo:'Agrimensores',sub:_agrList.length+' pago'+(_agrList.length!==1?'s':'')+' sin cerrar',valor:fmtPeso(totalAgri),color:'#c08a5e',onclick:"renderBalances('agrimensores')",limpiarBtn:_agrList.length?'resetAgrimensores()':''}),
             card({icon:'⚠️',titulo:'Caja de Mora',sub:'Lotes que pagaron mora',valor:String(lotesMora),valorSub:'lote'+(lotesMora!==1?'s':''),color:'#c77b7b',onclick:"renderBalances('mora');saveUltimaVistaMora();actualizarBadgeMora()"}),
             card({icon:'💼',titulo:'Gastos e Ingresos',sub:ex.length?ex.length+' registro'+(ex.length!==1?'s':''):'Sin registros',valor:(netoExtra>=0?'+':'-')+fmtPeso(Math.abs(netoExtra)),color:netoExtra>=0?'#5a9e78':'#c77b7b',onclick:"renderBalances('extras')"}),
             card({icon:'📒',titulo:'Registro SAF / SEC',sub:'Saldos a favor y en contra',color:'#5b9bb5',onclick:"renderBalances('safsec')"})
