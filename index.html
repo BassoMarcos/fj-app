@@ -1380,7 +1380,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0641';
+  datos['_version']='v1.0642';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -10839,7 +10839,7 @@ function cobrarAdmMora(clienteId){
   const cuotasMora=loadCuotasMora().filter(c=>!c.pagada&&c.clienteId===clienteId).sort((a,b)=>(a.anio-b.anio)||(a.mes-b.mes));
   const seleccionadas=[];
   cuotasMora.forEach(c=>{
-    const chk=document.getElementById('adm-mora-chk-'+c.clienteId+'-'+c.anio+'-'+c.mes);
+    const chk=document.getElementById('adm-mora-chk-'+c.clienteId+'-'+c.anio+'-'+c.mes)||document.getElementById('colab-mora-chk-'+c.clienteId+'-'+c.anio+'-'+c.mes);
     if(chk&&chk.checked){const mor=calcInteresMoraDesde(c.monto,c.anio,c.mes);seleccionadas.push({...c,interes:mor.interes,total:c.monto+mor.interes});}
   });
   if(!seleccionadas.length){alert('Seleccioná al menos una cuota');return;}
@@ -10877,7 +10877,17 @@ function cobrarAdmMora(clienteId){
     '<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--red)">Interés mora</span><span id="mora-adm-panel-interes" style="color:var(--red);font-weight:700">'+'+ '+fmtCur(totalInteresAuto,cur)+'</span></div>'+
     '<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;border-top:1px solid #fed7aa;padding-top:6px;margin-top:4px"><span>Total</span><span id="mora-adm-panel-total" style="color:var(--acc3)">'+fmtCur(totalMonto+totalInteresAuto,cur)+'</span></div>'+
     '</div></div>'+
-    '<button onclick="admConfirmarMoraPanel()" style="width:100%;background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">✓ Cobrar</button>'+
+    // v1.0641: tarjeta efectivo/vuelto (igual que Cobrar todo, pero solo mora)
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:10px">'+
+    '<div style="font-size:12px;font-weight:700;margin-bottom:8px">💵 Efectivo</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+    '<div style="flex:1"><label style="font-size:11px;color:var(--text2)">Entregó</label><input id="mora-ca-entrego" type="text" inputmode="numeric" value="'+fmtMiles(Math.round(totalMonto+totalInteresAuto))+'" oninput="caFmtInput(this);moraSelCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'+
+    '<div style="flex:1"><label style="font-size:11px;color:var(--text2)">Vuelto</label><input id="mora-ca-vuelto" type="text" inputmode="numeric" value="$0" oninput="caFmtInput(this);moraSelCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'+
+    '</div>'+
+    '<div id="mora-ca-vuelto-live" style="font-size:12px;padding:6px 10px;border-radius:6px;background:var(--green-bg);color:var(--green);text-align:center">✓ Justo</div>'+
+    '<div style="font-size:10px;color:var(--text3);margin-top:6px">Capital + interés van a Caja de Mora. La diferencia se carga al saldo (SAF/SEC).</div>'+
+    '</div>'+
+    '<button onclick="admConfirmarMoraPanel()" style="width:100%;background:#16a34a;color:#fff;border:none;border-radius:var(--r);padding:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:6px">✓ Confirmar cobro</button>'+
     '<button onclick="document.getElementById(\'mora-adm-panel-manual\').style.display=document.getElementById(\'mora-adm-panel-manual\').style.display===\'none\'?\'block\':\'none\'" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente</button>'+
     '<div id="mora-adm-panel-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'+
     '<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'+
@@ -10888,14 +10898,29 @@ function cobrarAdmMora(clienteId){
     '</div>'+
     '<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanel()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'+
     '<button onclick="admConfirmarMoraPanel()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'+
-    '</div></div></div>';
+    '</div>'+
+    '<button onclick="cerrarMoraPanel()" style="width:100%;margin-top:8px;background:none;border:1px solid var(--border2);color:var(--text2);border-radius:var(--r);padding:9px;font-size:13px;font-weight:600;cursor:pointer">No cobré (cerrar)</button>'+
+    '</div></div>';
   document.body.appendChild(ov);
+  window._moraSelTotal=totalMonto+totalInteresAuto;
 }
 
 
 function admToggleMoraPanel(){
   const el=document.getElementById('mora-adm-panel-manual');
   if(el) el.style.display=el.style.display==='none'?'block':'none';
+}
+// v1.0641: calcular vuelto/estado en vivo para el cobro de mora seleccionada
+function moraSelCalcVuelto(){
+  const eEl=document.getElementById('mora-ca-entrego'), vEl=document.getElementById('mora-ca-vuelto');
+  const live=document.getElementById('mora-ca-vuelto-live');
+  if(!eEl||!vEl||!live) return;
+  const total=window._moraSelTotal||0;
+  const entrego=caNum(eEl.value), vuelto=caNum(vEl.value);
+  const dif=(entrego-vuelto)-total;
+  if(dif===0){ live.style.background='var(--green-bg)'; live.style.color='var(--green)'; live.textContent='✓ Justo — pagó '+fmtPeso(entrego-vuelto); }
+  else if(dif>0){ live.style.background='var(--green-bg)'; live.style.color='var(--green)'; live.textContent='↑ SAF +'+fmtPeso(dif)+' (a favor del cliente)'; }
+  else { live.style.background='var(--red-bg)'; live.style.color='var(--red)'; live.textContent='↓ SEC '+fmtPeso(Math.abs(dif))+' (debe)'; }
 }
 
 function admUpdateMoraPanel(){
@@ -10910,6 +10935,8 @@ function admUpdateMoraPanel(){
   if(ie) ie.textContent='+ '+fmtCur(interes,cur);
   if(te) te.textContent=fmtCur(totalMonto+interes,cur);
   _moraPanelState.interesCustom=interes;
+  window._moraSelTotal=totalMonto+interes;
+  try{ moraSelCalcVuelto(); }catch(e){}
 }
 
 function admConfirmarMoraPanel(){
@@ -10924,10 +10951,29 @@ function admConfirmarMoraPanel(){
     total:c.monto+(totalMonto>0?Math.round(interes*(c.monto/totalMonto)):0)
   }));
   const totalTotal=totalMonto+interes;
-  mostrarConfirmAdmin('Confirmar cobro mora',fmtCur(totalTotal,cur),()=>{
+  // v1.0641: leer entregó/vuelto → diferencia al saldo (SAF/SEC)
+  const eEl=document.getElementById('mora-ca-entrego'), vEl=document.getElementById('mora-ca-vuelto');
+  const entrego=eEl?caNum(eEl.value):totalTotal;
+  const vuelto=vEl?caNum(vEl.value):0;
+  const dif=(entrego-vuelto)-totalTotal;
+
+  const ejecutar=()=>{
     document.getElementById('mora-panel-overlay')?.remove();
     _ejecutarCobroAdmMora(selConInteres,clienteId,(cur||''),totalTotal);
-  });
+    if(dif!==0){
+      const dataX=loadData(); const cX=dataX.find(x=>x.id===clienteId);
+      if(cX){
+        const ts=new Date().toISOString(), fecha=new Date().toLocaleDateString('es-AR');
+        cX.saldo=(Number(cX.saldo)||0)+dif; cX.saldoDifUltimoCobro=dif; saveData(dataX);
+        addHist('pago',(dif>0?'SAF ':'SEC ')+fmtPeso(Math.abs(dif))+' — '+cX.mz+' Lote '+cX.lote+' (cobro mora, cargado al saldo)',clienteId);
+        try{ registrarSafSec(cX,dif,ts,fecha); }catch(e){}
+        renderAdminDet(clienteId);
+      }
+    }
+  };
+  // Auto → clave colab. Interés diferente → clave admin
+  if(tipo==='auto'){ confirmarConClaveColab(ejecutar); }
+  else { confirmarConClave(ejecutar); }
 }
 
 
@@ -15004,7 +15050,7 @@ function renderDetColab(id){
           <div style="flex:1"></div>
           <div id="colab-mora-total-${id}" style="font-size:13px;font-weight:700;color:var(--red)"></div>
         </div>
-        <button id="colab-mora-cobrar-btn-${id}" onclick="cobrarColabMoraSeleccionadas('${id}')"
+        <button id="colab-mora-cobrar-btn-${id}" onclick="cobrarAdmMora('${id}')"
           style="width:100%;margin-top:8px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;opacity:0.4;pointer-events:none">
           💰 Cobrar seleccionadas
         </button>
