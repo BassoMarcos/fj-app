@@ -1380,7 +1380,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0642';
+  datos['_version']='v1.0643';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -7220,6 +7220,7 @@ function renderBalances(seccion){
               <div style="display:flex;align-items:center;gap:10px">
                 <div style="font-weight:700">${fmtPeso(a.total)}</div>
                 <button onclick="deshacerAdelanto(${gi})" title="Deshacer: devuelve la(s) cuota(s) al total del lote" style="background:var(--amber-bg);border:1px solid var(--amber-border);color:var(--amber);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">↩ Deshacer</button>
+                <button onclick="borrarRegistroAdelanto(${gi})" title="Borra solo el registro visual, sin tocar cuotas ni aprobación" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🗑 Borrar registro</button>
               </div>
             </div>`;}).join('')
           :'<div style="padding:1rem;font-size:13px;color:var(--text2)">No hay adelantos aprobados aún</div>'}
@@ -14555,6 +14556,21 @@ function registrarAdelanto(id, cuotas){
   addHist('adelanto', `Adelanto pendiente — ${c.mz} Lote ${c.lote} — ${c.titular} — ${cuotas.length} cuota${cuotas.length>1?'s':''} — ${fmtPeso(cuotas.reduce((s,q)=>s+q.monto,0))}`, id);
 }
 
+// v1.0643: Borrar SOLO el registro visual del adelanto (no toca cuotas ni aprobación)
+function borrarRegistroAdelanto(idx){
+  const adelantos=loadAdelantos();
+  const a=adelantos[idx];
+  if(!a){alert('No se encontró el registro.');return;}
+  if(!confirm('🗑 Borrar el registro de adelanto de '+formatLoteTag(a.mz,a.lote)+' — '+a.titular+'\n\n'
+    +'Esto SOLO saca el registro de esta lista.\n'
+    +'NO cancela el adelanto, NO devuelve cuotas, NO cambia nada del lote.\n\n'
+    +'(El adelanto ya aplicado sigue igual — solo se limpia el comprobante de la caja.)\n\n¿Confirmás?')) return;
+  const ads=loadAdelantos();
+  ads.splice(idx,1);
+  saveAdelantos(ads);
+  addHist('adelanto','🗑 Registro de adelanto borrado (visual) — '+formatLoteTag(a.mz,a.lote)+' — '+a.titular,a.id);
+  renderBalances('adelantos');
+}
 function deshacerAdelanto(idx){
   const adelantos = loadAdelantos();
   const a = adelantos[idx];
