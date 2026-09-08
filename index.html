@@ -1380,7 +1380,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0643';
+  datos['_version']='v1.0644';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -6188,7 +6188,7 @@ function renderBalances(seccion){
           ${(bal.transferencias||[]).slice().reverse().map(t=>`
             <div style="padding:7px 0;border-bottom:1px solid rgba(124,58,237,.25);font-size:12px">
               <div style="display:flex;justify-content:space-between">
-                <span style="font-weight:600">${formatLoteTag(t.mz,t.lote)} — ${t.titular||''} ${t.parcial?'<span style="background:rgba(217,119,6,.15);color:#f0a742;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">PARCIAL</span>':'<span style="background:rgba(124,58,237,.15);color:#a78bfa;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">TOTAL</span>'}</span>
+                <span style="font-weight:600">${formatLoteTag(t.mz,t.lote)} — ${t.titular||''} ${t.parcial?'<span style="background:rgba(217,119,6,.15);color:#f0a742;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">PARCIAL</span>':'<span style="background:rgba(124,58,237,.15);color:#a78bfa;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">TOTAL</span>'} ${esAgrimensor(t.id)?'<span style="background:rgba(217,119,6,.18);color:#f59e0b;border:1px solid rgba(245,158,11,.4);font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">⚖️ AGRIM.</span>':''}</span>
                 <span style="font-weight:800;color:#a78bfa">${t.moneda==='USD'?'USD ':''}${fmtPeso(t.totalTransferido||0)}</span>
               </div>
               <div style="display:flex;justify-content:space-between;align-items:center">
@@ -6545,7 +6545,7 @@ function renderBalances(seccion){
                 const pendiente=Math.max(0,(t.cuotaParte||0)-(t.rellenado||0));
                 return `<div style="padding:7px 0;border-bottom:1px solid rgba(124,58,237,.2);font-size:12px">
                   <div style="display:flex;justify-content:space-between;align-items:center">
-                    <span style="font-weight:600">${formatLoteTag(t.mz,t.lote)} — ${t.titular||''} ${t.parcial?'<span style="background:rgba(217,119,6,.15);color:#f0a742;font-size:9px;padding:1px 5px;border-radius:99px;font-weight:700">PARCIAL</span>':''} ${t.moneda==='USD'?'<span style="background:rgba(22,163,74,.15);color:#4ade80;font-size:9px;padding:1px 5px;border-radius:99px;font-weight:700">USD</span>':''}</span>
+                    <span style="font-weight:600">${formatLoteTag(t.mz,t.lote)} — ${t.titular||''} ${t.parcial?'<span style="background:rgba(217,119,6,.15);color:#f0a742;font-size:9px;padding:1px 5px;border-radius:99px;font-weight:700">PARCIAL</span>':''} ${esAgrimensor(t.id)?'<span style="background:rgba(217,119,6,.18);color:#f59e0b;border:1px solid rgba(245,158,11,.4);font-size:9px;padding:1px 5px;border-radius:99px;font-weight:700">⚖️ AGRIM.</span>':''} ${t.moneda==='USD'?'<span style="background:rgba(22,163,74,.15);color:#4ade80;font-size:9px;padding:1px 5px;border-radius:99px;font-weight:700">USD</span>':''}</span>
                     <button onclick="rellenarTransferencia('${t.ts}')" style="background:none;border:1.5px solid #a78bfa;color:#a78bfa;padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;cursor:pointer">💧 Rellenar</button>
                   </div>
                   <div style="font-size:11px;color:var(--text2)">Falta rellenar: ${t.moneda==='USD'?'USD ':''}${fmtPeso(pendiente)}${(t.rellenado||0)>0?' · ya rellenado '+fmtPeso(t.rellenado):''} · ${t.fecha||''}</div>
@@ -6564,7 +6564,7 @@ function renderBalances(seccion){
                 <div style="font-size:11px;font-weight:700;color:#4ade80">${fmtPeso(totRell)}</div>
               </div>
               ${listas.slice().reverse().map(t=>`<div style="padding:6px 0;border-bottom:1px solid rgba(124,58,237,.2);font-size:12px;display:flex;justify-content:space-between;align-items:center">
-                <span style="font-weight:600">${formatLoteTag(t.mz,t.lote)} — ${t.titular||''} ${t.moneda==='USD'?'<span style="background:rgba(22,163,74,.15);color:#4ade80;font-size:9px;padding:1px 5px;border-radius:99px;font-weight:700">USD</span>':''}</span>
+                <span style="font-weight:600">${formatLoteTag(t.mz,t.lote)} — ${t.titular||''} ${esAgrimensor(t.id)?'<span style="background:rgba(217,119,6,.18);color:#f59e0b;border:1px solid rgba(245,158,11,.4);font-size:9px;padding:1px 5px;border-radius:99px;font-weight:700">⚖️ AGRIM.</span>':''} ${t.moneda==='USD'?'<span style="background:rgba(22,163,74,.15);color:#4ade80;font-size:9px;padding:1px 5px;border-radius:99px;font-weight:700">USD</span>':''}</span>
                 <span style="color:#4ade80;font-weight:700">✓ ${t.moneda==='USD'?'USD ':''}${fmtPeso(t.rellenado)} <span style="font-size:10px;font-weight:400;color:var(--text2)">${t.fecha||''}</span></span>
               </div>`).join('')}
             </div>`;
@@ -14629,7 +14629,22 @@ function rechazarAdelanto(idx){
     if(!a || a.estado!=='pendiente') return;
     a.estado = 'rechazado';
     saveAdelantos(adelantos);
-    addHist('adelanto', `Adelanto RECHAZADO — ${a.mz} Lote ${a.lote} — ${a.titular}`);
+    // v1.0644: sacar el adelanto de las cajas (día y física) SIN tocar la cuota del mes.
+    // El adelanto se cobró junto con la cuota, en el mismo registro: solo se pone adelanto=0.
+    try{
+      const bal=loadBalances();
+      let limpiados=0;
+      // Caja del día
+      (bal.abierto||[]).forEach(p=>{
+        if(p.id===a.id && (p.adelanto||0)>0){ p.adelanto=0; limpiados++; }
+      });
+      // Caja física
+      (bal.cajaFisica||[]).forEach(p=>{
+        if(p.id===a.id && (p.adelanto||0)>0){ p.adelanto=0; limpiados++; }
+      });
+      if(limpiados) saveBalances(bal);
+    }catch(e){ console.warn('rechazarAdelanto limpieza cajas:',e); }
+    addHist('adelanto', `Adelanto RECHAZADO — ${a.mz} Lote ${a.lote} — ${a.titular} (se quitó de Caja del día y Caja física; la cuota del mes queda)`, a.id);
     renderBalances();
   });
 }
