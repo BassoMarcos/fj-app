@@ -1380,7 +1380,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0644';
+  datos['_version']='v1.0645';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -10898,7 +10898,7 @@ function cobrarAdmMora(clienteId){
     '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanel()"> $ Monto</label>'+
     '</div>'+
     '<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanel()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'+
-    '<button onclick="admConfirmarMoraPanel()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'+
+    '<button onclick="admAplicarInteresMora()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Aplicar interés</button>'+
     '</div>'+
     '<button onclick="cerrarMoraPanel()" style="width:100%;margin-top:8px;background:none;border:1px solid var(--border2);color:var(--text2);border-radius:var(--r);padding:9px;font-size:13px;font-weight:600;cursor:pointer">No cobré (cerrar)</button>'+
     '</div></div>';
@@ -10937,7 +10937,21 @@ function admUpdateMoraPanel(){
   if(te) te.textContent=fmtCur(totalMonto+interes,cur);
   _moraPanelState.interesCustom=interes;
   window._moraSelTotal=totalMonto+interes;
+  // v1.0645: al cambiar el interés, ajustar también lo "Entregó" al nuevo total
+  const eEl=document.getElementById('mora-ca-entrego');
+  if(eEl) eEl.value=fmtMiles(Math.round(totalMonto+interes));
+  const vEl=document.getElementById('mora-ca-vuelto');
+  if(vEl) vEl.value='$0';
   try{ moraSelCalcVuelto(); }catch(e){}
+}
+// v1.0645: aplicar SOLO el interés modificado (no cobra). El cobro se confirma aparte.
+function admAplicarInteresMora(){
+  admUpdateMoraPanel();
+  const {totalMonto,interesCustom,cur}=_moraPanelState;
+  const panel=document.getElementById('mora-adm-panel-manual');
+  if(panel) panel.style.display='none';
+  try{ mostrarToastCobro('✓ Interés aplicado: '+fmtCur(interesCustom||0,cur)+' — Total '+fmtCur(totalMonto+(interesCustom||0),cur)+'. Ahora confirmá el cobro.'); }
+  catch(e){ alert('✓ Interés aplicado. Ahora tocá "Confirmar cobro" para cobrar.'); }
 }
 
 function admConfirmarMoraPanel(){
