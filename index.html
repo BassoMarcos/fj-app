@@ -1388,7 +1388,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0650';
+  datos['_version']='v1.0651';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -11099,6 +11099,9 @@ function _ejecutarCobroAdmMora(seleccionadas, clienteId, cur, totalTotal){
   addHist('mora','Cobro mora — '+seleccionadas[0].mz+' Lote '+seleccionadas[0].lote+' — '+seleccionadas.length+' cuota(s) — '+cur+fmtPeso(totalTotal),clienteId);
   renderAdminDet(clienteId);renderPanelMora();actualizarBadgeMora();
   renderColab();
+  // v1.0651: refrescar también el detalle del colaborador (si no, quedaba trabado en el marcado
+  // de la cuota y había que actualizar la página a mano).
+  try{ if(typeof renderDetColab==='function') renderDetColab(clienteId); }catch(e){}
   setTimeout(()=>mostrarToastCobro(seleccionadas.length+' cuota'+(seleccionadas.length>1?'s':'')+' en mora cobrada'+(seleccionadas.length>1?'s':'')+' — '+cur+fmtPeso(totalTotal)),50);
 }
 
