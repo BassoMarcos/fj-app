@@ -904,7 +904,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0659';
+const APP_VERSION='v1.0660';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -931,7 +931,13 @@ function _updBanner(){
     +'<button onclick="_updAplicarYa()" style="background:#fff;color:#7c3aed;border:none;border-radius:8px;padding:5px 14px;font-size:12px;font-weight:800;cursor:pointer">Actualizar</button>';
 }
 function _updBloquearPantalla(){
-  if(document.getElementById('upd-bloqueo')) return;
+  const min=_updBloqueoDesde?Math.max(0,Math.ceil(_UPD_BLOQUEO_AUTO_MIN-(Date.now()-_updBloqueoDesde)/60000)):_UPD_BLOQUEO_AUTO_MIN;
+  const ya=document.getElementById('upd-bloqueo');
+  if(ya){
+    const c=document.getElementById('upd-bloqueo-cuenta');
+    if(c) c.textContent='Se actualiza solo en '+min+' min';
+    return;
+  }
   document.getElementById('upd-banner')?.remove();
   const ov=document.createElement('div');
   ov.id='upd-bloqueo';
@@ -944,10 +950,13 @@ function _updBloquearPantalla(){
       +'Para poder seguir trabajando, actualizá ahora.<br>'
       +'<span style="font-size:12px;color:#9a9aab">Tus datos ya están guardados.</span></div>'
     +'<button onclick="_updAplicarYa()" style="width:100%;background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:800;cursor:pointer">Actualizar ahora</button>'
+    +'<div id="upd-bloqueo-cuenta" style="font-size:11px;color:#8a8a99;margin-top:10px">Se actualiza solo en '+min+' min</div>'
     +'</div>';
   document.body.appendChild(ov);
 }
 const _UPD_AUTO_INACTIVO_MIN=60;   // si lleva este tiempo sin uso, actualiza solo
+const _UPD_BLOQUEO_AUTO_MIN=5;     // si queda bloqueado este tiempo, actualiza solo
+let _updBloqueoDesde=null;
 // ¿Nadie está usando este dispositivo? (sin sesión, o inactivo hace rato)
 function _updNadieUsando(){
   try{
@@ -961,7 +970,12 @@ function _updTick(){
   if(_updDesde===null) _updDesde=Date.now();
   // Si nadie lo está usando, se actualiza solo (no molesta con el botón)
   if(_updNadieUsando()){ _updAplicarYa(); return; }
-  if((Date.now()-_updDesde)/60000 >= _UPD_GRACIA_MIN){ _updBloquearPantalla(); }
+  if((Date.now()-_updDesde)/60000 >= _UPD_GRACIA_MIN){
+    _updBloquearPantalla();
+    if(_updBloqueoDesde===null) _updBloqueoDesde=Date.now();
+    // Si quedó bloqueado y nadie apretó, se actualiza solo
+    if((Date.now()-_updBloqueoDesde)/60000 >= _UPD_BLOQUEO_AUTO_MIN){ _updAplicarYa(); }
+  }
   else { _updBanner(); }
 }
 async function _updChequear(){
