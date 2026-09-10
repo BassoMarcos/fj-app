@@ -559,6 +559,7 @@ tr:hover td{background:var(--bg)}
         <div style="font-size:22px;font-weight:800;margin-bottom:6px">💾 Respaldos</div>
         <div style="font-size:13px;color:var(--text2);margin-bottom:1.5rem">Cada mes se guardan dos copias obligatorias: una al empezar (después del ICC) y otra antes del cierre final.</div>
         <div id="respaldos-panel"></div>
+        <div id="dispositivos-panel" style="margin-top:16px"></div>
         <div style="margin-top:2rem;border-top:1px solid var(--border);padding-top:1.5rem">
           <div style="font-size:15px;font-weight:800;margin-bottom:4px">🔧 Herramientas</div>
           <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Revisar qué lotes tienen problemas en el historial de cuotas hacia atrás (números salteados o meses no correlativos).</div>
@@ -902,7 +903,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AUTO-ACTUALIZACIÓN (v1.0653) ==============
-const APP_VERSION='v1.0653';
+const APP_VERSION='v1.0654';
 let _updNuevaVersion=null;
 // ¿El usuario está en medio de algo? (modal abierto o escribiendo) — no interrumpir
 function _updHayTrabajoEnCurso(){
@@ -951,6 +952,132 @@ window.addEventListener('load',()=>{
 });
 
 
+
+// ============== DETECTOR DE DISPOSITIVOS (v1.0654) ==============
+const _FB_DISP='https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/dispositivos';
+function _dispId(){
+  let id=null;
+  try{ id=localStorage.getItem('fj_device_id'); }catch(e){}
+  if(!id){ id='d'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+    try{ localStorage.setItem('fj_device_id',id); }catch(e){} }
+  return id;
+}
+function _dispNombreAuto(){
+  const ua=navigator.userAgent||'';
+  let so='Otro';
+  if(/Android/i.test(ua)) so='Android';
+  else if(/iPhone|iPad|iPod/i.test(ua)) so='iPhone/iPad';
+  else if(/Windows/i.test(ua)) so='Windows';
+  else if(/Mac OS X/i.test(ua)) so='Mac';
+  else if(/Linux/i.test(ua)) so='Linux';
+  let nav='Navegador';
+  if(/Edg\//i.test(ua)) nav='Edge';
+  else if(/OPR\//i.test(ua)) nav='Opera';
+  else if(/Chrome\//i.test(ua)) nav='Chrome';
+  else if(/Firefox\//i.test(ua)) nav='Firefox';
+  else if(/Safari\//i.test(ua)) nav='Safari';
+  return so+' · '+nav;
+}
+function _dispNombre(){
+  try{ const n=localStorage.getItem('fj_device_nombre'); if(n) return n; }catch(e){}
+  return _dispNombreAuto();
+}
+function _dispRol(){
+  const a=document.getElementById('page-admin'), c=document.getElementById('page-colab');
+  if(a&&a.classList.contains('active')) return 'admin';
+  if(c&&c.classList.contains('active')) return 'colaborador';
+  return null; // no logueado
+}
+let _dispSesionTs=new Date().toISOString();
+let _dispExpulsando=false;
+async function _dispLatido(){
+  const rol=_dispRol();
+  if(!rol) return; // solo si está logueado
+  const id=_dispId();
+  try{
+    await fetch(_FB_DISP+'/'+id+'.json',{method:'PATCH',
+      body:JSON.stringify({id, nombre:_dispNombre(), rol, version:APP_VERSION,
+        ts:new Date().toISOString(), sesion:_dispSesionTs})});
+    // ¿me expulsaron?
+    const r=await fetch(_FB_DISP+'/'+id+'/expulsar.json?cb='+Date.now(),{cache:'no-store'});
+    if(r.ok){
+      const exp=await r.json();
+      if(exp && String(exp)>String(_dispSesionTs) && !_dispExpulsando){
+        _dispExpulsando=true;
+        try{ await fetch(_FB_DISP+'/'+id+'/expulsar.json',{method:'DELETE'}); }catch(e){}
+        alert('🔒 Tu sesión fue cerrada desde el panel de administración.');
+        try{ doLogout(); }catch(e){}
+        location.reload();
+      }
+    }
+  }catch(e){}
+}
+window.addEventListener('load',()=>{
+  setTimeout(_dispLatido,3000);
+  setInterval(_dispLatido,30000); // cada 30 segundos
+});
+// ---- Panel admin ----
+async function renderDispositivosPanel(){
+  const el=document.getElementById('dispositivos-panel'); if(!el) return;
+  el.innerHTML='<div style="color:var(--text2);font-size:12px;padding:8px">Cargando dispositivos…</div>';
+  let mapa={};
+  try{
+    const r=await fetch(_FB_DISP+'.json?cb='+Date.now(),{cache:'no-store'});
+    mapa=(await r.json())||{};
+  }catch(e){ el.innerHTML='<div style="color:var(--red);font-size:12px;padding:8px">No se pudo leer la lista de dispositivos.</div>'; return; }
+  const ahora=Date.now();
+  const lista=Object.values(mapa).filter(d=>d&&d.id).sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
+  const yo=_dispId();
+  const filas=lista.map(d=>{
+    const mins=d.ts?Math.round((ahora-new Date(d.ts).getTime())/60000):9999;
+    const activo=mins<2;
+    const esYo=d.id===yo;
+    const vieja=d.version&&d.version!==APP_VERSION;
+    const estado=activo?'<span style="color:var(--green);font-weight:700">● Conectado</span>'
+      :'<span style="color:var(--text3)">○ Hace '+(mins<60?mins+' min':Math.round(mins/60)+' h')+'</span>';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap">'
+      +'<div style="min-width:180px">'
+      +'<div style="font-size:13px;font-weight:700">'+(d.nombre||'Dispositivo')+(esYo?' <span style="font-size:10px;color:var(--acc2)">(este)</span>':'')+'</div>'
+      +'<div style="font-size:11px;color:var(--text2)">'+(d.rol||'?')+' · '+estado+'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;'
+        +(vieja?'background:rgba(245,158,11,.18);color:#f59e0b':'background:rgba(22,163,74,.15);color:#4ade80')+'">'
+        +(d.version||'?')+(vieja?' ⚠️':'')+'</span>'
+      +(esYo?'':'<button onclick="_dispExpulsar(\''+d.id+'\')" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">Cerrar sesión</button>')
+      +'<button onclick="_dispBorrar(\''+d.id+'\')" title="Quitar de la lista" style="background:none;border:1px solid var(--border2);color:var(--text3);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer">🗑</button>'
+      +'</div></div>';
+  }).join('');
+  el.innerHTML='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden">'
+    +'<div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
+    +'<div><div style="font-size:14px;font-weight:800">📱 Dispositivos conectados</div>'
+    +'<div style="font-size:11px;color:var(--text2)">Versión actual: '+APP_VERSION+'</div></div>'
+    +'<div style="display:flex;gap:6px">'
+    +'<button onclick="_dispRenombrar()" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">✏️ Nombrar este</button>'
+    +'<button onclick="renderDispositivosPanel()" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">🔄 Actualizar</button>'
+    +'</div></div>'
+    +(filas||'<div style="padding:14px;color:var(--text3);font-size:12px">Sin dispositivos registrados todavía.</div>')
+    +'</div>';
+}
+async function _dispExpulsar(id){
+  if(!confirm('¿Cerrar la sesión de ese dispositivo?\n\nSe va a desloguear en menos de 1 minuto.')) return;
+  try{
+    await fetch(_FB_DISP+'/'+id+'/expulsar.json',{method:'PUT',body:JSON.stringify(new Date().toISOString())});
+    alert('✓ Listo. El dispositivo se va a cerrar en menos de 1 minuto.');
+    renderDispositivosPanel();
+  }catch(e){ alert('No se pudo cerrar la sesión de ese dispositivo.'); }
+}
+async function _dispBorrar(id){
+  if(!confirm('¿Quitar ese dispositivo de la lista?\n\n(Si vuelve a abrir la app, aparece de nuevo.)')) return;
+  try{ await fetch(_FB_DISP+'/'+id+'.json',{method:'DELETE'}); renderDispositivosPanel(); }catch(e){}
+}
+function _dispRenombrar(){
+  const actual=_dispNombre();
+  const n=prompt('Nombre para ESTE dispositivo (ej: "Celular Marcos", "PC oficina"):',actual);
+  if(n===null) return;
+  try{ localStorage.setItem('fj_device_nombre',n.trim()||_dispNombreAuto()); }catch(e){}
+  _dispLatido().then(()=>renderDispositivosPanel());
+}
 
 // ============== MULTI-DESARROLLO ==============
 const _memStore = {}; // in-memory fallback when localStorage unavailable
@@ -3458,7 +3585,7 @@ function _claveCancelar(){
 
 // ============== ADMIN TABS ==============
 function adminTab(t){
-  if(t==='datos') setTimeout(renderRespaldosPanel,50);
+  if(t==='datos'){ setTimeout(renderRespaldosPanel,50); setTimeout(renderDispositivosPanel,80); }
   // v1.0398: sin el respaldo "Mes desde 0 verificado" no se accede a las pantallas de cobro
   if((t==='lista'||t==='morapanel'||t==='balances') && !hitoHecho('inicio') && !modoConsultaActivo()){
     mostrarPantallaBloqueo(t);
