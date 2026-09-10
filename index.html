@@ -904,7 +904,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0657';
+const APP_VERSION='v1.0658';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -965,9 +965,25 @@ async function _updChequear(){
     }
   }catch(e){}
 }
+// v1.0658: aviso INSTANTÁNEO por Firebase (además del chequeo periódico como respaldo)
+function _updEscucharFirebase(){
+  try{
+    if(!window._firebaseReady || typeof window._fbListen!=='function'){
+      return setTimeout(_updEscucharFirebase,2000);
+    }
+    window._fbListen('appVersion',(v)=>{
+      if(v && typeof v==='string' && v!==APP_VERSION){
+        if(!_updNuevaVersion) _updDesde=Date.now();
+        _updNuevaVersion=v;
+        _updTick();
+      }
+    });
+  }catch(e){ setTimeout(_updEscucharFirebase,3000); }
+}
 window.addEventListener('load',()=>{
   setTimeout(_updChequear,4000);
-  setInterval(_updChequear,120000);   // busca versión nueva cada 2 min
+  setTimeout(_updEscucharFirebase,3500);
+  setInterval(_updChequear,120000);   // respaldo: busca versión nueva cada 2 min
   setInterval(_updTick,20000);        // refresca el aviso / bloquea al vencer
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden) _updChequear(); });
 });
