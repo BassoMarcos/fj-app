@@ -1388,7 +1388,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0651';
+  datos['_version']='v1.0652';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5311,6 +5311,13 @@ function onColabMoraCheck(clienteId){
   if(btn){
     btn.style.opacity=countSel>0?'1':'0.4';
     btn.style.pointerEvents=countSel>0?'auto':'none';
+  }
+  // v1.0652: si hay cuotas seleccionadas, no tiene sentido "Cobrar todo" — se bloquea.
+  const todoBtn=document.getElementById('colab-mora-todo-btn-'+clienteId);
+  if(todoBtn){
+    todoBtn.style.opacity=countSel>0?'0.35':'1';
+    todoBtn.style.pointerEvents=countSel>0?'none':'auto';
+    todoBtn.title=countSel>0?'Destildá las cuotas para poder cobrar todo':'';
   }
   const allChk=document.getElementById('colab-mora-all-'+clienteId);
   if(allChk) allChk.checked=countSel===cuotasMora.length;
@@ -9352,7 +9359,7 @@ function renderAdminDet(id){
         style="width:100%;margin-top:8px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;opacity:0.4;pointer-events:none">
         💰 Cobrar seleccionadas
       </button>
-      <button onclick="cobrarTodoAdmin('${id}')"
+      <button id="adm-mora-todo-btn-${id}" onclick="cobrarTodoAdmin('${id}')"
         style="width:100%;margin-top:6px;background:#7c3aed;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer">
         ⚡ Cobrar todo (mora + mes actual)
       </button>
@@ -10544,6 +10551,13 @@ function onAdmMoraCheck(clienteId){
   const btn=document.getElementById('adm-mora-cobrar-btn-'+clienteId);
   if(totalEl) totalEl.textContent=countSel>0?countSel+' cuota'+(countSel>1?'s':'')+' · Total: '+cur+fmtPeso(totalSel):'';
   if(btn){btn.style.opacity=countSel>0?'1':'0.4';btn.style.pointerEvents=countSel>0?'auto':'none';}
+  // v1.0652: si hay cuotas seleccionadas, no tiene sentido "Cobrar todo" — se bloquea.
+  const todoBtnA=document.getElementById('adm-mora-todo-btn-'+clienteId);
+  if(todoBtnA){
+    todoBtnA.style.opacity=countSel>0?'0.35':'1';
+    todoBtnA.style.pointerEvents=countSel>0?'none':'auto';
+    todoBtnA.title=countSel>0?'Destildá las cuotas para poder cobrar todo':'';
+  }
   const allChk=document.getElementById('adm-mora-all-'+clienteId);
   if(allChk) allChk.checked=countSel===cuotasMora.length;
 }
@@ -15199,7 +15213,7 @@ function renderDetColab(id){
           style="width:100%;margin-top:8px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;opacity:0.4;pointer-events:none">
           💰 Cobrar seleccionadas
         </button>
-        <button onclick="cobrarTodoColab('${id}')"
+        <button id="colab-mora-todo-btn-${id}" onclick="cobrarTodoColab('${id}')"
           style="width:100%;margin-top:6px;background:#7c3aed;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer">
           ⚡ Cobrar todo (mora + mes actual)
         </button>
