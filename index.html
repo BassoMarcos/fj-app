@@ -1388,7 +1388,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0647';
+  datos['_version']='v1.0648';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -4877,11 +4877,28 @@ function filtrarMoraCards(q){
 
 
 
+// v1.0648: clave de orden natural para lotes (Etapa → Manzana → Nº de lote → letra)
+function _ordenLoteKey(c){
+  const mz=String(c.mz||''), lt=String(c.lote||'');
+  let etapa=9, manz=0;
+  if(/^M[1-4]$/.test(mz)){ etapa=1; manz=parseInt(mz.slice(1))||0; }
+  else if(mz==='ETAPA 2'||mz==='E2'){ etapa=2; }
+  else if(mz==='ETAPA 3'||mz==='E3'){ etapa=3; }
+  else if(mz.startsWith('E4')){ etapa=4; const m=mz.match(/M(\d+)/); manz=m?parseInt(m[1]):0; }
+  const num=parseInt((lt.match(/\d+/)||[0])[0])||0;
+  const letra=(lt.match(/[A-Za-z]+/)||[''])[0].toUpperCase();
+  return [etapa, manz, num, letra];
+}
+function _compararLotes(a,b){
+  const ka=_ordenLoteKey(a), kb=_ordenLoteKey(b);
+  for(let i=0;i<3;i++){ if(ka[i]!==kb[i]) return ka[i]-kb[i]; }
+  return String(ka[3]).localeCompare(String(kb[3]));
+}
 function abrirModalAgregarMora(){
   const data=loadData();
   const activos=data
     .filter(c=>c.est==='activo'&&!c.agrimensor&&!c.autopago)
-    .sort((a,b)=>(a.mz+a.lote).localeCompare(b.mz+b.lote));
+    .sort(_compararLotes);
 
   const clienteOpts=activos.map(c=>
     '<option value="'+c.id+'">'+formatLoteTag(c.mz,c.lote)+' — '+c.titular+'</option>'
