@@ -904,7 +904,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0656';
+const APP_VERSION='v1.0657';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -1062,8 +1062,60 @@ async function dispPuedeIngresar(){
   }catch(e){}
   return true;
 }
+// v1.0657: escucha en TIEMPO REAL su propio registro → expulsión/bloqueo instantáneo
+function _dispEscucharPropio(){
+  try{
+    if(!window._firebaseReady || typeof window._fbListen!=='function'){
+      return setTimeout(_dispEscucharPropio,2000);
+    }
+    const id=_dispId();
+    window._fbListen('dispositivos/'+id, (d)=>{
+      if(!d || _dispCerrando) return;
+      const rol=_dispRol();
+      if(d.bloqueado && rol!=='sin sesión'){
+        _dispCerrando=true;
+        alert('🚫 Este dispositivo fue deshabilitado por el administrador.');
+        try{ doLogout(); }catch(e){}
+        setTimeout(()=>{_dispCerrando=false;},3000);
+        return;
+      }
+      if(d.expulsar && String(d.expulsar)>String(_dispSesionTs)){
+        _dispCerrando=true;
+        try{ fetch(_FB_DISP+'/'+id+'/expulsar.json',{method:'DELETE'}); }catch(e){}
+        alert('🔒 Tu sesión fue cerrada desde el panel de administración.');
+        try{ doLogout(); }catch(e){}
+        location.reload();
+      }
+    });
+    // El admin ve la lista actualizarse en vivo
+    window._fbListen('dispositivos', (mapa)=>{
+      _dispCache=mapa||{};
+      try{
+        if(document.getElementById('disp-modal-body')) document.getElementById('disp-modal-body').innerHTML=_dispFilas(_dispCache);
+        if(document.getElementById('dispositivos-panel')&&document.getElementById('dispositivos-panel').innerHTML) renderDispositivosPanel();
+        _dispRefrescarChipLocal();
+      }catch(e){}
+    });
+  }catch(e){ setTimeout(_dispEscucharPropio,3000); }
+}
+// Refresca el chip usando la cache (sin pedir de nuevo a la red)
+function _dispRefrescarChipLocal(){
+  const chip=document.getElementById('disp-chip-n'); if(!chip) return;
+  const ahora=Date.now();
+  const conectados=Object.values(_dispCache||{}).filter(d=>d&&d.ts&&(ahora-new Date(d.ts).getTime())<120000);
+  chip.textContent=conectados.length;
+  const cont=document.getElementById('disp-chip');
+  const hayVieja=conectados.some(d=>d.version&&d.version!==APP_VERSION);
+  if(cont){
+    cont.style.background=hayVieja?'rgba(245,158,11,.16)':'rgba(124,58,237,.14)';
+    cont.style.color=hayVieja?'#f59e0b':'#a78bfa';
+    cont.style.borderColor=hayVieja?'rgba(245,158,11,.4)':'rgba(124,58,237,.35)';
+    cont.title=hayVieja?'Hay dispositivos con versión desactualizada':'Dispositivos conectados';
+  }
+}
 window.addEventListener('load',()=>{
   setTimeout(_dispLatido,3000);
+  setTimeout(_dispEscucharPropio,3500);
   setInterval(_dispLatido,30000);
   setInterval(_dispRefrescarChip,60000);
   setTimeout(_dispRefrescarChip,6000);
