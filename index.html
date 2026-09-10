@@ -903,36 +903,55 @@ tr:hover td{background:var(--bg)}
 
 <script>
 
-// ============== VERSIÓN Y AUTO-ACTUALIZACIÓN (v1.0653) ==============
-const APP_VERSION='v1.0655';
+// ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
+const APP_VERSION='v1.0656';
+const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
-// ¿El usuario está en medio de algo? (modal abierto o escribiendo) — no interrumpir
-function _updHayTrabajoEnCurso(){
-  try{
-    const ae=document.activeElement;
-    if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return true;
-    const nodos=document.querySelectorAll('[id*="overlay"],[id*="Overlay"],[id*="modal"],[id*="Modal"]');
-    for(const el of nodos){ if(el.offsetParent!==null) return true; }
-  }catch(e){}
-  return false;
-}
-function _updBanner(){
-  if(document.getElementById('upd-banner')) return;
-  const b=document.createElement('div');
-  b.id='upd-banner';
-  b.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#7c3aed;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;z-index:999999;box-shadow:0 4px 20px rgba(0,0,0,.35);display:flex;align-items:center;gap:10px';
-  b.innerHTML='🔄 Hay una versión nueva ('+_updNuevaVersion+')'
-    +'<button onclick="_updAplicarYa()" style="background:#fff;color:#7c3aed;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer">Actualizar</button>';
-  document.body.appendChild(b);
-}
+let _updDesde=null;                // cuándo apareció el aviso
 function _updAplicarYa(){
   const v=_updNuevaVersion||Date.now();
   location.replace(location.pathname+'?v='+encodeURIComponent(v));
 }
-function _updIntentarAplicar(){
+function _updMinRestantes(){
+  if(!_updDesde) return _UPD_GRACIA_MIN;
+  const pasados=(Date.now()-_updDesde)/60000;
+  return Math.max(0, Math.ceil(_UPD_GRACIA_MIN-pasados));
+}
+function _updBanner(){
+  let b=document.getElementById('upd-banner');
+  if(!b){
+    b=document.createElement('div');
+    b.id='upd-banner';
+    b.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#7c3aed;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;z-index:999998;box-shadow:0 4px 20px rgba(0,0,0,.35);display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;max-width:92vw';
+    document.body.appendChild(b);
+  }
+  const min=_updMinRestantes();
+  b.innerHTML='🔄 Versión nueva ('+_updNuevaVersion+') — actualizá cuando termines'
+    +'<span style="font-weight:600;opacity:.85;font-size:12px">Se bloquea en '+min+' min</span>'
+    +'<button onclick="_updAplicarYa()" style="background:#fff;color:#7c3aed;border:none;border-radius:8px;padding:5px 14px;font-size:12px;font-weight:800;cursor:pointer">Actualizar</button>';
+}
+function _updBloquearPantalla(){
+  if(document.getElementById('upd-bloqueo')) return;
+  document.getElementById('upd-banner')?.remove();
+  const ov=document.createElement('div');
+  ov.id='upd-bloqueo';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(10,10,15,.92);backdrop-filter:blur(3px);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML='<div style="background:#1a1a24;border:2px solid #7c3aed;border-radius:16px;max-width:430px;width:100%;padding:28px 24px;text-align:center;box-shadow:0 10px 50px rgba(0,0,0,.6)">'
+    +'<div style="font-size:44px;margin-bottom:10px">🔄</div>'
+    +'<div style="font-size:19px;font-weight:800;color:#fff;margin-bottom:8px">Hay que actualizar la app</div>'
+    +'<div style="font-size:13px;color:#c9c9d6;line-height:1.5;margin-bottom:20px">'
+      +'Salió una versión nueva (<b style="color:#a78bfa">'+_updNuevaVersion+'</b>).<br>'
+      +'Para poder seguir trabajando, actualizá ahora.<br>'
+      +'<span style="font-size:12px;color:#9a9aab">Tus datos ya están guardados.</span></div>'
+    +'<button onclick="_updAplicarYa()" style="width:100%;background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:800;cursor:pointer">Actualizar ahora</button>'
+    +'</div>';
+  document.body.appendChild(ov);
+}
+function _updTick(){
   if(!_updNuevaVersion) return;
-  if(_updHayTrabajoEnCurso()){ _updBanner(); return; }
-  _updAplicarYa();
+  if(_updDesde===null) _updDesde=Date.now();
+  if((Date.now()-_updDesde)/60000 >= _UPD_GRACIA_MIN){ _updBloquearPantalla(); }
+  else { _updBanner(); }
 }
 async function _updChequear(){
   try{
@@ -940,19 +959,18 @@ async function _updChequear(){
     if(!r.ok) return;
     const j=await r.json();
     if(j && j.version && j.version!==APP_VERSION){
+      if(!_updNuevaVersion) _updDesde=Date.now();
       _updNuevaVersion=j.version;
-      _updIntentarAplicar();
+      _updTick();
     }
   }catch(e){}
 }
 window.addEventListener('load',()=>{
   setTimeout(_updChequear,4000);
-  setInterval(_updChequear,120000);           // cada 2 minutos
-  setInterval(_updIntentarAplicar,15000);      // reintenta si estaba ocupado
+  setInterval(_updChequear,120000);   // busca versión nueva cada 2 min
+  setInterval(_updTick,20000);        // refresca el aviso / bloquea al vencer
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden) _updChequear(); });
 });
-
-
 
 // ============== DETECTOR DE DISPOSITIVOS (v1.0655) ==============
 const _FB_DISP='https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/dispositivos';
