@@ -457,6 +457,7 @@ tr:hover td{background:var(--bg)}
     <div class="topbar-right">
       <div id="ciclo-estado" onclick="mostrarEstadoCiclo()" title="Estado del ciclo mensual" style="display:none;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap"></div>
       <div id="sync-indicator" onclick="mostrarEstadoSync()" title="Estado de sincronización" style="background:rgba(22,163,74,0.12);color:#16a34a;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap"><span style="color:#16a34a">●</span> Sincronizado</div>
+      <div id="disp-chip" onclick="abrirModalDispositivos()" title="Dispositivos conectados" style="background:rgba(124,58,237,.14);color:#a78bfa;border:1px solid rgba(124,58,237,.35);padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap">📱 <span id="disp-chip-n">0</span></div>
       <div class="role-pill">Administrador</div>
       <button onclick="toggleThemePanel()" style="background:transparent;border:1px solid var(--border2);color:var(--text2);padding:4px 10px;border-radius:6px;font-size:13px;cursor:pointer;margin-right:4px" title="Cambiar tema">🎨</button>
       <button class="logout-btn" onclick="doLogout()">Salir</button>
@@ -903,7 +904,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AUTO-ACTUALIZACIÓN (v1.0653) ==============
-const APP_VERSION='v1.0654';
+const APP_VERSION='v1.0655';
 let _updNuevaVersion=null;
 // ¿El usuario está en medio de algo? (modal abierto o escribiendo) — no interrumpir
 function _updHayTrabajoEnCurso(){
@@ -953,8 +954,9 @@ window.addEventListener('load',()=>{
 
 
 
-// ============== DETECTOR DE DISPOSITIVOS (v1.0654) ==============
+// ============== DETECTOR DE DISPOSITIVOS (v1.0655) ==============
 const _FB_DISP='https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/dispositivos';
+const _DISP_INACTIVIDAD_MIN=60;   // cierre de sesión por inactividad
 function _dispId(){
   let id=null;
   try{ id=localStorage.getItem('fj_device_id'); }catch(e){}
@@ -978,105 +980,212 @@ function _dispNombreAuto(){
   else if(/Safari\//i.test(ua)) nav='Safari';
   return so+' · '+nav;
 }
-function _dispNombre(){
-  try{ const n=localStorage.getItem('fj_device_nombre'); if(n) return n; }catch(e){}
-  return _dispNombreAuto();
-}
 function _dispRol(){
   const a=document.getElementById('page-admin'), c=document.getElementById('page-colab');
   if(a&&a.classList.contains('active')) return 'admin';
   if(c&&c.classList.contains('active')) return 'colaborador';
-  return null; // no logueado
+  return 'sin sesión';
 }
 let _dispSesionTs=new Date().toISOString();
-let _dispExpulsando=false;
+let _dispUltimaActividad=Date.now();
+let _dispCerrando=false;
+let _dispCache={};
+['mousedown','keydown','touchstart','wheel','click'].forEach(ev=>{
+  window.addEventListener(ev,()=>{_dispUltimaActividad=Date.now();},{passive:true});
+});
+function _dispMinInactivo(){ return Math.floor((Date.now()-_dispUltimaActividad)/60000); }
 async function _dispLatido(){
-  const rol=_dispRol();
-  if(!rol) return; // solo si está logueado
-  const id=_dispId();
+  const id=_dispId(), rol=_dispRol();
   try{
     await fetch(_FB_DISP+'/'+id+'.json',{method:'PATCH',
-      body:JSON.stringify({id, nombre:_dispNombre(), rol, version:APP_VERSION,
-        ts:new Date().toISOString(), sesion:_dispSesionTs})});
-    // ¿me expulsaron?
-    const r=await fetch(_FB_DISP+'/'+id+'/expulsar.json?cb='+Date.now(),{cache:'no-store'});
+      body:JSON.stringify({id, nombre:_dispNombreAuto(), rol, version:APP_VERSION,
+        ts:new Date().toISOString(), sesion:_dispSesionTs, inactivoMin:_dispMinInactivo()})});
+    const r=await fetch(_FB_DISP+'/'+id+'.json?cb='+Date.now(),{cache:'no-store'});
     if(r.ok){
-      const exp=await r.json();
-      if(exp && String(exp)>String(_dispSesionTs) && !_dispExpulsando){
-        _dispExpulsando=true;
-        try{ await fetch(_FB_DISP+'/'+id+'/expulsar.json',{method:'DELETE'}); }catch(e){}
-        alert('🔒 Tu sesión fue cerrada desde el panel de administración.');
-        try{ doLogout(); }catch(e){}
-        location.reload();
+      const d=await r.json();
+      if(d){
+        // Bloqueado por el admin
+        if(d.bloqueado && rol!=='sin sesión' && !_dispCerrando){
+          _dispCerrando=true;
+          alert('🚫 Este dispositivo fue deshabilitado por el administrador.');
+          try{ doLogout(); }catch(e){}
+          setTimeout(()=>{_dispCerrando=false;},3000);
+          return;
+        }
+        // Expulsado
+        if(d.expulsar && String(d.expulsar)>String(_dispSesionTs) && !_dispCerrando){
+          _dispCerrando=true;
+          try{ await fetch(_FB_DISP+'/'+id+'/expulsar.json',{method:'DELETE'}); }catch(e){}
+          alert('🔒 Tu sesión fue cerrada desde el panel de administración.');
+          try{ doLogout(); }catch(e){}
+          location.reload();
+        }
       }
     }
   }catch(e){}
+  // Cierre por inactividad
+  if(rol!=='sin sesión' && _dispMinInactivo()>=_DISP_INACTIVIDAD_MIN && !_dispCerrando){
+    _dispCerrando=true;
+    alert('⏰ Sesión cerrada por inactividad ('+_DISP_INACTIVIDAD_MIN+' minutos sin actividad).');
+    try{ doLogout(); }catch(e){}
+    _dispSesionTs=new Date().toISOString();
+    _dispUltimaActividad=Date.now();
+    setTimeout(()=>{_dispCerrando=false;},3000);
+  }
+}
+// ¿Este dispositivo está habilitado para entrar?
+async function dispPuedeIngresar(){
+  try{
+    const r=await fetch(_FB_DISP+'/'+_dispId()+'/bloqueado.json?cb='+Date.now(),{cache:'no-store'});
+    if(r.ok && (await r.json())===true){
+      alert('🚫 Este dispositivo está deshabilitado. Pedile al administrador que lo habilite.');
+      return false;
+    }
+  }catch(e){}
+  return true;
 }
 window.addEventListener('load',()=>{
   setTimeout(_dispLatido,3000);
-  setInterval(_dispLatido,30000); // cada 30 segundos
+  setInterval(_dispLatido,30000);
+  setInterval(_dispRefrescarChip,60000);
+  setTimeout(_dispRefrescarChip,6000);
 });
-// ---- Panel admin ----
-async function renderDispositivosPanel(){
-  const el=document.getElementById('dispositivos-panel'); if(!el) return;
-  el.innerHTML='<div style="color:var(--text2);font-size:12px;padding:8px">Cargando dispositivos…</div>';
-  let mapa={};
+async function _dispLeerTodos(){
   try{
     const r=await fetch(_FB_DISP+'.json?cb='+Date.now(),{cache:'no-store'});
-    mapa=(await r.json())||{};
-  }catch(e){ el.innerHTML='<div style="color:var(--red);font-size:12px;padding:8px">No se pudo leer la lista de dispositivos.</div>'; return; }
+    _dispCache=(await r.json())||{};
+  }catch(e){ _dispCache={}; }
+  return _dispCache;
+}
+async function _dispRefrescarChip(){
+  const chip=document.getElementById('disp-chip-n'); if(!chip) return;
+  const mapa=await _dispLeerTodos();
   const ahora=Date.now();
-  const lista=Object.values(mapa).filter(d=>d&&d.id).sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
-  const yo=_dispId();
-  const filas=lista.map(d=>{
-    const mins=d.ts?Math.round((ahora-new Date(d.ts).getTime())/60000):9999;
+  const conectados=Object.values(mapa).filter(d=>d&&d.ts&&(ahora-new Date(d.ts).getTime())<120000);
+  chip.textContent=conectados.length;
+  const cont=document.getElementById('disp-chip');
+  const hayVieja=conectados.some(d=>d.version&&d.version!==APP_VERSION);
+  if(cont){
+    cont.style.background=hayVieja?'rgba(245,158,11,.16)':'rgba(124,58,237,.14)';
+    cont.style.color=hayVieja?'#f59e0b':'#a78bfa';
+    cont.style.borderColor=hayVieja?'rgba(245,158,11,.4)':'rgba(124,58,237,.35)';
+    cont.title=hayVieja?'Hay dispositivos con versión desactualizada':'Dispositivos conectados';
+  }
+}
+function _dispFmtFecha(ts){
+  if(!ts) return '—';
+  const d=new Date(ts);
+  return d.toLocaleDateString('es-AR')+' '+d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+}
+function _dispFilas(mapa){
+  const ahora=Date.now(), yo=_dispId();
+  const lista=Object.values(mapa).filter(d=>d&&d.id)
+    .sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')));
+  if(!lista.length) return '<div style="padding:16px;color:var(--text3);font-size:12px">Sin dispositivos registrados todavía.</div>';
+  return lista.map(d=>{
+    const mins=d.ts?Math.round((ahora-new Date(d.ts).getTime())/60000):99999;
     const activo=mins<2;
     const esYo=d.id===yo;
     const vieja=d.version&&d.version!==APP_VERSION;
-    const estado=activo?'<span style="color:var(--green);font-weight:700">● Conectado</span>'
-      :'<span style="color:var(--text3)">○ Hace '+(mins<60?mins+' min':Math.round(mins/60)+' h')+'</span>';
-    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap">'
-      +'<div style="min-width:180px">'
-      +'<div style="font-size:13px;font-weight:700">'+(d.nombre||'Dispositivo')+(esYo?' <span style="font-size:10px;color:var(--acc2)">(este)</span>':'')+'</div>'
-      +'<div style="font-size:11px;color:var(--text2)">'+(d.rol||'?')+' · '+estado+'</div>'
+    const logueado=d.rol&&d.rol!=='sin sesión';
+    const bloq=!!d.bloqueado;
+    const nombre=d.nombreAdmin||d.nombre||'Dispositivo';
+    const estado=activo
+      ? '<span style="color:var(--green);font-weight:700">● Conectado</span>'
+      : '<span style="color:var(--text3)">○ Hace '+(mins<60?mins+' min':(mins<1440?Math.round(mins/60)+' h':Math.round(mins/1440)+' d'))+'</span>';
+    const sesion=logueado
+      ? '<span style="background:rgba(22,163,74,.15);color:#4ade80;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px">✓ '+d.rol+'</span>'
+      : '<span style="background:var(--hov);color:var(--text3);font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px">sin sesión</span>';
+    return '<div style="padding:12px 14px;border-bottom:1px solid var(--border);'+(bloq?'opacity:.55;':'')+'">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'
+      +'<div style="min-width:190px">'
+      +'<div style="font-size:13px;font-weight:700">'+nombre
+        +(esYo?' <span style="font-size:10px;color:var(--acc2)">(este)</span>':'')
+        +(bloq?' <span style="font-size:10px;color:var(--red)">🚫 deshabilitado</span>':'')+'</div>'
+      +'<div style="font-size:11px;color:var(--text2);margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+        +sesion+' '+estado+'</div>'
+      +'<div style="font-size:10px;color:var(--text3);margin-top:3px">Última conexión: '+_dispFmtFecha(d.ts)
+        +(logueado&&typeof d.inactivoMin==='number'?' · inactivo '+d.inactivoMin+' min':'')+'</div>'
       +'</div>'
-      +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
       +'<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;'
         +(vieja?'background:rgba(245,158,11,.18);color:#f59e0b':'background:rgba(22,163,74,.15);color:#4ade80')+'">'
         +(d.version||'?')+(vieja?' ⚠️':'')+'</span>'
-      +(esYo?'':'<button onclick="_dispExpulsar(\''+d.id+'\')" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">Cerrar sesión</button>')
+      +'<button onclick="_dispRenombrar(\''+d.id+'\')" title="Nombrar" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer">✏️</button>'
+      +'<button onclick="_dispToggleBloqueo(\''+d.id+'\','+(bloq?'false':'true')+')" style="background:'+(bloq?'rgba(22,163,74,.15)':'var(--amber-bg)')+';border:1px solid '+(bloq?'#4ade80':'var(--amber-border)')+';color:'+(bloq?'#4ade80':'var(--amber)')+';border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">'+(bloq?'Habilitar':'Deshabilitar')+'</button>'
+      +(esYo||!logueado?'':'<button onclick="_dispExpulsar(\''+d.id+'\')" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">Cerrar sesión</button>')
       +'<button onclick="_dispBorrar(\''+d.id+'\')" title="Quitar de la lista" style="background:none;border:1px solid var(--border2);color:var(--text3);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer">🗑</button>'
-      +'</div></div>';
+      +'</div></div></div>';
   }).join('');
+}
+async function abrirModalDispositivos(){
+  document.getElementById('disp-modal')?.remove();
+  const ov=document.createElement('div');
+  ov.id='disp-modal';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99998;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;max-width:720px;width:100%;max-height:86vh;overflow:auto">'
+    +'<div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:0;background:var(--card);z-index:1">'
+    +'<div><div style="font-size:16px;font-weight:800">📱 Dispositivos</div>'
+    +'<div style="font-size:11px;color:var(--text2)">Versión actual: '+APP_VERSION+' · cierre por inactividad: '+_DISP_INACTIVIDAD_MIN+' min</div></div>'
+    +'<div style="display:flex;gap:6px">'
+    +'<button onclick="_dispRefrescarModal()" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">🔄 Actualizar</button>'
+    +'<button onclick="document.getElementById(\'disp-modal\').remove()" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer">Cerrar</button>'
+    +'</div></div>'
+    +'<div id="disp-modal-body"><div style="padding:16px;color:var(--text2);font-size:12px">Cargando…</div></div>'
+    +'</div>';
+  document.body.appendChild(ov);
+  _dispRefrescarModal();
+}
+async function _dispRefrescarModal(){
+  const body=document.getElementById('disp-modal-body'); if(!body) return;
+  const mapa=await _dispLeerTodos();
+  body.innerHTML=_dispFilas(mapa);
+  _dispRefrescarChip();
+}
+async function renderDispositivosPanel(){
+  const el=document.getElementById('dispositivos-panel'); if(!el) return;
+  const mapa=await _dispLeerTodos();
   el.innerHTML='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden">'
     +'<div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
-    +'<div><div style="font-size:14px;font-weight:800">📱 Dispositivos conectados</div>'
+    +'<div><div style="font-size:14px;font-weight:800">📱 Dispositivos</div>'
     +'<div style="font-size:11px;color:var(--text2)">Versión actual: '+APP_VERSION+'</div></div>'
-    +'<div style="display:flex;gap:6px">'
-    +'<button onclick="_dispRenombrar()" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">✏️ Nombrar este</button>'
     +'<button onclick="renderDispositivosPanel()" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">🔄 Actualizar</button>'
-    +'</div></div>'
-    +(filas||'<div style="padding:14px;color:var(--text3);font-size:12px">Sin dispositivos registrados todavía.</div>')
-    +'</div>';
+    +'</div>'+_dispFilas(mapa)+'</div>';
+}
+function _dispRefrescarVistas(){
+  if(document.getElementById('disp-modal')) _dispRefrescarModal();
+  if(document.getElementById('dispositivos-panel')) renderDispositivosPanel();
+  _dispRefrescarChip();
 }
 async function _dispExpulsar(id){
   if(!confirm('¿Cerrar la sesión de ese dispositivo?\n\nSe va a desloguear en menos de 1 minuto.')) return;
   try{
     await fetch(_FB_DISP+'/'+id+'/expulsar.json',{method:'PUT',body:JSON.stringify(new Date().toISOString())});
-    alert('✓ Listo. El dispositivo se va a cerrar en menos de 1 minuto.');
-    renderDispositivosPanel();
+    _dispRefrescarVistas();
   }catch(e){ alert('No se pudo cerrar la sesión de ese dispositivo.'); }
+}
+async function _dispToggleBloqueo(id, bloquear){
+  const txt=bloquear
+    ? '¿Deshabilitar ese dispositivo?\n\nNo va a poder ingresar hasta que lo habilites de nuevo. Si está adentro, se cierra la sesión.'
+    : '¿Habilitar ese dispositivo para que pueda ingresar?';
+  if(!confirm(txt)) return;
+  try{
+    await fetch(_FB_DISP+'/'+id+'/bloqueado.json',{method:'PUT',body:JSON.stringify(!!bloquear)});
+    _dispRefrescarVistas();
+  }catch(e){ alert('No se pudo cambiar el estado del dispositivo.'); }
 }
 async function _dispBorrar(id){
   if(!confirm('¿Quitar ese dispositivo de la lista?\n\n(Si vuelve a abrir la app, aparece de nuevo.)')) return;
-  try{ await fetch(_FB_DISP+'/'+id+'.json',{method:'DELETE'}); renderDispositivosPanel(); }catch(e){}
+  try{ await fetch(_FB_DISP+'/'+id+'.json',{method:'DELETE'}); _dispRefrescarVistas(); }catch(e){}
 }
-function _dispRenombrar(){
-  const actual=_dispNombre();
-  const n=prompt('Nombre para ESTE dispositivo (ej: "Celular Marcos", "PC oficina"):',actual);
+async function _dispRenombrar(id){
+  const actual=(_dispCache[id]&&(_dispCache[id].nombreAdmin||_dispCache[id].nombre))||'';
+  const n=prompt('Nombre para este dispositivo (ej: "Celular Marcos", "PC oficina"):',actual);
   if(n===null) return;
-  try{ localStorage.setItem('fj_device_nombre',n.trim()||_dispNombreAuto()); }catch(e){}
-  _dispLatido().then(()=>renderDispositivosPanel());
+  try{
+    await fetch(_FB_DISP+'/'+id+'/nombreAdmin.json',{method:'PUT',body:JSON.stringify(n.trim())});
+    _dispRefrescarVistas();
+  }catch(e){ alert('No se pudo renombrar.'); }
 }
 
 // ============== MULTI-DESARROLLO ==============
@@ -2320,15 +2429,20 @@ function volverHomeMain(){
   document.getElementById('home-main').style.display='flex';
 }
 
-function doLogin(){
+async function doLogin(){
   const pass=document.getElementById('login-pwd').value||'';
   const ok=loginRole==='admin'?pass===ADMIN_PASS:pass===COLAB_PASS;
   if(ok){
+    // v1.0655: si el dispositivo está deshabilitado, no deja entrar
+    try{ if(typeof dispPuedeIngresar==='function' && !(await dispPuedeIngresar())) return; }catch(e){}
     volverHomeMain();
     setDesarrolloActivo('eucaliptus');
     document.getElementById('page-home').style.display='none';
     showPage(loginRole==='admin'?'admin':'colab');
-    if(loginRole==='admin') setTimeout(()=>{ adminTab('inicio'); actualizarBadgeFinalizados(); },50);
+    _dispSesionTs=new Date().toISOString();
+    _dispUltimaActividad=Date.now();
+    try{ _dispLatido(); }catch(e){}
+    if(loginRole==='admin') setTimeout(()=>{ adminTab('inicio'); actualizarBadgeFinalizados(); _dispRefrescarChip(); },50);
   } else {
     document.getElementById('login-err').textContent='Contraseña incorrecta';
   }
