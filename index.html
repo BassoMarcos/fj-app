@@ -1388,7 +1388,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0649';
+  datos['_version']='v1.0650';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -10017,20 +10017,25 @@ function _marcarImpagaYMora(clienteId, idx){
   if(mesIdx<0||!anio){alert('No se pudo interpretar el mes de la cuota ("'+(h.mes||'')+'").');return;}
   const monto=Number(h.monto)||0;
   const cuotasMora=loadCuotasMora();
-  if(cuotasMora.some(cm=>cm.clienteId===clienteId&&cm.mes===mesIdx&&cm.anio===anio)){
-    alert('Esa cuota ya está en Mora.');return;
+  const existente=cuotasMora.find(cm=>cm.clienteId===clienteId&&cm.mes===mesIdx&&cm.anio===anio);
+  if(existente && existente.pagada===false){
+    alert('Esa cuota ya está en Mora, impaga.');return;
   }
   if(!confirm('¿Marcar la cuota '+nro+' ('+h.mes+') como IMPAGA y mandarla a Mora?\n\n'
     +'Monto: '+fmtPeso(monto)+'\n\n'
     +'La cuota va a figurar impaga y va a aparecer en el panel de Mora para cobrarla.')) return;
-  // 1. A Mora
-  cuotasMora.push({
-    clienteId, mz:c.mz, lote:c.lote, titular:c.titular,
-    moneda:c.moneda||'ARS', numeroCuota:nro, totalCuotas:c.ct,
-    monto, mes:mesIdx, anio, mesNombre:h.mes,
-    dia10Ts:new Date(anio,mesIdx,10,23,59,59).toISOString(),
-    pagada:false, pagoTs:null
-  });
+  // 1. A Mora (si ya existía pagada, se revierte a impaga)
+  if(existente){
+    existente.pagada=false; existente.pagoTs=null;
+  } else {
+    cuotasMora.push({
+      clienteId, mz:c.mz, lote:c.lote, titular:c.titular,
+      moneda:c.moneda||'ARS', numeroCuota:nro, totalCuotas:c.ct,
+      monto, mes:mesIdx, anio, mesNombre:h.mes,
+      dia10Ts:new Date(anio,mesIdx,10,23,59,59).toISOString(),
+      pagada:false, pagoTs:null
+    });
+  }
   saveCuotasMora(cuotasMora);
   // 2. Marcar impaga en el historial (no se borra el registro)
   const real=(c.hist||[]).find(x=>x.cuota===h.cuota&&x.mes===h.mes);
