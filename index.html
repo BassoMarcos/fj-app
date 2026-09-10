@@ -1388,7 +1388,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0648';
+  datos['_version']='v1.0649';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -9990,6 +9990,59 @@ function _aplicarReconMayo(){
 }
 
 // ══════ Historial completo de cuotas por cliente — editable (v1.0450) ══════
+// v1.0649: marcar una cuota como IMPAGA desde el historial y devolverla a Mora.
+// Regla: no se puede marcar impaga si hay cuotas POSTERIORES ya pagadas (rompería la secuencia).
+function _marcarImpagaYMora(clienteId, idx){
+  const data=loadData();
+  const c=data.find(x=>x.id===clienteId);
+  if(!c){alert('Cliente no encontrado');return;}
+  const hist=(c.hist||[]).slice().sort((a,b)=>(b.cuota||0)-(a.cuota||0));
+  const h=hist[idx];
+  if(!h){alert('No se encontró la cuota.');return;}
+  if(h.pagada===false){alert('Esa cuota ya figura como impaga.');return;}
+  const nro=Number(h.cuota)||0;
+  // VALIDACIÓN: ninguna cuota posterior puede estar pagada
+  const posterioresPagas=hist.filter(x=>(Number(x.cuota)||0)>nro && x.pagada!==false)
+                             .map(x=>'C'+x.cuota).sort();
+  if(posterioresPagas.length){
+    alert('❌ No se puede marcar impaga la cuota '+nro+'.\n\n'
+      +'Hay cuotas posteriores ya pagadas: '+posterioresPagas.join(', ')+'.\n\n'
+      +'Primero tenés que marcar impagas esas (de la más nueva a la más vieja), sino se rompe la secuencia.');
+    return;
+  }
+  // Parsear mes/año desde el texto del historial (ej: "Agosto 2026")
+  const partes=String(h.mes||'').trim().split(/\s+/);
+  const mesIdx=MESES.indexOf(partes[0]);
+  const anio=parseInt(partes[1]);
+  if(mesIdx<0||!anio){alert('No se pudo interpretar el mes de la cuota ("'+(h.mes||'')+'").');return;}
+  const monto=Number(h.monto)||0;
+  const cuotasMora=loadCuotasMora();
+  if(cuotasMora.some(cm=>cm.clienteId===clienteId&&cm.mes===mesIdx&&cm.anio===anio)){
+    alert('Esa cuota ya está en Mora.');return;
+  }
+  if(!confirm('¿Marcar la cuota '+nro+' ('+h.mes+') como IMPAGA y mandarla a Mora?\n\n'
+    +'Monto: '+fmtPeso(monto)+'\n\n'
+    +'La cuota va a figurar impaga y va a aparecer en el panel de Mora para cobrarla.')) return;
+  // 1. A Mora
+  cuotasMora.push({
+    clienteId, mz:c.mz, lote:c.lote, titular:c.titular,
+    moneda:c.moneda||'ARS', numeroCuota:nro, totalCuotas:c.ct,
+    monto, mes:mesIdx, anio, mesNombre:h.mes,
+    dia10Ts:new Date(anio,mesIdx,10,23,59,59).toISOString(),
+    pagada:false, pagoTs:null
+  });
+  saveCuotasMora(cuotasMora);
+  // 2. Marcar impaga en el historial (no se borra el registro)
+  const real=(c.hist||[]).find(x=>x.cuota===h.cuota&&x.mes===h.mes);
+  if(real) real.pagada=false;
+  saveData(data);
+  addHist('mora','Cuota '+nro+' ('+h.mes+') marcada IMPAGA y enviada a Mora — '+formatLoteTag(c.mz,c.lote),clienteId);
+  actualizarBadgeMora();
+  try{ renderPanelMora(); }catch(e){}
+  try{ renderAdminDet(clienteId); }catch(e){}
+  abrirHistorialCuotas(clienteId);
+  try{ mostrarToastCobro('Cuota '+nro+' enviada a Mora'); }catch(e){}
+}
 function abrirHistorialCuotas(id){
   const c=loadData().find(x=>x.id===id);
   if(!c){alert('Lote no encontrado');return;}
@@ -10015,6 +10068,7 @@ function abrirHistorialCuotas(id){
         <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:${pagada?'var(--green-bg)':'var(--red-bg)'};color:${pagada?'var(--green)':'var(--red)'}">${pagada?'Pagada':'Impaga'}</span>
       </td>
       <td style="padding:7px 10px;text-align:right;white-space:nowrap">
+        ${pagada?`<button onclick="_marcarImpagaYMora('${id}',${i})" title="Marcar impaga y mandar a Mora" style="background:none;border:1px solid var(--amber-border);color:var(--amber);padding:2px 8px;border-radius:6px;font-size:11px;cursor:pointer">↩ a Mora</button>`:''}
         <button onclick="_editarCuotaHist('${id}',${i})" style="background:none;border:1px solid var(--border2);color:var(--text2);padding:2px 8px;border-radius:6px;font-size:11px;cursor:pointer">✏️</button>
         <button onclick="_borrarCuotaHist('${id}',${i})" style="background:none;border:1px solid #fca5a5;color:var(--red);padding:2px 8px;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>
       </td>
