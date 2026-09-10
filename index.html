@@ -901,6 +901,55 @@ tr:hover td{background:var(--bg)}
 
 <script>
 
+// ============== VERSIÓN Y AUTO-ACTUALIZACIÓN (v1.0653) ==============
+const APP_VERSION='v1.0653';
+let _updNuevaVersion=null;
+// ¿El usuario está en medio de algo? (modal abierto o escribiendo) — no interrumpir
+function _updHayTrabajoEnCurso(){
+  try{
+    const ae=document.activeElement;
+    if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return true;
+    const nodos=document.querySelectorAll('[id*="overlay"],[id*="Overlay"],[id*="modal"],[id*="Modal"]');
+    for(const el of nodos){ if(el.offsetParent!==null) return true; }
+  }catch(e){}
+  return false;
+}
+function _updBanner(){
+  if(document.getElementById('upd-banner')) return;
+  const b=document.createElement('div');
+  b.id='upd-banner';
+  b.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#7c3aed;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;z-index:999999;box-shadow:0 4px 20px rgba(0,0,0,.35);display:flex;align-items:center;gap:10px';
+  b.innerHTML='🔄 Hay una versión nueva ('+_updNuevaVersion+')'
+    +'<button onclick="_updAplicarYa()" style="background:#fff;color:#7c3aed;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer">Actualizar</button>';
+  document.body.appendChild(b);
+}
+function _updAplicarYa(){
+  const v=_updNuevaVersion||Date.now();
+  location.replace(location.pathname+'?v='+encodeURIComponent(v));
+}
+function _updIntentarAplicar(){
+  if(!_updNuevaVersion) return;
+  if(_updHayTrabajoEnCurso()){ _updBanner(); return; }
+  _updAplicarYa();
+}
+async function _updChequear(){
+  try{
+    const r=await fetch('version.json?cb='+Date.now(),{cache:'no-store'});
+    if(!r.ok) return;
+    const j=await r.json();
+    if(j && j.version && j.version!==APP_VERSION){
+      _updNuevaVersion=j.version;
+      _updIntentarAplicar();
+    }
+  }catch(e){}
+}
+window.addEventListener('load',()=>{
+  setTimeout(_updChequear,4000);
+  setInterval(_updChequear,120000);           // cada 2 minutos
+  setInterval(_updIntentarAplicar,15000);      // reintenta si estaba ocupado
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) _updChequear(); });
+});
+
 
 
 // ============== MULTI-DESARROLLO ==============
@@ -1388,7 +1437,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0652';
+  datos['_version']=APP_VERSION;
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
