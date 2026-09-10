@@ -904,7 +904,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0658';
+const APP_VERSION='v1.0659';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -947,9 +947,20 @@ function _updBloquearPantalla(){
     +'</div>';
   document.body.appendChild(ov);
 }
+const _UPD_AUTO_INACTIVO_MIN=60;   // si lleva este tiempo sin uso, actualiza solo
+// ¿Nadie está usando este dispositivo? (sin sesión, o inactivo hace rato)
+function _updNadieUsando(){
+  try{
+    if(typeof _dispRol==='function' && _dispRol()==='sin sesión') return true;
+    if(typeof _dispMinInactivo==='function' && _dispMinInactivo()>=_UPD_AUTO_INACTIVO_MIN) return true;
+  }catch(e){}
+  return false;
+}
 function _updTick(){
   if(!_updNuevaVersion) return;
   if(_updDesde===null) _updDesde=Date.now();
+  // Si nadie lo está usando, se actualiza solo (no molesta con el botón)
+  if(_updNadieUsando()){ _updAplicarYa(); return; }
   if((Date.now()-_updDesde)/60000 >= _UPD_GRACIA_MIN){ _updBloquearPantalla(); }
   else { _updBanner(); }
 }
