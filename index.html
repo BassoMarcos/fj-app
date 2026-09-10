@@ -914,6 +914,14 @@ function _lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}_memStore[k]=v;}
 function loadMora(){try{return JSON.parse(localStorage.getItem('fj_mora')||'[]');}catch(e){return [];}}
 // ── Rendidos de la CAJA DE MORA (Balances): archiva los cobros de un lote para que no sumen ──
 function loadCajaMoraRendidos(){try{return JSON.parse(localStorage.getItem('fj_cajamora_rendidos')||'{}');}catch(e){return {};}}
+// v1.0646: un cobro está rendido solo si es ANTERIOR al momento en que se rindió el lote.
+// Antes se ocultaba por id de lote, y eso escondía también los cobros nuevos.
+function _moraRendida(entry, rendidos){
+  const marca=rendidos&&rendidos[entry.id];
+  if(!marca) return false;
+  if(!entry.ts) return true; // sin fecha: comportamiento viejo
+  return String(entry.ts) <= String(marca);
+}
 function saveCajaMoraRendidos(o){localStorage.setItem('fj_cajamora_rendidos',JSON.stringify(o||{}));}
 function rendirCajaMora(loteId){
   if(!loteId) return;
@@ -1380,7 +1388,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0645';
+  datos['_version']='v1.0646';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -5941,9 +5949,9 @@ function renderBalances(seccion){
         ${(()=>{
           const _cmRend=loadCajaMoraRendidos();
           // v1.0641: no contar en el resumen la mora de agrimensores ya rendida en el panel de Mora
-          const _agrList=(bal.agrimensores||[]).filter(p=>!(p.esMora && _cmRend[p.id]));
+          const _agrList=(bal.agrimensores||[]).filter(p=>!(p.esMora && _moraRendida(p,_cmRend)));
           const totalAgri=_agrList.reduce((s,p)=>s+(p.monto||0),0);
-          const mora=loadMora().filter(m=>!_cmRend[m.id]);
+          const mora=loadMora().filter(m=>!_moraRendida(m,_cmRend));
           const ex=loadExtras().filter(e=>!e.rendido);
           const netoExtra=ex.filter(e=>e.tipo==='ingreso').reduce((s,e)=>s+e.monto,0)-ex.filter(e=>e.tipo==='gasto').reduce((s,e)=>s+e.monto,0);
           // lotes únicos que pagaron mora DE CUOTAS (no los de solo interés del mes) / que adelantaron
@@ -6577,8 +6585,8 @@ function renderBalances(seccion){
     actualizarBadgeMora();
     const _cmRendidos=loadCajaMoraRendidos();
     const _moraTodos=loadMora();
-    const mora=_moraTodos.filter(p=>!_cmRendidos[p.id]);
-    const _moraRendidosCaja=_moraTodos.filter(p=>_cmRendidos[p.id]);
+    const mora=_moraTodos.filter(p=>!_moraRendida(p,_cmRendidos));
+    const _moraRendidosCaja=_moraTodos.filter(p=>_moraRendida(p,_cmRendidos));
     const pesos=mora.filter(p=>p.moneda!=='USD');
     const usd=mora.filter(p=>p.moneda==='USD');
     const totalCuotaP=pesos.reduce((s,p)=>s+(p.cuota||0),0);
@@ -6983,8 +6991,8 @@ function renderBalances(seccion){
     const totalMoraAgrInt=agrMora.reduce((s,p)=>s+(p.interes||0),0);
     // v1.0640: separar mora de agrimensores rendida (marcada en el panel de Mora) para que no sume
     const _cmRend=(typeof loadCajaMoraRendidos==='function')?loadCajaMoraRendidos():{};
-    const agrMoraActiva=agrMora.filter(p=>!_cmRend[p.id]);
-    const agrMoraRendida=agrMora.filter(p=>_cmRend[p.id]);
+    const agrMoraActiva=agrMora.filter(p=>!_moraRendida(p,_cmRend));
+    const agrMoraRendida=agrMora.filter(p=>_moraRendida(p,_cmRend));
     const totMoraActCuota=agrMoraActiva.reduce((s,p)=>s+(p.monto||0),0);
     const totMoraActInt=agrMoraActiva.reduce((s,p)=>s+(p.interes||0),0);
 
@@ -11003,7 +11011,12 @@ function _ejecutarCobroAdmMora(seleccionadas, clienteId, cur, totalTotal){
     if(idx>=0){cuotasMoraAll[idx].pagada=true;cuotasMoraAll[idx].pagoTs=ts;}
     registrarCobroCuotaMora(mora, c, c.interes, ts, fecha);
     const cl=dataAll.find(x=>x.id===c.clienteId);
-    if(cl&&cl.ca===c.numeroCuota){if(cl.ca<cl.ct)cl.ca=cl.ca+1;registrarCuotaHist(cl, c.numeroCuota, c.monto, c.mesNombre, ts, true);}
+    if(cl){
+      // v1.0646: marcar la cuota como pagada en el historial SIEMPRE (antes solo si coincidía con la cuota actual,
+      // por eso una cuota vieja de mora quedaba "Impaga" aunque se hubiera cobrado).
+      registrarCuotaHist(cl, c.numeroCuota, c.monto, c.mesNombre, ts, true);
+      if(cl.ca===c.numeroCuota && cl.ca<cl.ct) cl.ca=cl.ca+1;
+    }
   });
   saveData(dataAll);saveCuotasMora(cuotasMoraAll);saveMora(mora);
   actualizarBadgeMora();
