@@ -1388,7 +1388,7 @@ function exportarDatos(){
     datos[k]=localStorage.getItem(k);
   }
   datos['_exportado']=new Date().toISOString();
-  datos['_version']='v1.0646';
+  datos['_version']='v1.0647';
   datos['_total_keys']=localStorage.length;
 
   if(Object.keys(datos).length<=3){
@@ -13144,6 +13144,14 @@ function revertirPagoClienteDesdeSnapshot(clienteId){
   });
 }
 
+// v1.0647: al desmarcar un pago, quitar SOLO el último registro de ese cliente en cada lista.
+// Antes se borraban TODOS los registros del cliente (incl. cobros de mora anteriores, que se perdían de vista).
+function _quitarUltimoDeLista(arr, id){
+  if(!Array.isArray(arr)) return arr||[];
+  const i=arr.map(p=>p.id).lastIndexOf(id);
+  if(i>=0) arr.splice(i,1);
+  return arr;
+}
 function desmarcarPagoAdmin(id){
   if(esNoCobrable(id)){ alert('Este lote es un préstamo: siempre figura como pago y no se puede desmarcar.'); return; }
   const _doDesmarcar=()=>{
@@ -13158,17 +13166,17 @@ function desmarcarPagoAdmin(id){
     
     // Remove from bal.abierto
     const bal=loadBalances();
-    bal.abierto=(bal.abierto||[]).filter(p=>p.id!==id);
-    // Remove from agrimensores
-    bal.agrimensores=(bal.agrimensores||[]).filter(p=>p.id!==id);
+    bal.abierto=_quitarUltimoDeLista(bal.abierto||[], id);
+    // Remove from agrimensores (solo el último)
+    bal.agrimensores=_quitarUltimoDeLista(bal.agrimensores||[], id);
     // Remove from cierres
     (bal.cierres||[]).forEach(ci=>{
       ci.pagos=(ci.pagos||[]).filter(p=>p.id!==id);
       ci.total=(ci.pagos||[]).reduce((s,p)=>s+(p.monto||0),0);
     });
 
-    // Remove from mora
-    saveMora(loadMora().filter(p=>p.id!==id));
+    // Remove from mora (solo el último registro, no todo el historial del cliente)
+    saveMora(_quitarUltimoDeLista(loadMora(), id));
     // Eliminar adelantos pendientes del cliente
     const adelantos=loadAdelantos();
     const adelantosRemovidos=adelantos.filter(a=>a.id===id&&a.estado==='pendiente').length;
@@ -15580,8 +15588,8 @@ function desmarcarPago(id){
   }
   saveData(data);
   const bal=loadBalances();
-  bal.abierto=(bal.abierto||[]).filter(p=>p.id!==id);
-  bal.agrimensores=(bal.agrimensores||[]).filter(p=>p.id!==id);
+  bal.abierto=_quitarUltimoDeLista(bal.abierto||[], id);
+  bal.agrimensores=_quitarUltimoDeLista(bal.agrimensores||[], id);
   (bal.cierres||[]).forEach(ci=>{
     ci.pagos=(ci.pagos||[]).filter(p=>p.id!==id);
     ci.total=(ci.pagos||[]).reduce((s,p)=>s+(p.monto||0),0);
@@ -15593,7 +15601,7 @@ function desmarcarPago(id){
   if(_idxF>=0) bal.cajaFisica.splice(_idxF,1);
   saveBalances(bal);
   // Remove from mora
-  saveMora(loadMora().filter(p=>p.id!==id));
+  saveMora(_quitarUltimoDeLista(loadMora(), id));
   // Eliminar adelantos pendientes del cliente
   saveAdelantos(loadAdelantos().filter(a=>!(a.id===id&&a.estado==='pendiente')));
   if(document.getElementById('colab-detalle')&&document.getElementById('colab-detalle').style.display!=='none'){
