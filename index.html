@@ -904,7 +904,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0661';
+const APP_VERSION='v1.0662';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -11490,7 +11490,11 @@ function admConfirmarMoraPanel(){
       const dataX=loadData(); const cX=dataX.find(x=>x.id===clienteId);
       if(cX){
         const ts=new Date().toISOString(), fecha=new Date().toLocaleDateString('es-AR');
-        cX.saldo=(Number(cX.saldo)||0)+dif; cX.saldoDifUltimoCobro=dif; saveData(dataX);
+        // v1.0662: NO tocar saldoDifUltimoCobro acá. Ese campo guarda la diferencia del
+        // cobro de la CUOTA DEL MES (lo usa desmarcarPago para revertir). Si el cobro de
+        // mora lo pisaba, al desmarcar/recobrar el pago del mes se revertía un monto que
+        // no correspondía y aparecía un saldo a favor/en contra fantasma.
+        cX.saldo=(Number(cX.saldo)||0)+dif; saveData(dataX);
         addHist('pago',(dif>0?'SAF ':'SEC ')+fmtPeso(Math.abs(dif))+' — '+cX.mz+' Lote '+cX.lote+' (cobro mora, cargado al saldo)',clienteId);
         try{ registrarSafSec(cX,dif,ts,fecha); }catch(e){}
         renderAdminDet(clienteId);
