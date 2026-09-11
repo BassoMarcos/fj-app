@@ -294,6 +294,11 @@ tr:hover td{background:var(--bg)}
     // Problema resuelto: antes, si Firebase no estaba listo o fallaba la red,
     // el cambio quedaba SOLO en este dispositivo y nadie se enteraba.
     window._syncQueue = {};        // {key: value} pendientes de subir
+    // v1.0663: hasta no RECIBIR la lista de clientes de la nube, este dispositivo no la sube.
+    // Evita que uno recién abierto pise datos nuevos con su copia vieja.
+    window._datosFrescos = false;
+    setTimeout(()=>{ if(!window._datosFrescos){ window._datosFrescos = true;
+      console.warn('Sync: no llegó la lista de la nube en 15s — se habilita la subida igual.'); } }, 15000);
     window._syncState = 'ok';      // 'ok' | 'pending' | 'error'
     window._syncLastOk = null;
 
@@ -330,6 +335,8 @@ tr:hover td{background:var(--bg)}
       if (!window._firebaseReady) return;
       const keys = Object.keys(window._syncQueue);
       for (const k of keys) {
+        // v1.0663: la lista de clientes espera a estar sincronizada antes de subirse
+        if (k === 'data' && !window._datosFrescos) continue;
         const v = window._syncQueue[k];
         try {
           await set(ref(db, 'eucaliptus/' + k), window._sanitizeUndefined(v));
@@ -904,7 +911,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0662';
+const APP_VERSION='v1.0663';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -16231,6 +16238,7 @@ async function init(){
       // v1.0380: protección anti-pisado — no aceptar una versión con MENOS clientes
       // o con cuotas más atrasadas sin avisar (esto causó la pérdida del 22/7/2026)
       window._fbListen('data', (d) => {
+        window._datosFrescos = true;   // v1.0663: ya recibimos la versión de la nube
         if(!d) return;
         let remoto = Array.isArray(d) ? d : Object.values(d);
         // Filtrar clientes borrados intencionalmente (tombstones) para que no revivan
