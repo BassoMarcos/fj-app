@@ -911,7 +911,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0664';
+const APP_VERSION='v1.0665';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -8455,6 +8455,24 @@ function renderStats(){
   const sumU=(arr)=>arr.filter(c=>c.moneda==='USD').reduce((s,c)=>s+montoCobrable(c).total,0);
   const cobradoARS=sum(pagados), pendARS=sum(pendientes);
   const cobradoUSD=sumU(pagados), pendUSD=sumU(pendientes);
+  // v1.0665: los lotes que FINALIZARON este ciclo pagaron una cuota este mes, así que tienen
+  // que contar en Cobrado y en el Total. Su monto quedó en 0 al finalizar, por eso se toma
+  // el importe real registrado en la caja del día / cierres.
+  const _finCiclo=(()=>{
+    const b=(typeof loadBalances==='function')?loadBalances():{};
+    const monto={};
+    (b.abierto||[]).forEach(p=>{ monto[p.id]=(monto[p.id]||0)+(p.monto||0); });
+    (b.cierres||[]).forEach(ci=>(ci.pagos||[]).forEach(p=>{ monto[p.id]=(monto[p.id]||0)+(p.monto||0); }));
+    let ars=0, usd=0, n=0;
+    data.forEach(c=>{
+      if(c.est!=='finalizado'||c.autopago||esAgrimensor(c.id)) return;
+      const m=monto[c.id]; if(!m) return;              // solo si su pago está en este ciclo
+      n++; if(c.moneda==='USD') usd+=m; else ars+=m;
+    });
+    return {ars,usd,n};
+  })();
+  const cobradoARStot=cobradoARS+_finCiclo.ars;
+  const cobradoUSDtot=cobradoUSD+_finCiclo.usd;
   const agrPag=agrim.filter(c=>c.pago).length;
 
   const card=(inner,extra)=>'<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;'+(extra||'')+'">'+inner+'</div>';
@@ -8489,7 +8507,7 @@ function renderStats(){
 
   // ── Columnas: plata cobrada / pendiente / agrimensores ──
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:1.25rem">';
-  html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">💰 COBRADO (PESOS)</div><div style="font-size:22px;font-weight:800;color:var(--green)">'+fmtPeso(cobradoARS)+'</div>'+(cobradoUSD?'<div style="font-size:13px;font-weight:700;color:var(--green)">+ USD '+fmtPeso(cobradoUSD).replace('$','')+'</div>':''),'text-align:center');
+  html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">💰 COBRADO (PESOS)</div><div style="font-size:22px;font-weight:800;color:var(--green)">'+fmtPeso(cobradoARStot)+'</div>'+(cobradoUSDtot?'<div style="font-size:13px;font-weight:700;color:var(--green)">+ USD '+fmtPeso(cobradoUSDtot).replace('$','')+'</div>':'')+(_finCiclo.n?'<div style="font-size:10px;color:var(--text3);margin-top:2px">incluye '+_finCiclo.n+' finalizado'+(_finCiclo.n>1?'s':'')+' este mes</div>':''),'text-align:center');
   html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">⏳ FALTA COBRAR</div><div style="font-size:22px;font-weight:800;color:#d97706">'+fmtPeso(pendARS)+'</div>'+(pendUSD?'<div style="font-size:13px;font-weight:700;color:#d97706">+ USD '+fmtPeso(pendUSD).replace('$','')+'</div>':''),'text-align:center');
   html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">📐 AGRIMENSORES</div><div style="font-size:22px;font-weight:800">'+agrPag+'<span style="font-size:14px;color:var(--text2)">/'+agrim.length+'</span></div><div style="font-size:11px;color:var(--text2)">pagados este mes</div>','text-align:center');
   html+='</div>';
@@ -8500,8 +8518,8 @@ function renderStats(){
   {
     const _cobrARS=cobrables.filter(c=>c.moneda!=='USD');
     const _cobrUSD=cobrables.filter(c=>c.moneda==='USD');
-    const _totARS=_cobrARS.reduce((s,c)=>s+montoCobrable(c).total,0);
-    const _totUSD=_cobrUSD.reduce((s,c)=>s+montoCobrable(c).total,0);
+    const _totARS=_cobrARS.reduce((s,c)=>s+montoCobrable(c).total,0)+_finCiclo.ars;
+    const _totUSD=_cobrUSD.reduce((s,c)=>s+montoCobrable(c).total,0)+_finCiclo.usd;
     html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem">';
     html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:10px">🎯 TOTAL A COBRAR ESTE MES</div>';
     html+='<div style="display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap">';
