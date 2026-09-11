@@ -911,7 +911,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0665';
+const APP_VERSION='v1.0666';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -1013,6 +1013,9 @@ function _updEscucharFirebase(){
   }catch(e){ setTimeout(_updEscucharFirebase,3000); }
 }
 window.addEventListener('load',()=>{
+  // v1.0666: la app cargó bien → limpiar el ?v= de la dirección.
+  // Si queda, al recargar se puede pedir una versión que Pages todavía no publicó (pantalla negra).
+  try{ if(location.search && /[?&]v=/.test(location.search)) history.replaceState(null,'',location.pathname); }catch(e){}
   setTimeout(_updChequear,4000);
   setTimeout(_updEscucharFirebase,3500);
   setInterval(_updChequear,120000);   // respaldo: busca versión nueva cada 2 min
