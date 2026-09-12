@@ -911,7 +911,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0668';
+const APP_VERSION='v1.0669';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -5867,17 +5867,14 @@ function _bloqueAuditoriaCaja(){
     +'<span>'+lbl+'</span><span style="text-align:center;font-weight:700">'+n+'</span>'
     +'<span style="text-align:right;font-weight:700">'+fmtPeso(m)+'</span></div>';
 
-  let h='<div style="background:'+bg+';border:2px solid '+bde+';border-radius:var(--rlg);padding:14px;margin-bottom:1rem">'
-    +'<div style="font-size:14px;font-weight:800;color:'+col+';margin-bottom:8px">'+(ok?'✅':'⚠️')+' Control: Cobrado vs Cajas</div>'
-    +'<div style="display:grid;grid-template-columns:1.4fr .6fr 1fr;gap:8px;font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;padding-bottom:3px;border-bottom:1px solid var(--border)">'
-    +'<span></span><span style="text-align:center">Lotes</span><span style="text-align:right">Total</span></div>'
-    + fila('Cobrado (estadísticas)',cobLotes,cobTotal)
-    + fila('Caja del día + Cierres',cajLotes,cajTotal)
-    + fila('<b>Diferencia</b>',(dL>0?'+':'')+dL,dM,'color:'+col)
-    + '<div style="font-size:11px;color:var(--text2);margin-top:8px;padding-top:6px;border-top:1px dashed var(--border)">'
-    + '📐 Agrimensores cobrados (aparte): <b>'+agrIds.size+'</b> lotes — <b>'+fmtPeso(agrTotal)+'</b></div>';
-  if(finN) h+='<div style="font-size:10px;color:var(--text3);margin-top:3px">Incluye '+finN+' lote(s) que finalizaron este ciclo — '+fmtPeso(finM)+'</div>';
-
+  let h='<div style="background:'+bg+';border:1px solid '+bde+';border-radius:10px;padding:8px 12px;margin-bottom:1rem;font-size:11px">'
+    +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:space-between">'
+    +'<span style="font-weight:800;color:'+col+'">'+(ok?'✅':'⚠️')+' Cobrado vs Cajas</span>'
+    +'<span style="color:var(--text2)">Cobrado <b style="color:var(--text)">'+cobLotes+'</b> lotes · <b style="color:var(--text)">'+fmtPeso(cobTotal)+'</b></span>'
+    +'<span style="color:var(--text2)">Cajas <b style="color:var(--text)">'+cajLotes+'</b> lotes · <b style="color:var(--text)">'+fmtPeso(cajTotal)+'</b></span>'
+    +'<span style="font-weight:800;color:'+col+'">Dif '+(dL>0?'+':'')+dL+' · '+fmtPeso(dM)+'</span>'
+    +'<span style="color:var(--text3)">📐 Agrim. '+agrIds.size+' · '+fmtPeso(agrTotal)+'</span>'
+    +'</div>';
   const filaL=(c,color)=>'<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">'
     +'<span><b>'+formatLoteTag(c.mz,c.lote)+'</b> <span style="color:var(--text2)">'+((c.titular||'').slice(0,24))+'</span></span>'
     +'<span style="font-weight:700;color:'+color+'">'+fmtPeso(montoCobrable(c).total)+'</span></div>';
@@ -5926,7 +5923,6 @@ function renderInicio(){
   el.innerHTML=`
     <div style="font-size:22px;font-weight:800;margin-bottom:4px">Bienvenido, Administrador</div>
     <div style="font-size:14px;color:var(--text2);margin-bottom:1rem">${new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
-    ${_bloqueAuditoriaCaja()}
     ${resumenLotes}
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
@@ -8601,6 +8597,7 @@ function renderStats(){
   html+='</div>';
   html+='<div style="background:var(--border2);border-radius:99px;height:18px;overflow:hidden"><div style="background:linear-gradient(90deg,#16a34a,#4ade80);width:'+pct+'%;height:100%;border-radius:99px;transition:width .5s"></div></div>';
   html+='</div>';
+  html+=_bloqueAuditoriaCaja();
 
   // ── Columnas: plata cobrada / pendiente / agrimensores ──
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:1.25rem">';
