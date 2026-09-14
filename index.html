@@ -911,7 +911,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0670';
+const APP_VERSION='v1.0671';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -8991,21 +8991,34 @@ function renderLotesTerminados(origen){
       <div onclick="toggleHistFin()" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer;${_abierto?'margin-bottom:10px':''}">
         <span id="histfin-flecha" style="font-size:13px;color:var(--text2);display:inline-block;transform:rotate(${_abierto?90:0}deg)">▶</span>
         <span style="font-size:15px;font-weight:800">🏁 Historial de finalizaciones</span>
-        <span style="font-size:11px;color:var(--text2)">${fins.length} lotes · ${esteAnio} este año · ${esteMes} este mes</span>
+        <span style="font-size:11px;color:var(--text2)">${fins.filter(x=>!x.prestamo).length} por pago${fins.filter(x=>x.prestamo).length?' · '+fins.filter(x=>x.prestamo).length+' préstamos':''} · ${esteAnio} este año · ${esteMes} este mes</span>
       </div>
       <div id="histfin-body" style="display:${_abierto?'block':'none'}">
-      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:520px">
-        <tr style="color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--border)">
-          <th style="padding:6px 8px;text-align:left">Fecha</th>
-          <th style="padding:6px 8px;text-align:left">Lote</th>
-          <th style="padding:6px 8px;text-align:left">Titular</th>
-        </tr>
-        ${fins.map(x=>`<tr style="border-top:1px solid var(--border)">
+      ${(()=>{
+        const norm=fins.filter(x=>!x.prestamo), pres=fins.filter(x=>x.prestamo);
+        const filas=(arr)=>arr.map(x=>`<tr style="border-top:1px solid var(--border)">
           <td style="padding:5px 8px;font-size:12px;white-space:nowrap">${fmtF(x.f)}${x.origenF!=='registrada'?' <span style="font-size:9px;color:var(--text2)" title="Deducida del último pago">≈</span>':''}</td>
-          <td style="padding:5px 8px;font-size:12px;font-weight:800;white-space:nowrap">${formatLoteTag(x.mz,x.lote)}${x.prestamo?' <span style="font-size:9px;color:var(--acc2)">préstamo</span>':''}</td>
+          <td style="padding:5px 8px;font-size:12px;font-weight:800;white-space:nowrap">${formatLoteTag(x.mz,x.lote)}</td>
           <td style="padding:5px 8px;font-size:12px">${String(x.titular||'')}</td>
-        </tr>`).join('')}
-      </table></div>
+        </tr>`).join('');
+        const tabla=(arr)=>`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:520px">
+          <tr style="color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--border)">
+            <th style="padding:6px 8px;text-align:left">Fecha</th>
+            <th style="padding:6px 8px;text-align:left">Lote</th>
+            <th style="padding:6px 8px;text-align:left">Titular</th>
+          </tr>${filas(arr)}</table></div>`;
+        let h='';
+        if(norm.length){
+          h+=`<div style="font-size:12px;font-weight:800;color:var(--text2);margin:2px 0 4px">🏁 Finalizados por pago (${norm.length})</div>`+tabla(norm);
+        }
+        if(pres.length){
+          h+=`<div style="margin-top:14px;padding-top:10px;border-top:1px dashed var(--border)">
+            <div style="font-size:12px;font-weight:800;color:var(--acc2);margin-bottom:4px">💠 Préstamos (${pres.length})</div>
+            <div style="font-size:10px;color:var(--text2);margin-bottom:6px">Lotes de préstamo — no se cobran por cuota.</div>`
+            +tabla(pres)+`</div>`;
+        }
+        return h||'<div style="font-size:12px;color:var(--text3);padding:8px">Sin finalizaciones registradas.</div>';
+      })()}
       <div style="font-size:10px;color:var(--text2);margin-top:8px">≈ fecha estimada por el último pago registrado. Podés completarla desde la ficha del lote.</div>
       </div>
     </div>`;
