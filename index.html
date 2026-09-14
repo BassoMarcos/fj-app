@@ -911,7 +911,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0669';
+const APP_VERSION='v1.0670';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -15292,13 +15292,31 @@ function aprobarAdelanto(idx){
     // Update client ct
     const data = loadData();
     const c = data.find(x=>x.id===a.id);
+    let finalizo=false;
     if(c){
       c.ct = c.ct - a.cuotas.length;
+      // v1.0670: si al descontar las cuotas adelantadas el lote quedó completo, finalizarlo.
+      // Antes solo se detectaba al cobrar, así que un lote que terminaba por un adelanto
+      // quedaba activo en 19/19 y no pasaba a Lotes Finalizados.
+      if(c.ca>=c.ct && c.est==='activo'){
+        c.est='finalizado'; c.monto=0; c.saldo=0; finalizo=true;
+      }
       saveData(data);
+      if(finalizo){
+        try{
+          const certs=loadLotesCerts();
+          if(!certs[a.id]) certs[a.id]={};
+          certs[a.id].fecha=new Date().toISOString().split('T')[0];
+          saveLotesCerts(certs);
+        }catch(e){}
+        try{ addHist('pago','🏁 Lote FINALIZADO por adelanto — '+formatLoteTag(c.mz,c.lote)+' — '+c.titular+' — '+c.ca+'/'+c.ct, a.id); }catch(e){}
+        try{ actualizarBadgeFinalizados(); }catch(e){}
+      }
     }
     saveAdelantos(adelantos);
     addHist('adelanto', `Adelanto APROBADO — ${a.mz} Lote ${a.lote} — ${a.titular} — ${a.cuotas.length} cuota${a.cuotas.length>1?'s':''} — ${fmtPeso(a.total)}`);
     renderBalances();
+    if(finalizo){ try{ alert('🏁 '+formatLoteTag(c.mz,c.lote)+' — '+c.titular+'\n\nTerminó de pagar con este adelanto. Pasó a Lotes Finalizados.'); }catch(e){} }
     if(document.getElementById('admin-detalle')&&document.getElementById('admin-detalle').style.display!=='none'){
       renderAdminDet(a.id);
     }
