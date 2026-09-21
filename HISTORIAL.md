@@ -111,6 +111,11 @@
 - Las sesiones tipo Cowork/nube quedaron con un **proxy de git nuevo** que bloquea `push` ("not in this session's authorized repository set") y manda a usar `add_repo`, que no existe en estas sesiones. Bug conocido de Anthropic (abierto desde ago-2026, sin fix).
 - Confirmado: leer/clonar funciona; escribir no; el token no es la palanca. Solución: usar **Claude Code** (claude.ai/code), que tiene selector de repos con permiso de escritura → el push/deploy vuelve a funcionar.
 
+## 2026-09-21 — FIX desmarcar mora (v1.0672) + reparación del lote Garnica
+- Incidente: al desmarcar UNA cuota de mora del lote ETAPA 2-57 (Garnica), desaparecieron de la Caja de Mora y del historial de cuotas TODAS las cuotas cobradas junto con ella, y la cuota actual bajó de 27 a 26. Causa: el botón identificaba el cobro solo por la hora (`ts`), que es la misma para las cuotas cobradas juntas.
+- Reparación del lote desde el respaldo `backups/dia4` (solo ese lote; con copia previa `backups/antes_de_reparar_garnica_20260921`): 6 cuotas de mora impagas, historial completo (15 cuotas), cuota actual 27, septiembre sin pagar. Verificado que no cambió nada más.
+- Arreglo (v1.0672): desmarcar afecta solo la cuota elegida; nuevo botón "↩ Desmarcar todas (N)" por lote en Caja de Mora. Pendiente: revisar el lote M2-6A (cuotas 29 y 30 sin registro en Caja de Mora ni historial) y el desmarcar-pago de la ficha, que saca los pagos del lote de todos los cierres de caja históricos.
+
 ---
 
 ## Pendientes abiertos (backlog al momento de migrar)

@@ -911,7 +911,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0671';
+const APP_VERSION='v1.0672';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -4037,34 +4037,88 @@ function editarInteresMora(clienteId, ts, mesNombre){
     });
   });
 }
-function desmararPagoMoraCaja(clienteId, ts){
+// v1.0672: desmarcar cobros de mora UNA CUOTA A LA VEZ.
+// Antes se identificaba el cobro solo por la hora (ts). Como las cuotas cobradas juntas comparten la misma hora,
+// desmarcar una borraba TODAS (de la Caja de Mora y del historial de cuotas), revertía una sola cuota
+// (la primera, no la elegida) y bajaba la cuota actual (ca) en 1. Ahora cada cobro se identifica por
+// lote + hora + mes + número de cuota, y no se toca la cuota actual.
+function _mismaEntradaMora(p, ref){
+  return !!p && p.id===ref.id && p.ts===ref.ts
+    && (p.mesNombre||'')===ref.mesNombre && (p.numeroCuota||0)===ref.numeroCuota
+    && !!p.esRefi===!!ref.esRefi && !!p.esInteresMes===!!ref.esInteresMes;
+}
+// Revierte UN cobro de mora sobre un estado en memoria {mora,cuotasMora,data,bal}. No guarda nada.
+function _revertirCobroMoraEnEstado(st, ref){
+  const i=st.mora.findIndex(p=>_mismaEntradaMora(p,ref));
+  if(i<0) return {ok:false};
+  st.mora.splice(i,1);
+  // Lotes agrimensor: el cobro de mora también quedó espejado en bal.agrimensores
+  const ag=(st.bal&&st.bal.agrimensores)||[];
+  const iAg=ag.findIndex(p=>p&&p.esMora&&p.id===ref.id&&p.ts===ref.ts&&!!p.esInteresMes===!!ref.esInteresMes
+    &&(ref.esInteresMes||(p.mesNombre||'')===ref.mesNombre));
+  if(iAg>=0){ ag.splice(iAg,1); st.tocoBal=true; }
+  // Refinanciación e interés del mes: solo se saca esa línea de la Caja de Mora
+  if(ref.esRefi||ref.esInteresMes) return {ok:true,cuota:false};
+  // La cuota vuelve a figurar impaga en Mora (solo ESA cuota)
+  const cm=st.cuotasMora.find(x=>x.clienteId===ref.id&&x.numeroCuota===ref.numeroCuota
+    &&(x.mesNombre||'')===ref.mesNombre&&x.pagada&&x.pagoTs===ref.ts);
+  if(cm){ cm.pagada=false; cm.pagoTs=null; }
+  // En el historial de cuotas se conserva la cuota, pero como impaga (no se borra)
+  const c=st.data.find(x=>x.id===ref.id);
+  if(c&&c.hist){
+    const h=c.hist.find(x=>x.cuota===ref.numeroCuota&&x.mes===ref.mesNombre);
+    if(h){ h.pagada=false; if(h.tsOrig!==undefined){ h.ts=h.tsOrig; delete h.tsOrig; } }
+  }
+  return {ok:true,cuota:!!cm};
+}
+function _estadoMoraCargar(){ return {mora:loadMora(),cuotasMora:loadCuotasMora(),data:loadData(),bal:loadBalances(),tocoBal:false}; }
+function _estadoMoraGuardar(st){
+  saveMora(st.mora); saveCuotasMora(st.cuotasMora); saveData(st.data);
+  if(st.tocoBal) saveBalances(st.bal);
+}
+function _refrescarTrasDesmarcarMora(){
+  actualizarBadgeMora();
+  renderBalances('mora');saveUltimaVistaMora();actualizarBadgeMora();
+  renderPanelMora();
+  if(document.getElementById('atab-lista')&&document.getElementById('atab-lista').style.display!=='none') renderAdminTable();
+  renderColab();
+}
+function _refDeEntradaMora(e){
+  return {id:e.id,ts:e.ts,mesNombre:e.mesNombre||'',numeroCuota:e.numeroCuota||0,esRefi:!!e.esRefi,esInteresMes:!!e.esInteresMes};
+}
+// Botón "↩ Desmarcar" de una fila de la Caja de Mora: desmarca SOLO esa cuota.
+function desmararPagoMoraCaja(btn){
+  const d=btn.dataset;
+  const ref={id:d.cid,ts:d.ts,mesNombre:d.mes||'',numeroCuota:parseInt(d.num)||0,esRefi:d.tipo==='refi',esInteresMes:d.tipo==='int'};
   confirmarConClave(()=>{
-    // 1. Sacar de caja mora
-    saveMora(loadMora().filter(p=>!(p.id===clienteId&&p.ts===ts)));
-    // 2. Desmarcar pago del cliente
-    const data=loadData();
-    const c=data.find(x=>x.id===clienteId);
-    if(c){
-      c.pago=false; c.pagoTs=null;
-      // Revertir ca si avanzó
-      if(c.ca>1) c.ca=c.ca-1;
-      // Quitar del hist
-      if(c.hist) c.hist=c.hist.filter(h=>h.ts!==ts);
-      saveData(data);
-    }
-    // 3. Restaurar cuota mora como impaga si existía
-    const cuotasMora=loadCuotasMora();
-    const idx=cuotasMora.findIndex(cm=>cm.clienteId===clienteId&&cm.pagoTs===ts);
-    if(idx>=0){
-      cuotasMora[idx].pagada=false;
-      cuotasMora[idx].pagoTs=null;
-      saveCuotasMora(cuotasMora);
-    }
-    actualizarBadgeMora();
-    renderBalances('mora');saveUltimaVistaMora();actualizarBadgeMora();
-    renderPanelMora();
-    if(document.getElementById('atab-lista')&&document.getElementById('atab-lista').style.display!=='none') renderAdminTable();
-    renderColab();
+    const st=_estadoMoraCargar();
+    const e=st.mora.find(p=>_mismaEntradaMora(p,ref));
+    const r=_revertirCobroMoraEnEstado(st,ref);
+    if(!r.ok){ alert('No se encontró ese cobro en la Caja de Mora (quizás ya se desmarcó).'); return; }
+    _estadoMoraGuardar(st);
+    addHist('mora','↩ Cobro de mora desmarcado — '+(e?e.mz+' Lote '+e.lote+' — '+(e.mesNombre||'')+' (cuota '+(e.numeroCuota||'?')+')':ref.id),ref.id);
+    _refrescarTrasDesmarcarMora();
+  });
+}
+// Botón "↩ Desmarcar todas" del lote: desmarca todas las cuotas de mora cobradas de ese lote (las que siguen en la Caja de Mora).
+function desmarcarTodasMoraCaja(btn){
+  const cid=btn.dataset.cid;
+  const rend=loadCajaMoraRendidos();
+  const cand=loadMora().filter(p=>p&&p.id===cid&&!p.esInteresMes&&!p.esRefi&&!_moraRendida(p,rend));
+  if(!cand.length){ alert('Este lote no tiene cuotas de mora cobradas para desmarcar.'); return; }
+  const cur=cand[0].moneda==='USD'?'USD ':'$';
+  const total=cand.reduce((s,p)=>s+(p.cuotaAgrimensor||p.cuota||0)+(p.interes||0),0);
+  const lista=cand.map(p=>'• '+(p.mesNombre||('Cuota '+(p.numeroCuota||'?')))+' — '+cur+fmtPeso((p.cuotaAgrimensor||p.cuota||0)+(p.interes||0)).replace('$','')).join('\n');
+  if(!confirm('↩ DESMARCAR TODAS LAS CUOTAS DE MORA COBRADAS\n\n'+formatLoteTag(cand[0].mz,cand[0].lote)+' — '+(cand[0].titular||'')+'\n\n'+lista+'\n\nTotal: '+cur+fmtPeso(total).replace('$','')+'\n\nLas '+cand.length+' cuotas salen de la Caja de Mora y vuelven a Mora como impagas.\n\n¿Confirmás?')) return;
+  confirmarConClave(()=>{
+    const st=_estadoMoraCargar();
+    let n=0;
+    cand.forEach(e=>{ if(_revertirCobroMoraEnEstado(st,_refDeEntradaMora(e)).ok) n++; });
+    if(!n){ alert('No se pudo desmarcar ninguna cuota (quizás ya se habían desmarcado).'); return; }
+    _estadoMoraGuardar(st);
+    addHist('mora','↩ Desmarcadas '+n+' cuota(s) de mora cobradas — '+cand[0].mz+' Lote '+cand[0].lote+' — '+(cand[0].titular||'')+' — '+cur+fmtPeso(total).replace('$',''),cid);
+    _refrescarTrasDesmarcarMora();
+    setTimeout(()=>mostrarToastCobro(n+' cuota'+(n>1?'s':'')+' de mora desmarcada'+(n>1?'s':'')),50);
   });
 }
 
@@ -5027,7 +5081,8 @@ function registrarCuotaHist(cl, cuota, monto, mes, ts, pagada){
   const ex=cl.hist.find(h=>(h.cuota===cuota)||(mes&&h.mes===mes));
   if(ex){
     ex.cuota=cuota; ex.mes=mes||ex.mes;
-    if(pagada){ ex.pagada=true; if(monto!=null) ex.monto=monto; ex.ts=ts||ex.ts; }
+    // v1.0672: guardar la fecha original (tsOrig) para poder devolverla si el cobro se desmarca
+    if(pagada){ ex.pagada=true; if(monto!=null) ex.monto=monto; if(ex.tsOrig===undefined&&ex.ts!==undefined) ex.tsOrig=ex.ts; ex.ts=ts||ex.ts; }
   } else {
     cl.hist.push({cuota, monto, mes, ts, pagada:!!pagada});
   }
@@ -7154,7 +7209,7 @@ function renderBalances(seccion){
         const detalle=g.items.slice().reverse().map(p=>{
           const extraBtn=p.interes&&!p.interesEnExtras?'<button data-id="'+p.id+'" data-ts="'+p.ts+'" onclick="pasarInteresMora(this.dataset.id,this.dataset.ts)" style="background:none;border:1px solid #c7d2fe;color:#4f46e5;border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">→ Extras</button>':'';
           const editBtn='<button data-cid="'+p.id+'" data-ts="'+p.ts+'" data-mes="'+(p.mesNombre||'').replace(/"/g,'&quot;')+'" onclick="editarInteresMora(this.dataset.cid,this.dataset.ts,this.dataset.mes)" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">✏️ Interés</button>';
-          const desmarcaBtn='<button data-cid="'+p.id+'" data-ts="'+p.ts+'" onclick="desmararPagoMoraCaja(this.dataset.cid,this.dataset.ts)" style="background:none;border:1px solid #fca5a5;color:var(--red);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">↩ Desmarcar</button>';
+          const desmarcaBtn='<button data-cid="'+p.id+'" data-ts="'+p.ts+'" data-mes="'+(p.mesNombre||'').replace(/"/g,'&quot;')+'" data-num="'+(p.numeroCuota||0)+'" data-tipo="'+(p.esRefi?'refi':(p.esInteresMes?'int':''))+'" onclick="desmararPagoMoraCaja(this)" style="background:none;border:1px solid #fca5a5;color:var(--red);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">↩ Desmarcar</button>';
           return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 6px 14px;border-bottom:1px dashed var(--border);font-size:12px">'
             +'<div><span style="font-weight:600">'+(p.esRefi?'💠 Refinanciación cuota '+p.refiNumero+' de '+p.refiTotal:(p.esInteresMes?'🔴 Interés del mes (cuota '+(p.numeroCuota||'')+')':(p.mesNombre||('Cuota'+(p.numeroCuota?' '+p.numeroCuota:'')))))+'</span> <span style="font-size:10px;color:var(--text2)">'+p.fecha+'</span></div>'
             +'<div style="display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end">'
@@ -7174,6 +7229,7 @@ function renderBalances(seccion){
           +'<div style="color:var(--red);font-size:11px">Interés: <b>'+cur+fmtPeso(g.interes)+'</b></div>'
           +'<div style="font-weight:700">'+cur+fmtPeso(g.cuota+g.interes)+'</div>'
           +(g.items.some(p=>p.interes&&!p.interesEnExtras)?'<button data-id="'+g.id+'" onclick="event.stopPropagation();pasarInteresesGrupo(this.dataset.id)" style="background:none;border:1px solid #c7d2fe;color:#4f46e5;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-top:3px">→ Pasar intereses a Extras</button>':'')
+          +(g.items.filter(p=>!p.esRefi).length>1?'<button data-cid="'+g.id+'" onclick="event.stopPropagation();desmarcarTodasMoraCaja(this)" title="Desmarca de una vez todas las cuotas de mora cobradas de este lote" style="display:block;margin-left:auto;background:none;border:1px solid #fca5a5;color:var(--red);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-top:4px">↩ Desmarcar todas ('+g.items.filter(p=>!p.esRefi).length+')</button>':'')
           +'<label onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:5px;justify-content:flex-end;margin-top:5px;font-size:10px;color:var(--text2);cursor:pointer"><input type="checkbox" data-mid="'+g.id+'" onchange="toggleCajaMoraSel(\''+g.id+'\')" style="width:15px;height:15px;cursor:pointer" '+(window._cajaMoraSel&&window._cajaMoraSel[g.id]?'checked':'')+'> rendir</label>'
           +'</div></div>'
           +'<div style="display:'+(abierto?'block':'none')+'">'+detalle+'</div>'
@@ -7204,7 +7260,7 @@ function renderBalances(seccion){
             +'<span>'+formatLoteTag(p.mz,p.lote)+' — '+(p.titular||'')+' <span style="font-size:10px;color:var(--text2)">cuota '+(p.numeroCuota||'')+' · '+p.fecha+'</span></span>'
             +'<span style="display:flex;align-items:center;gap:6px"><b style="color:var(--red)">'+(p.moneda==='USD'?'USD ':'')+fmtPeso(p.interes||0)+'</b>'
             +'<button data-id="'+p.id+'" data-ts="'+p.ts+'" onclick="pasarInteresMora(this.dataset.id,this.dataset.ts)" style="background:none;border:1px solid #c7d2fe;color:#4f46e5;border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer">→ Extras</button>'
-            +'<button data-cid="'+p.id+'" data-ts="'+p.ts+'" onclick="desmararPagoMoraCaja(this.dataset.cid,this.dataset.ts)" style="background:none;border:1px solid #fca5a5;color:var(--red);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer">↩</button>'
+            +'<button data-cid="'+p.id+'" data-ts="'+p.ts+'" data-mes="'+(p.mesNombre||'').replace(/"/g,'&quot;')+'" data-num="'+(p.numeroCuota||0)+'" data-tipo="int" onclick="desmararPagoMoraCaja(this)" style="background:none;border:1px solid #fca5a5;color:var(--red);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer">↩</button>'
             +'</span></div>';
         });
         moraHtml+='</div>';
@@ -11142,28 +11198,11 @@ function _deshacerUltimoCobroMora(clienteId, esColab){
   const mora=loadMora();
   const pagosCliente=mora.filter(p=>p.id===clienteId).sort((a,b)=>b.ts.localeCompare(a.ts));
   if(!pagosCliente.length){alert('No hay cobros mora para deshacer');return;}
-  const ultimo=pagosCliente[0];
-
-  // Restaurar cuota mora como impaga
-  const cuotasMora=loadCuotasMora();
-  const idx=cuotasMora.findIndex(cm=>cm.clienteId===clienteId&&cm.pagoTs===ultimo.ts);
-  if(idx>=0){
-    cuotasMora[idx].pagada=false;
-    cuotasMora[idx].pagoTs=null;
-    saveCuotasMora(cuotasMora);
-  }
-
-  // Sacar de caja mora
-  saveMora(mora.filter(p=>!(p.id===clienteId&&p.ts===ultimo.ts)));
-
-  // Revertir ca si corresponde
-  const data=loadData();
-  const c=data.find(x=>x.id===clienteId);
-  if(c){
-    if(c.ca>1) c.ca=c.ca-1;
-    if(c.hist) c.hist=c.hist.filter(h=>h.ts!==ultimo.ts);
-    saveData(data);
-  }
+  // v1.0672: deshace UNA sola cuota (la última cobrada), no todas las que comparten la misma hora
+  const ultimo=pagosCliente.filter(p=>p.ts===pagosCliente[0].ts).slice(-1)[0];
+  const st=_estadoMoraCargar();
+  if(!_revertirCobroMoraEnEstado(st,_refDeEntradaMora(ultimo)).ok){alert('No se encontró ese cobro');return;}
+  _estadoMoraGuardar(st);
 
   actualizarBadgeMora();
   if(esColab){
