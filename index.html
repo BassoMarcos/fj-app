@@ -911,7 +911,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0672';
+const APP_VERSION='v1.0673';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -12681,6 +12681,10 @@ function calcularFuturoRealEnIframe(){
         var dataAntes = loadData();
         var resumenAntes = calcularResumenCompleto(dataAntes);
 
+        // v1.0673: anotar qué cuotas ya estaban en mora ANTES del cierre (para saber cuáles son nuevas)
+        var moraAntesSet = {}; var yaEnMora = {};
+        loadCuotasMora().forEach(function(m){ if(!m.pagada){ moraAntesSet[m.clienteId+'|'+m.anio+'|'+m.mes]=true; yaEnMora[m.clienteId]=(yaEnMora[m.clienteId]||0)+1; } });
+
         // CORRER EL CIERRE REAL (en este entorno aislado escribe solo en memoria)
         ejecutarCierreFinal();
 
@@ -12702,8 +12706,16 @@ function calcularFuturoRealEnIframe(){
             estAntes:a.est, estDespues:c.est, esPrestamo: !!c.autopago });
         });
 
+        // v1.0673: cuotas que el cierre real mandó a mora (nuevas), y cuántas cuotas ya debía cada lote
+        var moraNuevas = [];
+        loadCuotasMora().forEach(function(m){
+          if(!m.pagada && !moraAntesSet[m.clienteId+'|'+m.anio+'|'+m.mes]){
+            moraNuevas.push({ id:m.clienteId, mz:m.mz, lote:m.lote, titular:m.titular, moneda:(m.moneda||'ARS'), monto:m.monto, cuota:m.numeroCuota, previas:(yaEnMora[m.clienteId]||0) });
+          }
+        });
+
         window.parent.postMessage({ tipo:'futuroReal', ok:true,
-          resumenAntes:resumenAntes, resumenDespues:resumenDespues, avance:avance }, '*');
+          resumenAntes:resumenAntes, resumenDespues:resumenDespues, avance:avance, moraNuevas:moraNuevas }, '*');
       }catch(err){
         window.parent.postMessage({ tipo:'futuroReal', ok:false, error:(err&&err.message?err.message:String(err)) }, '*');
       }
@@ -12764,7 +12776,7 @@ async function mostrarFuturoReal(){
     const r=await calcularFuturoRealEnIframe();
     const fut=r.resumenDespues;
     if(status) status.textContent='';
-    if(cont) cont.innerHTML=_renderComparativo(hoy, fut);
+    if(cont) cont.innerHTML=_renderComparativo(hoy, fut, Object.assign(_extrasSimulador(),{moraNuevas:r.moraNuevas||[]}));
     if(r.avance) _actualizarListaAvanceReal(r.avance);
   }catch(err){
     if(status) status.textContent='';
@@ -12815,12 +12827,61 @@ function _actualizarListaAvanceReal(avance){
   cont.innerHTML=html;
 }
 
-function _renderComparativo(hoy, fut){
+// v1.0673: datos reales de hoy para explicar el simulador en criollo (solo lectura)
+function _extrasSimulador(){
+  const data=loadData(), bal=loadBalances();
+  const cobr=data.filter(c=>c.est==='activo'&&!esAgrimensor(c.id)&&!c.autopago&&!c.empresaPaga&&!esPrimeraCuotaFutura(c)&&c.moneda!=='USD');
+  const mCaja={};
+  (bal.abierto||[]).forEach(p=>{ mCaja[p.id]=(mCaja[p.id]||0)+(p.monto||0); });
+  (bal.cierres||[]).forEach(ci=>(ci.pagos||[]).forEach(p=>{ mCaja[p.id]=(mCaja[p.id]||0)+(p.monto||0); }));
+  // Lotes que terminaron de pagar en este ciclo: Estadísticas los suma en "Total a cobrar", el Pre cierre no
+  const finalizadosCiclo=data.filter(c=>c.est==='finalizado'&&!c.autopago&&!esAgrimensor(c.id)&&c.moneda!=='USD'&&mCaja[c.id])
+    .map(c=>({mz:c.mz,lote:c.lote,titular:c.titular,monto:mCaja[c.id]}));
+  return {pagaron:cobr.filter(c=>c.pago).length, total:cobr.length, finalizadosCiclo};
+}
+// Bloque "qué va a pasar, en criollo" del simulador
+function _bloqueCriolloSimulador(extra){
+  const fmt=n=>'$'+(Math.round(n)||0).toLocaleString('es-AR');
+  const nu=extra.moraNuevas||[];
+  const lotes=new Set(nu.map(m=>m.id));
+  const lotesUSD=new Set(nu.filter(m=>m.moneda==='USD').map(m=>m.id));
+  const nuevos=new Set(nu.filter(m=>!m.previas).map(m=>m.id));
+  const sumARS=nu.filter(m=>m.moneda!=='USD').reduce((s,m)=>s+(m.monto||0),0);
+  const sumUSD=nu.filter(m=>m.moneda==='USD').reduce((s,m)=>s+(m.monto||0),0);
+  const pct=extra.total?Math.round(extra.pagaron/extra.total*100):0;
+  let h='<div style="background:var(--surface);border:1.5px solid var(--border2);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12.5px;line-height:1.6">';
+  h+='<div style="font-size:13px;font-weight:800;margin-bottom:6px">🧭 Qué va a pasar al cerrar, en criollo</div>';
+  h+='<div>• Pagaron <b>'+extra.pagaron+' de '+extra.total+'</b> lotes en pesos ('+pct+'%). Faltan <b>'+(extra.total-extra.pagaron)+'</b>.</div>';
+  h+='<div>• Pasan a mora <b>'+lotes.size+' lotes</b> ('+(lotes.size-lotesUSD.size)+' en pesos'+(lotesUSD.size?' y '+lotesUSD.size+' en dólares':'')+'): <b>'+nuevos.size+' entran nuevos</b> a mora y <b>'+(lotes.size-nuevos.size)+' ya estaban</b> en mora y suman una cuota más.</div>';
+  h+='<div>• La mora que se suma es <b>'+fmt(sumARS)+'</b> en pesos'+(sumUSD?' y <b>USD '+Math.round(sumUSD).toLocaleString('es-AR')+'</b> en dólares (aparte, no se mezclan)':'')+'.</div>';
+  const fin=extra.finalizadosCiclo||[];
+  if(fin.length){
+    h+='<div>• <b>'+fin.length+' lote'+(fin.length>1?'s':'')+' terminaron de pagar este mes</b> ('+fmt(fin.reduce((s,f)=>s+f.monto,0))+': '+fin.map(f=>formatLoteTag(f.mz,f.lote)).join(', ')+'). Estadísticas los suma en "Total a cobrar" y el Pre cierre no; por eso esos dos totales pueden diferir en ese monto.</div>';
+  }
+  if(nu.length){
+    const et=e=>({'Etapa 1':1,'Etapa 2':2,'Etapa 3':3,'Etapa 4':4}[e]||9);
+    const orden=nu.slice().sort((a,b)=>et(getEtapa(a.mz))-et(getEtapa(b.mz))||_cmpLote(a,b));
+    h+='<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:700;color:var(--acc2)">Ver los '+lotes.size+' lotes que pasan a mora ▾</summary><div style="margin-top:6px;max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">';
+    let etAct='';
+    orden.forEach(m=>{
+      const e=getEtapa(m.mz)||'Otros';
+      if(e!==etAct){ etAct=e; h+='<div style="background:var(--hov);padding:4px 10px;font-size:11px;font-weight:800;color:var(--text2)">'+e+'</div>'; }
+      const cur=m.moneda==='USD'?'USD ':'$';
+      const tag=m.previas?'<span style="color:var(--amber);font-size:10px;font-weight:700">ya debía '+m.previas+' cuota'+(m.previas>1?'s':'')+'</span>':'<span style="color:#ef4444;font-size:10px;font-weight:800">NUEVO en mora</span>';
+      h+='<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 10px;border-top:1px solid var(--border);font-size:12px"><span><b>'+formatLoteTag(m.mz,m.lote)+'</b> <span style="color:var(--text2)">'+String(m.titular||'').slice(0,28)+'</span></span><span style="white-space:nowrap">'+tag+' · '+cur+(Math.round(m.monto)||0).toLocaleString('es-AR')+'</span></div>';
+    });
+    h+='</div></details>';
+  }
+  h+='</div>';
+  return h;
+}
+function _renderComparativo(hoy, fut, extra){
   const fmt=n=>'$'+(Math.round(n)||0).toLocaleString('es-AR');
   const dif=(a,b)=>{ const d=b-a; if(d===0) return '<span style="color:var(--text3)">=</span>'; return '<span style="color:'+(d>0?'#10b981':'#ef4444')+'">'+(d>0?'+':'')+fmt(d)+'</span>'; };
   const difN=(a,b)=>{ const d=b-a; if(d===0) return '<span style="color:var(--text3)">=</span>'; return '<span style="color:'+(d>0?'#10b981':'#ef4444')+'">'+(d>0?'+':'')+d+'</span>'; };
   let h='<div style="margin-top:12px;border-top:1px dashed var(--border);padding-top:12px">';
   h+='<div style="font-size:12px;color:#10b981;font-weight:700;margin-bottom:10px">✓ Calculado por el cierre real en entorno aislado. Tus datos no se tocaron.</div>';
+  if(extra) h+=_bloqueCriolloSimulador(extra);
 
   // Encabezado de columnas
   h+='<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 0.7fr;gap:6px;font-size:11px;font-weight:800;color:var(--text2);padding-bottom:6px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg)">'
@@ -12874,7 +12935,8 @@ function _renderComparativo(hoy, fut){
 
   // ── MORA ──
   h+='<div style="font-size:12px;font-weight:800;color:var(--text);margin:12px 0 4px">⚠️ Mora acumulada</div>';
-  h+=_fila('Total mora', fmt(hoy.mora.total), fmt(fut.mora.total), dif(hoy.mora.total,fut.mora.total));
+  h+=_fila('Total mora (pesos)', fmt(hoy.mora.total), fmt(fut.mora.total), dif(hoy.mora.total,fut.mora.total));
+  if((hoy.mora.usd||0)||(fut.mora.usd||0)) h+=_fila('Total mora (USD)', 'USD '+fmt(hoy.mora.usd||0).replace('$',''), 'USD '+fmt(fut.mora.usd||0).replace('$',''), dif(hoy.mora.usd||0,fut.mora.usd||0).replace('$',''));
   h+=_fila('Lotes con mora', hoy.mora.lotes, fut.mora.lotes, difN(hoy.mora.lotes,fut.mora.lotes));
 
   // ── FINALIZADOS (los nuevos que aparecen después del cierre) ──
@@ -12946,10 +13008,11 @@ function calcularResumenCompleto(data){
   const finalizados=_fin.map(c=>({mz:c.mz, lote:c.lote, titular:c.titular, ct:c.ct}));
 
   // ── Mora acumulada ──
-  let moraTot=0, moraLotes=0;
+  let moraTot=0, moraUSD=0, moraLotes=0;
   try{
     const moraImp=loadCuotasMora().filter(m=>!m.pagada);
-    moraTot=moraImp.reduce((s,m)=>s+(m.monto||0),0);
+    // v1.0673: los USD se muestran aparte (antes se sumaban como si fueran pesos)
+    moraImp.forEach(m=>{ if(m.moneda==='USD') moraUSD+=(m.monto||0); else moraTot+=(m.monto||0); });
     moraLotes=new Set(moraImp.map(m=>m.clienteId)).size;
   }catch(e){}
 
@@ -12959,7 +13022,7 @@ function calcularResumenCompleto(data){
     tris,
     composicion:{ total:_all.length, activos:_act.length, finalizados:_fin.length, empresa:_empresa.length, agrimensores:_agr.length, prestamos:_pre.length, futuros:_fut.length, usd:_usd },
     finalizados,
-    mora:{ total:moraTot, lotes:moraLotes }
+    mora:{ total:moraTot, usd:moraUSD, lotes:moraLotes }
   };
 }
 

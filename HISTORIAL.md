@@ -115,6 +115,8 @@
 - Incidente: al desmarcar UNA cuota de mora del lote ETAPA 2-57 (Garnica), desaparecieron de la Caja de Mora y del historial de cuotas TODAS las cuotas cobradas junto con ella, y la cuota actual bajó de 27 a 26. Causa: el botón identificaba el cobro solo por la hora (`ts`), que es la misma para las cuotas cobradas juntas.
 - Reparación del lote desde el respaldo `backups/dia4` (solo ese lote; con copia previa `backups/antes_de_reparar_garnica_20260921`): 6 cuotas de mora impagas, historial completo (15 cuotas), cuota actual 27, septiembre sin pagar. Verificado que no cambió nada más.
 - Arreglo (v1.0672): desmarcar afecta solo la cuota elegida; nuevo botón "↩ Desmarcar todas (N)" por lote en Caja de Mora. Pendiente: revisar el lote M2-6A (cuotas 29 y 30 sin registro en Caja de Mora ni historial) y el desmarcar-pago de la ficha, que saca los pagos del lote de todos los cierres de caja históricos.
+- Revisión posterior: M2-6A sin daño reciente (solo faltan 2 renglones en el historial) y el desmarcar-pago de la ficha hoy no afecta (3 cierres guardados, ningún lote en más de uno). Se descartó el rename "Vista Cliente".
+- v1.0673 (preparada): el simulador de cierre explica en criollo cuántos lotes pagaron, cuántos pasan a mora (nuevos vs ya en mora, lista por etapa), separa mora en pesos y USD y aclara por qué Estadísticas y Pre cierre pueden diferir (lotes finalizados en el ciclo). Regla de publicación fyj: subir la versión en `index.html`, `version.json` y en Firebase (`appVersion`).
 
 ---
 
