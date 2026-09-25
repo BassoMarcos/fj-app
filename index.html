@@ -915,7 +915,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0675';
+const APP_VERSION='v1.0676';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -16471,28 +16471,12 @@ function _conectandoReintentar(){
 // Baja TODO de la nube, reemplaza lo local y deja los listeners. Si algo falla, tira error y se reintenta.
 async function _cargaInicialNube(){
   let histParaSubir=null;
-  const fbData = await _getNube('data');
-  const fbMora = await _getNube('cuotasMora');
-  const fbBal = await _getNube('balances');
-  const fbIcc = await _getNube('icc');
-  const fbAdel = await _getNube('adelantos');
-  const fbAdelBk = await _getNube('adelantosBackup');
-  const fbPago = await _getNube('pagoStore');
-  const fbMoraReg = await _getNube('mora');
-  const fbExtras = await _getNube('extras');
-  const fbMesActual = await _getNube('mesActual');
-  const fbCierreFinal = await _getNube('cierreFinal');
-  const fbHist = await _getNube('hist');
-  const fbPendAprob = await _getNube('pendientesAprobacion');
-  const fbCierreEst = await _getNube('cierreEstados');
-  const fbDistPct = await _getNube('distPct');
-  const fbMoraDesact = await _getNube('moraDesactivada');
-  const fbNotasMora = await _getNube('notasMora');
-  const fbAgrLotes = await _getNube('agrimensorLotes');
-  const fbLotesLibres = await _getNube('lotesLibresE123');
-  const fbLotesCerts = await _getNube('lotesCerts');
-  const fbIccMensual = await _getNube('iccMensual');
-  const fbHitos = await _getNube('hitosRespaldo');
+  // v1.0676: las 22 lecturas se piden TODAS A LA VEZ (antes de a una: ~6 s; ahora ~1 s).
+  const [
+    fbData, fbMora, fbBal, fbIcc, fbAdel, fbAdelBk, fbPago, fbMoraReg, fbExtras, fbMesActual, fbCierreFinal, fbHist, fbPendAprob, fbCierreEst, fbDistPct, fbMoraDesact, fbNotasMora, fbAgrLotes, fbLotesLibres, fbLotesCerts, fbIccMensual, fbHitos,
+  ] = await Promise.all([
+    _getNube('data'), _getNube('cuotasMora'), _getNube('balances'), _getNube('icc'), _getNube('adelantos'), _getNube('adelantosBackup'), _getNube('pagoStore'), _getNube('mora'), _getNube('extras'), _getNube('mesActual'), _getNube('cierreFinal'), _getNube('hist'), _getNube('pendientesAprobacion'), _getNube('cierreEstados'), _getNube('distPct'), _getNube('moraDesactivada'), _getNube('notasMora'), _getNube('agrimensorLotes'), _getNube('lotesLibresE123'), _getNube('lotesCerts'), _getNube('iccMensual'), _getNube('hitosRespaldo'),
+  ]);
   if(fbData) _lsSet(dKey('data'), JSON.stringify(fbData));
   if(fbMora) localStorage.setItem('fj_cuotas_mora', JSON.stringify(fbMora));
   if(fbBal) _lsSet(dKey('balances'), JSON.stringify(fbBal));
