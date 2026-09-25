@@ -117,6 +117,7 @@
 - Arreglo (v1.0672): desmarcar afecta solo la cuota elegida; nuevo botón "↩ Desmarcar todas (N)" por lote en Caja de Mora. Pendiente: revisar el lote M2-6A (cuotas 29 y 30 sin registro en Caja de Mora ni historial) y el desmarcar-pago de la ficha, que saca los pagos del lote de todos los cierres de caja históricos.
 - Revisión posterior: M2-6A sin daño reciente (solo faltan 2 renglones en el historial) y el desmarcar-pago de la ficha hoy no afecta (3 cierres guardados, ningún lote en más de uno). Se descartó el rename "Vista Cliente".
 - v1.0673 (preparada): el simulador de cierre explica en criollo cuántos lotes pagaron, cuántos pasan a mora (nuevos vs ya en mora, lista por etapa), separa mora en pesos y USD y aclara por qué Estadísticas y Pre cierre pueden diferir (lotes finalizados en el ciclo). Regla de publicación fyj: subir la versión en `index.html`, `version.json` y en Firebase (`appVersion`).
+- v1.0674 (25/9/2026): el cierre de sesión por 60 min de inactividad ya no muestra cartel; se cierra solo.
 
 ---
 

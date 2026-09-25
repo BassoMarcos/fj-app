@@ -911,7 +911,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0673';
+const APP_VERSION='v1.0674';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -1095,7 +1095,7 @@ async function _dispLatido(){
   // Cierre por inactividad
   if(rol!=='sin sesión' && _dispMinInactivo()>=_DISP_INACTIVIDAD_MIN && !_dispCerrando){
     _dispCerrando=true;
-    alert('⏰ Sesión cerrada por inactividad ('+_DISP_INACTIVIDAD_MIN+' minutos sin actividad).');
+    // v1.0674: se cierra sola, sin cartel (pedido de Marcos).
     try{ doLogout(); }catch(e){}
     _dispSesionTs=new Date().toISOString();
     _dispUltimaActividad=Date.now();
