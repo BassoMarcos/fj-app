@@ -299,6 +299,9 @@ tr:hover td{background:var(--bg)}
     window._datosFrescos = false;
     setTimeout(()=>{ if(!window._datosFrescos){ window._datosFrescos = true;
       console.warn('Sync: no llegó la lista de la nube en 15s — se habilita la subida igual.'); } }, 15000);
+    // v1.0675: NADA se sube a la nube hasta terminar la bajada inicial (init → _cargaInicialNube).
+    // Si un dispositivo abre con internet lento, no puede pisar la nube con sus datos viejos.
+    window._cargaInicialOk = false;
     window._syncState = 'ok';      // 'ok' | 'pending' | 'error'
     window._syncLastOk = null;
 
@@ -332,7 +335,7 @@ tr:hover td{background:var(--bg)}
       return o;
     };
     window._syncFlush = async () => {
-      if (!window._firebaseReady) return;
+      if (!window._firebaseReady || !window._cargaInicialOk) return;
       const keys = Object.keys(window._syncQueue);
       for (const k of keys) {
         // v1.0663: la lista de clientes espera a estar sincronizada antes de subirse
@@ -359,7 +362,8 @@ tr:hover td{background:var(--bg)}
     setInterval(() => { if (Object.keys(window._syncQueue).length) window._syncFlush(); }, 8000);
     window.addEventListener('online', () => window._syncFlush());
     window.addEventListener('beforeunload', (e) => {
-      if (Object.keys(window._syncQueue).length) {
+      // (antes de la bajada inicial lo encolado es viejo y se descarta: no hace falta avisar)
+      if (window._cargaInicialOk && Object.keys(window._syncQueue).length) {
         e.preventDefault();
         e.returnValue = 'Hay cambios sin guardar en la nube. Si cerrás ahora se pueden perder.';
         return e.returnValue;
@@ -911,7 +915,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0674';
+const APP_VERSION='v1.0675';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -16412,176 +16416,241 @@ function guardarRegistroEnArchivo(){
 
 
 // ===================== INIT =====================
-async function init(){
-  // Esperar a que Firebase esté listo y escuchar cambios en tiempo real
-  await new Promise(resolve => {
-    const check = setInterval(() => {
-      if(window._firebaseReady) { clearInterval(check); resolve(); }
-    }, 100);
-    setTimeout(() => { clearInterval(check); resolve(); }, 3000);
+// v1.0675: la app NO se usa hasta bajar todo de la nube. Antes, si Firebase tardaba más de 3 s,
+// se salteaba la bajada y el dispositivo trabajaba con sus datos viejos: un cobro en ese estado
+// podía pisar la nube (lo nuevo de otros dispositivos). Ahora se muestra "Conectando…" y, si no
+// conecta, no deja operar. Las fotos mensuales y el simulador (_esFotoOffline) siguen igual.
+const _CONECTAR_ESPERA_MS = 20000;   // cuánto esperar a que cargue Firebase en cada intento
+const _NUBE_GET_TIMEOUT_MS = 15000;  // tope para cada lectura de la nube
+function _esperarFirebase(ms){
+  return new Promise(resolve => {
+    if(window._firebaseReady){ resolve(); return; }
+    const check = setInterval(() => { if(window._firebaseReady){ clearInterval(check); resolve(); } }, 100);
+    setTimeout(() => { clearInterval(check); resolve(); }, ms);
   });
+}
+function _getNube(key){
+  return Promise.race([
+    window._fbGet(key),
+    new Promise((_, rej) => setTimeout(() => rej(new Error('La nube no respondió ('+key+')')), _NUBE_GET_TIMEOUT_MS)),
+  ]);
+}
+let _conectandoTimer=null, _conectandoDespertar=null;
+function _conectandoMostrar(estado){
+  const pintar=()=>{
+    let el=document.getElementById('conectando-nube');
+    if(!el){ el=document.createElement('div'); el.id='conectando-nube'; document.body.appendChild(el); }
+    el.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(10,14,20,.72);display:flex;align-items:center;justify-content:center;padding:20px';
+    const error=estado==='error';
+    el.innerHTML='<style>@keyframes conectandoGiro{to{transform:rotate(360deg)}}</style>'
+      +'<div style="background:var(--surface,#fff);color:var(--text,#111);border:1px solid var(--border,#ddd);border-radius:16px;padding:26px 28px;max-width:380px;width:100%;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.35)">'
+      +(error
+        ? '<div style="font-size:34px;margin-bottom:6px">📡</div>'
+          +'<div style="font-size:17px;font-weight:800;margin-bottom:6px">Sin conexión con la nube</div>'
+          +'<div style="font-size:13px;color:var(--text2,#555);line-height:1.5;margin-bottom:16px">Para no trabajar con datos viejos, la app espera a conectarse. Revisá internet.</div>'
+          +'<button onclick="_conectandoReintentar()" style="background:var(--acc,#16a34a);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer">Reintentar</button>'
+          +'<div style="font-size:11px;color:var(--text3,#888);margin-top:10px">También se reintenta solo cada pocos segundos.</div>'
+        : '<div style="width:34px;height:34px;border:3px solid var(--border,#ddd);border-top-color:var(--acc,#16a34a);border-radius:50%;margin:0 auto 12px;animation:conectandoGiro .9s linear infinite"></div>'
+          +'<div style="font-size:16px;font-weight:800;margin-bottom:4px">Conectando con la nube…</div>'
+          +'<div style="font-size:13px;color:var(--text2,#555)">Bajando los datos actualizados.</div>')
+      +'</div>';
+  };
+  clearTimeout(_conectandoTimer); _conectandoTimer=null;
+  if(estado==='error' || document.getElementById('conectando-nube')) pintar();
+  else _conectandoTimer=setTimeout(pintar, 1200);   // si conecta rápido, ni se llega a ver
+}
+function _conectandoOcultar(){
+  clearTimeout(_conectandoTimer); _conectandoTimer=null;
+  const el=document.getElementById('conectando-nube'); if(el) el.remove();
+}
+function _conectandoReintentar(){
+  // Si Firebase ni siquiera cargó (se abrió sin internet), hay que recargar la página.
+  if(!window._firebaseReady){ location.reload(); return; }
+  if(_conectandoDespertar) _conectandoDespertar();
+}
+// Baja TODO de la nube, reemplaza lo local y deja los listeners. Si algo falla, tira error y se reintenta.
+async function _cargaInicialNube(){
+  let histParaSubir=null;
+  const fbData = await _getNube('data');
+  const fbMora = await _getNube('cuotasMora');
+  const fbBal = await _getNube('balances');
+  const fbIcc = await _getNube('icc');
+  const fbAdel = await _getNube('adelantos');
+  const fbAdelBk = await _getNube('adelantosBackup');
+  const fbPago = await _getNube('pagoStore');
+  const fbMoraReg = await _getNube('mora');
+  const fbExtras = await _getNube('extras');
+  const fbMesActual = await _getNube('mesActual');
+  const fbCierreFinal = await _getNube('cierreFinal');
+  const fbHist = await _getNube('hist');
+  const fbPendAprob = await _getNube('pendientesAprobacion');
+  const fbCierreEst = await _getNube('cierreEstados');
+  const fbDistPct = await _getNube('distPct');
+  const fbMoraDesact = await _getNube('moraDesactivada');
+  const fbNotasMora = await _getNube('notasMora');
+  const fbAgrLotes = await _getNube('agrimensorLotes');
+  const fbLotesLibres = await _getNube('lotesLibresE123');
+  const fbLotesCerts = await _getNube('lotesCerts');
+  const fbIccMensual = await _getNube('iccMensual');
+  const fbHitos = await _getNube('hitosRespaldo');
+  if(fbData) _lsSet(dKey('data'), JSON.stringify(fbData));
+  if(fbMora) localStorage.setItem('fj_cuotas_mora', JSON.stringify(fbMora));
+  if(fbBal) _lsSet(dKey('balances'), JSON.stringify(fbBal));
+  if(fbIcc) _lsSet(dKey('icc'), JSON.stringify(fbIcc));
+  if(fbAdel) _lsSet(dKey('adelantos'), JSON.stringify(fbAdel));
+  if(fbAdelBk!==undefined) _lsSet(dKey('adelantosBackup'), JSON.stringify(fbAdelBk));
+  if(fbPago) _lsSet(dKey('pagos'), JSON.stringify(fbPago));
+  if(fbMoraReg) localStorage.setItem('fj_mora', JSON.stringify(fbMoraReg));
+  if(fbExtras) localStorage.setItem('fj_extras', JSON.stringify(fbExtras));
+  if(fbMesActual) localStorage.setItem('fj_mes_actual', JSON.stringify(fbMesActual));
+  if(fbCierreFinal) localStorage.setItem('fj_cierre_final', JSON.stringify(fbCierreFinal));
+  // hist: quedarse con el más largo (nunca perder registros)
+  if(fbHist){
+    let hLocal=[]; try{hLocal=JSON.parse(_lsGet(dKey('hist'))||'[]');}catch(e){}
+    if(fbHist.length>=hLocal.length) _lsSet(dKey('hist'), JSON.stringify(fbHist));
+    else histParaSubir = hLocal;   // se sube recién al terminar la bajada (ver abajo)
+  }
+  if(fbPendAprob) localStorage.setItem('fj_pendientes_aprobacion', JSON.stringify(fbPendAprob));
+  if(fbCierreEst) localStorage.setItem('fj_cierre_estados', JSON.stringify(fbCierreEst));
+  if(fbDistPct) localStorage.setItem('fj_dist_pct', fbDistPct);
+  if(fbMoraDesact!==null&&fbMoraDesact!==undefined) localStorage.setItem('fj_mora_desactivada', String(fbMoraDesact));
+  if(fbNotasMora) localStorage.setItem('fj_notas_mora', JSON.stringify(fbNotasMora));
+  if(fbAgrLotes) _lsSet(dKey('agrimensorLotes'), JSON.stringify(fbAgrLotes));
+  if(fbLotesLibres) _lsSet(dKey('lotesLibresE123'), JSON.stringify(fbLotesLibres));
+  if(fbLotesCerts) _lsSet(dKey('lotesCerts'), JSON.stringify(fbLotesCerts));
+  if(fbIccMensual) _lsSet(dKey('iccMensual'), JSON.stringify(fbIccMensual));
+  if(fbHitos) localStorage.setItem('fj_hitos_respaldo', JSON.stringify(fbHitos));
+  console.log('Firebase data loaded');
+  // Escuchar cambios en tiempo real
+  let _fbInitDone = false;
+  setTimeout(() => { _fbInitDone = true; }, 3000); // No re-render durante carga inicial
 
-  if(window._firebaseReady){
-    // Cargar datos iniciales desde Firebase
+  function _fbRerender(tab){
+    if(!_fbInitDone) return;
     try{
-      const fbData = await window._fbGet('data');
-      const fbMora = await window._fbGet('cuotasMora');
-      const fbBal = await window._fbGet('balances');
-      const fbIcc = await window._fbGet('icc');
-      const fbAdel = await window._fbGet('adelantos');
-      const fbAdelBk = await window._fbGet('adelantosBackup');
-      const fbPago = await window._fbGet('pagoStore');
-      const fbMoraReg = await window._fbGet('mora');
-      const fbExtras = await window._fbGet('extras');
-      const fbMesActual = await window._fbGet('mesActual');
-      const fbCierreFinal = await window._fbGet('cierreFinal');
-      const fbHist = await window._fbGet('hist');
-      const fbPendAprob = await window._fbGet('pendientesAprobacion');
-      const fbCierreEst = await window._fbGet('cierreEstados');
-      const fbDistPct = await window._fbGet('distPct');
-      const fbMoraDesact = await window._fbGet('moraDesactivada');
-      const fbNotasMora = await window._fbGet('notasMora');
-      const fbAgrLotes = await window._fbGet('agrimensorLotes');
-      const fbLotesLibres = await window._fbGet('lotesLibresE123');
-      const fbLotesCerts = await window._fbGet('lotesCerts');
-      const fbIccMensual = await window._fbGet('iccMensual');
-      const fbHitos = await window._fbGet('hitosRespaldo');
-      if(fbData) _lsSet(dKey('data'), JSON.stringify(fbData));
-      if(fbMora) localStorage.setItem('fj_cuotas_mora', JSON.stringify(fbMora));
-      if(fbBal) _lsSet(dKey('balances'), JSON.stringify(fbBal));
-      if(fbIcc) _lsSet(dKey('icc'), JSON.stringify(fbIcc));
-      if(fbAdel) _lsSet(dKey('adelantos'), JSON.stringify(fbAdel));
-      if(fbAdelBk!==undefined) _lsSet(dKey('adelantosBackup'), JSON.stringify(fbAdelBk));
-      if(fbPago) _lsSet(dKey('pagos'), JSON.stringify(fbPago));
-      if(fbMoraReg) localStorage.setItem('fj_mora', JSON.stringify(fbMoraReg));
-      if(fbExtras) localStorage.setItem('fj_extras', JSON.stringify(fbExtras));
-      if(fbMesActual) localStorage.setItem('fj_mes_actual', JSON.stringify(fbMesActual));
-      if(fbCierreFinal) localStorage.setItem('fj_cierre_final', JSON.stringify(fbCierreFinal));
-      // hist: quedarse con el más largo (nunca perder registros)
-      if(fbHist){
-        let hLocal=[]; try{hLocal=JSON.parse(_lsGet(dKey('hist'))||'[]');}catch(e){}
-        if(fbHist.length>=hLocal.length) _lsSet(dKey('hist'), JSON.stringify(fbHist));
-        else window._fbSet('hist', hLocal).catch(()=>{});
-      }
-      if(fbPendAprob) localStorage.setItem('fj_pendientes_aprobacion', JSON.stringify(fbPendAprob));
-      if(fbCierreEst) localStorage.setItem('fj_cierre_estados', JSON.stringify(fbCierreEst));
-      if(fbDistPct) localStorage.setItem('fj_dist_pct', fbDistPct);
-      if(fbMoraDesact!==null&&fbMoraDesact!==undefined) localStorage.setItem('fj_mora_desactivada', String(fbMoraDesact));
-      if(fbNotasMora) localStorage.setItem('fj_notas_mora', JSON.stringify(fbNotasMora));
-      if(fbAgrLotes) _lsSet(dKey('agrimensorLotes'), JSON.stringify(fbAgrLotes));
-      if(fbLotesLibres) _lsSet(dKey('lotesLibresE123'), JSON.stringify(fbLotesLibres));
-      if(fbLotesCerts) _lsSet(dKey('lotesCerts'), JSON.stringify(fbLotesCerts));
-      if(fbIccMensual) _lsSet(dKey('iccMensual'), JSON.stringify(fbIccMensual));
-      if(fbHitos) localStorage.setItem('fj_hitos_respaldo', JSON.stringify(fbHitos));
-      console.log('Firebase data loaded');
-      // Escuchar cambios en tiempo real
-      let _fbInitDone = false;
-      setTimeout(() => { _fbInitDone = true; }, 3000); // No re-render durante carga inicial
-
-      function _fbRerender(tab){
-        if(!_fbInitDone) return;
-        try{
-          const pa = document.getElementById('page-admin');
-          if(pa && pa.classList.contains('active')){
-            const tabActiva = window._adminTabActiva;
-            if(!tabActiva) return;
-            // Solo re-renderizar si el cambio es relevante para la pestaña activa
-            if(tab && tabActiva !== tab) return;
-            // No interrumpir inicio ni datos
-            if(tabActiva === 'inicio' || tabActiva === 'datos') return;
-            // Re-renderizar la pestaña activa
-            if(tabActiva==='balances' && window._balancesSeccion){
-              renderBalances(window._balancesSeccion);
-            } else {
-              adminTab(tabActiva);
-            }
-          }
-        }catch(e){}
-      }
-
-      // v1.0380: protección anti-pisado — no aceptar una versión con MENOS clientes
-      // o con cuotas más atrasadas sin avisar (esto causó la pérdida del 22/7/2026)
-      window._fbListen('data', (d) => {
-        window._datosFrescos = true;   // v1.0663: ya recibimos la versión de la nube
-        if(!d) return;
-        let remoto = Array.isArray(d) ? d : Object.values(d);
-        // Filtrar clientes borrados intencionalmente (tombstones) para que no revivan
-        const borradosSet = new Set(loadBorrados().map(x=>x&&x.id).filter(Boolean));
-        if(borradosSet.size){
-          const antes=remoto.length;
-          remoto = remoto.filter(c=>!(c&&c.id&&borradosSet.has(c.id)));
-          if(remoto.length<antes){
-            // La nube traía clientes ya borrados: reafirmar la versión limpia
-            if(window._fbSet) window._fbSet('data', remoto).catch(()=>{});
-          }
+      const pa = document.getElementById('page-admin');
+      if(pa && pa.classList.contains('active')){
+        const tabActiva = window._adminTabActiva;
+        if(!tabActiva) return;
+        // Solo re-renderizar si el cambio es relevante para la pestaña activa
+        if(tab && tabActiva !== tab) return;
+        // No interrumpir inicio ni datos
+        if(tabActiva === 'inicio' || tabActiva === 'datos') return;
+        // Re-renderizar la pestaña activa
+        if(tabActiva==='balances' && window._balancesSeccion){
+          renderBalances(window._balancesSeccion);
+        } else {
+          adminTab(tabActiva);
         }
-        let local = [];
-        try{ local = JSON.parse(_lsGet(dKey('data'))||'[]'); }catch(e){}
-        if(local.length){
-          const mapR = {}; remoto.forEach(c=>{ if(c&&c.id) mapR[c.id]=c; });
-          // Clientes que yo tengo y la versión remota no (sin contar los que borré a propósito)
-          const faltan = local.filter(c=>c&&c.id&&!mapR[c.id]&&!borradosSet.has(c.id)).length;
-          let atrasados = 0;   // cuota retrocedida en remoto
-          let montoViejo = 0;  // monto o saldo distinto con cuota igual (posible dato viejo)
-          local.forEach(c=>{
-            const r=mapR[c&&c.id];
-            if(!r) return;
-            if((r.ca||0) < (c.ca||0)) atrasados++;
-            // Si la cuota es la misma pero el monto o saldo cambió, puede ser una versión vieja
-            else if((r.ca||0)===(c.ca||0) && ((r.monto||0)!==(c.monto||0) || (r.saldo||0)!==(c.saldo||0))) montoViejo++;
-          });
-          if(faltan > 0 || atrasados > 2 || montoViejo > 5){
-            console.warn('SYNC BLOQUEADO: remoto tiene '+faltan+' clientes menos, '+atrasados+' con cuota atrasada, '+montoViejo+' con monto/saldo distinto.');
-            if(!window._syncConflicto){
-              window._syncConflicto = true;
-              const el=document.getElementById('sync-indicator');
-              if(el){
-                el.innerHTML='<span style="color:#dc2626">●</span> Conflicto';
-                el.style.background='rgba(220,38,38,0.15)'; el.style.color='#dc2626';
-                el.title='Otro dispositivo tiene datos más viejos. Tus datos NO fueron pisados. Cerrá la app en los otros dispositivos.';
-              }
-              alert('⚠️ SINCRONIZACIÓN BLOQUEADA\n\nOtro dispositivo intentó sobrescribir tus datos con una versión más vieja ('+faltan+' clientes menos, '+atrasados+' cuotas atrasadas, '+montoViejo+' montos/saldos distintos).\n\nTus datos NO fueron modificados.\n\nCerrá la app en los otros dispositivos y recargá esta pestaña.');
-            }
-            // Reafirmar la versión local (la más completa) en la nube
-            if(window._fbSet) window._fbSet('data', local).catch(()=>{});
-            return;
-          }
-        }
-        _lsSet(dKey('data'), JSON.stringify(remoto)); _fbRerender('lista'); _fbRerender('colab');
-      });
-      window._fbListen('pagoStore', (d) => { if(d){ _lsSet(dKey('pagos'), JSON.stringify(d)); _fbRerender('lista'); _fbRerender('colab'); } });
-      window._fbListen('borrados', (d) => { if(Array.isArray(d)){ localStorage.setItem('fj_borrados', JSON.stringify(d)); } });
-      window._fbListen('cuotasMora', (d) => { if(d){ localStorage.setItem('fj_cuotas_mora', JSON.stringify(d)); _fbRerender('mora'); } });
-      window._fbListen('balances', (d) => { if(d){ _lsSet(dKey('balances'), JSON.stringify(d)); _fbRerender('balances'); } });
-      window._fbListen('icc', (d) => { if(d) _lsSet(dKey('icc'), JSON.stringify(d)); });
-      window._fbListen('adelantos', (d) => { if(d){ _lsSet(dKey('adelantos'), JSON.stringify(d)); _fbRerender('balances'); } });
-      window._fbListen('agrimensorLotes', (d) => { if(d){ _lsSet(dKey('agrimensorLotes'), JSON.stringify(d)); _fbRerender('balances'); } });
-      window._fbListen('lotesLibresE123', (d) => { if(d){ _lsSet(dKey('lotesLibresE123'), JSON.stringify(d)); } });
-      window._fbListen('lotesCerts', (d) => { if(d){ _lsSet(dKey('lotesCerts'), JSON.stringify(d)); } });
-      window._fbListen('iccMensual', (d) => { if(d){ _lsSet(dKey('iccMensual'), JSON.stringify(d)); } });
-      window._fbListen('mora', (d) => { if(d) localStorage.setItem('fj_mora', JSON.stringify(d)); });
-      window._fbListen('extras', (d) => { if(d) localStorage.setItem('fj_extras', JSON.stringify(d)); });
-      window._fbListen('mesActual', (d) => { if(d) localStorage.setItem('fj_mes_actual', JSON.stringify(d)); });
-      window._fbListen('cierreFinal', (d) => { if(d) localStorage.setItem('fj_cierre_final', JSON.stringify(d)); });
-      window._fbListen('hist', (d) => { if(d){ let l=[]; try{l=JSON.parse(_lsGet(dKey('hist'))||'[]');}catch(e){} if(d.length>=l.length) _lsSet(dKey('hist'), JSON.stringify(d)); } });
-      window._fbListen('pendientesAprobacion', (d) => { if(d) localStorage.setItem('fj_pendientes_aprobacion', JSON.stringify(d)); });
-      window._fbListen('notifMora', (d) => { if(d) localStorage.setItem('fj_notif_mora', JSON.stringify(d)); });
-      window._fbListen('adelantosHist', (d) => { if(d) _lsSet(dKey('adelantosHist'), JSON.stringify(d)); });
-      window._fbListen('cierreEstados', (d) => { if(d) localStorage.setItem('fj_cierre_estados', JSON.stringify(d)); });
-      window._fbListen('distPct', (d) => { if(d) localStorage.setItem('fj_dist_pct', d); });
-      setTimeout(backupDiarioAuto, 12000);
-      window._fbListen('moraDesactivada', (d) => { if(d!==null&&d!==undefined) localStorage.setItem('fj_mora_desactivada', String(d)); });
-      window._fbListen('notasMora', (d) => { if(d) localStorage.setItem('fj_notas_mora', JSON.stringify(d)); });
-      window._fbListen('hitosRespaldo', (d) => { if(d){ localStorage.setItem('fj_hitos_respaldo', JSON.stringify(d)); try{ renderCicloEstado(); }catch(e){} try{ const pc=document.getElementById('page-colab'); if(pc&&pc.classList.contains('active')) renderColab(); }catch(e){} } });
-    }catch(e){
-      console.warn('Firebase load failed:', e);
+      }
+    }catch(e){}
+  }
+
+  // v1.0380: protección anti-pisado — no aceptar una versión con MENOS clientes
+  // o con cuotas más atrasadas sin avisar (esto causó la pérdida del 22/7/2026)
+  window._fbListen('data', (d) => {
+    window._datosFrescos = true;   // v1.0663: ya recibimos la versión de la nube
+    if(!d) return;
+    let remoto = Array.isArray(d) ? d : Object.values(d);
+    // Filtrar clientes borrados intencionalmente (tombstones) para que no revivan
+    const borradosSet = new Set(loadBorrados().map(x=>x&&x.id).filter(Boolean));
+    if(borradosSet.size){
+      const antes=remoto.length;
+      remoto = remoto.filter(c=>!(c&&c.id&&borradosSet.has(c.id)));
+      if(remoto.length<antes){
+        // La nube traía clientes ya borrados: reafirmar la versión limpia
+        if(window._fbSet) window._fbSet('data', remoto).catch(()=>{});
+      }
     }
-  } else {
-    // Fallback a Sheets si Firebase no está disponible
+    let local = [];
+    try{ local = JSON.parse(_lsGet(dKey('data'))||'[]'); }catch(e){}
+    if(local.length){
+      const mapR = {}; remoto.forEach(c=>{ if(c&&c.id) mapR[c.id]=c; });
+      // Clientes que yo tengo y la versión remota no (sin contar los que borré a propósito)
+      const faltan = local.filter(c=>c&&c.id&&!mapR[c.id]&&!borradosSet.has(c.id)).length;
+      let atrasados = 0;   // cuota retrocedida en remoto
+      let montoViejo = 0;  // monto o saldo distinto con cuota igual (posible dato viejo)
+      local.forEach(c=>{
+        const r=mapR[c&&c.id];
+        if(!r) return;
+        if((r.ca||0) < (c.ca||0)) atrasados++;
+        // Si la cuota es la misma pero el monto o saldo cambió, puede ser una versión vieja
+        else if((r.ca||0)===(c.ca||0) && ((r.monto||0)!==(c.monto||0) || (r.saldo||0)!==(c.saldo||0))) montoViejo++;
+      });
+      if(faltan > 0 || atrasados > 2 || montoViejo > 5){
+        console.warn('SYNC BLOQUEADO: remoto tiene '+faltan+' clientes menos, '+atrasados+' con cuota atrasada, '+montoViejo+' con monto/saldo distinto.');
+        if(!window._syncConflicto){
+          window._syncConflicto = true;
+          const el=document.getElementById('sync-indicator');
+          if(el){
+            el.innerHTML='<span style="color:#dc2626">●</span> Conflicto';
+            el.style.background='rgba(220,38,38,0.15)'; el.style.color='#dc2626';
+            el.title='Otro dispositivo tiene datos más viejos. Tus datos NO fueron pisados. Cerrá la app en los otros dispositivos.';
+          }
+          alert('⚠️ SINCRONIZACIÓN BLOQUEADA\n\nOtro dispositivo intentó sobrescribir tus datos con una versión más vieja ('+faltan+' clientes menos, '+atrasados+' cuotas atrasadas, '+montoViejo+' montos/saldos distintos).\n\nTus datos NO fueron modificados.\n\nCerrá la app en los otros dispositivos y recargá esta pestaña.');
+        }
+        // Reafirmar la versión local (la más completa) en la nube
+        if(window._fbSet) window._fbSet('data', local).catch(()=>{});
+        return;
+      }
+    }
+    _lsSet(dKey('data'), JSON.stringify(remoto)); _fbRerender('lista'); _fbRerender('colab');
+  });
+  window._fbListen('pagoStore', (d) => { if(d){ _lsSet(dKey('pagos'), JSON.stringify(d)); _fbRerender('lista'); _fbRerender('colab'); } });
+  window._fbListen('borrados', (d) => { if(Array.isArray(d)){ localStorage.setItem('fj_borrados', JSON.stringify(d)); } });
+  window._fbListen('cuotasMora', (d) => { if(d){ localStorage.setItem('fj_cuotas_mora', JSON.stringify(d)); _fbRerender('mora'); } });
+  window._fbListen('balances', (d) => { if(d){ _lsSet(dKey('balances'), JSON.stringify(d)); _fbRerender('balances'); } });
+  window._fbListen('icc', (d) => { if(d) _lsSet(dKey('icc'), JSON.stringify(d)); });
+  window._fbListen('adelantos', (d) => { if(d){ _lsSet(dKey('adelantos'), JSON.stringify(d)); _fbRerender('balances'); } });
+  window._fbListen('agrimensorLotes', (d) => { if(d){ _lsSet(dKey('agrimensorLotes'), JSON.stringify(d)); _fbRerender('balances'); } });
+  window._fbListen('lotesLibresE123', (d) => { if(d){ _lsSet(dKey('lotesLibresE123'), JSON.stringify(d)); } });
+  window._fbListen('lotesCerts', (d) => { if(d){ _lsSet(dKey('lotesCerts'), JSON.stringify(d)); } });
+  window._fbListen('iccMensual', (d) => { if(d){ _lsSet(dKey('iccMensual'), JSON.stringify(d)); } });
+  window._fbListen('mora', (d) => { if(d) localStorage.setItem('fj_mora', JSON.stringify(d)); });
+  window._fbListen('extras', (d) => { if(d) localStorage.setItem('fj_extras', JSON.stringify(d)); });
+  window._fbListen('mesActual', (d) => { if(d) localStorage.setItem('fj_mes_actual', JSON.stringify(d)); });
+  window._fbListen('cierreFinal', (d) => { if(d) localStorage.setItem('fj_cierre_final', JSON.stringify(d)); });
+  window._fbListen('hist', (d) => { if(d){ let l=[]; try{l=JSON.parse(_lsGet(dKey('hist'))||'[]');}catch(e){} if(d.length>=l.length) _lsSet(dKey('hist'), JSON.stringify(d)); } });
+  window._fbListen('pendientesAprobacion', (d) => { if(d) localStorage.setItem('fj_pendientes_aprobacion', JSON.stringify(d)); });
+  window._fbListen('notifMora', (d) => { if(d) localStorage.setItem('fj_notif_mora', JSON.stringify(d)); });
+  window._fbListen('adelantosHist', (d) => { if(d) _lsSet(dKey('adelantosHist'), JSON.stringify(d)); });
+  window._fbListen('cierreEstados', (d) => { if(d) localStorage.setItem('fj_cierre_estados', JSON.stringify(d)); });
+  window._fbListen('distPct', (d) => { if(d) localStorage.setItem('fj_dist_pct', d); });
+  setTimeout(backupDiarioAuto, 12000);
+  window._fbListen('moraDesactivada', (d) => { if(d!==null&&d!==undefined) localStorage.setItem('fj_mora_desactivada', String(d)); });
+  window._fbListen('notasMora', (d) => { if(d) localStorage.setItem('fj_notas_mora', JSON.stringify(d)); });
+  window._fbListen('hitosRespaldo', (d) => { if(d){ localStorage.setItem('fj_hitos_respaldo', JSON.stringify(d)); try{ renderCicloEstado(); }catch(e){} try{ const pc=document.getElementById('page-colab'); if(pc&&pc.classList.contains('active')) renderColab(); }catch(e){} } });
+  // Todo lo que se encoló MIENTRAS no teníamos la nube salió de datos viejos de este dispositivo: se descarta.
+  window._syncQueue = {};
+  if(histParaSubir) window._syncQueue.hist = histParaSubir;   // (como antes: el historial nunca pierde renglones)
+  // Recién ahora este dispositivo tiene lo mismo que la nube: se habilita subir cambios.
+  window._datosFrescos = true;
+  window._cargaInicialOk = true;
+  try{ window._syncRender(); }catch(e){}
+  try{ window._syncFlush(); }catch(e){}
+}
+
+async function init(){
+  if(window._esFotoOffline){
+    // Foto mensual / simulador: sin nube, como siempre.
     const tieneDataLocal = !!localStorage.getItem('fj_eucaliptus_data');
     if(!tieneDataLocal){
       try{ await syncFromSheets(); }catch(e){ console.warn('syncFromSheets failed:', e); }
     }
+  } else {
+    _conectandoMostrar('conectando');
+    for(;;){
+      await _esperarFirebase(_CONECTAR_ESPERA_MS);
+      if(window._firebaseReady){
+        try{ await _cargaInicialNube(); break; }
+        catch(e){ console.warn('Carga inicial desde la nube falló:', e); }
+      }
+      _conectandoMostrar('error');
+      await new Promise(r => { _conectandoDespertar = r; setTimeout(r, 8000); });
+      _conectandoDespertar = null;
+      _conectandoMostrar('conectando');
+    }
+    _conectandoOcultar();
   }
   initPublic();
   // Refrescar vista activa si el usuario ya estaba logueado

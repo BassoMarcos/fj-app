@@ -118,6 +118,7 @@
 - Revisión posterior: M2-6A sin daño reciente (solo faltan 2 renglones en el historial) y el desmarcar-pago de la ficha hoy no afecta (3 cierres guardados, ningún lote en más de uno). Se descartó el rename "Vista Cliente".
 - v1.0673 (preparada): el simulador de cierre explica en criollo cuántos lotes pagaron, cuántos pasan a mora (nuevos vs ya en mora, lista por etapa), separa mora en pesos y USD y aclara por qué Estadísticas y Pre cierre pueden diferir (lotes finalizados en el ciclo). Regla de publicación fyj: subir la versión en `index.html`, `version.json` y en Firebase (`appVersion`).
 - v1.0674 (25/9/2026): el cierre de sesión por 60 min de inactividad ya no muestra cartel; se cierra solo.
+- v1.0675 (25/9/2026): hueco de sync cerrado — si al abrir la conexión tardaba más de 3 s, el dispositivo trabajaba con datos viejos y podía pisar la nube. Ahora espera a bajar todo ("Conectando con la nube…" / "Sin conexión" con Reintentar) y no sube nada antes.
 
 ---
 
