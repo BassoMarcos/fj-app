@@ -915,7 +915,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0676';
+const APP_VERSION='v1.0677';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -11223,6 +11223,14 @@ function cerrarMoraPanel(){
   document.getElementById('mora-panel-overlay')?.remove();
   try{ if(typeof _colabDesbloquearLista==='function') _colabDesbloquearLista(); }catch(e){}
 }
+// v1.0677: la cuota del mes en "Cobrar todo" se calcula IGUAL que en el cobro normal (marcarPago):
+// valor cobrable (con escalón) y, si ya pasó el día de vencimiento, su interés (que va a Caja de Mora).
+// Antes se sumaba c.monto pelado y el interés del mes quedaba en 0.
+function _cuotaMesParaCobrarTodo(c){
+  const _mc=montoCobrable(c);
+  const mora=esPrimeraCuotaFutura(c)?{interes:0,pct:0,dias:0}:calcInteresAuto(_mc.total);
+  return {cuota:_mc.total, interes:mora.interes||0, dias:mora.dias||0, pct:mora.pct||0};
+}
 function cobrarTodoColab(clienteId){
   window._moraEfectivoTocado=false;
   const data=loadData();
@@ -11238,10 +11246,12 @@ function cobrarTodoColab(clienteId){
   });
   const totalMoraCapital=moraConInteres.reduce((s,x)=>s+x.monto,0);
   const totalMoraInteres=moraConInteres.reduce((s,x)=>s+x.interes,0);
-  const cuotaActual=c.monto||0;
-  const grandTotal=totalMoraCapital+totalMoraInteres+cuotaActual;
+  const _mes=_cuotaMesParaCobrarTodo(c);
+  const cuotaActual=_mes.cuota;
+  const interesMes=_mes.interes;
+  const grandTotal=totalMoraCapital+totalMoraInteres+cuotaActual+interesMes;
 
-  _moraPanelState={clienteId,seleccionadas:moraConInteres,totalMonto:totalMoraCapital,totalInteresAuto:totalMoraInteres,cur,_incluyeMesActual:true,cuotaActual,_esColab:true};
+  _moraPanelState={clienteId,seleccionadas:moraConInteres,totalMonto:totalMoraCapital,totalInteresAuto:totalMoraInteres,cur,_incluyeMesActual:true,cuotaActual,interesMes,_esColab:true};
 
   const filasHtml=moraConInteres.map(cm=>
     '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid rgba(252,165,165,.3)">'
@@ -11274,8 +11284,10 @@ function cobrarTodoColab(clienteId){
     +'<div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:4px">CUOTA MES ACTUAL</div>'
     +'<div style="display:flex;justify-content:space-between;font-size:13px">'
     +'<span>Cuota '+c.ca+'/'+c.ct+' — '+mesActual()+'</span>'
-    +'<span style="font-weight:700">'+fmtCur(cuotaActual,cur)+'</span>'
-    +'</div></div>'
+    +'<span style="font-weight:700">'+fmtCur(cuotaActual,cur)+(interesMes>0?' <span style="color:var(--red)">+ '+fmtCur(interesMes,cur)+'</span>':'')+'</span>'
+    +'</div>'
+    +(interesMes>0?'<div style="font-size:11px;color:var(--red);margin-top:3px">'+_mes.dias+' día(s) de atraso · '+_mes.pct+'% · el interés va a Caja de Mora</div>':'')
+    +'</div>'
     +'<div style="background:#7c3aed;border-radius:var(--r);padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">'
     +'<span style="color:#fff;font-weight:700;font-size:14px">TOTAL</span>'
     +'<span id="cobrar-todo-total" style="color:#fff;font-weight:900;font-size:18px">'+fmtCur(grandTotal,cur)+'</span>'
@@ -11311,7 +11323,7 @@ function cobrarTodoColab(clienteId){
 }
 
 function admConfirmarTodoColab(){
-  const {clienteId,seleccionadas,totalMonto,totalInteresAuto,cur,cuotaActual}=_moraPanelState;
+  const {clienteId,seleccionadas,totalMonto,totalInteresAuto,cur,cuotaActual,interesMes}=_moraPanelState;
   const tipo=document.querySelector('input[name="mora-adm-panel-tipo"]:checked')?.value||'auto';
   const interes=_moraInteresElegido(totalMonto,totalInteresAuto);
   const selConInteres=seleccionadas.map(c=>({
@@ -11319,7 +11331,7 @@ function admConfirmarTodoColab(){
     interes:totalMonto>0?Math.round(interes*(c.monto/totalMonto)):0,
     total:c.monto+(totalMonto>0?Math.round(interes*(c.monto/totalMonto)):0)
   }));
-  const grandTotal=totalMonto+interes+(cuotaActual||0);
+  const grandTotal=totalMonto+interes+(cuotaActual||0)+(interesMes||0);
   // Leer efectivo/vuelto (la cuota del mes va a caja física; SAF/SEC sobre el total)
   const eEl=document.getElementById('mora-ca-entrego'), vEl=document.getElementById('mora-ca-vuelto');
   const entregoTotal=(window._moraEfectivoTocado&&eEl)?caNum(eEl.value):grandTotal;
@@ -11331,7 +11343,7 @@ function admConfirmarTodoColab(){
     // 1. Mora (capital + interés → caja de mora)
     _ejecutarCobroAdmMora(selConInteres,clienteId,(cur||''),totalMonto+interes);
     // 2. Cuota mes actual (caja del día)
-    marcarPago(clienteId,0);
+    marcarPago(clienteId,interesMes||0);   // v1.0677: con el interés del mes (antes 0)
     // 3. Cuota del mes → Caja Física + SAF/SEC sobre el total
     const dataX=loadData();
     const cX=dataX.find(x=>x.id===clienteId);
@@ -11374,11 +11386,13 @@ function cobrarTodoAdmin(clienteId){
   });
   const totalMoraCapital=moraConInteres.reduce((s,x)=>s+x.monto,0);
   const totalMoraInteres=moraConInteres.reduce((s,x)=>s+x.interes,0);
-  const cuotaActual=c.monto||0;
-  const grandTotal=totalMoraCapital+totalMoraInteres+cuotaActual;
+  const _mes=_cuotaMesParaCobrarTodo(c);
+  const cuotaActual=_mes.cuota;
+  const interesMes=_mes.interes;
+  const grandTotal=totalMoraCapital+totalMoraInteres+cuotaActual+interesMes;
 
   // Guardar en estado global
-  _moraPanelState={clienteId,seleccionadas:moraConInteres,totalMonto:totalMoraCapital,totalInteresAuto:totalMoraInteres,cur,_incluyeMesActual:true,cuotaActual};
+  _moraPanelState={clienteId,seleccionadas:moraConInteres,totalMonto:totalMoraCapital,totalInteresAuto:totalMoraInteres,cur,_incluyeMesActual:true,cuotaActual,interesMes};
 
   // Construir filas desglose
   const filasHtml=moraConInteres.map(cm=>
@@ -11414,8 +11428,10 @@ function cobrarTodoAdmin(clienteId){
     +'<div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:4px">CUOTA MES ACTUAL</div>'
     +'<div style="display:flex;justify-content:space-between;font-size:13px">'
     +'<span>Cuota '+c.ca+'/'+c.ct+' — '+mesActual()+'</span>'
-    +'<span style="font-weight:700">'+fmtCur(cuotaActual,cur)+'</span>'
-    +'</div></div>'
+    +'<span style="font-weight:700">'+fmtCur(cuotaActual,cur)+(interesMes>0?' <span style="color:var(--red)">+ '+fmtCur(interesMes,cur)+'</span>':'')+'</span>'
+    +'</div>'
+    +(interesMes>0?'<div style="font-size:11px;color:var(--red);margin-top:3px">'+_mes.dias+' día(s) de atraso · '+_mes.pct+'% · el interés va a Caja de Mora</div>':'')
+    +'</div>'
     // Total
     +'<div style="background:#7c3aed;border-radius:var(--r);padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">'
     +'<span style="color:#fff;font-weight:700;font-size:14px">TOTAL</span>'
@@ -11471,7 +11487,7 @@ function admUpdateMoraPanelTodo(){
   if(valInput) valInput.style.display=tipo==='auto'?'none':'block';
   const val=parseFloat(valInput?.value)||0;
   const interes=tipo==='auto'?totalMoraInteres:tipo==='pct'?Math.round(totalMoraCapital*val/100):val;
-  const total=totalMoraCapital+interes+cuotaActual;
+  const total=totalMoraCapital+interes+cuotaActual+(_moraPanelState.interesMes||0);
   const totalEl=document.getElementById('cobrar-todo-total');
   if(totalEl) totalEl.textContent=fmtCur(total,cur);
   // Actualizar el total de referencia para el cálculo de vuelto
@@ -11487,7 +11503,7 @@ function admUpdateMoraPanelTodo(){
 }
 
 function admConfirmarTodo(){
-  const {clienteId,seleccionadas,totalMonto,totalInteresAuto,cur,cuotaActual}=_moraPanelState;
+  const {clienteId,seleccionadas,totalMonto,totalInteresAuto,cur,cuotaActual,interesMes}=_moraPanelState;
   const tipo=document.querySelector('input[name="mora-adm-panel-tipo"]:checked')?.value||'auto';
   const valInput=document.getElementById('mora-adm-panel-val');
   const val=parseFloat(valInput?.value)||0;
@@ -11497,7 +11513,7 @@ function admConfirmarTodo(){
     interes:totalMonto>0?Math.round(interes*(c.monto/totalMonto)):0,
     total:c.monto+(totalMonto>0?Math.round(interes*(c.monto/totalMonto)):0)
   }));
-  const grandTotal=totalMonto+interes+(cuotaActual||0);
+  const grandTotal=totalMonto+interes+(cuotaActual||0)+(interesMes||0);
   // Leer efectivo/vuelto (la cuota del mes va a caja física; el SAF/SEC se calcula sobre el total)
   const eEl=document.getElementById('mora-ca-entrego'), vEl=document.getElementById('mora-ca-vuelto');
   const entregoTotal=eEl?caNum(eEl.value):grandTotal;
@@ -11508,7 +11524,7 @@ function admConfirmarTodo(){
     // 1. Cobrar mora (capital + interés → caja de mora)
     _ejecutarCobroAdmMora(selConInteres,clienteId,(cur||''),totalMonto+interes);
     // 2. Cobrar cuota mes actual (caja del día)
-    marcarPago(clienteId, 0);
+    marcarPago(clienteId, interesMes||0);   // v1.0677: con el interés del mes (antes 0)
     // 3. Registrar la cuota del mes en Caja Física + SAF/SEC sobre el total
     const dataX=loadData();
     const cX=dataX.find(x=>x.id===clienteId);
