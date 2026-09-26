@@ -915,7 +915,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0677';
+const APP_VERSION='v1.0678';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -10004,7 +10004,7 @@ function renderAdminDet(id){
       +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'
       +'<div style="display:flex;gap:6px;margin-bottom:8px">'
       +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="auto" data-cid="'+cid+'" data-cuota="'+montoCobrable(c).total+'" data-autopct="'+_mora.pct+'" data-autoint="'+_mora.interes+'" onchange="updateAdmMora(this)"> ⚡ Auto ('+_mora.pct+'%)</label>'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+montoCobrable(c).total+'" onchange="updateAdmMora(this)"> % Porcentaje</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+montoCobrable(c).total+'" onchange="updateAdmMora(this)"> % del interés</label>'
       +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+montoCobrable(c).total+'" onchange="updateAdmMora(this)"> $ Monto</label>'
       +'</div>'
       +'<input id="'+cid+'-val" type="number" placeholder="Ingresá el valor..." data-cid="'+cid+'" data-cuota="'+montoCobrable(c).total+'" oninput="updateAdmMora(this)" style="width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
@@ -11041,14 +11041,14 @@ function updateAdmMora(el){
   const valInput=document.getElementById(cid+'-val');
   if(valInput){
     if(tipo==='auto'){valInput.style.display='none';valInput.value='';}
-    else{valInput.style.display='block';valInput.placeholder=tipo==='pct'?'Porcentaje %':'Monto $';}
+    else{valInput.style.display='block';valInput.placeholder=tipo==='pct'?'¿Qué % del interés se cobra? (100 = todo, 50 = la mitad)':'Monto $';}
   }
   const val=parseFloat(valInput?.value)||0;
   const autoRadio=document.querySelector('input[name="'+cid+'-tipo"][value="auto"]');
   const autoInt=parseFloat(autoRadio?.dataset.autoint)||0;
   let interes=0;
   if(tipo==='auto') interes=autoInt;
-  else if(tipo==='pct') interes=Math.round(cuota*val/100);
+  else if(tipo==='pct') interes=Math.round(autoInt*val/100);   // v1.0678: % DEL INTERÉS
   else if(tipo==='monto') interes=val;
   const mid=cid.replace('mora-adm-','');
   const interesEl=document.getElementById('mora-adm-'+mid+'-interes');
@@ -11064,7 +11064,7 @@ function updateAdmMora(el){
   if(detTot) detTot.textContent=_cur2+fmtPeso(cuota+interes);
   if(detSub){
     if(tipo==='auto'){const ap=parseFloat(autoRadio?.dataset.autopct)||0;detSub.textContent=ap?ap+'% (auto)':'auto';}
-    else if(tipo==='pct') detSub.textContent=val+'% (manual)';
+    else if(tipo==='pct') detSub.textContent='se cobra el '+val+'% del interés';
     else detSub.textContent='monto manual';
   }
   // Update cobrar btn dataset
@@ -11106,8 +11106,8 @@ function confirmarAdmMora(btn){
   const autoRadio=manual.querySelector('input[value="auto"]');
   const _autoInt=parseFloat(autoRadio?.dataset.autoint)||0;
   const autoPct=parseFloat(autoRadio?.dataset.autopct)||0;
-  const interes=tipo==='auto'?_autoInt:tipo==='pct'?Math.round(cuota*val/100):val;
-  const label=tipo==='auto'?'Auto '+autoPct+'%':tipo==='pct'?'Porcentaje '+val+'%':'Monto '+fmtPeso(val);
+  const interes=tipo==='auto'?_autoInt:tipo==='pct'?Math.round(_autoInt*val/100):val;   // v1.0678: % DEL INTERÉS
+  const label=tipo==='auto'?'Auto '+autoPct+'%':tipo==='pct'?val+'% del interés':'Monto '+fmtPeso(val);
 
   // Mostrar desglose
   const tapado=document.getElementById('mora-adm-'+id+'-tapado');
@@ -11231,6 +11231,43 @@ function _cuotaMesParaCobrarTodo(c){
   const mora=esPrimeraCuotaFutura(c)?{interes:0,pct:0,dias:0}:calcInteresAuto(_mc.total);
   return {cuota:_mc.total, interes:mora.interes||0, dias:mora.dias||0, pct:mora.pct||0};
 }
+// v1.0678: intereses elegidos en "Cobrar todo". El % es del interés TOTAL (mora + mes): 50 = la mitad.
+// El monto es el interés total a cobrar; se reparte entre mora y mes en proporción a los automáticos.
+// v1.0678: reparte un interés total entre las cuotas en mora EN PROPORCIÓN AL INTERÉS AUTOMÁTICO de cada una
+// (la más vieja debe más). Si ninguna tiene interés automático, en proporción al capital. La última cuota
+// absorbe el redondeo: la suma da EXACTO el total (antes podía sobrar o faltar $1).
+function _repartirInteresEnCuotas(cuotas, interesTotal){
+  const base=cuotas.map(c=>Number(c.interes)||0);
+  let tot=base.reduce((a,b)=>a+b,0);
+  const pesos=tot>0?base:cuotas.map(c=>Number(c.monto)||0);
+  tot=pesos.reduce((a,b)=>a+b,0);
+  let acum=0;
+  return cuotas.map((c,i)=>{
+    const it=i===cuotas.length-1 ? Math.round(interesTotal)-acum : (tot>0?Math.round(interesTotal*pesos[i]/tot):0);
+    acum+=it;
+    return {...c, interes:it, total:(Number(c.monto)||0)+it};
+  });
+}
+function _interesesCobrarTodo(){
+  const st=_moraPanelState||{};
+  const moraAuto=st.totalInteresAuto||0, mesAuto=st.interesMes||0, totAuto=moraAuto+mesAuto;
+  const tipo=document.querySelector('input[name="mora-adm-panel-tipo"]:checked')?.value||'auto';
+  const valInput=document.getElementById('mora-adm-panel-val');
+  const raw=valInput?String(valInput.value).trim():'';
+  const val=parseFloat(raw);
+  if(tipo==='auto'||raw===''||isNaN(val)||val<0) return {tipo:'auto',mora:moraAuto,mes:mesAuto,total:totAuto,auto:totAuto,val:null};
+  let total=tipo==='pct'?Math.round(totAuto*val/100):Math.round(val);
+  let mora, mes;
+  if(tipo==='pct'){ mora=Math.round(moraAuto*val/100); mes=total-mora; }
+  else if(totAuto>0){ mora=Math.round(total*moraAuto/totAuto); mes=total-mora; }
+  else { mora=total; mes=0; }
+  return {tipo,mora,mes,total,auto:totAuto,val};
+}
+function _textoInteresesCobrarTodo(r,cur){
+  if(r.tipo==='auto') return 'automático';
+  if(r.tipo==='pct') return 'Se cobra el '+r.val+'% del interés: '+fmtCur(r.total,cur)+' de '+fmtCur(r.auto,cur)+(r.total<r.auto?' (descuento '+fmtCur(r.auto-r.total,cur)+')':'');
+  return 'Se cobra '+fmtCur(r.total,cur)+' de interés (el automático era '+fmtCur(r.auto,cur)+')';
+}
 function cobrarTodoColab(clienteId){
   window._moraEfectivoTocado=false;
   const data=loadData();
@@ -11288,16 +11325,22 @@ function cobrarTodoColab(clienteId){
     +'</div>'
     +(interesMes>0?'<div style="font-size:11px;color:var(--red);margin-top:3px">'+_mes.dias+' día(s) de atraso · '+_mes.pct+'% · el interés va a Caja de Mora</div>':'')
     +'</div>'
+    // v1.0678: la cuenta a la vista
+    +'<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;font-size:13px">'
+    +'<div style="display:flex;justify-content:space-between;padding:2px 0"><span>Cuota pura ('+(cuotasMora.length+1)+' cuota'+(cuotasMora.length?'s':'')+')</span><span style="font-weight:700">'+fmtCur(totalMoraCapital+cuotaActual,cur)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:2px 0"><span>Intereses</span><span id="ct-intereses" style="font-weight:700;color:var(--red)">'+fmtCur(totalMoraInteres+interesMes,cur)+'</span></div>'
+    +'<div id="ct-intereses-det" style="font-size:11px;color:var(--text3);text-align:right">automático</div>'
+    +'</div>'
     +'<div style="background:#7c3aed;border-radius:var(--r);padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">'
     +'<span style="color:#fff;font-weight:700;font-size:14px">TOTAL</span>'
     +'<span id="cobrar-todo-total" style="color:#fff;font-weight:900;font-size:18px">'+fmtCur(grandTotal,cur)+'</span>'
     +'</div>'
-    +'<button onclick="admToggleMoraPanel()" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente (requiere admin)</button>'
+    +'<button onclick="admToggleMoraPanel()" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con otro interés / descuento (requiere admin)</button>'
     +'<div id="mora-adm-panel-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
-    +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente (mora)</div>'
+    +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Otro interés / descuento</div>'
     +'<div style="display:flex;gap:6px;margin-bottom:8px">'
     +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanelTodo()"> ⚡ Auto</label>'
-    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanelTodo()"> % Porc.</label>'
+    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanelTodo()"> % del interés</label>'
     +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanelTodo()"> $ Monto</label>'
     +'</div>'
     +'<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanelTodo()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
@@ -11323,15 +11366,12 @@ function cobrarTodoColab(clienteId){
 }
 
 function admConfirmarTodoColab(){
-  const {clienteId,seleccionadas,totalMonto,totalInteresAuto,cur,cuotaActual,interesMes}=_moraPanelState;
+  const {clienteId,seleccionadas,totalMonto,cur,cuotaActual}=_moraPanelState;
   const tipo=document.querySelector('input[name="mora-adm-panel-tipo"]:checked')?.value||'auto';
-  const interes=_moraInteresElegido(totalMonto,totalInteresAuto);
-  const selConInteres=seleccionadas.map(c=>({
-    ...c,
-    interes:totalMonto>0?Math.round(interes*(c.monto/totalMonto)):0,
-    total:c.monto+(totalMonto>0?Math.round(interes*(c.monto/totalMonto)):0)
-  }));
-  const grandTotal=totalMonto+interes+(cuotaActual||0)+(interesMes||0);
+  const _r=_interesesCobrarTodo();   // v1.0678
+  const interes=_r.mora, interesMesCobrado=_r.mes;
+  const selConInteres=_repartirInteresEnCuotas(seleccionadas, interes);   // v1.0678: cierra exacto al peso
+  const grandTotal=totalMonto+interes+(cuotaActual||0)+interesMesCobrado;
   // Leer efectivo/vuelto (la cuota del mes va a caja física; SAF/SEC sobre el total)
   const eEl=document.getElementById('mora-ca-entrego'), vEl=document.getElementById('mora-ca-vuelto');
   const entregoTotal=(window._moraEfectivoTocado&&eEl)?caNum(eEl.value):grandTotal;
@@ -11343,7 +11383,7 @@ function admConfirmarTodoColab(){
     // 1. Mora (capital + interés → caja de mora)
     _ejecutarCobroAdmMora(selConInteres,clienteId,(cur||''),totalMonto+interes);
     // 2. Cuota mes actual (caja del día)
-    marcarPago(clienteId,interesMes||0);   // v1.0677: con el interés del mes (antes 0)
+    marcarPago(clienteId,interesMesCobrado);   // interés del mes (con el descuento si lo hay)
     // 3. Cuota del mes → Caja Física + SAF/SEC sobre el total
     const dataX=loadData();
     const cX=dataX.find(x=>x.id===clienteId);
@@ -11433,17 +11473,23 @@ function cobrarTodoAdmin(clienteId){
     +(interesMes>0?'<div style="font-size:11px;color:var(--red);margin-top:3px">'+_mes.dias+' día(s) de atraso · '+_mes.pct+'% · el interés va a Caja de Mora</div>':'')
     +'</div>'
     // Total
+    // v1.0678: la cuenta a la vista
+    +'<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;font-size:13px">'
+    +'<div style="display:flex;justify-content:space-between;padding:2px 0"><span>Cuota pura ('+(cuotasMora.length+1)+' cuota'+(cuotasMora.length?'s':'')+')</span><span style="font-weight:700">'+fmtCur(totalMoraCapital+cuotaActual,cur)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:2px 0"><span>Intereses</span><span id="ct-intereses" style="font-weight:700;color:var(--red)">'+fmtCur(totalMoraInteres+interesMes,cur)+'</span></div>'
+    +'<div id="ct-intereses-det" style="font-size:11px;color:var(--text3);text-align:right">automático</div>'
+    +'</div>'
     +'<div style="background:#7c3aed;border-radius:var(--r);padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">'
     +'<span style="color:#fff;font-weight:700;font-size:14px">TOTAL</span>'
     +'<span id="cobrar-todo-total" style="color:#fff;font-weight:900;font-size:18px">'+fmtCur(grandTotal,cur)+'</span>'
     +'</div>'
     // Interés diferente
-    +'<button onclick="admToggleMoraPanel()" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con interés diferente (mora)</button>'
+    +'<button onclick="admToggleMoraPanel()" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:6px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px">⚠️ Cobrar con otro interés / descuento</button>'
     +'<div id="mora-adm-panel-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
-    +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente (mora)</div>'
+    +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Otro interés / descuento</div>'
     +'<div style="display:flex;gap:6px;margin-bottom:8px">'
     +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanelTodo()" > ⚡ Auto</label>'
-    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanelTodo()"> % Porc.</label>'
+    +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanelTodo()"> % del interés</label>'
     +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanelTodo()"> $ Monto</label>'
     +'</div>'
     +'<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanelTodo()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
@@ -11485,9 +11531,13 @@ function admUpdateMoraPanelTodo(){
   const tipo=document.querySelector('input[name="mora-adm-panel-tipo"]:checked')?.value||'auto';
   const valInput=document.getElementById('mora-adm-panel-val');
   if(valInput) valInput.style.display=tipo==='auto'?'none':'block';
+  if(valInput) valInput.placeholder=tipo==='pct'?'¿Qué % del interés se cobra? (100 = todo, 50 = la mitad)':'¿Cuánto interés se cobra? ($)';
   const val=parseFloat(valInput?.value)||0;
-  const interes=tipo==='auto'?totalMoraInteres:tipo==='pct'?Math.round(totalMoraCapital*val/100):val;
-  const total=totalMoraCapital+interes+cuotaActual+(_moraPanelState.interesMes||0);
+  const _r=_interesesCobrarTodo();   // v1.0678: % y monto sobre el interés total (mora + mes)
+  const interes=_r.mora;
+  const total=totalMoraCapital+cuotaActual+_r.total;
+  const ctI=document.getElementById('ct-intereses'); if(ctI) ctI.textContent=fmtCur(_r.total,cur);
+  const ctD=document.getElementById('ct-intereses-det'); if(ctD) ctD.textContent=_textoInteresesCobrarTodo(_r,cur);
   const totalEl=document.getElementById('cobrar-todo-total');
   if(totalEl) totalEl.textContent=fmtCur(total,cur);
   // Actualizar el total de referencia para el cálculo de vuelto
@@ -11503,17 +11553,13 @@ function admUpdateMoraPanelTodo(){
 }
 
 function admConfirmarTodo(){
-  const {clienteId,seleccionadas,totalMonto,totalInteresAuto,cur,cuotaActual,interesMes}=_moraPanelState;
+  const {clienteId,seleccionadas,totalMonto,cur,cuotaActual}=_moraPanelState;
   const tipo=document.querySelector('input[name="mora-adm-panel-tipo"]:checked')?.value||'auto';
   const valInput=document.getElementById('mora-adm-panel-val');
-  const val=parseFloat(valInput?.value)||0;
-  const interes=tipo==='auto'?totalInteresAuto:tipo==='pct'?Math.round(totalMonto*val/100):val;
-  const selConInteres=seleccionadas.map(c=>({
-    ...c,
-    interes:totalMonto>0?Math.round(interes*(c.monto/totalMonto)):0,
-    total:c.monto+(totalMonto>0?Math.round(interes*(c.monto/totalMonto)):0)
-  }));
-  const grandTotal=totalMonto+interes+(cuotaActual||0)+(interesMes||0);
+  const _r=_interesesCobrarTodo();   // v1.0678
+  const interes=_r.mora, interesMesCobrado=_r.mes;
+  const selConInteres=_repartirInteresEnCuotas(seleccionadas, interes);   // v1.0678: cierra exacto al peso
+  const grandTotal=totalMonto+interes+(cuotaActual||0)+interesMesCobrado;
   // Leer efectivo/vuelto (la cuota del mes va a caja física; el SAF/SEC se calcula sobre el total)
   const eEl=document.getElementById('mora-ca-entrego'), vEl=document.getElementById('mora-ca-vuelto');
   const entregoTotal=eEl?caNum(eEl.value):grandTotal;
@@ -11524,7 +11570,7 @@ function admConfirmarTodo(){
     // 1. Cobrar mora (capital + interés → caja de mora)
     _ejecutarCobroAdmMora(selConInteres,clienteId,(cur||''),totalMonto+interes);
     // 2. Cobrar cuota mes actual (caja del día)
-    marcarPago(clienteId, interesMes||0);   // v1.0677: con el interés del mes (antes 0)
+    marcarPago(clienteId, interesMesCobrado);   // interés del mes (con el descuento si lo hay)
     // 3. Registrar la cuota del mes en Caja Física + SAF/SEC sobre el total
     const dataX=loadData();
     const cX=dataX.find(x=>x.id===clienteId);
@@ -11604,7 +11650,7 @@ function cobrarAdmMora(clienteId){
     '<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'+
     '<div style="display:flex;gap:6px;margin-bottom:8px">'+
     '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="auto" checked onchange="admUpdateMoraPanel()"> ⚡ Auto ('+pct+'%)</label>'+
-    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanel()"> % Porc.</label>'+
+    '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="pct" onchange="admUpdateMoraPanel()"> % del interés</label>'+
     '<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanel()"> $ Monto</label>'+
     '</div>'+
     '<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanel()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'+
@@ -11639,8 +11685,9 @@ function admUpdateMoraPanel(){
   const tipo=document.querySelector('input[name="mora-adm-panel-tipo"]:checked')?.value||'auto';
   const valInput=document.getElementById('mora-adm-panel-val');
   if(valInput) valInput.style.display=tipo==='auto'?'none':'block';
+  if(valInput) valInput.placeholder=tipo==='pct'?'¿Qué % del interés se cobra? (100 = todo, 50 = la mitad)':'¿Cuánto interés se cobra? ($)';
   const val=parseFloat(valInput?.value)||0;
-  const interes=tipo==='auto'?totalInteresAuto:tipo==='pct'?Math.round(totalMonto*val/100):val;
+  const interes=tipo==='auto'?totalInteresAuto:tipo==='pct'?Math.round(totalInteresAuto*val/100):val;   // v1.0678: % DEL INTERÉS
   const ie=document.getElementById('mora-adm-panel-interes');
   const te=document.getElementById('mora-adm-panel-total');
   if(ie) ie.textContent='+ '+fmtCur(interes,cur);
@@ -11675,17 +11722,13 @@ function _moraInteresElegido(totalMonto, totalInteresAuto){
   if(raw===''){ return totalInteresAuto; }           // no cargaron nada → interés automático
   const val=parseFloat(raw);
   if(isNaN(val)||val<0) return totalInteresAuto;
-  return tipo==='pct'?Math.round(totalMonto*val/100):Math.round(val);
+  return tipo==='pct'?Math.round(totalInteresAuto*val/100):Math.round(val);   // v1.0678: % DEL INTERÉS
 }
 function admConfirmarMoraPanel(){
   const {clienteId,seleccionadas,totalMonto,totalInteresAuto,cur}=_moraPanelState;
   const tipo=document.querySelector('input[name="mora-adm-panel-tipo"]:checked')?.value||'auto';
   const interes=_moraInteresElegido(totalMonto,totalInteresAuto);
-  const selConInteres=seleccionadas.map(c=>({
-    ...c,
-    interes:totalMonto>0?Math.round(interes*(c.monto/totalMonto)):0,
-    total:c.monto+(totalMonto>0?Math.round(interes*(c.monto/totalMonto)):0)
-  }));
+  const selConInteres=_repartirInteresEnCuotas(seleccionadas, interes);   // v1.0678: cierra exacto al peso
   const totalTotal=totalMonto+interes;
   // v1.0641: leer entregó/vuelto → diferencia al saldo (SAF/SEC)
   const eEl=document.getElementById('mora-ca-entrego'), vEl=document.getElementById('mora-ca-vuelto');
@@ -13632,7 +13675,7 @@ function updateMoraColab(el){
       valInput.value='';
     } else {
       valInput.style.display='block';
-      valInput.placeholder=tipo==='pct'?'Porcentaje %':'Monto $';
+      valInput.placeholder=tipo==='pct'?'¿Qué % del interés se cobra? (100 = todo, 50 = la mitad)':'Monto $';
     }
   }
   const val=parseFloat(valInput?.value)||0;
@@ -13642,7 +13685,7 @@ function updateMoraColab(el){
   const autoPct=parseFloat(autoRadio?.dataset.autopct)||0;
   let interes=0;
   if(tipo==='auto') interes=autoInt;
-  else if(tipo==='pct') interes=Math.round(cuota*val/100);
+  else if(tipo==='pct') interes=Math.round(autoInt*val/100);   // v1.0678: % DEL INTERÉS
   else if(tipo==='monto') interes=val;
   const mid=cid.replace('mora-colab-','');
   const interesEl=document.getElementById('mora-colab-'+mid+'-interes');
@@ -13666,7 +13709,7 @@ function admConfirmarMoraPanelColab(){
   const tipo=document.querySelector('input[name="mora-adm-panel-tipo"]:checked')?.value||'auto';
   const valInput=document.getElementById('mora-adm-panel-val');
   const val=parseFloat(valInput?.value)||0;
-  const interes=tipo==='auto'?totalInteresAuto:tipo==='pct'?Math.round(totalMonto*val/100):val;
+  const interes=tipo==='auto'?totalInteresAuto:tipo==='pct'?Math.round(totalInteresAuto*val/100):val;   // v1.0678: % DEL INTERÉS
 
   const ejecutar=()=>{
     document.getElementById('mora-panel-overlay')?.remove();
@@ -13749,8 +13792,8 @@ function confirmarMoraManualColab(btn){
   const autoRadio=document.querySelector('input[name="'+cid+'-tipo"][value="auto"]');
   const _autoInt2=parseFloat(autoRadio?.dataset.autoint)||0;
   const autoPct=parseFloat(autoRadio?.dataset.autopct)||0;
-  const interes=tipo==='auto'?_autoInt2:tipo==='pct'?Math.round(cuota*val/100):val;
-  const label=tipo==='auto'?'Automático: '+autoPct+'%':tipo==='pct'?'Porcentaje diferente: '+val+'%':'Monto diferente: '+fmtPeso(val);
+  const interes=tipo==='auto'?_autoInt2:tipo==='pct'?Math.round(_autoInt2*val/100):val;   // v1.0678: % DEL INTERÉS
+  const label=tipo==='auto'?'Automático: '+autoPct+'%':tipo==='pct'?val+'% del interés':'Monto diferente: '+fmtPeso(val);
 
   // Pedir contraseña admin antes de confirmar
   confirmarConClave(()=>{
@@ -15947,12 +15990,12 @@ function renderDetColab(id){
       +'<div id="'+cid+'-extra" style="display:none">'
       +'<button onclick="colabToggleAdelanto(\''+id+'\')" style="width:100%;margin-bottom:6px;padding:5px;font-size:12px;background:none;border:1.5px solid #7dd3fc;color:#5eb0ef;border-radius:var(--r);cursor:pointer;font-weight:600">⏭ Adelantar cuotas</button>'
       +'<div id="adelanto-selector-'+id+'" style="display:none"></div>'
-      +'<button data-cid="'+cid+'" onclick="toggleMoraManualColab(this.dataset.cid)" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">⚠️ Cobrar con interés diferente (requiere admin)</button>'
+      +'<button data-cid="'+cid+'" onclick="toggleMoraManualColab(this.dataset.cid)" style="width:100%;background:none;border:2px solid #f97316;color:var(--acc3);border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">⚠️ Cobrar con otro interés / descuento (requiere admin)</button>'
       +'<div id="'+cid+'-manual" style="display:none;background:var(--card);border:1px solid #fed7aa;border-radius:var(--r);padding:.875rem;margin-bottom:8px">'
       +'<div style="font-size:12px;font-weight:700;color:var(--acc3);margin-bottom:8px">Interés diferente</div>'
       +'<div style="display:flex;gap:6px;margin-bottom:8px">'
       +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="auto" data-cid="'+cid+'" data-cuota="'+_mcC.total+'" data-autopct="'+_mora.pct+'" data-autoint="'+_mora.interes+'" onchange="updateMoraColab(this)"> ⚡ Auto ('+_mora.pct+'%)</label>'
-      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+_mcC.total+'" onchange="updateMoraColab(this)"> % Porcentaje</label>'
+      +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="pct" data-cid="'+cid+'" data-cuota="'+_mcC.total+'" onchange="updateMoraColab(this)"> % del interés</label>'
       +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="'+cid+'-tipo" value="monto" data-cid="'+cid+'" data-cuota="'+_mcC.total+'" onchange="updateMoraColab(this)"> $ Monto</label>'
       +'</div>'
       +'<input id="'+cid+'-val" type="number" placeholder="Ingresá el valor..." data-cid="'+cid+'" data-cuota="'+_mcC.total+'" oninput="updateMoraColab(this)" style="width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'

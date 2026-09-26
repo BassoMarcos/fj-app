@@ -121,6 +121,7 @@
 - v1.0675 (25/9/2026): hueco de sync cerrado — si al abrir la conexión tardaba más de 3 s, el dispositivo trabajaba con datos viejos y podía pisar la nube. Ahora espera a bajar todo ("Conectando con la nube…" / "Sin conexión" con Reintentar) y no sube nada antes.
 - v1.0676 (25/9/2026): la apertura baja todo de la nube a la vez: pasa de ~6 s a ~1 s.
 - v1.0677 (26/9/2026): "Cobrar todo (mora + mes actual)" ahora cobra la cuota del mes con su interés si está atrasada (y con escalón), igual que el cobro normal. Antes la cobraba sin interés.
+- v1.0678 (26/9/2026): en los cobros con mora, el % de "otro interés / descuento" es el **% del interés que se cobra** (50 = la mitad; antes era % de la cuota). "Cobrar todo" muestra cuota pura + intereses = total. Caja de Mora cierra exacto al peso.
 
 ---
 
