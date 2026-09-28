@@ -915,7 +915,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0679';
+const APP_VERSION='v1.0680';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -12978,20 +12978,22 @@ function _renderComparativo(hoy, fut, extra){
 
   // ── TRIMESTRES ──
   h+='<div style="font-size:12px;font-weight:800;color:var(--text);margin:12px 0 4px">📊 Trimestres (cuota pura ARS)</div>';
-  // Determinar qué trimestre sube con el ICC este mes (el que contiene el mes operativo post-cierre)
-  let triQueSube='';
+  // v1.0680: qué trimestre sube con el PRÓXIMO ICC. El ICC pendiente es el del mes operativo del ICC y
+  // aumenta el mes siguiente (ICC_MAP): ej. ICC de Septiembre → sube Octubre → Ene-Abr-Jul-Oct.
+  // (Antes marcaba el trimestre del mes operativo, que ya había subido con el ICC anterior.)
+  let triQueSube='', mesQueSube='';
   try{
     const mo=getMesOperativoICC();
-    const mesNom=MESES[mo.mesIdx];
-    const triKeysAll=[...new Set([...Object.keys(hoy.tris),...Object.keys(fut.tris)])];
-    triKeysAll.forEach(k=>{
-      // cada key es tipo "Ene-Abr-Jul-Oct"; comparar por las 3 primeras letras del mes
-      const abbr=mesNom.substring(0,3);
-      if(k.toLowerCase().indexOf(abbr.toLowerCase())>=0) triQueSube=k;
-    });
+    const info=ICC_MAP[mo.mesIdx];
+    if(info){
+      mesQueSube=info.aumentaEn;
+      const triKeysAll=[...new Set([...Object.keys(hoy.tris),...Object.keys(fut.tris)])];
+      triQueSube=triKeysAll.find(k=>k===info.planillaVal)
+        || triKeysAll.find(k=>k.toLowerCase().indexOf(info.aumentaEn.substring(0,3).toLowerCase())>=0) || '';
+    }
   }catch(e){}
   if(triQueSube){
-    h+='<div style="font-size:11px;color:#f59e0b;font-weight:700;margin-bottom:6px">⭐ Este mes sube: <b>'+triQueSube+'</b> (por el ICC). Los otros dos quedan igual.</div>';
+    h+='<div style="font-size:11px;color:#f59e0b;font-weight:700;margin-bottom:6px">⭐ Próximo aumento por ICC: <b>'+triQueSube+'</b>, con la cuota de <b>'+mesQueSube+'</b>. Se aplica aparte, después del cierre (por eso acá no cambia). Los otros dos quedan igual.</div>';
   }
   const trisKeys=[...new Set([...Object.keys(hoy.tris),...Object.keys(fut.tris)])].sort();
   trisKeys.forEach(k=>{

@@ -143,3 +143,6 @@
 - La herramienta tenía fijo "cuota actual = Agosto 2026" (se hizo en agosto): en septiembre corría todos los meses uno para atrás y marcaba cuotas como impagas (caso M2-6A). Ahora el mes de la cuota actual = el siguiente al último cierre final (`_mesOperativoAncla`).
 - Si una cuota falta en el historial pero pasó por la mora, se completa con su monto y si se pagó (antes: impaga en $0).
 - Probado con datos reales (solo lectura): M2-6A queda C29 Junio y C30 Julio pagadas; ningún mes guardado cambia.
+
+## 2026-09-28 — v1.0680: cartel del próximo aumento por ICC
+- El comparativo HOY vs POST-CIERRE decía "Este mes sube: Mar-Jun-Sep-Dic" (el trimestre del mes operativo, que ya subió con el ICC de Agosto). Ahora usa ICC_MAP: ICC pendiente de Septiembre → sube Octubre → Ene-Abr-Jul-Oct, y aclara que se aplica aparte, después del cierre.
