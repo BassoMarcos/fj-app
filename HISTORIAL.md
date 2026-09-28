@@ -146,3 +146,7 @@
 
 ## 2026-09-28 — v1.0680: cartel del próximo aumento por ICC
 - El comparativo HOY vs POST-CIERRE decía "Este mes sube: Mar-Jun-Sep-Dic" (el trimestre del mes operativo, que ya subió con el ICC de Agosto). Ahora usa ICC_MAP: ICC pendiente de Septiembre → sube Octubre → Ene-Abr-Jul-Oct, y aclara que se aplica aparte, después del cierre.
+
+## 2026-09-28 — v1.0681: foto del mes automática al cierre final
+- Marcos cerró Septiembre sin sacar la foto; se rearmó del respaldo "Pre cierre final" (28/9 15:21) y se subió a la nube como "Septiembre 2026 · rearmada".
+- Desde ahora el cierre final guarda la foto solo, antes de tocar datos; si no puede, no cierra. Ver MAPA.md.

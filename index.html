@@ -915,7 +915,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0680';
+const APP_VERSION='v1.0681';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -12113,10 +12113,12 @@ function _base64ABytes(b64){
   return bytes;
 }
 
-// Guarda una foto (HTML) comprimida en Firebase, con verificación de integridad
-async function guardarFotoEnNube(mesNombre, htmlCompleto){
+// Guarda una foto (HTML) comprimida en Firebase, con verificación de integridad.
+// v1.0681: opciones {key, nota, silencioso} — la foto automática del cierre usa otra clave si ya hay una.
+async function guardarFotoEnNube(mesNombre, htmlCompleto, opciones){
+  const op=opciones||{};
   if(typeof CompressionStream==='undefined'){
-    alert('Tu navegador no soporta compresión. La foto se descargó igual a tu compu, pero no se guardó en la nube.');
+    if(!op.silencioso) alert('Tu navegador no soporta compresión. La foto se descargó igual a tu compu, pero no se guardó en la nube.');
     return false;
   }
   // 1) comprimir
@@ -12124,12 +12126,12 @@ async function guardarFotoEnNube(mesNombre, htmlCompleto){
   // 2) VERIFICACIÓN DE INTEGRIDAD: descomprimir y comparar con el original
   const verif = await _gzipDescomprimir(comprimido);
   if(verif !== htmlCompleto){
-    alert('⚠️ La verificación de integridad falló. Por seguridad, NO se guardó la foto en la nube (el archivo en tu compu está bien). Avisá para revisarlo.');
+    if(!op.silencioso) alert('⚠️ La verificación de integridad falló. Por seguridad, NO se guardó la foto en la nube (el archivo en tu compu está bien). Avisá para revisarlo.');
     return false;
   }
   // 3) a base64 y guardar en Firebase por PUT directo
   const b64 = _bytesABase64(comprimido);
-  const key = mesNombre.replace(/\s+/g,'_');
+  const key = op.key || mesNombre.replace(/\s+/g,'_');
   const payload = {
     mesNombre: mesNombre,
     ts: new Date().toISOString(),
@@ -12139,6 +12141,7 @@ async function guardarFotoEnNube(mesNombre, htmlCompleto){
     tamComprimido: comprimido.length,
     gzipB64: b64
   };
+  if(op.nota) payload.nota = op.nota;
   const resp = await fetch('https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/fotos_mensuales/'+key+'.json', {
     method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
   });
@@ -12184,7 +12187,9 @@ async function eliminarFotoNube(key, mesNombre){
   }catch(e){ alert('Error al eliminar: '+(e&&e.message?e.message:e)); }
 }
 
-async function generarFotoMes(){
+// v1.0681: arma la foto (código actual + datos de este dispositivo, sin conexión) y devuelve {mesNombre, codigo}.
+// La usan el botón "Generar foto" y el cierre final (foto automática).
+async function _armarFotoMes(){
   const mesActualNombre = (function(){
     const cf=loadCierreFinal();
     const hoy=new Date();
@@ -12194,15 +12199,10 @@ async function generarFotoMes(){
     }
     return MESES_NOMBRE[hoy.getMonth()]+' '+hoy.getFullYear();
   })();
-
-  if(!confirm('Se va a generar la FOTO NAVEGABLE de '+mesActualNombre+'.\n\nEs un archivo HTML independiente, sin conexión, que podés abrir cuando quieras para ver la app con los datos de este mes.\n\n¿Continuar?')) return;
-
-  const btnMsg = document.getElementById('foto-status');
-  if(btnMsg) btnMsg.textContent='Generando… (puede tardar unos segundos)';
-
-  try{
+  {
     // 1) Traer el código de la app (el index.html actual)
     const resp = await fetch('https://raw.githubusercontent.com/BassoMarcos/fj-app/main/index.html?_='+Date.now());
+    if(!resp.ok) throw new Error('no se pudo bajar el código de la app ('+resp.status+')');
     let codigo = await resp.text();
 
     // 2) Reunir TODOS los datos del desarrollo activo (todo lo que hay en localStorage con el prefijo)
@@ -12287,11 +12287,59 @@ async function generarFotoMes(){
       codigo = cspMeta + '\n' + codigo;
     }
     // Verificación: si la CSP no quedó, ABORTAR (no generar una foto insegura)
-    if(codigo.indexOf('connect-src')<0){
-      if(btnMsg) btnMsg.textContent='';
-      alert('⚠️ No se pudo aplicar la barrera de seguridad (CSP). Por precaución, NO se generó la foto. Avisá para revisarlo.');
-      return;
-    }
+    if(codigo.indexOf('connect-src')<0) throw new Error('no se pudo aplicar la barrera de seguridad (CSP)');
+    if(codigo.indexOf('window._esFotoOffline = true;')<0) throw new Error('no se pudo desconectar Firebase en la foto');
+    return {mesNombre: mesActualNombre, codigo};
+  }
+}
+
+// v1.0681: FOTO AUTOMÁTICA al cierre final. Se saca con los datos de ANTES de cerrar y se guarda en la
+// nube (verificada). Si ya había una foto de ese mes sacada a mano, no se pisa: esta va como "<Mes>_cierre".
+// Devuelve true si quedó guardada; si no, el cierre no se hace.
+async function _fotoAntesDelCierre(){
+  const ov=document.createElement('div');
+  ov.id='foto-cierre-aviso';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100002;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML='<div style="background:var(--surface);border-radius:14px;padding:22px 26px;max-width:420px;text-align:center;font-family:sans-serif">'
+    +'<div style="font-size:34px;margin-bottom:6px">📸</div>'
+    +'<div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">Guardando la foto del mes…</div>'
+    +'<div style="font-size:12px;color:var(--text2)">Antes de cerrar, la app guarda sola la foto con los datos de este mes. Tarda unos segundos.</div></div>';
+  document.body.appendChild(ov);
+  try{
+    const armada=await _armarFotoMes();
+    const base=armada.mesNombre.replace(/\s+/g,'_');
+    let key=base;
+    try{
+      const ya=await fetch('https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/fotos_mensuales/'+base+'.json?shallow=true').then(r=>r.json());
+      if(ya) key=base+'_cierre';
+    }catch(e){}
+    const ok=await guardarFotoEnNube(armada.mesNombre, armada.codigo, {key, nota: armada.mesNombre+' · automática al cierre final', silencioso:true});
+    if(!ok) throw new Error('no se pudo guardar o verificar en la nube');
+    try{ registrarFotoGenerada(armada.mesNombre); }catch(e){}
+    return true;
+  }catch(e){
+    console.error('foto automática:', e);
+    alert('⚠️ No se pudo guardar la FOTO del mes ('+(e&&e.message?e.message:e)+').\n\nPor seguridad el CIERRE NO SE HIZO: no se tocó ningún dato.\nRevisá la conexión a internet y volvé a intentar el cierre.');
+    return false;
+  }finally{
+    const m=document.getElementById('foto-cierre-aviso'); if(m) m.remove();
+  }
+}
+
+async function generarFotoMes(){
+  const cfM=loadCierreFinal(), hoyM=new Date();
+  const mesActualNombre = (cfM && typeof cfM.mes==='number')
+    ? MESES_NOMBRE[(cfM.mes+1)%12]+' '+(cfM.mes===11?(cfM.anio+1):cfM.anio)
+    : MESES_NOMBRE[hoyM.getMonth()]+' '+hoyM.getFullYear();
+
+  if(!confirm('Se va a generar la FOTO NAVEGABLE de '+mesActualNombre+'.\n\nEs un archivo HTML independiente, sin conexión, que podés abrir cuando quieras para ver la app con los datos de este mes.\n\n¿Continuar?')) return;
+
+  const btnMsg = document.getElementById('foto-status');
+  if(btnMsg) btnMsg.textContent='Generando… (puede tardar unos segundos)';
+
+  try{
+    const armada = await _armarFotoMes();
+    const codigo = armada.codigo;
 
     // 5) Descargar el archivo
     const blob = new Blob([codigo], {type:'text/html;charset=utf-8'});
@@ -13356,7 +13404,10 @@ function ejecutarCierreFinal(){
     if(confirm('🔒 FALTA EL RESPALDO "PRE CIERRE FINAL"\n\nAntes de cerrar el mes hay que guardar una copia con todos los pagos hechos hasta ahora.\n\nSi el cierre sale mal, volvés a esa copia sin perder la cobranza del mes.\n\n¿Guardar el respaldo ahora?')) abrirValidarEstado('precierre');
     return;
   }
-  confirmarConClave(()=>{
+  confirmarConClave(async ()=>{
+    // v1.0681: FOTO del mes automática, con los datos de antes del cierre. Si falla, no se cierra.
+    if(!(await _fotoAntesDelCierre())) return;
+
     // Guardar snapshot ANTES de ejecutar
     saveSnapshot();
 
@@ -13426,6 +13477,7 @@ function ejecutarCierreFinal(){
       '\n\n📋 '+avanzados+' clientes avanzaron al mes siguiente'+
       '\n⚠️ '+nuevasMora+' cuotas pasaron a mora'+
       (_fin.length?'\n\n🏁 '+_fin.length+' lote(s) FINALIZARON su plan (pagaron todas las cuotas):\n'+_fin.join(', ')+'\n\nYa aparecen en "Lotes Finalizados".':'')+
+      '\n\n📸 La foto de '+mesNombre+' quedó guardada en la nube (Informes mensuales).'+
       '\n\nDesde ahora los pagos pendientes van a Caja de Mora.');
   });
 }
