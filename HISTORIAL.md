@@ -162,3 +162,6 @@
 
 ## 2026-09-28 — v1.0685: informes en PDF dicen "ADMINISTRACIÓN"
 - Los 3 informes internos (cartera morosa, informe de cierre de mes, informe de deuda para Legales) tenían arriba "F&J DESARROLLOS INMOBILIARIOS" en dorado: ahora "ADMINISTRACIÓN" en verde. F&J queda solo en los WhatsApp a clientes.
+
+## 2026-09-28 — v1.0686: contraseñas nuevas, guardadas como huella
+- Marcos cambió las claves de administrador y colaborador. Ya NO están escritas en el código (el repo es público): se guarda solo su huella (SHA-256 x10.000 con sal) en `_CLAVE_HUELLA` y se comprueban con `_rolesDeClave()`. La clave de edición no cambió (quedó igual a la de administrador).

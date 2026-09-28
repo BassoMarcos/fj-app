@@ -908,7 +908,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0685';
+const APP_VERSION='v1.0686';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -1744,9 +1744,54 @@ const CLIENTES_POR_PLANILLA = {
   'Ene-Abr-Jul-Oct': 97    // Azul
 };
 // ===================== DATA =====================
-const ADMIN_PASS = 'fyj41252.0';
-const COLAB_PASS = 'fyj4125';
-const EDIT_PASS = 'm4rk14125';
+// v1.0686: las contraseñas NO están escritas en el código (el repo es público): se guarda solo su
+// "huella" (SHA-256 repetido 10.000 veces, con sal). Con la huella se comprueba una clave, pero no se la puede leer.
+// Para cambiar una clave: calcular su huella con _huellaClave('nueva') y reemplazarla en _CLAVE_HUELLA.
+const _CLAVE_SAL='adm-eucaliptus-2026';
+function _sha256hex(ascii){
+  function rr(v,a){return (v>>>a)|(v<<(32-a));}
+  const mp=Math.pow, maxW=mp(2,32);
+  let res='', words=[], asciiBitLen=ascii.length*8;
+  let hash=_sha256hex.h=_sha256hex.h||[], k=_sha256hex.k=_sha256hex.k||[], pl=k.length;
+  const isC={};
+  for(let c=2;pl<64;c++){ if(!isC[c]){ for(let i=0;i<313;i+=c) isC[i]=c; hash[pl]=(mp(c,.5)*maxW)|0; k[pl++]=(mp(c,1/3)*maxW)|0; } }
+  ascii+='\x80';
+  while(ascii.length%64-56) ascii+='\x00';
+  for(let i=0;i<ascii.length;i++){ const j=ascii.charCodeAt(i); if(j>>8) return ''; words[i>>2]|=j<<((3-i)%4)*8; }
+  words[words.length]=((asciiBitLen/maxW)|0);
+  words[words.length]=(asciiBitLen);
+  hash=hash.slice(0,8);
+  for(let j=0;j<words.length;){
+    const w=words.slice(j,j+=16), oldHash=hash;
+    hash=hash.slice(0,8);
+    for(let i=0;i<64;i++){
+      const w15=w[i-15], w2=w[i-2], a=hash[0], e=hash[4];
+      const t1=hash[7]+(rr(e,6)^rr(e,11)^rr(e,25))+((e&hash[5])^((~e)&hash[6]))+k[i]
+        +(w[i]=(i<16)?w[i]:(w[i-16]+(rr(w15,7)^rr(w15,18)^(w15>>>3))+w[i-7]+(rr(w2,17)^rr(w2,19)^(w2>>>10)))|0);
+      const t2=(rr(a,2)^rr(a,13)^rr(a,22))+((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));
+      hash=[(t1+t2)|0].concat(hash); hash[4]=(hash[4]+t1)|0;
+    }
+    for(let i=0;i<8;i++) hash[i]=(hash[i]+oldHash[i])|0;
+  }
+  for(let i=0;i<8;i++) for(let j=3;j+1;j--){ const b=(hash[i]>>(j*8))&255; res+=((b<16)?0:'')+b.toString(16); }
+  return res;
+}
+function _huellaClave(p){
+  let h=_CLAVE_SAL+'|'+unescape(encodeURIComponent(String(p||'')));
+  for(let i=0;i<10000;i++) h=_sha256hex(h);
+  return h;
+}
+// ¿De qué rol es esta clave? {admin, colab, edit} (se calcula la huella una sola vez)
+function _rolesDeClave(p){
+  if(typeof p!=='string'||!p) return {admin:false,colab:false,edit:false};
+  const h=_huellaClave(p);
+  return {admin:h===_CLAVE_HUELLA.admin, colab:h===_CLAVE_HUELLA.colab, edit:h===_CLAVE_HUELLA.edit};
+}
+const _CLAVE_HUELLA={
+  admin:'288ddd5079bcee457d908f6c83483fa0112f0d81e5ae2a180aed6ff8c42cab84',
+  colab:'a2381a7ba3f6c862a17cc6712baafb8c001768de3256e4a54a658bad714dad2c',
+  edit:'288ddd5079bcee457d908f6c83483fa0112f0d81e5ae2a180aed6ff8c42cab84',
+};
 const SK = 'fj_v2_data';
 // Agrimensor lotes - auto-detected when adding new clients
 const AGRIMENSOR_LOTES_DEFAULT = new Set([
@@ -2592,7 +2637,7 @@ function volverHomeMain(){
 
 async function doLogin(){
   const pass=document.getElementById('login-pwd').value||'';
-  const ok=loginRole==='admin'?pass===ADMIN_PASS:pass===COLAB_PASS;
+  const _r=_rolesDeClave(pass); const ok=loginRole==='admin'?_r.admin:_r.colab;
   if(ok){
     // v1.0655: si el dispositivo está deshabilitado, no deja entrar
     try{ if(typeof dispPuedeIngresar==='function' && !(await dispPuedeIngresar())) return; }catch(e){}
@@ -3490,7 +3535,7 @@ function confirmarConClaveColab(accion){
   _claveAccion=accion;
   _claveEsColab=true;
   const modal=document.getElementById('modal-clave');
-  if(!modal){const p=prompt('Contraseña colaborador:');if(p===COLAB_PASS)accion();return;}
+  if(!modal){const p=prompt('Contraseña colaborador:');if(_rolesDeClave(p).colab)accion();return;}
   document.getElementById('modal-clave-titulo').textContent='Contraseña de colaborador';
   document.getElementById('clave-error').textContent='';
   document.getElementById('clave-input').value='';
@@ -3846,7 +3891,7 @@ function confirmarConClave(accion){
   _claveAccion=accion;
   _claveEsColab=false;
   const modal=document.getElementById('modal-clave');
-  if(!modal){const p=prompt('Contraseña:');if(p===ADMIN_PASS)accion();return;}
+  if(!modal){const p=prompt('Contraseña:');if(_rolesDeClave(p).admin)accion();return;}
   document.getElementById('modal-clave-titulo').textContent='Contraseña de administrador';
   document.getElementById('clave-error').textContent='';
   document.getElementById('clave-input').value='';
@@ -3858,9 +3903,10 @@ confirmarConClave.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram o
 function _claveConfirmar(){
   const pass=document.getElementById('clave-input').value;
   let ok=false;
-  if(_claveEsEdit) ok=pass===EDIT_PASS;
-  else if(_claveEsColab) ok=(pass===COLAB_PASS||pass===ADMIN_PASS);
-  else ok=pass===ADMIN_PASS;
+  const _r=_rolesDeClave(pass);
+  if(_claveEsEdit) ok=_r.edit;
+  else if(_claveEsColab) ok=(_r.colab||_r.admin);
+  else ok=_r.admin;
   if(ok){
     document.getElementById('modal-clave').style.display='none';
     document.getElementById('modal-clave-titulo').textContent='Contraseña de administrador';
@@ -16505,10 +16551,10 @@ function esNoCobrable_placeholder(){}
 function pedirClaveDoble(titulo, cb){
   const p1=prompt(titulo+'\n\nIngresá la clave de administrador (1 de 2):');
   if(p1===null) return;
-  if(p1!=='fyj41252.0'){ alert('Clave incorrecta.'); return; }
+  if(!_rolesDeClave(p1).admin){ alert('Clave incorrecta.'); return; }
   const p2=prompt(titulo+'\n\nConfirmá la clave nuevamente (2 de 2):');
   if(p2===null) return;
-  if(p2!=='fyj41252.0'){ alert('Clave incorrecta. Operación cancelada.'); return; }
+  if(!_rolesDeClave(p2).admin){ alert('Clave incorrecta. Operación cancelada.'); return; }
   cb();
 }
 
