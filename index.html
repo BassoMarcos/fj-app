@@ -915,7 +915,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0681';
+const APP_VERSION='v1.0682';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -12534,11 +12534,33 @@ function revertirCierre(){
   });
 }
 
+// v1.0682: el mes que se cierra = el siguiente al último cierre final (el mes que se está cobrando),
+// NO el del calendario: cerrar Octubre el 2 de Noviembre graba Octubre. Sin cierre previo: el del calendario.
+function _mesQueSeCierra(){
+  const cf=loadCierreFinal();
+  if(cf && typeof cf.mes==='number' && cf.anio){
+    const v=Number(cf.anio)*12+cf.mes+1;
+    return {mes:v%12, anio:Math.floor(v/12)};
+  }
+  const hoy=new Date();
+  return {mes:hoy.getMonth(), anio:hoy.getFullYear()};
+}
+// No se puede cerrar un mes que todavía no empezó (ej. volver a cerrar el 28/9 después de cerrar Septiembre).
+function _mesYaEmpezo(mc){
+  const hoy=new Date();
+  return hoy.getFullYear()*12+hoy.getMonth() >= mc.anio*12+mc.mes;
+}
+function _avisoMesNoEmpezo(mc){
+  const cf=loadCierreFinal();
+  alert('⛔ No se puede hacer el cierre todavía.\n\nYa cerraste '+((cf&&cf.mesNombre)||'el mes anterior')+'. El próximo cierre es '+MESES_NOMBRE[mc.mes]+' '+mc.anio+', y ese mes todavía no empezó.');
+}
+
 // ══════════ MODAL RESUMEN CIERRE ══════════
 function mostrarResumenCierre(){
-  const hoy=new Date();
-  const mes=hoy.getMonth();
-  const anio=hoy.getFullYear();
+  const _mc=_mesQueSeCierra();
+  if(!_mesYaEmpezo(_mc)){ _avisoMesNoEmpezo(_mc); return; }
+  const mes=_mc.mes;
+  const anio=_mc.anio;
   const mesNombre=MESES_NOMBRE[mes]+' '+anio;
   const data=loadData();
 
@@ -13157,9 +13179,9 @@ function calcularResumenCompleto(data){
 }
 
 function simularCierre(){
-  const hoy=new Date();
-  const anio=hoy.getFullYear();
-  const mes=hoy.getMonth();
+  const _mc=_mesQueSeCierra();   // v1.0682: el mes que se va a cerrar, no el del calendario
+  const anio=_mc.anio;
+  const mes=_mc.mes;
   const mesNombre=MESES_NOMBRE[mes]+' '+anio;
 
   const data=loadData();
@@ -13400,6 +13422,9 @@ function cerrarModalVerif(){ const m=document.getElementById('verif-modal'); if(
 function ejecutarCierreFinal(){
   window._finalizadosEnCierre=[]; var _finalizadosEnCierre=window._finalizadosEnCierre;
   if(_syncBloqueaOperacion('HACER EL CIERRE')) return;
+  // v1.0682: se cierra el mes siguiente al último cierre, y solo si ese mes ya empezó
+  const _mc=_mesQueSeCierra();
+  if(!_mesYaEmpezo(_mc)){ _avisoMesNoEmpezo(_mc); return; }
   if(!hitoHecho('precierre')){
     if(confirm('🔒 FALTA EL RESPALDO "PRE CIERRE FINAL"\n\nAntes de cerrar el mes hay que guardar una copia con todos los pagos hechos hasta ahora.\n\nSi el cierre sale mal, volvés a esa copia sin perder la cobranza del mes.\n\n¿Guardar el respaldo ahora?')) abrirValidarEstado('precierre');
     return;
@@ -13417,8 +13442,8 @@ function ejecutarCierreFinal(){
     const hoy=new Date();
     const fecha=hoy.toLocaleDateString('es-AR');
     const hora=hoy.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-    const anio=hoy.getFullYear();
-    const mes=hoy.getMonth();
+    const anio=_mc.anio;   // v1.0682: el mes que se cierra (antes: hoy.getMonth(), el del calendario)
+    const mes=_mc.mes;
 
     const data=loadData();
     const cuotasMoraExist=loadCuotasMora();

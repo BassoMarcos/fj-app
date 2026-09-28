@@ -150,3 +150,6 @@
 ## 2026-09-28 — v1.0681: foto del mes automática al cierre final
 - Marcos cerró Septiembre sin sacar la foto; se rearmó del respaldo "Pre cierre final" (28/9 15:21) y se subió a la nube como "Septiembre 2026 · rearmada".
 - Desde ahora el cierre final guarda la foto solo, antes de tocar datos; si no puede, no cierra. Ver MAPA.md.
+
+## 2026-09-28 — v1.0682: el cierre final cierra el mes que se está cobrando
+- Antes tomaba el mes del calendario: cerrar Octubre a principios de Noviembre lo grababa como Noviembre. Ahora cierra siempre el mes siguiente al último cierre, y no deja cerrar un mes que todavía no empezó (doble cierre).
