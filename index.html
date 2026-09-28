@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<!-- 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>F&amp;J App</title>
 <style>
+/* 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#222222;--surface:#2d2d2d;--border:#444444;--border2:#4e4e4e;
@@ -915,10 +917,11 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0682';
+const APP_VERSION='v1.0683';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _updAplicarYa(){
   const v=_updNuevaVersion||Date.now();
   location.replace(location.pathname+'?v='+encodeURIComponent(v));
@@ -969,6 +972,7 @@ const _UPD_AUTO_INACTIVO_MIN=60;   // si lleva este tiempo sin uso, actualiza so
 const _UPD_BLOQUEO_AUTO_MIN=5;     // si queda bloqueado este tiempo, actualiza solo
 let _updBloqueoDesde=null;
 // ¿Nadie está usando este dispositivo? (sin sesión, o inactivo hace rato)
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _updNadieUsando(){
   try{
     if(typeof _dispRol==='function' && _dispRol()==='sin sesión') return true;
@@ -1030,6 +1034,7 @@ window.addEventListener('load',()=>{
 // ============== DETECTOR DE DISPOSITIVOS (v1.0655) ==============
 const _FB_DISP='https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/dispositivos';
 const _DISP_INACTIVIDAD_MIN=60;   // cierre de sesión por inactividad
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _dispId(){
   let id=null;
   try{ id=localStorage.getItem('fj_device_id'); }catch(e){}
@@ -1067,6 +1072,7 @@ let _dispCache={};
   window.addEventListener(ev,()=>{_dispUltimaActividad=Date.now();},{passive:true});
 });
 function _dispMinInactivo(){ return Math.floor((Date.now()-_dispUltimaActividad)/60000); }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function _dispLatido(){
   const id=_dispId(), rol=_dispRol();
   try{
@@ -1175,6 +1181,7 @@ window.addEventListener('load',()=>{
   setInterval(_dispRefrescarChip,60000);
   setTimeout(_dispRefrescarChip,6000);
 });
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function _dispLeerTodos(){
   try{
     const r=await fetch(_FB_DISP+'.json?cb='+Date.now(),{cache:'no-store'});
@@ -1243,6 +1250,7 @@ function _dispFilas(mapa){
       +'</div></div></div>';
   }).join('');
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function abrirModalDispositivos(){
   document.getElementById('disp-modal')?.remove();
   const ov=document.createElement('div');
@@ -1282,6 +1290,7 @@ function _dispRefrescarVistas(){
   if(document.getElementById('dispositivos-panel')) renderDispositivosPanel();
   _dispRefrescarChip();
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function _dispExpulsar(id){
   if(!confirm('¿Cerrar la sesión de ese dispositivo?\n\nSe va a desloguear en menos de 1 minuto.')) return;
   try{
@@ -1315,10 +1324,12 @@ async function _dispRenombrar(id){
 
 // ============== MULTI-DESARROLLO ==============
 const _memStore = {}; // in-memory fallback when localStorage unavailable
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function getDesarrolloActivo(){try{return localStorage.getItem('fj_desarrollo_activo')||'eucaliptus';}catch(e){return 'eucaliptus';}}
 function setDesarrolloActivo(id){try{localStorage.setItem('fj_desarrollo_activo',id);}catch(e){}_memStore['fj_desarrollo_activo']=id;}
 function dKey(base){return 'fj_'+getDesarrolloActivo()+'_'+base;}
 function _lsGet(k){try{const v=localStorage.getItem(k);if(v!==null)return v;}catch(e){}return _memStore[k]||null;}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}_memStore[k]=v;}
 
 function loadMora(){try{return JSON.parse(localStorage.getItem('fj_mora')||'[]');}catch(e){return [];}}
@@ -1332,6 +1343,7 @@ function _moraRendida(entry, rendidos){
   if(!entry.ts) return true; // sin fecha: comportamiento viejo
   return String(entry.ts) <= String(marca);
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function saveCajaMoraRendidos(o){localStorage.setItem('fj_cajamora_rendidos',JSON.stringify(o||{}));}
 function rendirCajaMora(loteId){
   if(!loteId) return;
@@ -1354,6 +1366,7 @@ function marcarCajaMoraRendidos(){
   renderBalances('mora');
   alert('✓ '+ids.length+' lote(s) marcados como rendidos. Quedan guardados en la carpeta "Rendidos".');
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function reactivarCajaMora(loteId){
   const r=loadCajaMoraRendidos(); delete r[loteId]; saveCajaMoraRendidos(r);
   renderBalances('mora');
@@ -1385,11 +1398,13 @@ function limpiarExtrasRendidos(){
   alert('✓ Extras rendidos limpiados. Lo activo quedó intacto.');
 }
 function loadPendientesAprobacion(){try{return JSON.parse(localStorage.getItem('fj_pendientes_aprobacion')||'[]');}catch(e){return [];}}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function savePendientesAprobacion(v){localStorage.setItem('fj_pendientes_aprobacion',JSON.stringify(v));sheetsSet('Pendientes',v);window._fbSet('pendientesAprobacion',v).catch(e=>console.warn('FB pend error:',e));}
 // v1.0637: Notificaciones de mora (avisos, sin aprobación). Reemplaza el sistema de pendientes.
 function loadNotifMora(){try{return JSON.parse(localStorage.getItem('fj_notif_mora')||'[]');}catch(e){return [];}}
 function saveNotifMora(v){localStorage.setItem('fj_notif_mora',JSON.stringify(v));window._fbSet('notifMora',v).catch(e=>console.warn('FB notifMora error:',e));}
 function agregarNotifMora(n){ const arr=loadNotifMora(); arr.push(n); saveNotifMora(arr); }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function limpiarNotifMora(){
   const arr=loadNotifMora();
   const pend=loadPendientesAprobacion();
@@ -1454,6 +1469,7 @@ function _renderNotifMoraHtml(){
   return h;
 }
 function loadUltimaVistaMora(){return localStorage.getItem('fj_mora_vista')||'0';}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function saveUltimaVistaMora(){localStorage.setItem('fj_mora_vista',new Date().toISOString());}
 function getMoraNoVistos(){
   const mora=loadMora();
@@ -1462,16 +1478,19 @@ function getMoraNoVistos(){
 }
 function saveMora(v){localStorage.setItem('fj_mora',JSON.stringify(v));sheetsSet('Mora',v);window._fbSet('mora',v).catch(e=>console.warn('FB mora error:',e));}
 function loadCierreFinal(){try{return JSON.parse(localStorage.getItem('fj_cierre_final')||'null');}catch(e){return null;}}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function saveCierreFinal(v){localStorage.setItem('fj_cierre_final',JSON.stringify(v));sheetsSet('CierreFinal',[v]);window._fbSet('cierreFinal',v).catch(e=>console.warn('FB cierre error:',e));}
 function hayCierreFinal(){return !!loadCierreFinal();}
 // Cuotas morosas: lista de cuotas impagas registradas al cierre
 function loadCuotasMora(){try{return JSON.parse(localStorage.getItem('fj_cuotas_mora')||'[]');}catch(e){return [];}}
 function saveCuotasMora(v){localStorage.setItem('fj_cuotas_mora',JSON.stringify(v));sheetsSet('CuotasMora',[{json:'STR:'+JSON.stringify(v)}]);window._fbSet('cuotasMora',v).catch(e=>console.warn('FB mora error:',e));}
 // Mes actual del sistema (para saber qué cuota es la del mes en curso)
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function loadMesActual(){try{return JSON.parse(localStorage.getItem('fj_mes_actual')||'null');}catch(e){return null;}}
 function saveMesActual(v){localStorage.setItem('fj_mes_actual',JSON.stringify(v));sheetsSet('MesActual',[v]);window._fbSet('mesActual',v).catch(e=>console.warn('FB mes error:',e));}
 
 // ── Escalonado: cuota pura + adicional fijo hasta la cuota N (inclusive) ──
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function montoCobrable(c){
   const base=Number(c.monto)||0;
   const adic=Number(c.adicionalMonto)||0;
@@ -1479,6 +1498,7 @@ function montoCobrable(c){
   const activo=adic>0 && hasta>0 && Number(c.ca)<=hasta;
   return {base, adicional:activo?adic:0, total:base+(activo?adic:0), escalonActivo:activo, hasta};
 }
+montoCobrable.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 // ── Refinanciación: extra mensual que va a Caja de Mora (no es cuota, no va a caja normal) ──
 function refiCobrable(c){
   const monto=Number(c.refiMonto)||0;
@@ -1493,6 +1513,7 @@ function refiCobrable(c){
 // Monto que se debe GUARDAR en el historial de cuotas.
 // Regla: siempre el monto PURO de la cuota (sin interés/mora). Para USD el precio es fijo,
 // nunca se infla. Nunca guardar valores con recargos en el historial.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function montoPuroHist(c){
   return Number(c.monto)||0;
 }
@@ -1539,11 +1560,13 @@ function calcInteresMoraDesde(monto, anio, mes){
 const MESES_NOMBRE=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 function getModo(){return localStorage.getItem('fj_modo')||'prueba';}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function getMoraDesactivada(){return localStorage.getItem('fj_mora_desactivada')==='1';}
 function toggleMoraDesactivada(){const v=getMoraDesactivada();const nv=v?'0':'1';localStorage.setItem('fj_mora_desactivada',nv);window._fbSet('moraDesactivada',nv).catch(e=>console.warn('FB moraDesact:',e));renderAdminTable();const det=document.getElementById('admin-detalle');if(det&&det.style.display!=='none'&&typeof adminDetId!=='undefined'&&adminDetId)renderAdminDet(adminDetId);}
 function loadExtras(){try{return JSON.parse(localStorage.getItem('fj_extras')||'[]');}catch(e){return [];}}
 function saveExtras(v){localStorage.setItem('fj_extras',JSON.stringify(v));sheetsSet('Extras',v);window._fbSet('extras',v).catch(e=>console.warn('FB extras error:',e));}
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function limpiarTransferencias(){
   const bal=loadBalances();
   const n=(bal.transferencias||[]).length;
@@ -1577,12 +1600,14 @@ function _parseAdelantoCuotas(c){
   if(c&&typeof c==='object') return Object.values(c);
   return [];
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function loadAdelantos(){try{const d=JSON.parse(_lsGet(dKey('adelantos'))||'[]');return d.map(a=>({...a,cuotas:_parseAdelantoCuotas(a.cuotas)}));}catch(e){return[];}}
 function saveAdelantos(d){_lsSet(dKey('adelantos'),JSON.stringify(d));sheetsSet('Adelantos',d);window._fbSet('adelantos',d).catch(e=>console.warn('FB adel error:',e));}
 function loadAdelantosBackup(){try{return JSON.parse(_lsGet(dKey('adelantosBackup'))||'null');}catch(e){return null;}}
 function saveAdelantosBackup(obj){_lsSet(dKey('adelantosBackup'),JSON.stringify(obj));window._fbSet('adelantosBackup',obj).catch(e=>{});}
 
 // ── Agrimensores: lista dinámica persistida ──────────────────────────
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function loadAgrimensorLotes(){
   try{
     const s=_lsGet(dKey('agrimensorLotes'));
@@ -1623,6 +1648,7 @@ function agrAddMzChange(){
   const mz=document.getElementById('agr-add-mz').value;
   if(mz) agrAddLlenarLotes(mz);
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function agrAddLlenarLotes(prefijo){
   const loteWrap=document.getElementById('agr-add-lote-wrap');
   const loteSel=document.getElementById('agr-add-lote-sel');
@@ -1668,6 +1694,7 @@ function loadLotesLibresE123(){
   }catch(e){}
   return new Set();
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function saveLotesLibresE123(set){
   const arr=[...set];
   _lsSet(dKey('lotesLibresE123'),JSON.stringify(arr));
@@ -1744,6 +1771,7 @@ const AGRIMENSOR_LOTES_DEFAULT = new Set([
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxljkv9fj6mYqkCOUz81Rp38K4xvFoML_WWegC-TkzpFeRHKTB7JmaIycf5sb0tbM0e/exec';
 
 // ===================== GOOGLE SHEETS SYNC =====================
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function sheetsSet(sheet, rows){
   if(!SHEETS_URL) return null;
   try{
@@ -1772,6 +1800,7 @@ const BASE = [{"id":"M1-1A","mz":"M1","lote":"1A","titular":"Miriam Beatriz Belt
 // ============ PAGO STORE ============
 function loadPagoStore(){try{return JSON.parse(_lsGet(dKey('pagos'))||'{}');}catch(e){return {};}}
 function savePagoStore(s){_lsSet(dKey('pagos'),JSON.stringify(s));sheetsSet('PagoStore',Object.entries(s).map(([id,ts])=>({id,ts})));window._fbSet('pagoStore',s).catch(e=>console.warn('FB pago error:',e));}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function setPagoState(id,pago,ts){const s=loadPagoStore();if(pago){s[id]=ts||new Date().toISOString();}else{delete s[id];}savePagoStore(s);}
 
 function mostrarToastCobro(msg){
@@ -1853,6 +1882,7 @@ function importarDatos(input){
   input.value='';
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function loadData(){
   const _SK=dKey('data');
   try{
@@ -1921,6 +1951,7 @@ function loadData(){
   }));
   saveData(d);return d;
 }
+loadData.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 function loadBorrados(){try{return JSON.parse(localStorage.getItem('fj_borrados')||'[]');}catch(e){return [];}}
 function saveBorrados(v){localStorage.setItem('fj_borrados',JSON.stringify(v));if(window._fbSet)window._fbSet('borrados',v).catch(e=>console.warn('FB borrados error:',e));}
 function registrarBorrado(id){
@@ -1931,6 +1962,7 @@ function registrarBorrado(id){
   limpio.push({id,ts:ahora});
   saveBorrados(limpio);
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function esBorrado(id){
   return loadBorrados().some(x=>x&&x.id===id);
 }
@@ -1939,6 +1971,7 @@ function quitarBorrado(id){
   const limpio=b.filter(x=>x&&x.id!==id);
   if(limpio.length!==b.length) saveBorrados(limpio);
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function saveData(d){
   // Save full data so it becomes the new base for next month
   const full=d.map(c=>({
@@ -1968,7 +2001,9 @@ function saveData(d){
   window._fbSet('data', full).catch(e=>console.warn('FB write error:', e));
 
 }
+saveData.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 function loadHist(){try{return JSON.parse(_lsGet(dKey('hist'))||'[]');}catch(e){return [];}}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function saveHist(h){
   _lsSet(dKey('hist'),JSON.stringify(h));
   // Sync latest 100 to Sheets
@@ -1999,6 +2034,7 @@ function saveIccMensual(arr){
   window._fbSet('iccMensual',arr).catch(e=>console.warn('FB iccMensual error:',e));
 }
 // Registra el % de un mes específico (mesIdx 0-indexed, anio ej 2026). No duplica.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function registrarIccMensual(mesIdx, anio, pct){
   const arr=loadIccMensual();
   const mesKey=anio+'-'+String(mesIdx+1).padStart(2,'0');
@@ -2046,6 +2082,7 @@ function loadICC(){
     return merged.sort((a,b)=>new Date(b.ts)-new Date(a.ts));
   }catch(e){ return ICC_HISTORICO; }
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function loadICCFromSheets(){
   if(window.location.protocol==='file:') return null;
   try{return null;}catch(e){return null;}
@@ -2233,6 +2270,7 @@ async function sincronizarTodo(){
   }
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function syncToSheets(){
   // Push all local data to Sheets
   const data = loadData();
@@ -2295,6 +2333,7 @@ function fmtDate(iso){
 }
 // Número de cuota que corresponde al MES OPERATIVO actual (no la última pagada).
 // No modifica el ca real; solo se usa para mostrar en las tarjetas.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function cuotaOperativa(c){
   if(!c) return c;
   // Mes/año operativo actual
@@ -2327,6 +2366,7 @@ function cuotaOperativa(c){
   }
   return c.ca; // fallback: lo que había
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function mesActual(){
   const cf=loadCierreFinal();
   if(cf&&cf.mes!==undefined){
@@ -2340,6 +2380,7 @@ function mesActual(){
   }catch(e){}
   return MESES[new Date().getMonth()];
 }
+mesActual.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 // Detecta si un cliente todavia no llegó a su primera cuota
 function esPrimeraCuotaFutura(c){
@@ -2375,6 +2416,7 @@ function nombreMesPrimeraCuota(c){
 }
 
 // Etapa/Manzana logic
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function getEtapa(mz){
   if(!mz) return 'Otra';
   mz=mz.toUpperCase().trim();
@@ -2418,6 +2460,7 @@ function initPublic(){
     sel.innerHTML+=`<option value="${e}">${e}</option>`;
   });
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function onPubEtapa(){
   const data=loadData();
   const etapa=document.getElementById('pub-etapa').value;
@@ -2490,6 +2533,7 @@ function consultarCuota(){
   if(res) setTimeout(()=>res.scrollIntoView({behavior:'smooth',block:'nearest'}),50);
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function renderTarjetaCliente(id, containerId){
   const data=loadData();
   const c=data.find(x=>x.id===id);
@@ -2549,6 +2593,7 @@ function mostrarLoginForm(role){
   document.getElementById('login-err').textContent='';
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function volverHomeMain(){
   document.getElementById('home-login').style.display='none';
   document.getElementById('home-main').style.display='flex';
@@ -2598,6 +2643,7 @@ function showPage(p){
 // ===================== ADMIN =====================
 
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function initAdminFilters(){
   const data=loadData();
   const etapas=[...new Set(data.map(c=>getEtapa(c.mz)))].sort();
@@ -2689,6 +2735,7 @@ function actualizarSaldoHint(){
   else { h.textContent='Positivo = a favor (SAF). Negativo = en contra (SEC).'; h.style.color='var(--text2)'; }
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function openEditModal(id){
   editId=id;
   const data=loadData();
@@ -2903,6 +2950,7 @@ let _lotesSeleccionados = [];
 let _etapaActual = '';
 let _mzActual = '';
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function renderSelectorEtapa(){
   const grid = document.getElementById('sel-etapa-grid');
   if(!grid) return;
@@ -2992,6 +3040,7 @@ function toggleLoteSeleccionado(etapa, mz, lote, id, isAgri){
 }
 
 // Format number as currency display
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function fmtMoneda(val, moneda){
   if(!val && val!==0) return '';
   const sym = moneda==='USD' ? 'U$S ' : '$ ';
@@ -3193,6 +3242,7 @@ function setModoLote(i, modo){
   renderResumenLotes();
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function updateContratoLote(i, campo, val){
   if(campo==='saldoTipo'){
     const abs = Math.abs(_lotesSeleccionados[i].saldo||0);
@@ -3260,6 +3310,7 @@ function formatMontoLote(i, input){
   _formatNumInput(input, val => _lotesSeleccionados[i].monto = val);
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function formatAdicionalLote(i, input){
   _formatNumInput(input, val => _lotesSeleccionados[i].adicionalMonto = val);
 }
@@ -3288,6 +3339,7 @@ function toggleIgualarLote(i){
   renderResumenLotes();
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function quitarLote(i){
   _lotesSeleccionados.splice(i,1);
   renderSelectorLotes();
@@ -3302,10 +3354,12 @@ function getLotesSeleccionados(){
 let _loteCount = 0;
 function addLoteSlot(){ _lotesSeleccionados=[]; renderSelectorEtapa(); renderSelectorManzana(); renderSelectorLotes(); }
 function renderEtapaGrid(){ addLoteSlot(); }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function selectEtapa(){}
 function renderManzanaGrid(){}
 function selectManzana(){}
 function renderLoteGrid(){}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function selectLote(){}
 function onAddEtapa(){}
 function onAddManzana(){}
@@ -3314,6 +3368,7 @@ function onAddManzana(){}
 // ---- MODOS NUEVO CLIENTE ----
 function onModoChange(){ /* legacy - use setModoContrato */ }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function calcTrimestrePorCuota(cuotaActual, mesPaga){
   // Próximo incremento = próximo múltiplo de 3 después de cuotaActual
   const proxIncremento = Math.ceil((cuotaActual + 1) / 3) * 3;
@@ -3363,6 +3418,7 @@ function onPrimeraCuota(){
   document.getElementById('e-tri-display').style.color='var(--text)';
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function addTitularField(nombre='', dni=''){
   const wrap=document.getElementById('titulares-fields');
   const div=document.createElement('div');
@@ -3398,6 +3454,7 @@ function setModoContrato(modo){
   _modoContrato = modo;
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function openAddModal(){
   editId=null;
   const safe=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val;};
@@ -3450,6 +3507,7 @@ function confirmarConClaveColab(accion){
   setTimeout(()=>document.getElementById('clave-input').focus(),50);
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function actualizarEscalonInfo(){
   const info=document.getElementById('e-escalon-info');
   const caEl=document.getElementById('e-ca-visible');
@@ -3506,6 +3564,7 @@ function cobrarPorTransferencia(id){
   // Admin: directo. Colaborador: requiere clave admin (ver colabCobrarTransfer).
   elegirTipoTransferencia(id,'admin',undefined);
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function elegirTipoTransferencia(id,ctx,interes){
   let m=document.getElementById('form-cobro-modal');
   if(!m){
@@ -3611,6 +3670,7 @@ function abrirFormCobro(id, opts){
   m.onclick=cerrarFormCobro;
   setTimeout(()=>{const f=document.getElementById(opts.transfer?'fc-transf':'fc-entrego');if(f)f.focus();},60);
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function cerrarFormCobro(){const m=document.getElementById('form-cobro-modal');if(m)m.style.display='none';window._fcCtx=null;}
 function fcNoCobre(){
   const x=window._fcCtx; const id=x?x.id:null;
@@ -3619,6 +3679,7 @@ function fcNoCobre(){
 }
 function fcNum(v){ return parseFloat(String(v||'').replace(/[^\d]/g,''))||0; }
 function fcVacio(v){ return String(v||'').replace(/[^\d]/g,'')===''; }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function fcFmt(el){
   const x=window._fcCtx; if(!el) return;
   const d=String(el.value||'').replace(/[^\d]/g,'');
@@ -3674,6 +3735,7 @@ function fcRecalc(){
   }
   if(ok){ok.disabled=!valido;ok.style.opacity=valido?'1':'.4';}
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function fcConfirmar(){
   const x=window._fcCtx; if(!x) return;
   const esTotal=x.transfer&&x.transferTipo==='total';
@@ -3788,6 +3850,7 @@ function modalPrompt(opts){
     setTimeout(()=>{ inp.focus(); if(!opts.multiline) inp.select(); },60);
   });
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function confirmarConClave(accion){
   _claveAccion=accion;
   _claveEsColab=false;
@@ -3799,6 +3862,8 @@ function confirmarConClave(accion){
   modal.style.display='flex';
   setTimeout(()=>document.getElementById('clave-input').focus(),50);
 }
+confirmarConClave.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _claveConfirmar(){
   const pass=document.getElementById('clave-input').value;
   let ok=false;
@@ -3883,6 +3948,7 @@ function aplicarModoAdmin(){
 
 
 // ============== PANEL DE MORA ==============
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function copiarLinkCliente(btn){
   const link=window._vistaclienteLink||window.location.href.split('#')[0]+'#cliente';
   navigator.clipboard.writeText(link).then(()=>{
@@ -3955,6 +4021,7 @@ function onPrevMz(){
   loteSel.disabled=false;
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function onPrevLote(){
   const id=document.getElementById('prev-lote').value;
   if(id) renderTarjetaCliente(id,'prev-resultado');
@@ -4013,6 +4080,7 @@ function mostrarVCModal(id){
 
 
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function editarInteresMora(clienteId, ts, mesNombre){
   const mora=loadMora();
   const p=mora.find(x=>x.id===clienteId&&x.ts===ts&&(x.mesNombre||'')===(mesNombre||''));
@@ -4076,6 +4144,7 @@ function _revertirCobroMoraEnEstado(st, ref){
   return {ok:true,cuota:!!cm};
 }
 function _estadoMoraCargar(){ return {mora:loadMora(),cuotasMora:loadCuotasMora(),data:loadData(),bal:loadBalances(),tocoBal:false}; }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _estadoMoraGuardar(st){
   saveMora(st.mora); saveCuotasMora(st.cuotasMora); saveData(st.data);
   if(st.tocoBal) saveBalances(st.bal);
@@ -4105,6 +4174,7 @@ function desmararPagoMoraCaja(btn){
   });
 }
 // Botón "↩ Desmarcar todas" del lote: desmarca todas las cuotas de mora cobradas de ese lote (las que siguen en la Caja de Mora).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function desmarcarTodasMoraCaja(btn){
   const cid=btn.dataset.cid;
   const rend=loadCajaMoraRendidos();
@@ -4462,6 +4532,7 @@ function renderPanelMora(){
   el.innerHTML=pendientesHtml+html;
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _cargarScript(src){
   return new Promise((res,rej)=>{
     if(document.querySelector('script[src="'+src+'"]')) return res();
@@ -5004,6 +5075,7 @@ async function generarInformeMora(clienteId, soloTest){
 }
 
 // v1.0384: vista previa del PDF antes de descargar (evita llenarse de archivos)
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _previewPDF(doc,nombre){
   const url=doc.output('bloburl');
   const ov=document.createElement('div');
@@ -5055,6 +5127,7 @@ setInterval(()=>{
 
 // ══════ v1.0391: GESTION DE MORA — WhatsApp, notas y alertas de cambio de estado ══════
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function loadNotasMora(){ try{ return JSON.parse(localStorage.getItem('fj_notas_mora')||'{}'); }catch(e){ return {}; } }
 function saveNotasMora(v){
   localStorage.setItem('fj_notas_mora',JSON.stringify(v));
@@ -5080,6 +5153,7 @@ function borrarNotaMora(clienteId,idx){
 
 // Registra o actualiza una cuota en el hist de un cliente (evita duplicados).
 // Si la cuota ya existe (por número o por mes), actualiza su estado/monto; si no, la agrega.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function registrarCuotaHist(cl, cuota, monto, mes, ts, pagada){
   if(!cl.hist) cl.hist=[];
   const ex=cl.hist.find(h=>(h.cuota===cuota)||(mes&&h.mes===mes));
@@ -5091,6 +5165,7 @@ function registrarCuotaHist(cl, cuota, monto, mes, ts, pagada){
     cl.hist.push({cuota, monto, mes, ts, pagada:!!pagada});
   }
 }
+registrarCuotaHist.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 // Mensaje automatico segun la situacion del deudor
 // ── Plantillas editables (v1.0449). Se guardan en Firebase; si no hay, usa los defaults. ──
@@ -5126,6 +5201,7 @@ function rellenarVars(txt, cl){
   return String(txt||'').replace(/\{nombre\}|\{lote\}|\{cuotas\}|\{meses\}|\{monto\}|\{cuotapura\}/g, m=>map[m]!==undefined?map[m]:m);
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function mensajeMoraWA(cl){
   const P=loadPlantillasMora();
   const n=cl.cuotas.length;
@@ -5139,6 +5215,7 @@ function mensajeMoraWA(cl){
   const firma=rellenarVars(P.firma, cl);
   return saludo+'\n\n'+cuerpo+'\n\n'+firma;
 }
+mensajeMoraWA.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 function abrirWhatsMora(clienteId){
   const cm=loadCuotasMora().filter(m=>!m.pagada&&m.clienteId===clienteId).sort((a,b)=>(a.anio-b.anio)||(a.mes-b.mes));
@@ -5260,6 +5337,7 @@ function _plantInsert(v){
 }
 
 // ── Alertas de cambio de categoria ──
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function loadEstadosMora(){ try{ return JSON.parse(localStorage.getItem('fj_estados_mora')||'{}'); }catch(e){ return {}; } }
 function chequearCambiosMora(){
   const prev=loadEstadosMora();
@@ -5292,6 +5370,7 @@ function toggleMoraMz(k){
   renderPanelMora();
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function toggleMoraCajaGrupo(k){
   if(!window._moraCajaAbierto) window._moraCajaAbierto={};
   window._moraCajaAbierto[k]=!window._moraCajaAbierto[k];
@@ -5348,6 +5427,7 @@ function filtrarMoraCards(q){
 
 
 // v1.0648: clave de orden natural para lotes (Etapa → Manzana → Nº de lote → letra)
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _ordenLoteKey(c){
   const mz=String(c.mz||''), lt=String(c.lote||'');
   let etapa=9, manz=0;
@@ -5430,6 +5510,7 @@ function mamSeleccionarMesManual(clienteId, mesNombre, monto, cuota){
     '</div>';
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function mamCargarMeses(){
   const clienteId=document.getElementById('mam-cliente')?.value;
   const container=document.getElementById('mam-meses-container');
@@ -5574,6 +5655,7 @@ function marcarMayoImpago(clienteId){
   }
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function onMoraInteresEdit(clienteId, anio, mes, nuevoInteres, grupoCid){
   const interes=Math.max(0, parseFloat(nuevoInteres)||0);
   // Actualizar el data-interes en el checkbox para que cobrarMoraSeleccionadas lo use
@@ -5718,6 +5800,7 @@ function cobrarMoraSeleccionadas(clienteId){
   }
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function actualizarBadgeMora(){
   // v1.0362: la burbuja cuenta LOTES en mora, no cuotas
   const _cmImp=loadCuotasMora().filter(c=>!c.pagada);
@@ -5865,6 +5948,7 @@ function cobrarColabMoraSeleccionadas(clienteId){
 // ══════ v1.0667: DETECTOR DE PAGOS SIN REGISTRO EN CAJA ══════
 // Compara los lotes marcados como pagados contra lo que hay en caja del día + cierres.
 // Avisa si un pago quedó marcado pero sin su registro (o al revés).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _auditarPagosVsCaja(){
   const data=loadData(), bal=loadBalances();
   const enCaja={};
@@ -6036,6 +6120,7 @@ function resetearADatosIniciales(){
   },'Resetear TODOS los datos al estado inicial de mayo.');
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function resetTodosLosDatos(){
   confirmarConClave(()=>{
     try{Object.keys(localStorage).filter(k=>k.startsWith('fj_')).forEach(k=>localStorage.removeItem(k));}catch(e){}
@@ -6098,6 +6183,7 @@ function resetPagos(){
 
 // ============== RENDER BALANCES ==============
 function fmtFechaAdel(f){if(!f)return'';try{const d=new Date(f);if(isNaN(d))return f;return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});}catch(e){return f;}}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function getCierreEstados(){try{return JSON.parse(localStorage.getItem('fj_cierre_estados')||'{}');}catch(e){return{};}}
 // v1.0381: estos dos ajustes también se sincronizan
 function saveCierreEstados(e){localStorage.setItem('fj_cierre_estados',JSON.stringify(e));window._fbSet('cierreEstados',e).catch(x=>console.warn('FB cierreEstados:',x));}
@@ -6125,6 +6211,7 @@ function editObsCierre(ts){
     renderBalances('cierres');
   });
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function editObsListModal(ts){
   const bal=loadBalances();
   const ci=(bal.cierres||[]).find(c=>c.ts===ts);
@@ -6198,6 +6285,7 @@ function revertirFusion(){
   </div>`;
   document.body.appendChild(modal);
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _doRevertirFusion(fid){
   confirmarConClave(()=>{
     const bal=loadBalances();
@@ -6315,6 +6403,7 @@ function fusionarCierre(srcTs){
   </div>`;
   document.body.appendChild(modal);
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function toggleCierreSel(ts){
   window._cierresSeleccionados=window._cierresSeleccionados||new Set();
   const s=window._cierresSeleccionados;
@@ -6374,6 +6463,7 @@ function fusionarSeleccionados(){
     alert('✅ '+sel.length+' cierres fusionados en uno solo.');
   });
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _doFusionarSilencioso(srcTs,dstTs){
   if(srcTs===dstTs)return;
   const bal=loadBalances();
@@ -6471,6 +6561,7 @@ function _doFusionar(srcTs,dstTs){
 function getDistPct(){const v=parseInt(localStorage.getItem('fj_dist_pct')||'70');return isNaN(v)||v<1||v>99?70:v;}
 function setDistPct(v){const n=parseInt(v);if(!isNaN(n)&&n>=1&&n<=99){localStorage.setItem('fj_dist_pct',n);window._fbSet('distPct',n).catch(x=>console.warn('FB distPct:',x));renderBalances();}}
 // ── Registro permanente SAF/SEC (nunca se limpia) ──
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function loadSafSecLog(){ try{ return JSON.parse(_lsGet(dKey('safsecLog'))||'[]'); }catch(e){ return []; } }
 function saveSafSecLog(arr){ _lsSet(dKey('safsecLog'),JSON.stringify(arr)); window._fbSet('safsecLog',arr).catch(e=>console.warn('FB safsecLog:',e)); }
 function registrarSafSec(c,dif,ts,fecha){
@@ -6493,6 +6584,7 @@ function calcSafSecEstado(){
   return r;
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function renderBalances(seccion){
   window._balancesSeccion=seccion||null;
   const el=document.getElementById('a-balances-content');if(!el)return;
@@ -7903,6 +7995,7 @@ function toggleCFPago(key){
   localStorage.setItem('fj_cf_pagos_excluidos',JSON.stringify(ex));
   renderBalances('fisica');
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function limpiarExclusionesCF(){
   localStorage.setItem('fj_cf_pagos_excluidos','[]');
   renderBalances('fisica');
@@ -7934,6 +8027,7 @@ function limpiarCajaFisica(){
     renderBalances('fisica');
   });
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function limpiarCajaFisicaFecha(fecha){
   confirmarConClave(()=>{
     const bal=loadBalances();
@@ -8021,6 +8115,7 @@ function guardarExtra(){
 
 let _editBtnClicks=[];
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function toggleVistaColumnasExtras(){
   window._extrasColView=!window._extrasColView;
   const btn=document.getElementById('btn-cols-extras');
@@ -8116,6 +8211,7 @@ function editarExtraField(input){
   saveExtras(extras);
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function toggleExtraSel(id){
   window._extraSel=window._extraSel||{};
   window._extraSel[id]=!window._extraSel[id];
@@ -8163,6 +8259,7 @@ function desmarcarExtraRendido(id){
   const e=extras.find(x=>x.id===id);
   if(e){ delete e.rendido; delete e.rendidoTs; saveExtras(extras); renderBalances('extras'); }
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function eliminarExtra(id){
   confirmarConClave(()=>{
     const extras=loadExtras().filter(e=>e.id!==id);
@@ -8194,6 +8291,7 @@ function cerrarModalModo(){
   document.getElementById('modal-modo').style.display = 'none';
   _modalModoTipo = null;
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function modalModoConfirm(revertir){
   const tipo = _modalModoTipo;
   cerrarModalModo();
@@ -8245,6 +8343,7 @@ function pasarTodosInteresesMes(){
     alert('✓ '+fmtPeso(total)+' de intereses del mes ('+items.length+' cuota'+(items.length>1?'s':'')+') enviados a Extras.');
   });
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function pasarInteresesGrupo(id){
   confirmarConClave(()=>{
     const mora=loadMora();
@@ -8333,6 +8432,7 @@ function pasarInteresMora(id, ts){
   };
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function resetAdelantos(){
   const ads=loadAdelantos();
   if(!ads.length){alert('La caja de adelantos ya está vacía.');return;}
@@ -8382,6 +8482,7 @@ function resetAgrimensoresConfirm(revertir){
   alert(revertir?'✓ Agrimensores limpiados — pagos revertidos (Modo Prueba)':'✓ Agrimensores limpiados — pagos conservados (Modo Real)');
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function resetTodoBalances(){
   confirmarConClave(()=>{
     const bal=loadBalances();
@@ -8431,6 +8532,7 @@ function resetCierresConfirm(revertir){
 function resetCajaAbierta(){
   mostrarModalModo('caja');
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function resetCajaAbiertaConfirm(revertir){
   const bal=loadBalances();
   if(revertir){
@@ -8540,6 +8642,7 @@ function loadLotesCerts(){
   return {};
 }
 // ── Burbuja de lotes finalizados en los últimos 30 días (v1.0625) ──
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function contarFinalizadosRecientes(){
   try{
     const certs=loadLotesCerts();
@@ -8582,6 +8685,7 @@ function toggleCertField(id, field){
   saveLotesCerts(certs);
   renderStats();
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function setCertFecha(id, fecha){
   const certs=loadLotesCerts();
   if(!certs[id]) certs[id]={};
@@ -8998,6 +9102,7 @@ function duenosToggleEtapa(i){
   if(d) d.style.display=d.style.display==='none'?'block':'none';
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function toggleHistFin(){
   const b=document.getElementById('histfin-body'), f=document.getElementById('histfin-flecha');
   if(!b) return;
@@ -9278,6 +9383,7 @@ function toggleGrupoTerminados(key){
   if(arrow){ arrow.style.transform=open?'rotate(90deg)':''; arrow.style.transition='transform .2s'; }
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function previewLoteCert(id){
   const box=document.getElementById('lt-preview');
   if(!box) return;
@@ -9362,6 +9468,7 @@ window._caCtx=null;
 function normTitular(t){
   return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function clienteTieneMoraCA(id){
   return loadCuotasMora().some(cm=>cm.clienteId===id&&!cm.pagada);
 }
@@ -9470,6 +9577,7 @@ function renderCobroAgrupadoModal(){
   m.style.display='flex';
   m.onclick=cerrarCobroAgrupado;
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function cerrarCobroAgrupado(){const m=document.getElementById('cobro-agrupado-modal');if(m)m.style.display='none';window._caCtx=null;try{if(typeof _colabDesbloquearLista==='function')_colabDesbloquearLista();}catch(e){}}
 function caToggleLote(id){
   const x=window._caCtx; if(!x) return;
@@ -9514,6 +9622,7 @@ function caAgregarLoteManual(){
   m.style.display='flex';
   m.onclick=()=>{m.style.display='none';};
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function caManualMz(){
   const data=loadData();
   const etapa=document.getElementById('ca-f-etapa').value;
@@ -9567,6 +9676,7 @@ function caManualPreview(){
   prev.innerHTML='<b>'+formatLoteTag(c.mz,c.lote)+'</b> — '+c.titular+'<br>Cuota '+c.ca+'/'+c.ct+' · '+cur+fmtPeso(montoCobrable(c).total);
   btn.disabled=false; btn.style.opacity='1';
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function caManualConfirmar(){
   const x=window._caCtx; if(!x) return;
   const id=document.getElementById('ca-f-lote').value;
@@ -9662,6 +9772,7 @@ function caRepartoChange(){
   if(sel) sel.style.display=tipo==='especifica'?'block':'none';
 }
 function fmtMiles(n){ return '$'+(Math.round(n)||0).toLocaleString('es-AR'); }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function fmtMilesUSD(n){ return 'USD '+(Math.round(n)||0).toLocaleString('es-AR'); }
 function caNum(str){ return parseFloat(String(str||'').replace(/[^\d]/g,''))||0; }
 function caFmtInput(el){
@@ -9672,6 +9783,7 @@ function caFmtInputUSD(el){
   const d=String(el.value||'').replace(/[^\d]/g,'');
   el.value=d===''?'':'USD '+Number(d).toLocaleString('es-AR');
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function caCalcVueltoUSD(){
   const eEl=document.getElementById('ca-entrego-usd'), vEl=document.getElementById('ca-vuelto-usd'), live=document.getElementById('ca-vuelto-live-usd');
   if(!eEl||!live) return;
@@ -9820,6 +9932,7 @@ function caMostrarComprobante(recibo, totARS, totUSD, difGlobal, difGlobalUSD){
   window._caRecibo=recibo.map(r=>r.lote+'\tCuota '+r.cuota+'\t'+r.cur+fmtPeso(r.total)+(r.nAdel?'\t(+'+r.nAdel+' adel)':'')).join('\n')
     +'\nTOTAL\t'+totalStr;
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function caCopiarComprobante(){
   const txt=window._caRecibo||'';
   if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -9858,6 +9971,7 @@ function caSetAdelanto(id,n){
   renderCobroAgrupadoModal();
 }
 // ══════ Cambiar trimestre manualmente (v1.0633) ══════
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function cambiarTrimestreManual(id){
   const data=loadData();
   const c=data.find(x=>x.id===id);
@@ -10145,6 +10259,7 @@ function _corregirCaPlan(){
   cambios.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
   return cambios;
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function abrirCorregirCa(){
   const cambios=_corregirCaPlan();
   const fila=(x)=>`<div style="display:flex;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border);font-size:12px;align-items:center">
@@ -10232,6 +10347,7 @@ function corregirLoteHist(id){
 
 // v1.0679: mes de la cuota actual = mes operativo (el siguiente al último cierre final; si no hay
 // cierre, el del ICC; si tampoco, el del calendario). Antes estaba fijo en Agosto 2026.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _mesOperativoAncla(){
   try{
     const cf=loadCierreFinal();
@@ -10243,6 +10359,7 @@ function _mesOperativoAncla(){
 }
 // Calcula el historial realineado de un lote (sin aplicar). Devuelve {antes, despues, anclaTxt}
 // Corrige meses/números correlativos desde la cuota actual, completa hasta ca-1, mantiene pagada/impaga.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _realinearHist(c){
   const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const _anc=_mesOperativoAncla();
@@ -10281,6 +10398,7 @@ function _realinearHist(c){
   const antes=(c.hist||[]).slice().sort((a,b)=>(b.cuota||0)-(a.cuota||0)).map(h=>({cuota:h.cuota,mes:h.mes,monto:h.monto,pagada:h.pagada!==false}));
   return {antes, despues, anclaTxt: MESES[anclaMesIdx]+' '+anclaAnio};
 }
+_realinearHist.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 function abrirPreviewRealineado(id){
   const c=loadData().find(x=>x.id===id);
@@ -10356,6 +10474,7 @@ function _guardarRealinEditado(id){
   });
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function abrirDiagnosticoHist(){
   const MESES={'Enero':0,'Febrero':1,'Marzo':2,'Abril':3,'Mayo':4,'Junio':5,'Julio':6,'Agosto':7,'Septiembre':8,'Octubre':9,'Noviembre':10,'Diciembre':11};
   const data=loadData();
@@ -10420,6 +10539,7 @@ function abrirDiagnosticoHist(){
   </div>`;
   document.body.appendChild(ov);
 }
+abrirDiagnosticoHist.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 // ══════ Verificación numeración PDF vs App (v1.0456) ══════
 const TABLA_CUOTAS_PDF = {"M1-1A": {"mayo": 41, "junio": 42, "julio": 43, "agosto": 44}, "M1-2A": {"mayo": 38, "junio": 39, "julio": 40, "agosto": 41}, "M1-3A": {"mayo": 34, "junio": 35, "julio": 36, "agosto": 37}, "M1-3B": {"mayo": 34, "junio": 35, "julio": 36, "agosto": 37}, "M1-4A": {"mayo": 39, "junio": 40, "julio": 41, "agosto": 42}, "M1-4B": {"mayo": 38, "junio": 39, "julio": 40, "agosto": 41}, "M1-5A": {"mayo": 32, "junio": 33, "julio": 34, "agosto": 35}, "M1-5B": {"mayo": 32, "junio": 33, "julio": 34, "agosto": 35}, "M1-6A": {"mayo": 33, "junio": 34, "julio": 35, "agosto": 36}, "M1-6B": {"mayo": 34, "junio": 35, "julio": 36, "agosto": 37}, "M1-8A": {"mayo": 42, "junio": 43, "julio": 44, "agosto": 45}, "M1-8B": {"mayo": 41, "junio": 42, "julio": 43, "agosto": 44}, "M1-9A": {"mayo": 42, "junio": 43, "julio": 44, "agosto": 45}, "M1-9B": {"mayo": 43, "junio": 44, "julio": 45, "agosto": 46}, "M1-10A": {"mayo": 42, "junio": 43, "julio": 44, "agosto": 45}, "M1-10B": {"mayo": 41, "junio": 42, "julio": 43, "agosto": 44}, "M1-11A": {"mayo": 43, "junio": 44, "julio": 45, "agosto": 46}, "M1-11B": {"mayo": 41, "junio": 42, "julio": 43, "agosto": 44}, "M1-13A": {"mayo": 42, "junio": 43, "julio": 44, "agosto": 45}, "M1-13B": {"mayo": 42, "junio": 43, "julio": 44, "agosto": 45}, "M1-14A": {"mayo": 41, "junio": 42, "julio": 43, "agosto": 44}, "M1-15A": {"mayo": 43, "junio": 44, "julio": 45, "agosto": 46}, "M1-15B": {"mayo": 43, "junio": 44, "julio": 45, "agosto": 46}, "M1-16A": {"mayo": 41, "junio": 42, "julio": 43, "agosto": 44}, "M1-16B": {"mayo": 42, "junio": 43, "julio": 44, "agosto": 45}, "M1-2B": {"mayo": 31, "junio": 32, "julio": 32, "agosto": 32}, "M1-12B": {"mayo": 20, "junio": 21, "julio": 22, "agosto": 23}, "M2-1A": {"mayo": 32, "junio": 33, "julio": 34, "agosto": 35}, "M2-1B": {"mayo": 32, "junio": 33, "julio": 34, "agosto": 35}, "M2-2A": {"mayo": 30, "junio": 31, "julio": 32, "agosto": 33}, "M2-2B": {"mayo": 31, "junio": 32, "julio": 33, "agosto": 34}, "M2-3A": {"mayo": 32, "junio": 33, "julio": 34, "agosto": 35}, "M2-3B": {"mayo": 33, "junio": 34, "julio": 35, "agosto": 36}, "M2-5A": {"mayo": 29, "junio": 30, "julio": 31, "agosto": 32}, "M2-5B": {"mayo": 32, "junio": 33, "julio": 34, "agosto": 35}, "M2-6A": {"mayo": 28, "junio": 29, "julio": 30, "agosto": 31}, "M2-6B": {"mayo": 30, "junio": 31, "julio": 32, "agosto": 33}, "M2-7A": {"mayo": 32, "junio": 33, "julio": 34, "agosto": 35}, "M2-8A": {"mayo": 38, "junio": 39, "julio": 40, "agosto": 41}, "M2-8B": {"mayo": 28, "junio": 29, "julio": 30, "agosto": 31}, "M2-9A": {"mayo": 31, "junio": 32, "julio": 33, "agosto": 34}, "M2-9B": {"mayo": 30, "junio": 31, "julio": 32, "agosto": 33}, "M2-10A": {"mayo": 32, "junio": 33, "julio": 34, "agosto": 35}, "M2-10B": {"mayo": 31, "junio": 32, "julio": 33, "agosto": 34}, "M2-11A": {"mayo": 31, "junio": 32, "julio": 33, "agosto": 34}, "M2-11B": {"mayo": 28, "junio": 29, "julio": 30, "agosto": 31}, "M2-12A": {"mayo": 34, "junio": 35, "julio": 36, "agosto": 37}, "M2-12B": {"mayo": 32, "junio": 33, "julio": 34, "agosto": 35}, "M2-13A": {"mayo": 32, "junio": 33, "julio": 34, "agosto": 35}, "M2-13B": {"mayo": 33, "junio": 34, "julio": 35, "agosto": 36}, "M2-14A": {"mayo": 39, "junio": 40, "julio": 41, "agosto": 42}, "M2-14B": {"mayo": 31, "junio": 32, "julio": 33, "agosto": 34}, "M2-15A": {"mayo": 38, "junio": 39, "julio": 40, "agosto": 41}, "M2-15B": {"mayo": 31, "junio": 32, "julio": 33, "agosto": 34}, "M2-16A": {"mayo": 40, "junio": 41, "julio": 42, "agosto": 43}, "M2-16B": {"mayo": 40, "junio": 41, "julio": 42, "agosto": 43}, "M2-17A": {"mayo": 39, "junio": 40, "julio": 41, "agosto": 42}, "M2-17B": {"mayo": 38, "junio": 39, "julio": 40, "agosto": 41}, "M2-18B": {"mayo": 34, "junio": 35, "julio": 36, "agosto": 37}, "M3-1A": {"mayo": 30, "junio": 31, "julio": 32, "agosto": 33}, "M3-1B": {"mayo": 30, "junio": 31, "julio": 32, "agosto": 33}, "M3-2A": {"mayo": 29, "junio": 30, "julio": 31, "agosto": 32}, "M3-2B": {"mayo": 25, "junio": 26, "julio": 27, "agosto": 28}, "M3-3A": {"mayo": 31, "junio": 32, "julio": 33, "agosto": 34}, "M3-3B": {"mayo": 31, "junio": 32, "julio": 33, "agosto": 34}, "M3-4A": {"mayo": 28, "junio": 29, "julio": 30, "agosto": 31}, "M3-4B": {"mayo": 28, "junio": 29, "julio": 30, "agosto": 31}, "M3-5A": {"mayo": 27, "junio": 28, "julio": 29, "agosto": 30}, "M3-5B": {"mayo": 27, "junio": 28, "julio": 29, "agosto": 30}, "M3-7B": {"mayo": 3, "junio": 4, "julio": 5, "agosto": 6}, "M3-12B": {"mayo": 31, "junio": 32, "julio": 33, "agosto": 34}, "M3-13A": {"mayo": 29, "junio": 30, "julio": 31, "agosto": 32}, "M3-13B": {"mayo": 30, "junio": 31, "julio": 32, "agosto": 33}, "M3-14A": {"mayo": 32, "junio": 33, "julio": 34, "agosto": 35}, "M3-15A": {"mayo": 30, "junio": 31, "julio": 32, "agosto": 33}, "M3-15B": {"mayo": 30, "junio": 31, "julio": 32, "agosto": 33}, "M3-16B": {"mayo": 37, "junio": 38, "julio": 39, "agosto": 40}, "M3-17A": {"mayo": 33, "junio": 34, "julio": 35, "agosto": 36}, "M3-17B": {"mayo": 31, "junio": 32, "julio": 33, "agosto": 34}, "M3-18A": {"mayo": 31, "junio": 32, "julio": 33, "agosto": 34}, "M3-18B": {"mayo": 22, "junio": 23, "julio": 24, "agosto": 25}, "M4-1A": {"mayo": 28, "junio": 29, "julio": 30, "agosto": 31}, "M4-1B": {"mayo": 27, "junio": 28, "julio": 29, "agosto": 30}, "M4-2A": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "M4-2B": {"mayo": 27, "junio": 28, "julio": 29, "agosto": 30}, "M4-3A": {"mayo": 29, "junio": 30, "julio": 31, "agosto": 32}, "M4-3B": {"mayo": 29, "junio": 30, "julio": 31, "agosto": 32}, "M4-6A": {"mayo": 30, "junio": 31, "julio": 32, "agosto": 33}, "M4-8A": {"mayo": 27, "junio": 28, "julio": 29, "agosto": 30}, "M4-8B": {"mayo": 27, "junio": 28, "julio": 29, "agosto": 30}, "M4-9A": {"mayo": 27, "junio": 28, "julio": 29, "agosto": 30}, "M4-9B": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "M4-10A": {"mayo": 30, "junio": 31, "julio": 32, "agosto": 33}, "M4-10B": {"mayo": 30, "junio": 31, "julio": 32, "agosto": 33}, "M4-11B": {"mayo": 29, "junio": 30, "julio": 31, "agosto": 32}, "M4-12A": {"mayo": 30, "junio": 31, "julio": 32, "agosto": 33}, "M4-12B": {"mayo": 30, "junio": 31, "julio": 32, "agosto": 33}, "M4-13A": {"mayo": 14, "junio": 15, "julio": 16, "agosto": 17}, "M4-13B": {"mayo": 14, "junio": 15, "julio": 16, "agosto": 17}, "M4-15A": {"mayo": 28, "junio": 29, "julio": 30, "agosto": 31}, "M4-15B": {"mayo": 30, "junio": 31, "julio": 32, "agosto": 33}, "M4-16A": {"mayo": 28, "junio": 29, "julio": 30, "agosto": 31}, "M4-16B": {"mayo": 28, "junio": 29, "julio": 30, "agosto": 31}, "ETAPA 2-2": {"mayo": 21, "junio": 22, "julio": 23, "agosto": 24}, "ETAPA 2-3": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-4": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-5": {"mayo": 25, "junio": 26, "julio": 27, "agosto": 28}, "ETAPA 2-6": {"mayo": 25, "junio": 26, "julio": 27, "agosto": 28}, "ETAPA 2-7": {"mayo": 25, "junio": 26, "julio": 27, "agosto": 28}, "ETAPA 2-8": {"mayo": 25, "junio": 26, "julio": 27, "agosto": 28}, "ETAPA 2-9": {"mayo": 25, "junio": 26, "julio": 27, "agosto": 28}, "ETAPA 2-12": {"mayo": 25, "junio": 26, "julio": 27, "agosto": 28}, "ETAPA 2-13": {"mayo": 25, "junio": 26, "julio": 27, "agosto": 28}, "ETAPA 2-14": {"mayo": 21, "junio": 22, "julio": 23, "agosto": 24}, "ETAPA 2-15": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-17": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-18": {"mayo": 25, "junio": 26, "julio": 27, "agosto": 28}, "ETAPA 2-20": {"mayo": 27, "junio": 28, "julio": 29, "agosto": 30}, "ETAPA 2-21": {"mayo": 27, "junio": 28, "julio": 29, "agosto": 30}, "ETAPA 2-22": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-23": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-24": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-25": {"mayo": 27, "junio": 28, "julio": 29, "agosto": 30}, "ETAPA 2-26": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-27": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-28": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-29": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-30": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-31": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-32": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-33": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-34": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-35": {"mayo": 27, "junio": 28, "julio": 29, "agosto": 30}, "ETAPA 2-37": {"mayo": 23, "junio": 24, "julio": 25, "agosto": 26}, "ETAPA 2-38": {"mayo": 23, "junio": 24, "julio": 25, "agosto": 26}, "ETAPA 2-39": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-40": {"mayo": 27, "junio": 28, "julio": 29, "agosto": 30}, "ETAPA 2-41": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-42": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-43": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-44": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-45": {"mayo": 26, "junio": 27, "julio": 28, "agosto": 29}, "ETAPA 2-46": {"mayo": 23, "junio": 24, "julio": 25, "agosto": 26}, "ETAPA 2-47": {"mayo": 23, "junio": 24, "julio": 25, "agosto": 26}, "ETAPA 2-48": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 2-49": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 2-50": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 2-51": {"mayo": 21, "junio": 22, "julio": 23, "agosto": 24}, "ETAPA 2-52": {"mayo": 19, "junio": 20, "julio": 21, "agosto": 22}, "ETAPA 2-53": {"mayo": 21, "junio": 22, "julio": 23, "agosto": 24}, "ETAPA 2-54": {"mayo": 27, "junio": 28, "julio": 29, "agosto": 30}, "ETAPA 2-55": {"mayo": 27, "junio": 28, "julio": 29, "agosto": 30}, "ETAPA 2-56": {"mayo": 21, "junio": 22, "julio": 23, "agosto": 24}, "ETAPA 2-57": {"mayo": 23, "junio": 24, "julio": 25, "agosto": 26}, "ETAPA 2-58": {"mayo": 25, "junio": 26, "julio": 27, "agosto": 28}, "ETAPA 2-59": {"mayo": 25, "junio": 26, "julio": 27, "agosto": 28}, "ETAPA 3-4": {"mayo": 21, "junio": 22, "julio": 23, "agosto": 24}, "ETAPA 3-5": {"mayo": 21, "junio": 22, "julio": 23, "agosto": 24}, "ETAPA 3-6": {"mayo": 21, "junio": 22, "julio": 23, "agosto": 24}, "ETAPA 3-8": {"mayo": 19, "junio": 20, "julio": 21, "agosto": 22}, "ETAPA 3-9": {"mayo": 19, "junio": 20, "julio": 21, "agosto": 22}, "ETAPA 3-10": {"mayo": 19, "junio": 20, "julio": 21, "agosto": 22}, "ETAPA 3-11": {"mayo": 19, "junio": 20, "julio": 21, "agosto": 22}, "ETAPA 3-12": {"mayo": 17, "junio": 18, "julio": 19, "agosto": 20}, "ETAPA 3-13": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-14": {"mayo": 15, "junio": 16, "julio": 17, "agosto": 18}, "ETAPA 3-15": {"mayo": 15, "junio": 16, "julio": 17, "agosto": 18}, "ETAPA 3-16": {"mayo": 14, "junio": 15, "julio": 16, "agosto": 17}, "ETAPA 3-17": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-18": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-19": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-20": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-21": {"mayo": 14, "junio": 15, "julio": 16, "agosto": 17}, "ETAPA 3-22": {"mayo": 14, "junio": 15, "julio": 16, "agosto": 17}, "ETAPA 3-23": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-24": {"mayo": 17, "junio": 18, "julio": 19, "agosto": 20}, "ETAPA 3-25": {"mayo": 17, "junio": 18, "julio": 19, "agosto": 20}, "ETAPA 3-26": {"mayo": 17, "junio": 18, "julio": 19, "agosto": 20}, "ETAPA 3-27": {"mayo": 18, "junio": 19, "julio": 20, "agosto": 21}, "ETAPA 3-28": {"mayo": 21, "junio": 22, "julio": 23, "agosto": 24}, "ETAPA 3-29": {"mayo": 21, "junio": 22, "julio": 23, "agosto": 24}, "ETAPA 3-30": {"mayo": 21, "junio": 22, "julio": 23, "agosto": 24}, "ETAPA 3-31": {"mayo": 20, "junio": 21, "julio": 22, "agosto": 23}, "ETAPA 3-32": {"mayo": 20, "junio": 21, "julio": 22, "agosto": 23}, "ETAPA 3-33": {"mayo": 20, "junio": 21, "julio": 22, "agosto": 23}, "ETAPA 3-34": {"mayo": 20, "junio": 21, "julio": 22, "agosto": 23}, "ETAPA 3-35": {"mayo": 20, "junio": 21, "julio": 22, "agosto": 23}, "ETAPA 3-36": {"mayo": 20, "junio": 21, "julio": 22, "agosto": 23}, "ETAPA 3-37": {"mayo": 20, "junio": 21, "julio": 22, "agosto": 23}, "ETAPA 3-39": {"mayo": 18, "junio": 19, "julio": 20, "agosto": 21}, "ETAPA 3-40": {"mayo": 19, "junio": 20, "julio": 21, "agosto": 22}, "ETAPA 3-41": {"mayo": 18, "junio": 19, "julio": 20, "agosto": 21}, "ETAPA 3-42": {"mayo": 17, "junio": 18, "julio": 19, "agosto": 20}, "ETAPA 3-43": {"mayo": 17, "junio": 18, "julio": 19, "agosto": 20}, "ETAPA 3-44": {"mayo": 17, "junio": 18, "julio": 19, "agosto": 20}, "ETAPA 3-45": {"mayo": 20, "junio": 21, "julio": 22, "agosto": 23}, "ETAPA 3-46": {"mayo": 19, "junio": 20, "julio": 21, "agosto": 22}, "ETAPA 3-47": {"mayo": 17, "junio": 18, "julio": 19, "agosto": 20}, "ETAPA 3-48": {"mayo": 17, "junio": 18, "julio": 19, "agosto": 20}, "ETAPA 3-49": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-50": {"mayo": 19, "junio": 20, "julio": 21, "agosto": 22}, "ETAPA 3-51": {"mayo": 18, "junio": 19, "julio": 20, "agosto": 21}, "ETAPA 3-53": {"mayo": 17, "junio": 18, "julio": 19, "agosto": 20}, "ETAPA 3-54": {"mayo": 21, "junio": 22, "julio": 23, "agosto": 24}, "ETAPA 3-55": {"mayo": 21, "junio": 22, "julio": 23, "agosto": 24}, "ETAPA 3-56": {"mayo": 20, "junio": 21, "julio": 22, "agosto": 23}, "ETAPA 3-57": {"mayo": 21, "junio": 22, "julio": 23, "agosto": 24}, "ETAPA 3-58": {"mayo": 20, "junio": 21, "julio": 22, "agosto": 23}, "ETAPA 3-59": {"mayo": 18, "junio": 19, "julio": 20, "agosto": 21}, "ETAPA 3-60": {"mayo": 17, "junio": 18, "julio": 19, "agosto": 20}, "ETAPA 3-61": {"mayo": 17, "junio": 18, "julio": 19, "agosto": 20}, "ETAPA 3-62": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-63": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-64": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-65": {"mayo": 15, "junio": 16, "julio": 17, "agosto": 18}, "ETAPA 3-66": {"mayo": 15, "junio": 16, "julio": 17, "agosto": 18}, "ETAPA 3-67": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-68": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-69": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-70": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-71": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-72": {"mayo": 15, "junio": 16, "julio": 17, "agosto": 18}, "ETAPA 3-73": {"mayo": 15, "junio": 16, "julio": 17, "agosto": 18}, "ETAPA 3-74": {"mayo": 16, "junio": 17, "julio": 18, "agosto": 19}, "ETAPA 3-75": {"mayo": 14, "junio": 15, "julio": 16, "agosto": 17}, "ETAPA 3-76": {"mayo": 17, "junio": 18, "julio": 19, "agosto": 20}, "E4-M5-1A": {"mayo": 9, "junio": 10, "julio": 11, "agosto": 12}, "E4-M5-1B": {"mayo": 10, "junio": 11, "julio": 12, "agosto": 13}, "E4-M5-3A": {"mayo": 10, "junio": 11, "julio": 12, "agosto": 13}, "E4-M5-3B": {"mayo": 6, "junio": 7, "julio": 8, "agosto": 9}, "E4-M5-4A": {"mayo": 3, "junio": 4, "julio": 5, "agosto": 6}, "E4-M5-4B": {"mayo": 10, "junio": 11, "julio": 12, "agosto": 13}, "E4-M5-5A": {"mayo": 10, "junio": 11, "julio": 12, "agosto": 13}, "E4-M5-5B": {"mayo": 10, "junio": 11, "julio": 12, "agosto": 13}, "E4-M5-6A": {"mayo": 10, "junio": 11, "julio": 12, "agosto": 13}, "E4-M5-6B": {"mayo": 10, "junio": 11, "julio": 12, "agosto": 13}, "E4-M5-7A": {"mayo": 6, "junio": 7, "julio": 8, "agosto": 9}, "E4-M5-7B": {"mayo": 7, "junio": 8, "julio": 9, "agosto": 10}, "E4-M5-8A": {"mayo": 7, "junio": 8, "julio": 9, "agosto": 10}, "E4-M5-8B": {"mayo": 10, "junio": 11, "julio": 12, "agosto": 13}, "E4-M5-9A": {"mayo": 10, "junio": 11, "julio": 12, "agosto": 13}, "E4-M5-9B": {"mayo": 10, "junio": 11, "julio": 12, "agosto": 13}, "E4-M5-10A": {"mayo": 10, "junio": 11, "julio": 12, "agosto": 13}, "E4-M5-10B": {"mayo": 10, "junio": 11, "julio": 12, "agosto": 13}, "E4-M5-11A": {"mayo": 9, "junio": 10, "julio": 11, "agosto": 12}, "E4-M5-11B": {"mayo": 3, "junio": 4, "julio": 5, "agosto": 6}, "E4-M5-12A": {"mayo": 10, "junio": 11, "julio": 12, "agosto": 13}, "E4-M5-12B": {"mayo": 10, "junio": 11, "julio": 12, "agosto": 13}, "E4-M5-13A": {"mayo": 3, "junio": 4, "julio": 5, "agosto": 6}, "E4-M5-13B": {"mayo": 3, "junio": 4, "julio": 5, "agosto": 6}, "E4-M5-14A": {"mayo": 4, "junio": 5, "julio": 6, "agosto": 7}, "E4-M5-14B": {"mayo": 2, "junio": 3, "julio": 4, "agosto": 5}, "E4-M4-1B": {"mayo": 7, "junio": 8, "julio": 9, "agosto": 10}, "E4-M4-2A": {"mayo": 7, "junio": 8, "julio": 9, "agosto": 10}, "E4-M4-2B": {"mayo": 7, "junio": 8, "julio": 9, "agosto": 10}, "E4-M4-3A": {"mayo": 1, "junio": 2, "julio": 3, "agosto": 4}, "E4-M4-4A": {"mayo": 1, "junio": 2, "julio": 3, "agosto": 4}, "E4-M4-6B": {"mayo": 3, "junio": 4, "julio": 5, "agosto": 6}, "E4-M4-7A": {"mayo": 3, "junio": 4, "julio": 5, "agosto": 6}, "E4-M4-8A": {"mayo": 6, "junio": 7, "julio": 8, "agosto": 9}, "E4-M4-8B": {"mayo": 9, "junio": 10, "julio": 11, "agosto": 12}, "E4-M4-9A": {"mayo": 4, "junio": 5, "julio": 6, "agosto": 7}, "E4-M4-9B": {"mayo": 10, "junio": 11, "julio": 12, "agosto": 13}, "E4-M4-10A": {"mayo": 1, "junio": 2, "julio": 3, "agosto": 4}, "E4-M4-10B": {"mayo": 1, "junio": 2, "julio": 3, "agosto": 4}, "E4-M4-13B": {"mayo": 1, "junio": 2, "julio": 3, "agosto": 4}, "E4-M3-8B": {"mayo": 6, "junio": 7, "julio": 8, "agosto": 9}, "E4-M1-7B": {"mayo": 1, "junio": 2, "julio": 3, "agosto": 4}, "E4-M1-8A": {"mayo": 1, "junio": 2, "julio": 3, "agosto": 4}, "E4-M1-9B": {"mayo": 2, "junio": 3, "julio": 4, "agosto": 5}};
@@ -10544,6 +10664,7 @@ function abrirSyncMora(){
   </div>`;
   document.body.appendChild(ov);
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _aplicarSyncMora(){
   const plan=_syncMoraPlan();
   const m=document.getElementById('sync-mora-modal'); if(m) m.remove();
@@ -10684,6 +10805,7 @@ function _marcarImpagaYMora(clienteId, idx){
   abrirHistorialCuotas(clienteId);
   try{ mostrarToastCobro('Cuota '+nro+' enviada a Mora'); }catch(e){}
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function abrirHistorialCuotas(id){
   const c=loadData().find(x=>x.id===id);
   if(!c){alert('Lote no encontrado');return;}
@@ -10910,6 +11032,7 @@ function _borrarCuotaHist(id, idx){
   });
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _agregarCuotaHist(id){
   const data0=loadData();
   const c0=data0.find(x=>x.id===id);
@@ -11016,6 +11139,7 @@ function admCobrarAutoById(btn){
   const interes=parseFloat(btn.dataset.interes)||0;
   abrirFormCobro(id,{ctx:'admin',interes});
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function cerrarConfirmAdmin(){const m=document.getElementById("admin-confirm-modal");if(m)m.style.display="none";}
 function mostrarConfirmAdmin(titulo, msg, onOk){
   let modal=document.getElementById('admin-confirm-modal');
@@ -11050,6 +11174,7 @@ function admToggleInteresDif(cid){
   el.style.display=el.style.display==='none'?'block':'none';
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function updateAdmMora(el){
   // Igual que updateMoraColab pero para ids mora-adm-
   const cid=el.dataset.cid;
@@ -11206,6 +11331,7 @@ let _moraPanelState={clienteId:null,seleccionadas:[],totalMonto:0,totalInteresAu
 
 
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function deshacerUltimoCobro(clienteId){
   confirmarConClave(()=>_deshacerUltimoCobroMora(clienteId, false));
 }
@@ -11243,6 +11369,7 @@ function cerrarMoraPanel(){
 // v1.0677: la cuota del mes en "Cobrar todo" se calcula IGUAL que en el cobro normal (marcarPago):
 // valor cobrable (con escalón) y, si ya pasó el día de vencimiento, su interés (que va a Caja de Mora).
 // Antes se sumaba c.monto pelado y el interés del mes quedaba en 0.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _cuotaMesParaCobrarTodo(c){
   const _mc=montoCobrable(c);
   const mora=esPrimeraCuotaFutura(c)?{interes:0,pct:0,dias:0}:calcInteresAuto(_mc.total);
@@ -11265,6 +11392,7 @@ function _repartirInteresEnCuotas(cuotas, interesTotal){
     return {...c, interes:it, total:(Number(c.monto)||0)+it};
   });
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _interesesCobrarTodo(){
   const st=_moraPanelState||{};
   const moraAuto=st.totalInteresAuto||0, mesAuto=st.interesMes||0, totAuto=moraAuto+mesAuto;
@@ -11280,11 +11408,13 @@ function _interesesCobrarTodo(){
   else { mora=total; mes=0; }
   return {tipo,mora,mes,total,auto:totAuto,val};
 }
+_interesesCobrarTodo.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 function _textoInteresesCobrarTodo(r,cur){
   if(r.tipo==='auto') return 'automático';
   if(r.tipo==='pct') return 'Se cobra el '+r.val+'% del interés: '+fmtCur(r.total,cur)+' de '+fmtCur(r.auto,cur)+(r.total<r.auto?' (descuento '+fmtCur(r.auto-r.total,cur)+')':'');
   return 'Se cobra '+fmtCur(r.total,cur)+' de interés (el automático era '+fmtCur(r.auto,cur)+')';
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function cobrarTodoColab(clienteId){
   window._moraEfectivoTocado=false;
   const data=loadData();
@@ -11381,6 +11511,7 @@ function cobrarTodoColab(clienteId){
   window._moraCaCuotaActual=cuotaActual;
   try{ moraCalcVuelto(); }catch(e){}
 }
+cobrarTodoColab.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 function admConfirmarTodoColab(){
   const {clienteId,seleccionadas,totalMonto,cur,cuotaActual}=_moraPanelState;
@@ -11540,6 +11671,7 @@ function moraCalcVuelto(){
   else { live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent='SEC (en contra): '+fmtPeso(-dif); }
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function admUpdateMoraPanelTodo(){
   const totalMoraCapital=_moraPanelState.totalMonto||0;
   const totalMoraInteres=_moraPanelState.totalInteresAuto||0;
@@ -11685,6 +11817,7 @@ function admToggleMoraPanel(){
   if(el) el.style.display=el.style.display==='none'?'block':'none';
 }
 // v1.0641: calcular vuelto/estado en vivo para el cobro de mora seleccionada
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function moraSelCalcVuelto(){
   const eEl=document.getElementById('mora-ca-entrego'), vEl=document.getElementById('mora-ca-vuelto');
   const live=document.getElementById('mora-ca-vuelto-live');
@@ -11741,6 +11874,7 @@ function _moraInteresElegido(totalMonto, totalInteresAuto){
   if(isNaN(val)||val<0) return totalInteresAuto;
   return tipo==='pct'?Math.round(totalInteresAuto*val/100):Math.round(val);   // v1.0678: % DEL INTERÉS
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function admConfirmarMoraPanel(){
   const {clienteId,seleccionadas,totalMonto,totalInteresAuto,cur}=_moraPanelState;
   const tipo=document.querySelector('input[name="mora-adm-panel-tipo"]:checked')?.value||'auto';
@@ -11892,6 +12026,7 @@ function borrarCierreFinalYReaplicar(){
 
 
 // ══════════ SNAPSHOT / REVERT ══════════
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function saveSnapshot(){
   try{
     // v1.0354: claves corregidas — antes leía de lugares equivocados y la foto quedaba incompleta
@@ -11922,6 +12057,7 @@ function loadSnapshot(){
 // Archiva "lo que pasó este mes" antes del cierre. Solo lectura de datos existentes.
 function loadInformes(){ try{ return JSON.parse(_lsGet(dKey('informes_mensuales'))||'[]'); }catch(e){ return []; } }
 function saveInformes(arr){ _lsSet(dKey('informes_mensuales'), JSON.stringify(arr)); try{ window._fbSet && window._fbSet('informesMensuales', arr).catch(()=>{}); }catch(e){} }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function loadFotosGeneradas(){ try{ return JSON.parse(_lsGet(dKey('fotos_generadas'))||'[]'); }catch(e){ return []; } }
 function saveFotosGeneradas(arr){ _lsSet(dKey('fotos_generadas'), JSON.stringify(arr)); try{ window._fbSet && window._fbSet('fotosGeneradas', arr).catch(()=>{}); }catch(e){} }
 function registrarFotoGenerada(mesNombre){
@@ -11933,6 +12069,7 @@ function registrarFotoGenerada(mesNombre){
   saveFotosGeneradas(fotos);
 }
 function regenerarFoto(mesNombre){ generarFotoMes(); }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function eliminarFoto(idx){
   const fotos=loadFotosGeneradas();
   const f=fotos[idx];
@@ -11955,6 +12092,7 @@ function renombrarFoto(idx){
 
 // Construye el informe del mes a partir del estado ACTUAL (antes de cerrar) o de una foto.
 // fuente: null = estado actual en vivo; o un objeto snapshot con .data/.balances/etc (strings JSON)
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function construirInformeMes(fuente){
   function parse(v, def){ if(v==null) return def; if(typeof v!=='string') return v; try{ return JSON.parse(v); }catch(e){ return def; } }
   let data, balances, cuotasMora, icc, extras, cierreFinal;
@@ -12022,6 +12160,7 @@ function construirInformeMes(fuente){
     totalLotes: data.length
   };
 }
+construirInformeMes.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 function descargarInformeExcel(idx){
   const informes=loadInformes();
@@ -12066,6 +12205,7 @@ function descargarInformeExcel(idx){
 }
 
 // ── Vista de informes mensuales ──
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function archivarInformeMes(){
   const inf=construirInformeMes(null);
   const informes=loadInformes();
@@ -12107,6 +12247,7 @@ function _bytesABase64(bytes){
   for(let i=0;i<bytes.length;i+=chunk){ bin+=String.fromCharCode.apply(null, bytes.subarray(i,i+chunk)); }
   return btoa(bin);
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _base64ABytes(b64){
   const bin=atob(b64); const bytes=new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
@@ -12178,6 +12319,7 @@ async function descargarFotoNube(key){
 }
 
 // Elimina una foto de la nube
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function eliminarFotoNube(key, mesNombre){
   if(!confirm('¿Eliminar de la NUBE la foto de "'+mesNombre+'"?\n\nEsta acción no se puede deshacer.')) return;
   try{
@@ -12189,6 +12331,7 @@ async function eliminarFotoNube(key, mesNombre){
 
 // v1.0681: arma la foto (código actual + datos de este dispositivo, sin conexión) y devuelve {mesNombre, codigo}.
 // La usan el botón "Generar foto" y el cierre final (foto automática).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function _armarFotoMes(){
   const mesActualNombre = (function(){
     const cf=loadCierreFinal();
@@ -12292,10 +12435,12 @@ async function _armarFotoMes(){
     return {mesNombre: mesActualNombre, codigo};
   }
 }
+_armarFotoMes.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 // v1.0681: FOTO AUTOMÁTICA al cierre final. Se saca con los datos de ANTES de cerrar y se guarda en la
 // nube (verificada). Si ya había una foto de ese mes sacada a mano, no se pisa: esta va como "<Mes>_cierre".
 // Devuelve true si quedó guardada; si no, el cierre no se hace.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function _fotoAntesDelCierre(){
   const ov=document.createElement('div');
   ov.id='foto-cierre-aviso';
@@ -12325,7 +12470,9 @@ async function _fotoAntesDelCierre(){
     const m=document.getElementById('foto-cierre-aviso'); if(m) m.remove();
   }
 }
+_fotoAntesDelCierre.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function generarFotoMes(){
   const cfM=loadCierreFinal(), hoyM=new Date();
   const mesActualNombre = (cfM && typeof cfM.mes==='number')
@@ -12370,7 +12517,9 @@ async function generarFotoMes(){
     alert('No se pudo generar la foto: '+(err&&err.message?err.message:err));
   }
 }
+generarFotoMes.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function abrirInformesMensuales(){
   const informes=loadInformes().slice().reverse();
   const actual=construirInformeMes(null);
@@ -12446,6 +12595,7 @@ function verInformeActual(){
   const inf=construirInformeMes(null);
   verInformeMes(inf, true);
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function verInformeMes(idx, esPreview){
   let inf, idxNum;
   if(esPreview && typeof idx==='object'){
@@ -12536,6 +12686,7 @@ function revertirCierre(){
 
 // v1.0682: el mes que se cierra = el siguiente al último cierre final (el mes que se está cobrando),
 // NO el del calendario: cerrar Octubre el 2 de Noviembre graba Octubre. Sin cierre previo: el del calendario.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _mesQueSeCierra(){
   const cf=loadCierreFinal();
   if(cf && typeof cf.mes==='number' && cf.anio){
@@ -12545,7 +12696,9 @@ function _mesQueSeCierra(){
   const hoy=new Date();
   return {mes:hoy.getMonth(), anio:hoy.getFullYear()};
 }
+_mesQueSeCierra.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 // No se puede cerrar un mes que todavía no empezó (ej. volver a cerrar el 28/9 después de cerrar Septiembre).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _mesYaEmpezo(mc){
   const hoy=new Date();
   return hoy.getFullYear()*12+hoy.getMonth() >= mc.anio*12+mc.mes;
@@ -12556,6 +12709,7 @@ function _avisoMesNoEmpezo(mc){
 }
 
 // ══════════ MODAL RESUMEN CIERRE ══════════
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function mostrarResumenCierre(){
   const _mc=_mesQueSeCierra();
   if(!_mesYaEmpezo(_mc)){ _avisoMesNoEmpezo(_mc); return; }
@@ -12668,6 +12822,7 @@ function mostrarResumenCierre(){
   `;
   document.body.appendChild(modal);
 }
+mostrarResumenCierre.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 // v1.0382: respaldo automático diario en Firebase (rota 7 días).
 // Si algo se corrompe, siempre hay una foto reciente para restaurar.
@@ -12698,6 +12853,7 @@ async function backupDiarioAuto(){
   }catch(e){ console.warn('Backup diario falló:',e); }
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function verBackups(){
   fetch('https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/backups.json')
     .then(r=>r.json())
@@ -12737,6 +12893,7 @@ function _ordenLoteKey(o){
   const suf=m?m[2]:String(o.lote||'');
   return [_ordenMz(o.mz), num, suf];
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _cmpLote(a,b){
   const ka=_ordenLoteKey(a), kb=_ordenLoteKey(b);
   if(ka[0]!==kb[0]) return ka[0]-kb[0];
@@ -12978,6 +13135,7 @@ function _actualizarListaAvanceReal(avance){
 }
 
 // v1.0673: datos reales de hoy para explicar el simulador en criollo (solo lectura)
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _extrasSimulador(){
   const data=loadData(), bal=loadBalances();
   const cobr=data.filter(c=>c.est==='activo'&&!esAgrimensor(c.id)&&!c.autopago&&!c.empresaPaga&&!esPrimeraCuotaFutura(c)&&c.moneda!=='USD');
@@ -13117,6 +13275,7 @@ function _fila(label, hoy, fut, dif){
 // ══════ RESUMEN COMPLETO (usa las MISMAS funciones reales de la app) v1.0624 ══════
 // Replica exactamente los cálculos de generarInformeEstadistica, sin inventar reglas.
 // Se usa en dos lados: columna IZQUIERDA (datos de hoy) y motor DERECHA (datos post-cierre).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function calcularResumenCompleto(data){
   if(!Array.isArray(data)) data=Object.values(data||{});
   const _et=e=>({'Etapa 1':1,'Etapa 2':2,'Etapa 3':3,'Etapa 4':4}[e]||9);
@@ -13178,6 +13337,7 @@ function calcularResumenCompleto(data){
   };
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function simularCierre(){
   const _mc=_mesQueSeCierra();   // v1.0682: el mes que se va a cerrar, no el del calendario
   const anio=_mc.anio;
@@ -13280,6 +13440,7 @@ function simularCierre(){
     totalEsperan:esperan.length
   };
 }
+simularCierre.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 // ══════ PANEL VISUAL DE VERIFICACIÓN DE CIERRE (v1.0599) ══════
 // ══════ VERIFICADOR POST-CIERRE (v1.0610) ══════
@@ -13417,8 +13578,10 @@ function abrirVerificacionCierre(){
   ov.innerHTML='<div style="background:var(--bg);border-radius:14px;padding:1.5rem;max-width:940px;margin:0 auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">'+html+'</div>';
   document.body.appendChild(ov);
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function cerrarModalVerif(){ const m=document.getElementById('verif-modal'); if(m) m.remove(); }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function ejecutarCierreFinal(){
   window._finalizadosEnCierre=[]; var _finalizadosEnCierre=window._finalizadosEnCierre;
   if(_syncBloqueaOperacion('HACER EL CIERRE')) return;
@@ -13506,6 +13669,7 @@ function ejecutarCierreFinal(){
       '\n\nDesde ahora los pagos pendientes van a Caja de Mora.');
   });
 }
+ejecutarCierreFinal.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 function repararCierreJunio2026(){
   try{
@@ -13663,6 +13827,7 @@ function hacerCierreFinal(){
 // Registra un cobro de cuota con mora (post-cierre).
 // Si el lote es agrimensor, la cuota pura va a bal.agrimensores; el interés
 // permanece en mora para ser transferido a Extras via pasarInteresMora.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function registrarCobroCuotaMora(mora, c, interes, ts, fecha){
   const id=c.clienteId||c.id;
   const moneda=c.moneda||'ARS';
@@ -13728,6 +13893,7 @@ function registrarPagoMora(id, cuota, interes, ts){
   actualizarBadgeMora();
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function toggleVerPrecioColab(btn){
   const cid=btn.dataset.cid;
   const tapado=document.getElementById('mora-colab-'+btn.dataset.mid+'-tapado');
@@ -13800,6 +13966,7 @@ function cobrarConMoraColab(btn){
   abrirFormCobro(id,{ctx:'colab',interes:interes});
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function admConfirmarMoraPanelColab(){
   const {clienteId,totalMonto,totalInteresAuto,cur}=_moraPanelState;
   const tipo=document.querySelector('input[name="mora-adm-panel-tipo"]:checked')?.value||'auto';
@@ -13949,6 +14116,7 @@ function adminMarcarConMora(id, esAuto){
 }
 
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function revertirCobroMesAnterior(clienteId){
   // Mostrar modal para seleccionar qué mes revertir
   const data=loadData();
@@ -14074,6 +14242,7 @@ function _quitarUltimoDeLista(arr, id){
   if(i>=0) arr.splice(i,1);
   return arr;
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function desmarcarPagoAdmin(id){
   if(esNoCobrable(id)){ alert('Este lote es un préstamo: siempre figura como pago y no se puede desmarcar.'); return; }
   const _doDesmarcar=()=>{
@@ -14141,6 +14310,7 @@ function adminMarcarPago(id){
 }
 function adminDesmarcarPago(id){desmarcarPago(id);renderAdminDet(id);}
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function adminFieldId(base){
   const wide=window.innerWidth>=768;
   const deskFields=['a-search','a-etapa','a-mz','a-lote','a-pago','a-moneda','a-tri'];
@@ -14168,6 +14338,7 @@ const ICC_MAP = {
 };
 // MESES defined globally above
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function renderAdminTable(){
   const moraOff=getMoraDesactivada();
   ['btn-mora-toggle','btn-mora-toggle-desk'].forEach(id=>{
@@ -14281,6 +14452,7 @@ function renderAdminTable(){
     </div>`;
   }).join('');
 }
+renderAdminTable.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 
 function saveCliente(){
@@ -14458,6 +14630,7 @@ function saveCliente(){
     renderAdminDet(editId||newId);
   }
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function delCliente(){
   if(!editId)return;
   const data=loadData();
@@ -14663,6 +14836,7 @@ function renderHistorial(){
     </div>`;
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function limpiarSeccionHist(key){
   const nombres={obs:'Observaciones',pago:'Pagos',mora:'Mora',adelanto:'Adelantos',desmarcar:'Desmarcados / Colab no cobró',sistema:'Cambios / ICC'};
   confirmarConClave(()=>{
@@ -14716,6 +14890,7 @@ function getTrimestreMeses(mesPublicacion){
   ];
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function getIccDeHistorial(mes0indexed){
   // Find an ICC entry in history that was applied for this month (0-indexed)
   const icc = loadICC();
@@ -14806,6 +14981,7 @@ function renderTrimestreMeses(mesPublicacion, pctActualFromFetch){
 
 // Mes operativo del ICC: el mes siguiente al último ICC aplicado (Lista 2).
 // No se rige por el calendario — si todavía no aplicaste Junio, seguís en Junio aunque sea Julio.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function getMesOperativoICC(){
   const hoy=new Date();
   let best=-1;
@@ -14824,7 +15000,9 @@ function getMesOperativoICC(){
   const next=best+1;
   return {mesIdx:next%12, anio:Math.floor(next/12), atrasado: next<calVal};
 }
+getMesOperativoICC.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function renderIccStatus(){
   const hoy = new Date();
   const dia = hoy.getDate();
@@ -14948,7 +15126,9 @@ function renderIccStatus(){
     document.getElementById('icc-planilla-display').textContent = info.planillaNombre + ' — ' + info.planillaVal.replace(/-/g,'/');
   }
 }
+renderIccStatus.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function cierreFinalOkParaICC(){
   try{
     const mesOp=getMesOperativoICC();
@@ -15116,6 +15296,7 @@ function aplicarICC(){
 }
 
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function autoDetectarPlanilla(){
   const hoy = new Date();
   const dia = hoy.getDate();
@@ -15222,6 +15403,7 @@ function initCobFilters(){
   renderColab();
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function initCobMzFilter(){
   const data=loadData();
   const etapa=document.getElementById('c-etapa')?.value||'';
@@ -15254,6 +15436,7 @@ function initCobLoteFilter(){
   lsel.innerHTML='<option value="">Lote</option>'+lotes.map(l=>`<option value="${l}">${l}</option>`).join('');
   lsel.disabled=false;
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function renderColab(){
   // v1.0398: el colaborador no ve nada hasta que el admin guarde el respaldo del mes
   if(!hitoHecho('inicio')){
@@ -15328,6 +15511,7 @@ function renderColab(){
   }).join('');
   }catch(e){console.error('renderColab error:',e);el.innerHTML='<div class="empty">Error al cargar lista: '+e.message+'</div>';}
 }
+renderColab.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 function mostrarDetColab(id){
   cobDetalleId=id;
@@ -15367,6 +15551,7 @@ function mostrarDetColab(id){
   }
   renderDetColab(id);
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function volverColab(){
   if(window._colabCobrando){
     alert('⚠️ Estás cobrando este lote.\n\nCompletá el cobro o tocá "No cobré la cuota" para salir.');
@@ -15464,6 +15649,7 @@ function guardarTelConfirmado(id, tel){
   renderDetColab(id);
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function cancelarTel(){
   const modal=document.getElementById('modal-clave');
   // Restore normal modal content
@@ -15528,6 +15714,7 @@ function borrarRegistroAdelanto(idx){
   addHist('adelanto','🗑 Registro de adelanto borrado (visual) — '+formatLoteTag(a.mz,a.lote)+' — '+a.titular,a.id);
   renderBalances('adelantos');
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function deshacerAdelanto(idx){
   const adelantos = loadAdelantos();
   const a = adelantos[idx];
@@ -15650,6 +15837,7 @@ function toggleAdelantoCuota(id, num, monto){
 
 let _adelantoVerMas = 5; // how many cuota buttons to show
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function adelantoTodoResto(id){
   const data = loadData();
   const c = data.find(x=>x.id===id);
@@ -15810,6 +15998,7 @@ function renderAgrLista(){
 }
 
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function agrCobrarDesdeLista(id){
   const data=loadData();
   const c=data.find(x=>x.id===id);
@@ -15897,6 +16086,7 @@ function _colabDesbloquearLista(){
   const back=document.querySelector('#colab-detalle .btn-back');
   if(back){ back.style.opacity=''; back.style.pointerEvents=''; back.dataset.bloqueado=''; }
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function colabNoCobre(id){
   if(!confirm('¿Confirmás que NO cobraste este lote?\n\nSe cierra sin registrar el pago.')) return;
   try{ const c=loadData().find(x=>x.id===id); if(c) addHist('colabvio','👁️ Colaborador vio la cuota de '+c.mz+' Lote '+c.lote+' y NO cobró',id); }catch(e){}
@@ -15938,6 +16128,7 @@ function colabVerCuotaMora(id){
 function colabCobrarYVerde(id, interes){
   abrirFormCobro(id,{ctx:'colab',interes:interes});
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function colabToggleAdelanto(id){
   let el=document.getElementById('adelanto-selector-'+id);
   // Si no existe el div, crearlo debajo del botón de adelantar
@@ -16182,6 +16373,7 @@ const FB_CLAVES=['data','cuotasMora','pagoStore','mora','balances','extras','ade
   'cierreFinal','mesActual','agrimensorLotes','lotesCerts','hist','pendientesAprobacion','notifMora','notasMora',
   'cierreEstados','distPct','moraDesactivada','lotesLibresE123'];
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _totalesActuales(){
   const d=loadData();
   // v1.0408: usar EXACTAMENTE el mismo criterio que Estadísticas
@@ -16210,6 +16402,7 @@ function _totalesActuales(){
 function _cicloKey(){ const m=loadMesActual()||{}; return (m.anio||'?')+'-'+String((m.mes||0)+1).padStart(2,'0'); }
 function loadHitos(){ try{ return JSON.parse(localStorage.getItem('fj_hitos_respaldo')||'{}'); }catch(e){ return {}; } }
 function saveHitos(v){ localStorage.setItem('fj_hitos_respaldo',JSON.stringify(v)); window._fbSet('hitosRespaldo',v).catch(()=>{}); }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function hitoHecho(tipo){ const h=loadHitos()[_cicloKey()]||{}; return !!h[tipo]; }
 function marcarHito(tipo,id){ const h=loadHitos(); const k=_cicloKey(); if(!h[k])h[k]={}; h[k][tipo]={id,ts:new Date().toISOString()}; saveHitos(h); }
 
@@ -16249,6 +16442,7 @@ function renderRespaldosPanel(){
 
 // v1.0400: Modo consulta — permite VER los datos con el cobro bloqueado, para comparar totales
 function modoConsultaActivo(){ return sessionStorage.getItem('fj_modo_consulta')==='1'; }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function activarModoConsulta(){
   pedirClaveDoble('MODO CONSULTA — solo lectura', ()=>{
     sessionStorage.setItem('fj_modo_consulta','1');
@@ -16293,6 +16487,7 @@ function renderCicloEstado(){
 setInterval(renderCicloEstado, 5000);
 setTimeout(renderCicloEstado, 3000);
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function mostrarEstadoCiclo(){
   if(modoConsultaActivo()){
     if(confirm('👁️ MODO CONSULTA ACTIVO\n\nPodés ver y editar clientes, pero no cobrar ni cerrar el mes.\n\n¿Salir del modo consulta?')){ salirModoConsulta(); }
@@ -16326,6 +16521,7 @@ function pedirClaveDoble(titulo, cb){
   cb();
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function abrirValidarEstado(tipoForzado){
   const t=_totalesActuales();
   const tipo = tipoForzado || (hitoHecho('inicio') ? 'libre' : 'inicio');
@@ -16375,6 +16571,7 @@ async function abrirValidarEstado(tipoForzado){
   };
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function guardarPuntoRestauracion(nota,totales,tipo){
   const B='https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/';
   const snap={};
@@ -16396,6 +16593,7 @@ async function guardarPuntoRestauracion(nota,totales,tipo){
   addHist('edit','✅ Punto de restauración validado: '+(nota||'sin nota')+' — Total cobrable '+fmtPeso(totales.totalCobrable));
   return id;
 }
+guardarPuntoRestauracion.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 async function verPuntosRestauracion(){
   const B='https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/';
@@ -16447,6 +16645,7 @@ function restaurarPunto(punto){
   });
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function esNoCobrable(id){
   try{
     const c = (typeof id==='object') ? id : loadData().find(x=>x.id===id);
@@ -16454,6 +16653,7 @@ function esNoCobrable(id){
   }catch(e){ return false; }
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function marcarPago(id, interesOverride){
   if(_bloqueaCobroSinRespaldo()) return;
   if(esNoCobrable(id)){ alert('Este lote es un préstamo: no se cobra por este medio y ya figura como pago.'); return; }
@@ -16514,6 +16714,7 @@ function marcarPago(id, interesOverride){
   if(adminDetId===id) renderAdminDet(id);
   if(document.getElementById('atab-lista')&&document.getElementById('atab-lista').style.display!=='none') renderAdminTable();
 }
+marcarPago.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 function desmarcarPago(id){
   if(esNoCobrable(id)){ alert('Este lote es un préstamo: siempre figura como pago y no se puede desmarcar.'); return; }
   const data=loadData();const c=data.find(x=>x.id===id);if(!c)return;
@@ -16559,6 +16760,7 @@ function guardarObs(id){
 }
 
 // ===================== MODAL UTILS =====================
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
@@ -16584,6 +16786,7 @@ function _esperarFirebase(ms){
     setTimeout(() => { clearInterval(check); resolve(); }, ms);
   });
 }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _getNube(key){
   return Promise.race([
     window._fbGet(key),
@@ -16624,6 +16827,7 @@ function _conectandoReintentar(){
   if(_conectandoDespertar) _conectandoDespertar();
 }
 // Baja TODO de la nube, reemplaza lo local y deja los listeners. Si algo falla, tira error y se reintenta.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function _cargaInicialNube(){
   let histParaSubir=null;
   // v1.0676: las 22 lecturas se piden TODAS A LA VEZ (antes de a una: ~6 s; ahora ~1 s).
@@ -16768,6 +16972,7 @@ async function _cargaInicialNube(){
   try{ window._syncRender(); }catch(e){}
   try{ window._syncFlush(); }catch(e){}
 }
+_cargaInicialNube.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 async function init(){
   if(window._esFotoOffline){
@@ -16844,6 +17049,7 @@ function gestionToggleCaja(){
   }
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function cerrarGestionPagos(){
   document.getElementById('gestion-pagos-modal').style.display='none';
   _gpPendingChanges={};
@@ -16895,6 +17101,7 @@ function gestionOnEtapa(){
   }
 }
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function gestionOnMz(){
   const etapa=document.getElementById('gp-etapa').value;
   const mz=document.getElementById('gp-mz').value;
@@ -17194,4 +17401,5 @@ function applyFjTheme(t){
 })();
 </script>
 </body>
+<!-- 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse -->
 </html>

@@ -153,3 +153,6 @@
 
 ## 2026-09-28 — v1.0682: el cierre final cierra el mes que se está cobrando
 - Antes tomaba el mes del calendario: cerrar Octubre a principios de Noviembre lo grababa como Noviembre. Ahora cierra siempre el mes siguiente al último cierre, y no deja cerrar un mes que todavía no empezó (doble cierre).
+
+## 2026-09-28 — v1.0683: marcas de autoría
+- Marcas de autoría de Marcos repartidas por el código (principio, estilos, final, antes de muchas funciones y en texto dentro de las funciones clave) + archivo LICENSE. No cambia nada de lo que hace la app.
