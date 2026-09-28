@@ -156,3 +156,6 @@
 
 ## 2026-09-28 — v1.0683: marcas de autoría
 - Marcas de autoría de Marcos repartidas por el código (principio, estilos, final, antes de muchas funciones y en texto dentro de las funciones clave) + archivo LICENSE. No cambia nada de lo que hace la app.
+
+## 2026-09-28 — v1.0684: la app pasa a llamarse "Administración"
+- Entrada sin logo ni "F&J Desarrollos Inmobiliarios SRL": dice "Administración"; botones verdes (antes dorado F&J). Pestaña, títulos, pie de los PDF, archivo de respaldo y mapa: "Administración". "F&J" queda solo en el encabezado de los PDF y en los WhatsApp a clientes (la empresa hablándole a sus clientes). README y notas: la app es de su autor, Marcos Basso.

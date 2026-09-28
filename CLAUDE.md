@@ -1,16 +1,16 @@
-# CLAUDE.md — FJ App (BassoMarcos/fj-app)
+# CLAUDE.md — App de Administración (repo BassoMarcos/fj-app)
 
 > Contexto maestro del proyecto para Claude. Leer esto ENTERO al iniciar cualquier sesión, junto con `MAPA.md` (fuente de verdad arquitectónica) e `index.html`.
 
 ## Qué es
 
-- App de **administración de pagos de propiedades** de F&J Desarrollos Inmobiliarios.
+- App de **administración de pagos de propiedades**, creada por Marcos Basso. Hoy la usa F&J Desarrollos Inmobiliarios para su loteo. En pantalla se llama **"Administración"** (desde v1.0684; antes "F&J App"/"FJ App"). "F&J" solo aparece donde la empresa le habla a sus clientes (encabezado de los PDF y mensajes de WhatsApp).
 - Proyecto de loteo administrado: **"Los Eucaliptus"** — ~321 lotes en Etapas 1–4 con varias manzanas.
 - **Un solo archivo `index.html`** (~1MB, ~9000 líneas) en vanilla JS con JS inline. Es la herramienta operativa principal hoy.
 - Deploy: **GitHub Pages** (repo `BassoMarcos/fj-app`, rama `main`, `index.html` en la raíz).
 - Datos: **Firebase Realtime Database** (`fj-app-44df3-default-rtdb.firebaseio.com`) + Google Sheets (Apps Script) como backup.
 - Roles de usuario: **admin** y **colaborador**.
-- Marcos es **empleado administrativo** de F&J Desarrollos (no el dueño) y es quien creó esta app (y MasterPlan) desde cero junto con Claude. fj-app es el **área administrativa** que después migra a MasterPlan.
+- **Autor: Marcos Basso.** Creó esta app (y MasterPlan) desde cero junto con Claude. Es el **área administrativa** que después migra a MasterPlan. El código lleva sus marcas de autoría: no borrarlas.
 - Marcos NO tiene formación técnica: depende de Claude para escribir y deployar todo el código. Comunicación en español rioplatense, directo y analítico.
 
 ## Módulos operativos (todos funcionando)
@@ -76,5 +76,5 @@
 
 ## Estrategia a largo plazo
 
-- FJ App eventualmente migra módulo por módulo al pilar **Administración** de MasterPlan (repo `masterplan-management`). Primero se terminan todas las features administrativas de FJ App, después se integra.
+- Esta app eventualmente migra módulo por módulo al pilar **Administración** de MasterPlan (repo `masterplan-management`). Primero se terminan todas sus features administrativas, después se integra.
 - Mapa neuronal interactivo (`mapa.html` + `mapa-data.json`, en el repo de MasterPlan) conecta ambos sistemas y es accesible desde ambas apps con el botón 🧠.

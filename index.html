@@ -4,7 +4,7 @@
 <!-- 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>F&amp;J App</title>
+<title>Administración</title>
 <style>
 /* 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse */
 *{box-sizing:border-box;margin:0;padding:0}
@@ -400,25 +400,16 @@ tr:hover td{background:var(--bg)}
       style="width:100%;padding:10px 14px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:8px;box-sizing:border-box"
       onkeydown="if(event.key==='Enter')_claveConfirmar()">
     <div id="clave-error" style="color:var(--red);font-size:13px;min-height:18px;margin-bottom:8px"></div>
-    <button onclick="_claveConfirmar()" style="width:100%;padding:12px;background:#da9e22;color:#1d1c1a;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer;margin-bottom:8px">Confirmar</button>
+    <button onclick="_claveConfirmar()" style="width:100%;padding:12px;background:#5a9e78;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer;margin-bottom:8px">Confirmar</button>
     <button onclick="_claveCancelar()" style="width:100%;padding:10px;background:transparent;color:#888;font-size:14px;border:1px solid #ddd;border-radius:8px;cursor:pointer">Cancelar</button>
   </div>
 </div>
 <div id="page-home" style="display:block;overflow:hidden">
   <div id="home-main" style="min-height:100vh;background:#1d1c1a;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;font-family:'Century Gothic',Arial,sans-serif">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 180" width="100" height="90" style="margin-bottom:8px">
-      <rect x="74" y="6" width="30" height="13" rx="3" fill="rgba(255,255,255,0.85)"/>
-      <path d="M30 105 L30 168" stroke="#da9e22" stroke-width="20" stroke-linecap="round" fill="none"/>
-      <path d="M22 108 L100 42 L178 108" stroke="#da9e22" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-      <path d="M170 105 L170 148" stroke="#da9e22" stroke-width="20" stroke-linecap="round" fill="none"/>
-      <path d="M170 148 Q170 178 142 178 Q118 178 118 162" stroke="#da9e22" stroke-width="20" stroke-linecap="round" fill="none"/>
-      <path d="M30 168 L68 168" stroke="#da9e22" stroke-width="20" stroke-linecap="round" fill="none"/>
-    </svg>
-    <div style="font-size:48px;font-weight:900;color:#fff;letter-spacing:8px;margin-bottom:4px">F<span style="color:#da9e22">&amp;</span>J</div>
-    <div style="font-size:11px;font-weight:700;color:#da9e22;letter-spacing:.3em;margin-bottom:2px">DESARROLLOS INMOBILIARIOS</div>
-    <div style="font-size:10px;color:#6b6866;letter-spacing:.15em;margin-bottom:2.5rem">SRL</div>
-    <button onclick="mostrarLoginForm('admin')" style="display:block;width:100%;max-width:320px;padding:14px;margin-bottom:12px;background:#da9e22;color:#1d1c1a;font-size:16px;font-weight:700;border:none;border-radius:12px;cursor:pointer">Acceso Administrador</button>
-    <button onclick="mostrarLoginForm('colab')" style="display:block;width:100%;max-width:320px;padding:13px;background:transparent;color:#fff;font-size:15px;font-weight:600;border:1.5px solid #6b6866;border-radius:12px;cursor:pointer">Acceso Colaborador</button>
+    <div style="font-size:38px;font-weight:800;color:#fff;letter-spacing:.02em;margin-bottom:6px">Administración</div>
+    <div style="width:56px;height:4px;border-radius:2px;background:#5a9e78;margin-bottom:2.5rem"></div>
+    <button onclick="mostrarLoginForm('admin')" style="display:block;width:100%;max-width:320px;padding:14px;margin-bottom:12px;background:#5a9e78;color:#fff;font-size:16px;font-weight:700;border:none;border-radius:12px;cursor:pointer">Acceso Administrador</button>
+    <button onclick="mostrarLoginForm('colab')" style="display:block;width:100%;max-width:320px;padding:13px;background:transparent;color:#fff;font-size:15px;font-weight:600;border:1.5px solid #5a9e78;border-radius:12px;cursor:pointer">Acceso Colaborador</button>
   </div>
   <div id="home-login" style="display:none;min-height:100vh;background:#1d1c1a;flex-direction:column;align-items:center;justify-content:center;padding:2rem;font-family:'Century Gothic',Arial,sans-serif">
     <div style="background:var(--card);border-radius:16px;padding:2rem;width:100%;max-width:340px">
@@ -427,7 +418,7 @@ tr:hover td{background:var(--bg)}
         style="width:100%;padding:10px 14px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:8px;box-sizing:border-box"
         onkeydown="if(event.key==='Enter')doLogin()">
       <div id="login-err" style="color:var(--red);font-size:13px;min-height:18px;margin-bottom:8px"></div>
-      <button onclick="doLogin()" style="width:100%;padding:12px;background:#da9e22;color:#1d1c1a;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer;margin-bottom:8px">Ingresar</button>
+      <button onclick="doLogin()" style="width:100%;padding:12px;background:#5a9e78;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer;margin-bottom:8px">Ingresar</button>
       <button onclick="volverHomeMain()" style="width:100%;padding:10px;background:transparent;color:#888;font-size:14px;border:1px solid #ddd;border-radius:8px;cursor:pointer">Volver</button>
     </div>
   </div>
@@ -435,7 +426,7 @@ tr:hover td{background:var(--bg)}
 
 <div id="page-public" class="page" style="display:none">
   <nav class="navbar">
-    <div class="nav-logo">F&amp;J Desarrollos <span>Inmobiliarios</span></div>
+    <div class="nav-logo">Administración</div>
     <button class="nav-login-btn" onclick="openLoginModal()">Acceso personal</button>
   </nav>
   <div class="hero">
@@ -466,7 +457,7 @@ tr:hover td{background:var(--bg)}
 <div id="page-admin" class="page">
   <div class="topbar">
     <button id="admin-det-back-btn" onclick="cerrarAdminDet()" class="btn-back" style="display:none">← Lista</button>
-    <div class="topbar-title" id="admin-topbar-title">F&amp;J — Administración</div>
+    <div class="topbar-title" id="admin-topbar-title">Administración</div>
     <div class="topbar-right">
       <div id="ciclo-estado" onclick="mostrarEstadoCiclo()" title="Estado del ciclo mensual" style="display:none;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap"></div>
       <div id="sync-indicator" onclick="mostrarEstadoSync()" title="Estado de sincronización" style="background:rgba(22,163,74,0.12);color:#16a34a;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;white-space:nowrap"><span style="color:#16a34a">●</span> Sincronizado</div>
@@ -488,7 +479,7 @@ tr:hover td{background:var(--bg)}
       <button class="tab-btn" onclick="adminTab('morapanel')" id="tab-btn-mora">⚠️ Mora</button>
       <button class="tab-btn" onclick="adminTab('terminados')" id="tab-btn-terminados">🏁 Lotes Finalizados</button>
       <button class="tab-btn" onclick="adminTab('vistaclient')">👁 Vista Cliente</button>
-      <button class="tab-btn" onclick="window.open('mapa.html','_blank')" title="Mapa de arquitectura FJ App + MasterPlan">🧠 Mapa</button>
+      <button class="tab-btn" onclick="window.open('mapa.html','_blank')" title="Mapa de arquitectura">🧠 Mapa</button>
     </div>
     <div class="tab-content-area">
     <div id="atab-inicio" style="display:none"><div class="main" id="a-inicio-content" style="padding-top:1rem"></div></div>
@@ -691,7 +682,7 @@ tr:hover td{background:var(--bg)}
 </style>
 <div id="page-colab" class="page">
   <div class="topbar">
-    <div class="topbar-title">F&amp;J — Lista de cobranza</div>
+    <div class="topbar-title">Lista de cobranza</div>
     <div class="topbar-right">
       <div class="role-pill" style="background:rgba(21,128,61,.3)">Colaborador</div>
       <button class="logout-btn" onclick="doLogout()">Salir</button>
@@ -917,7 +908,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0683';
+const APP_VERSION='v1.0684';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -1839,7 +1830,7 @@ function exportarDatos(){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
-  a.download='FJ_datos_'+new Date().toLocaleDateString('es-AR').replace(/\//g,'-')+'.json';
+  a.download='Administracion_datos_'+new Date().toLocaleDateString('es-AR').replace(/\//g,'-')+'.json';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -4760,7 +4751,7 @@ async function generarInformeMensual(soloTest){
     doc.setPage(i);
     doc.setDrawColor(229,231,235); doc.line(M,285,W-M,285);
     doc.setFontSize(7.5); doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
-    doc.text('FJ App - Los Eucaliptus  |  Cartera morosa al '+hoyStr+'  |  Intereses 2% diario desde el dia 10 de cada mes',M,290);
+    doc.text('Administración - Los Eucaliptus  |  Cartera morosa al '+hoyStr+'  |  Intereses 2% diario desde el dia 10 de cada mes',M,290);
     doc.text('Pagina '+i+' de '+pages,W-M,290,{align:'right'});
   }
 
@@ -4929,7 +4920,7 @@ async function generarInformeEstadistica(soloTest){
   for(let i=1;i<=pages;i++){ doc.setPage(i);
     doc.setDrawColor(229,231,235); doc.line(M,285,W-M,285);
     doc.setFontSize(7.5); doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
-    doc.text('FJ App - Los Eucaliptus  |  '+titInf+' '+mesTxt+'  |  Emitido '+hoyStr,M,290);
+    doc.text('Administración - Los Eucaliptus  |  '+titInf+' '+mesTxt+'  |  Emitido '+hoyStr,M,290);
     doc.text('Pagina '+i+' de '+pages,W-M,290,{align:'right'}); }
 
   if(soloTest) return doc.output('datauristring').length;
@@ -5066,7 +5057,7 @@ async function generarInformeMora(clienteId, soloTest){
   for(let i=1;i<=pages;i++){
     doc.setPage(i);
     doc.setFontSize(8); doc.setTextColor(140,140,140); doc.setFont('helvetica','normal');
-    doc.text('FJ App — Los Eucaliptus · Informe generado el '+hoy.toLocaleDateString('es-AR')+' · Intereses calculados al día de emisión (2% diario desde el día 10 de cada mes)',12,292);
+    doc.text('Administración — Los Eucaliptus · Informe generado el '+hoy.toLocaleDateString('es-AR')+' · Intereses calculados al día de emisión (2% diario desde el día 10 de cada mes)',12,292);
     doc.text('Página '+i+' de '+pages,W-12,292,{align:'right'});
   }
 
@@ -15659,7 +15650,7 @@ function cancelarTel(){
       style="width:100%;padding:10px 14px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;margin-bottom:8px;box-sizing:border-box"
       onkeydown="if(event.key==='Enter')_claveConfirmar()">
     <div id="clave-error" style="color:var(--red);font-size:13px;min-height:18px;margin-bottom:8px"></div>
-    <button onclick="_claveConfirmar()" style="width:100%;padding:12px;background:#da9e22;color:#1d1c1a;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer;margin-bottom:8px">Confirmar</button>
+    <button onclick="_claveConfirmar()" style="width:100%;padding:12px;background:#5a9e78;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer;margin-bottom:8px">Confirmar</button>
     <button onclick="_claveCancelar()" style="width:100%;padding:10px;background:transparent;color:#888;font-size:14px;border:1px solid #ddd;border-radius:8px;cursor:pointer">Cancelar</button>
   `;
   modal.style.display='none';
