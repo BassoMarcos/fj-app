@@ -908,7 +908,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0684';
+const APP_VERSION='v1.0685';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -4617,8 +4617,8 @@ async function generarInformeMensual(soloTest){
 
   const encabezado=()=>{
     doc.setFillColor(24,24,27); doc.rect(0,0,W,24,'F');
-    doc.setTextColor(230,168,48); doc.setFont('helvetica','bold'); doc.setFontSize(14);
-    doc.text('F&J DESARROLLOS INMOBILIARIOS',M,10);
+    doc.setTextColor(90,158,120); doc.setFont('helvetica','bold'); doc.setFontSize(14);
+    doc.text('ADMINISTRACIÓN',M,10);   // v1.0685: antes F&J
     doc.setTextColor(255,255,255); doc.setFont('helvetica','normal'); doc.setFontSize(10);
     doc.text('Los Eucaliptus - Informe de cartera morosa',M,18);
     doc.setFontSize(9); doc.text('Al '+hoyStr,W-M,10,{align:'right'});
@@ -4824,8 +4824,8 @@ async function generarInformeEstadistica(soloTest){
 
   const encabezado=()=>{
     doc.setFillColor(24,24,27); doc.rect(0,0,W,24,'F');
-    doc.setTextColor(230,168,48); doc.setFont('helvetica','bold'); doc.setFontSize(14);
-    doc.text('F&J DESARROLLOS INMOBILIARIOS',M,10);
+    doc.setTextColor(90,158,120); doc.setFont('helvetica','bold'); doc.setFontSize(14);
+    doc.text('ADMINISTRACIÓN',M,10);   // v1.0685: antes F&J
     doc.setTextColor(255,255,255); doc.setFont('helvetica','normal'); doc.setFontSize(10);
     doc.text('Los Eucaliptus - '+titInf+' - '+mesTxt,M,18);
     doc.setFontSize(9); doc.text(hoyStr,W-M,10,{align:'right'});
@@ -4999,8 +4999,8 @@ async function generarInformeMora(clienteId, soloTest){
 
   // Encabezado
   doc.setFillColor(24,24,27); doc.rect(0,0,W,26,'F');
-  doc.setTextColor(230,168,48); doc.setFont('helvetica','bold'); doc.setFontSize(15);
-  doc.text('F&J DESARROLLOS INMOBILIARIOS',12,11);
+  doc.setTextColor(90,158,120); doc.setFont('helvetica','bold'); doc.setFontSize(15);
+  doc.text('ADMINISTRACIÓN',12,11);   // v1.0685: antes F&J
   doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont('helvetica','normal');
   doc.text('Los Eucaliptus — Informe de deuda para Legales',12,19);
   doc.setFontSize(9);

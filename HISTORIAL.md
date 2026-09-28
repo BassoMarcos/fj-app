@@ -159,3 +159,6 @@
 
 ## 2026-09-28 — v1.0684: la app pasa a llamarse "Administración"
 - Entrada sin logo ni "F&J Desarrollos Inmobiliarios SRL": dice "Administración"; botones verdes (antes dorado F&J). Pestaña, títulos, pie de los PDF, archivo de respaldo y mapa: "Administración". "F&J" queda solo en el encabezado de los PDF y en los WhatsApp a clientes (la empresa hablándole a sus clientes). README y notas: la app es de su autor, Marcos Basso.
+
+## 2026-09-28 — v1.0685: informes en PDF dicen "ADMINISTRACIÓN"
+- Los 3 informes internos (cartera morosa, informe de cierre de mes, informe de deuda para Legales) tenían arriba "F&J DESARROLLOS INMOBILIARIOS" en dorado: ahora "ADMINISTRACIÓN" en verde. F&J queda solo en los WhatsApp a clientes.
