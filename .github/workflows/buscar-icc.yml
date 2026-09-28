@@ -27,7 +27,7 @@ jobs:
       - name: Commit y push
         run: |
           git config user.name "icc-bot"
-          git config user.email "bot@fj-app"
+          git config user.email "bot@administracion"
           git add icc-data.json
           git diff --staged --quiet || git commit -m "ICC actualizado $(date +%Y-%m-%d)"
           git push
