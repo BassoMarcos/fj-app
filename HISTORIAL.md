@@ -138,3 +138,8 @@
 - **Rotar la service account key** que quedó expuesta.
 - Construir pilares **Legales** y **Desarrollos y Obras**.
 - Pilar **Administración**: vacío hasta migrar FJ App módulo por módulo.
+
+## 2026-09-28 — v1.0679: "Corregir historial" usa el mes operativo
+- La herramienta tenía fijo "cuota actual = Agosto 2026" (se hizo en agosto): en septiembre corría todos los meses uno para atrás y marcaba cuotas como impagas (caso M2-6A). Ahora el mes de la cuota actual = el siguiente al último cierre final (`_mesOperativoAncla`).
+- Si una cuota falta en el historial pero pasó por la mora, se completa con su monto y si se pagó (antes: impaga en $0).
+- Probado con datos reales (solo lectura): M2-6A queda C29 Junio y C30 Julio pagadas; ningún mes guardado cambia.

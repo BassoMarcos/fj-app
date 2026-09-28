@@ -915,7 +915,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0678';
+const APP_VERSION='v1.0679';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -10223,18 +10223,33 @@ function corregirLoteHist(id){
     if(!c) return;
     c.hist=r.despues.map(h=>({cuota:h.cuota, mes:h.mes, monto:h.monto, pagada:h.pagada, ts:new Date().toISOString()}));
     saveData(data);
-    addHist('edit','🔧 Historial realineado: '+c.mz+' Lote '+c.lote+' — '+r.despues.length+' cuotas ordenadas desde Agosto 2026',id);
+    addHist('edit','🔧 Historial realineado: '+c.mz+' Lote '+c.lote+' — '+r.despues.length+' cuotas (cuota actual = '+r.anclaTxt+')',id);
     alert('✓ '+id+' corregido. '+r.despues.length+' cuotas realineadas.');
     // reabrir el diagnóstico para seguir con el próximo
     if(typeof abrirDiagnosticoHist==='function') abrirDiagnosticoHist();
   });
 }
 
-// Calcula el historial realineado de un lote (sin aplicar). Devuelve {antes, despues}
+// v1.0679: mes de la cuota actual = mes operativo (el siguiente al último cierre final; si no hay
+// cierre, el del ICC; si tampoco, el del calendario). Antes estaba fijo en Agosto 2026.
+function _mesOperativoAncla(){
+  try{
+    const cf=loadCierreFinal();
+    if(cf&&typeof cf.mes==='number'&&cf.anio){ const v=cf.anio*12+cf.mes+1; return {mesIdx:v%12, anio:Math.floor(v/12)}; }
+  }catch(e){}
+  try{ const mo=getMesOperativoICC(); if(mo) return {mesIdx:mo.mesIdx, anio:mo.anio}; }catch(e){}
+  const hoy=new Date();
+  return {mesIdx:hoy.getMonth(), anio:hoy.getFullYear()};
+}
+// Calcula el historial realineado de un lote (sin aplicar). Devuelve {antes, despues, anclaTxt}
 // Corrige meses/números correlativos desde la cuota actual, completa hasta ca-1, mantiene pagada/impaga.
 function _realinearHist(c){
   const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const anclaCuota=c.ca, anclaMesIdx=7, anclaAnio=2026; // cuota actual = Agosto 2026
+  const _anc=_mesOperativoAncla();
+  const anclaCuota=c.ca, anclaMesIdx=_anc.mesIdx, anclaAnio=_anc.anio; // cuota actual = mes operativo
+  // v1.0679: cuotas que pasaron por la mora (para completar las que faltan con su estado y monto reales)
+  const _moraDe={};
+  try{ (loadCuotasMora()||[]).forEach(q=>{ if(q&&q.clienteId===c.id&&typeof q.numeroCuota==='number') _moraDe[q.numeroCuota]=q; }); }catch(e){}
   const hist=(c.hist||[]).filter(h=>typeof h.cuota==='number' && h.cuota>=1);
   // dedup por número: quedarse con el de monto mayor (y su estado)
   const porNum={};
@@ -10242,7 +10257,7 @@ function _realinearHist(c){
   const numsExist=Object.keys(porNum).map(Number);
   if(!numsExist.length) return null;
   const minNum=Math.min(...numsExist);
-  const maxNum=anclaCuota-1; // el historial debe llegar hasta la cuota anterior a la actual (Julio)
+  const maxNum=anclaCuota-1; // el historial debe llegar hasta la cuota anterior a la actual
   const mesTxtDe=(n)=>{
     const diff=anclaCuota-n;
     const total=anclaAnio*12+anclaMesIdx-diff;
@@ -10252,17 +10267,19 @@ function _realinearHist(c){
   const despues=[];
   for(let n=minNum; n<=maxNum; n++){
     const ex=porNum[n];
+    const qm=!ex?_moraDe[n]:null;              // v1.0679: si falta pero pasó por la mora, se usa eso
     despues.push({
       cuota:n,
       mes:mesTxtDe(n),
-      monto: ex ? (ex.monto||0) : 0,          // si falta, monto 0 (se edita después)
-      pagada: ex ? (ex.pagada!==false) : false, // si falta, la marcamos impaga por defecto
-      _nueva: !ex                              // marca si es una cuota que se agregó
+      monto: ex ? (ex.monto||0) : (qm ? (qm.monto||0) : 0),   // si falta y no hay dato, 0 (se edita después)
+      pagada: ex ? (ex.pagada!==false) : (qm ? qm.pagada===true : false),
+      _nueva: !ex,                             // marca si es una cuota que se agregó
+      _deMora: !!qm                            // se completó con el dato de la mora
     });
   }
   despues.sort((a,b)=>b.cuota-a.cuota); // descendente: más nueva arriba
   const antes=(c.hist||[]).slice().sort((a,b)=>(b.cuota||0)-(a.cuota||0)).map(h=>({cuota:h.cuota,mes:h.mes,monto:h.monto,pagada:h.pagada!==false}));
-  return {antes, despues};
+  return {antes, despues, anclaTxt: MESES[anclaMesIdx]+' '+anclaAnio};
 }
 
 function abrirPreviewRealineado(id){
@@ -10308,12 +10325,12 @@ function abrirPreviewRealineado(id){
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100001;display:flex;align-items:center;justify-content:center;padding:16px';
   ov.innerHTML=`<div style="background:var(--surface);border-radius:14px;max-width:640px;width:100%;max-height:92vh;overflow-y:auto;padding:20px">
     <div style="font-size:16px;font-weight:800;margin-bottom:2px">✏️ Corregir historial — ${id}</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:14px">${c.titular||''} · cuota actual ${c.ca} (Agosto 2026) · <b style="color:var(--acc2)">${(c.moneda==='USD'?'USD ':'$')+Math.round(c.monto||0).toLocaleString('es-AR')}</b>. Podés ajustar cada cuota antes de guardar.</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px">${c.titular||''} · cuota actual ${c.ca} (${r.anclaTxt}) · <b style="color:var(--acc2)">${(c.moneda==='USD'?'USD ':'$')+Math.round(c.monto||0).toLocaleString('es-AR')}</b>. Podés ajustar cada cuota antes de guardar.</div>
     <div style="display:flex;gap:10px;margin-bottom:16px">
       ${colAntes}
       ${colDespues}
     </div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Las cuotas en amarillo son nuevas (faltaban). Revisá los montos y el estado antes de guardar.</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Las cuotas en amarillo son nuevas (faltaban). Si figuraban en la mora, se completan con su monto y si se pagaron. Revisá los montos y el estado antes de guardar.</div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button onclick="_guardarRealinEditado('${id.replace(/'/g,"\\'")}')" style="background:#5a9e78;color:#fff;border:none;border-radius:8px;padding:11px 20px;font-size:13px;font-weight:700;cursor:pointer">✓ Guardar</button>
       <button onclick="document.getElementById('preview-realin-modal').remove()" style="background:var(--surface);border:1.5px solid var(--border2);color:var(--text);border-radius:8px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer">Cancelar</button>
