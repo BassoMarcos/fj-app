@@ -888,6 +888,7 @@ tr:hover td{background:var(--bg)}
     <div class="form-actions">
       <button class="btn" onclick="closeModal('modal-edit')">Cancelar</button>
       <button class="btn btn-danger btn-sm" id="btn-del" onclick="delCliente()" style="display:none">Eliminar</button>
+      <button class="btn btn-sm" id="btn-resc" onclick="rescindirCliente()" title="El cliente firmó la rescisión: el lote queda libre y limpio para un cliente nuevo" style="display:none;background:#7c3aed;color:#fff;border-color:#7c3aed">📝 Rescisión</button>
       <button class="btn btn-primary" onclick="saveCliente()">Guardar</button>
     </div>
   </div>
@@ -908,7 +909,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0686';
+const APP_VERSION='v1.0687';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -2780,6 +2781,7 @@ function openEditModal(id){
   const safeDisp=(eid,v)=>{const el=document.getElementById(eid);if(el)el.style.display=v;};
   document.getElementById('edit-title').textContent='Editar — '+c.mz+' Lote '+c.lote;
   document.getElementById('btn-del').style.display='inline-block';
+  safeDisp('btn-resc','inline-block');
   // Mostrar/ocultar secciones
   safeDisp('e-est-wrap','block');
   safeDisp('e-ca-wrap','block');
@@ -3496,6 +3498,7 @@ function openAddModal(){
   const safe=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val;};
   document.getElementById('edit-title').textContent='Nuevo cliente';
   document.getElementById('btn-del').style.display='none';
+  { const br=document.getElementById('btn-resc'); if(br) br.style.display='none'; }
   const estWrap=document.getElementById('e-est-wrap');
   if(estWrap) estWrap.style.display='none';
   const caWrap=document.getElementById('e-ca-wrap');
@@ -14692,6 +14695,109 @@ function delCliente(){
     }
   );
 }
+
+// ══════ v1.0687: RESCISIÓN DE CONTRATO ══════
+// El cliente firmó la rescisión: el lote vuelve a quedar libre y LIMPIO, como si nunca hubiera tenido
+// cliente, listo para cargar al comprador nuevo desde "Nuevo cliente" (en su etapa).
+// Se saca el cliente y todo lo que quedaba atado al lote (el número de lote es el número de cliente):
+// deudas en mora, avisos de mora, adelantos, notas de mora, certificado y la marca de pago del mes.
+// Lo ya cobrado NO se toca: cajas, caja de mora, cierres, extras e historial general quedan igual.
+// Antes se guarda un punto de restauración (para volver atrás con "↩ Restaurar") y una copia de todo
+// lo del cliente en eucaliptus/rescindidos/<id> (por si hace falta consultarlo).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _loDelLote(id){
+  const esDe=(p)=>!!(p&&(p.clienteId===id||p.cid===id||p.idCliente===id));
+  let ah=[]; try{ ah=JSON.parse(_lsGet(dKey('adelantosHist'))||'[]'); }catch(e){}
+  return {
+    c: loadData().find(x=>x.id===id)||null,
+    cm: loadCuotasMora().filter(x=>x.clienteId===id),
+    notif: loadNotifMora().filter(x=>x.clienteId===id),
+    pend: loadPendientesAprobacion().filter(esDe),
+    adel: loadAdelantos().filter(a=>a.id===id),
+    adelHist: ah.filter(a=>a.id===id),
+    pago: loadPagoStore()[id],
+    nota: loadNotasMora()[id],
+    cert: loadLotesCerts()[id],
+    esDe
+  };
+}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function rescindirCliente(){
+  if(!editId) return;
+  const id=editId;
+  const x=_loDelLote(id);
+  if(!x.c) return;
+  const c=x.c;
+  const deuda=x.cm.filter(m=>!m.pagada);
+  const lineas=[
+    deuda.length?'• '+deuda.length+' cuota'+(deuda.length>1?'s':'')+' en mora (la deuda se cancela)':'',
+    (x.adel.length||x.adelHist.length)?'• adelantos registrados':'',
+    x.notif.length?'• avisos de mora':'',
+    x.nota!==undefined?'• notas de mora':'',
+    x.cert!==undefined?'• seguimiento del certificado':'',
+    x.pago!==undefined?'• marca de pago de este mes':''
+  ].filter(Boolean).join('\n');
+  showConfirmModal('📝 Rescisión de contrato',
+    formatLoteTag(c.mz,c.lote)+' — '+(c.titular||'')+'\n\n'
+    +'Se borra el cliente'+(lineas?' y todo lo atado al lote:\n'+lineas:'.')+'\n\n'
+    +'El lote queda libre y limpio para cargar un cliente nuevo desde cero.\n'
+    +'Lo ya cobrado (cajas, caja de mora y cierres) no se toca.',
+    ()=>showConfirmModal('¿Confirmás la rescisión?',
+      'Antes se guarda un punto de restauración, por si hay que volver atrás.',
+      ()=>{ _ejecutarRescision(id); }, 'Sí, rescindir', '#7c3aed'),
+    'Continuar', '#7c3aed');
+}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+async function _ejecutarRescision(id){
+  const x=_loDelLote(id);
+  if(!x.c) return;
+  const c=x.c, tag=formatLoteTag(c.mz,c.lote);
+  const espera=document.createElement('div');
+  espera.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700;padding:20px;text-align:center';
+  espera.textContent='Guardando el respaldo antes de la rescisión…';
+  document.body.appendChild(espera);
+  try{
+    await guardarPuntoRestauracion('Antes de rescisión: '+tag+' — '+(c.titular||''), _totalesActuales(), 'rescision');
+  }catch(e){
+    espera.remove();
+    alert('No se pudo guardar el respaldo ('+((e&&e.message)||e)+').\n\nNo se hizo ningún cambio. Probá de nuevo con conexión.');
+    return;
+  }
+  // 1) Copia de todo lo del cliente (cada rescisión en su propio lugar: no se pisan entre dispositivos)
+  const ahora=new Date();
+  const clave='r'+ahora.getTime();
+  const copia={ id, ts:ahora.toISOString(), fecha:ahora.toLocaleDateString('es-AR'), lote:tag, titular:c.titular||'',
+    cliente:c, cuotasMora:x.cm, adelantos:x.adel, adelantosHist:x.adelHist, notifMora:x.notif, pendientes:x.pend,
+    pago:x.pago===undefined?null:x.pago, notaMora:x.nota===undefined?null:x.nota, certificado:x.cert===undefined?null:x.cert };
+  try{ const loc=JSON.parse(localStorage.getItem('fj_rescindidos')||'{}'); loc[clave]=copia; localStorage.setItem('fj_rescindidos',JSON.stringify(loc)); }catch(e){}
+  window._fbSet('rescindidos/'+clave, copia).catch(e=>console.warn('FB rescindidos error:',e));
+  // 2) Limpiar todo lo atado al lote
+  if(x.cm.length) saveCuotasMora(loadCuotasMora().filter(m=>m.clienteId!==id));
+  if(x.notif.length) saveNotifMora(loadNotifMora().filter(m=>m.clienteId!==id));
+  if(x.pend.length) savePendientesAprobacion(loadPendientesAprobacion().filter(p=>!x.esDe(p)));
+  if(x.adel.length) saveAdelantos(loadAdelantos().filter(a=>a.id!==id));
+  if(x.adelHist.length){
+    let ah=[]; try{ ah=JSON.parse(_lsGet(dKey('adelantosHist'))||'[]'); }catch(e){}
+    const ah2=ah.filter(a=>a.id!==id);
+    _lsSet(dKey('adelantosHist'),JSON.stringify(ah2));
+    window._fbSet('adelantosHist',ah2).catch(()=>{});
+  }
+  if(x.pago!==undefined){ const p=loadPagoStore(); delete p[id]; savePagoStore(p); }
+  if(x.nota!==undefined){ const n=loadNotasMora(); delete n[id]; saveNotasMora(n); }
+  if(x.cert!==undefined){ const ce=loadLotesCerts(); delete ce[id]; saveLotesCerts(ce); }
+  // 3) Sacar el cliente y dejar el lote libre (igual que "Eliminar"; al cargar el cliente nuevo se rehabilita)
+  const d=loadData(); const i=d.findIndex(y=>y.id===id);
+  if(i>=0){ d.splice(i,1); saveData(d); }
+  registrarBorrado(id);
+  if(['M1','M2','M3','M4'].includes(c.mz)||c.mz==='ETAPA 2'||c.mz==='ETAPA 3') agregarLoteLibreE123(id);
+  addHist('edit','📝 Rescisión: '+tag+' — '+(c.titular||'')+' · el lote quedó libre (respaldo guardado)',id);
+  espera.remove();
+  closeModal('modal-edit');
+  try{ const det=document.getElementById('admin-detalle'); if(det&&det.style.display!=='none'&&adminDetId===id) det.style.display='none'; }catch(e){}
+  renderAdminTable();
+  alert('✅ Rescisión hecha.\n\n'+tag+' quedó libre y limpio: ya aparece en "Nuevo cliente" para cargar al comprador nuevo.');
+}
+rescindirCliente.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
 function showConfirmModal(titulo, msg, onConfirm, btnLabel, btnColor){
   btnLabel = btnLabel || 'Eliminar';

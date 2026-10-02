@@ -71,6 +71,7 @@ Campos clave: `id` (ej `"M1-4B"`, `"ETAPA 2-3"`, `"E4-M1-9B"`), `mz` (manzana/et
 - `getManzanasPorEtapa('E1')` ahora también cuenta lotes libres (antes solo E4).
 - `renderSelectorManzana()` muestra sub-manzanas M1-M4 para E1 igual que E4-M1...M5.
 - Al guardar nuevo cliente (`saveCliente`), cada lote asignado se quita de la lista de vacantes vía `quitarLoteLibreE123(lId)`.
+- **Rescisión (v1.0687)** — botón `#btn-resc` "📝 Rescisión" en Editar cliente → `rescindirCliente()` (2 confirmaciones) → `_ejecutarRescision(id)`: 1) `guardarPuntoRestauracion("Antes de rescisión…", _totalesActuales(), "rescision")` (si falla, no cambia nada); 2) copia de todo lo del cliente en `eucaliptus/rescindidos/r<ts>` (y `fj_rescindidos` local); 3) borra lo atado al id del lote (`_loDelLote`): `cuotasMora`, `notifMora`, `pendientesAprobacion`, `adelantos`, `adelantosHist`, `pagoStore[id]`, `notasMora[id]`, `lotesCerts[id]`; 4) saca el cliente, `registrarBorrado(id)` y `agregarLoteLibreE123(id)` (E1–E3; E4 queda libre solo). NO toca `balances`, `mora` (caja de mora), `extras`, cierres ni `hist`. Al cargar el comprador nuevo, `saveCliente` hace `quitarBorrado` y `quitarLoteLibreE123`.
 
 ## Lotes Finalizados — vista + certificados (v1.0298+)
 
@@ -127,6 +128,8 @@ Rediseño basado en la lógica real del negocio, conversada y confirmada con el 
 4. Avisar al usuario: `Ctrl+Shift+R` para ver el cambio.
 
 ## Changelog reciente
+
+- **v1.0687 (1/10/2026) — Rescisión de contrato**: botón "📝 Rescisión" en Editar cliente. El lote queda libre y limpio para un cliente nuevo (sin deudas, avisos, adelantos ni notas del anterior); antes guarda punto de restauración + copia en `rescindidos`; lo cobrado no se toca. Ver "Lotes vacantes". Pedido de Marcos: después también en MasterPlan.
 
 - **v1.0678 (26/9/2026) — "% del interés" en los cobros con mora**: la opción "% Porc." de interés diferente pasa a ser **% del interés que se cobra** (antes era % de la cuota). 50 = la mitad del interés. Vale en cobrar todo, cobrar seleccionadas y una cuota (admin y colab). En "Cobrar todo" el % y el monto aplican al interés TOTAL (mora + mes) (`_interesesCobrarTodo`), y se muestra la cuenta: cuota pura + intereses = total, con el detalle "Se cobra el X% del interés: $A de $B (descuento $C)". El interés elegido se reparte entre cuotas en proporción al interés automático de cada una y cierra exacto al peso (`_repartirInteresEnCuotas`; antes podía sobrar $1 en Caja de Mora). Probado con datos reales (ETAPA 2-3): auto $3.553.609, 50% $2.574.222, monto $1.000.000 → $2.594.834; cajas exactas.
 - **v1.0677 (26/9/2026) — "Cobrar todo" con el interés del mes**: `cobrarTodoAdmin` / `cobrarTodoColab` sumaban la cuota del mes actual como `c.monto` pelado y al confirmar hacían `marcarPago(id, 0)` → el mes atrasado se cobraba SIN interés (y sin escalón). Ahora usan `_cuotaMesParaCobrarTodo(c)` = igual que el cobro normal (`montoCobrable` + `calcInteresAuto`), lo muestran en el renglón "Cuota mes actual" y lo pasan a `marcarPago` (el interés va a Caja de Mora como interés del mes). Probado con datos reales (ETAPA 2-18): total $1.071.360 → $1.187.971; Caja de Mora agosto + interés de sept., Caja del día / Física solo la cuota.
