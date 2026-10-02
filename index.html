@@ -842,16 +842,21 @@ tr:hover td{background:var(--bg)}
     <!-- Refinanciación (solo edición, siempre editable) -->
     <div class="field" id="e-refi-wrap" style="display:none">
       <div style="padding:10px;border:1.5px solid #c084fc;border-radius:var(--r);background:rgba(192,132,252,.06)">
-        <label style="font-size:12px;font-weight:700;color:#c084fc">💠 Refinanciación <span style="font-weight:400;color:var(--text3)">(extra mensual que se cobra junto a la cuota y cae en Caja de Mora)</span></label>
+        <label style="font-size:12px;font-weight:700;color:#c084fc">💠 Refinanciación <span style="font-weight:400;color:var(--text3)">(monto fijo que paga además de la cuota; nunca sube con el ICC; va a Ingresos Extras)</span></label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:6px">
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Monto refinanciación ($)</div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Monto por cuota ($)</div>
             <input type="number" id="e-refi-monto" min="0" placeholder="0"
               style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:120px"
               oninput="actualizarRefiInfo()">
           </div>
           <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Cuota N° (este mes)</div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Empieza a pagar</div>
+            <select id="e-refi-inicio" onchange="actualizarRefiInfo()"
+              style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg)"></select>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Ese mes paga la cuota N°</div>
             <input type="number" id="e-refi-num" min="1" placeholder="1"
               style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:90px"
               oninput="actualizarRefiInfo()">
@@ -862,8 +867,6 @@ tr:hover td{background:var(--bg)}
               style="padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);width:90px"
               oninput="actualizarRefiInfo()">
           </div>
-          <input type="hidden" id="e-refi-hasta" value="0">
-          <input type="hidden" id="e-refi-desde" value="0">
         </div>
         <div id="e-refi-info" style="display:none;font-size:11px;color:#c084fc;margin-top:4px;background:rgba(192,132,252,.10);border-radius:6px;padding:5px 8px"></div>
       </div>
@@ -909,7 +912,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0687';
+const APP_VERSION='v1.0688';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -1491,17 +1494,81 @@ function montoCobrable(c){
   return {base, adicional:activo?adic:0, total:base+(activo?adic:0), escalonActivo:activo, hasta};
 }
 montoCobrable.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
-// ── Refinanciación: extra mensual que va a Caja de Mora (no es cuota, no va a caja normal) ──
-function refiCobrable(c){
-  const monto=Number(c.refiMonto)||0;
-  const hasta=Number(c.refiHasta)||0;
-  const desde=Number(c.refiDesde)||0;
-  const ca=Number(c.ca)||0;
-  const activo=monto>0 && hasta>0 && ca<=hasta && ca>=desde;
-  const total=(hasta>=desde)?(hasta-desde+1):0; // cantidad total de cuotas de refi
-  const numero=activo?(ca-desde+1):0; // cuál cuota de refi es la actual (1-based)
-  return {monto:activo?monto:0, activo, hasta, desde, total, numero};
+// ══════ v1.0688: REFINANCIACIÓN ══════
+// Un monto FIJO (no sube con el ICC ni con nada) que el cliente paga además de la cuota, en N cuotas.
+// Se carga en Editar cliente: monto, desde qué mes empieza, qué cuota paga ese mes (ej. 4) y cuántas son (ej. 6).
+// Al cobrar se suma a la cuota, bien detallado para el recibo, y la plata va a 💼 Gastos e Ingresos Extras
+// como INGRESO (una línea por cuota: "Refinanciación cuota 4 de 6 — lote — titular"). Nunca va a mora.
+// La cuota de refinanciación avanza SOLO cuando se cobra (no con el cierre): si un mes no se paga, no se
+// pierde. Al cobrar se elige cuántas se cobran: 0 (ese mes no la paga), 1 (lo normal) o más (atrasadas/adelantar).
+// Datos del cliente: refiMonto, refiTotal, refiProxima (la próxima a cobrar), refiInicio ("AAAA-MM": mes en que
+// se cobra la cuota refiPrimera) y refiPrimera. (refiDesde/refiHasta = formato viejo, sin uso.)
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _mesOpNum(){ const m=getMesOperativoICC(); return m.anio*12+m.mesIdx; }
+function _mesKeyNum(k){ const p=String(k||'').split('-'); const a=+p[0], m=+p[1]; return (a>0&&m>0)?a*12+(m-1):null; }
+function _mesKeyNombre(k){ const n=_mesKeyNum(k); return n===null?'':MESES_NOMBRE[n%12]+' '+Math.floor(n/12); }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function refiEstado(c){
+  const monto=Number(c&&c.refiMonto)||0, total=Number(c&&c.refiTotal)||0;
+  const vacio={tiene:false,activa:false,monto:0,total:0,proxima:0,quedan:0,debe:0,empiezaEn:null,terminada:false};
+  if(!c||monto<=0||total<=0) return vacio;
+  const proxima=Math.max(1,Number(c.refiProxima)||1);
+  const quedan=Math.max(0,total-proxima+1);
+  if(!quedan) return {...vacio,tiene:true,monto,total,proxima,terminada:true};
+  const ini=_mesKeyNum(c.refiInicio), primera=Math.max(1,Number(c.refiPrimera)||1), hoy=_mesOpNum();
+  if(ini!==null&&hoy<ini) return {...vacio,tiene:true,monto,total,proxima,quedan,empiezaEn:c.refiInicio};
+  // Cuántas tendrían que estar cobradas hasta este mes (incluida la de este mes) y cuántas debe.
+  const esperada=Math.min(total, primera+(ini===null?0:hoy-ini));
+  const debe=Math.max(0, esperada-proxima+1);
+  return {tiene:true,activa:true,monto,total,proxima,quedan,debe,empiezaEn:null,terminada:false};
 }
+// Lo que se cobra de refinanciación si no se elige otra cosa: 1 cuota si debe alguna (lo normal), si no 0.
+function refiACobrar(c){ const e=refiEstado(c); const cant=(e.activa&&e.debe>0)?1:0; return {cant, monto:cant*e.monto, e}; }
+function _refiCuotasTxt(desde,cant,total){ return cant>1?('cuotas '+desde+' a '+(desde+cant-1)+' de '+total):('cuota '+desde+' de '+total); }
+// Registra lo cobrado de refinanciación en 💼 Gastos e Ingresos Extras (una línea por cuota). Devuelve cuántas.
+// El que llama suma esa cantidad a c.refiProxima al guardar el cliente.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function registrarRefiCobro(c, cant, ts, fecha, medio){
+  const e=refiEstado(c);
+  cant=Math.max(0,Math.min(Math.floor(Number(cant)||0), e.quedan));
+  if(!cant||!e.monto) return 0;
+  const ex=loadExtras(), tag=formatLoteTag(c.mz,c.lote), t0=Date.parse(ts)||Date.now();
+  for(let i=0;i<cant;i++){
+    const n=e.proxima+i;
+    ex.push({ id:'refi-'+t0+'-'+n, tipo:'ingreso', origen:'refi', clienteId:c.id, refiNumero:n, refiTotal:e.total, cobroTs:ts,
+      desc:'💠 Refinanciación cuota '+n+' de '+e.total+' — '+tag+' '+(c.titular||'')+(medio&&medio!=='efectivo'?' ('+medio+')':''),
+      monto:e.monto, medio:medio||'efectivo', fecha, ts });
+  }
+  saveExtras(ex);
+  addHist('pago','💠 Refinanciación '+_refiCuotasTxt(e.proxima,cant,e.total)+' — '+c.mz+' Lote '+c.lote+' — '+fmtPeso(e.monto*cant)+' (a Ingresos Extras)',c.id);
+  return cant;
+}
+// Al anular un cobro: saca de Ingresos Extras la refinanciación de ESE cobro (mismo ts) y la vuelve a dejar pendiente.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _revertirRefiCobro(c, ts){
+  if(!c||!ts) return 0;
+  const ex=loadExtras();
+  const mios=ex.filter(e=>e&&e.origen==='refi'&&e.clienteId===c.id&&e.cobroTs===ts);
+  if(!mios.length) return 0;
+  saveExtras(ex.filter(e=>!mios.includes(e)));
+  c.refiProxima=Math.min(...mios.map(e=>Number(e.refiNumero)||1));
+  addHist('desmarcar','💠 Refinanciación revertida ('+mios.length+' cuota'+(mios.length>1?'s':'')+', vuelve a quedar pendiente) — '+c.mz+' Lote '+c.lote,c.id);
+  return mios.length;
+}
+// Cartelito violeta para las pantallas de cobro (detalle del cliente): qué refinanciación se cobra con la cuota.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function refiCajaHtml(c, cur, idBlur){
+  const e=refiEstado(c);
+  if(!e.tiene||e.terminada) return '';
+  const caja=(txt)=>'<div'+(idBlur?' id="'+idBlur+'"':'')+' style="background:rgba(192,132,252,.10);border:1.5px solid #c084fc;border-radius:var(--r);padding:8px 12px;margin:.25rem 0 .5rem;font-size:13px;color:#c084fc'+(idBlur&&!c.pago?';filter:blur(6px);user-select:none':'')+'">'+txt+'</div>';
+  if(e.empiezaEn) return caja('💠 Refinanciación: empieza en '+_mesKeyNombre(e.empiezaEn)+' (cuota '+e.proxima+' de '+e.total+', '+(cur||'')+fmtPeso(e.monto)+')');
+  if(!e.debe) return caja('💠 Refinanciación de este mes ya cobrada · próxima: cuota '+e.proxima+' de '+e.total);
+  const r=refiACobrar(c);
+  return caja('<div style="display:flex;justify-content:space-between;gap:8px;font-weight:700"><span>💠 + Refinanciación cuota '+e.proxima+' de '+e.total+'</span><span>+'+(cur||'')+fmtPeso(r.monto)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;gap:8px;margin-top:3px"><span>Cuota + refinanciación</span><span style="font-weight:800">'+(cur||'')+fmtPeso(montoCobrable(c).total+r.monto)+'</span></div>'
+    +(e.debe>1?'<div style="font-size:11px;margin-top:3px">⚠️ Debe '+e.debe+' cuotas de refinanciación (al cobrar podés sumar las atrasadas)</div>':''));
+}
+refiEstado.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 // Monto que se debe GUARDAR en el historial de cuotas.
 // Regla: siempre el monto PURO de la cuota (sin interés/mora). Para USD el precio es fijo,
 // nunca se infla. Nunca guardar valores con recargos en el historial.
@@ -1954,7 +2021,12 @@ function loadData(){
             adicionalHasta:sc.adicionalHasta||b.adicionalHasta||0,
             refiMonto:sc.refiMonto||b.refiMonto||0,
             refiHasta:sc.refiHasta||b.refiHasta||0,
-            refiDesde:sc.refiDesde||b.refiDesde||0
+            refiDesde:sc.refiDesde||b.refiDesde||0,
+            // v1.0688: refinanciación nueva (ver refiEstado)
+            refiTotal:sc.refiTotal||0,
+            refiProxima:sc.refiProxima||0,
+            refiPrimera:sc.refiPrimera||0,
+            refiInicio:sc.refiInicio||null
           };
         });
       }
@@ -2028,7 +2100,11 @@ function saveData(d){
     adicionalHasta:c.adicionalHasta||0,
     refiMonto:c.refiMonto||0,
     refiHasta:c.refiHasta||0,
-    refiDesde:c.refiDesde||0
+    refiDesde:c.refiDesde||0,
+    refiTotal:c.refiTotal||0,
+    refiProxima:c.refiProxima||0,
+    refiPrimera:c.refiPrimera||0,
+    refiInicio:c.refiInicio||null
   }));
 
   _lsSet(dKey('data'),JSON.stringify(full));
@@ -2797,18 +2873,8 @@ function openEditModal(id){
     set('e-adic-cant',_cantIni);
     const _h=document.getElementById('e-adic-hasta'); if(_h) _h.value=c.adicionalHasta||0;
     setTimeout(actualizarEscalonInfo,0);
-    // Refinanciación (editable, no usar set() que deshabilita)
-    (function(){
-      const rm=document.getElementById('e-refi-monto'); if(rm){ rm.value=c.refiMonto||0; rm.disabled=false; rm.style.opacity='1'; }
-      const _refiCant=(c.refiMonto&&c.refiHasta&&c.refiDesde)?Math.max(0,(c.refiHasta-c.refiDesde)+1):0;
-      const rc=document.getElementById('e-refi-cant'); if(rc){ rc.value=_refiCant||''; rc.disabled=false; rc.style.opacity='1'; }
-      // Número de refi de este mes = ca - desde + 1
-      const _ca=c.ca||1;
-      const _num=(c.refiMonto&&c.refiDesde)?Math.max(1,(_ca-c.refiDesde+1)):'';
-      const rn=document.getElementById('e-refi-num'); if(rn){ rn.value=_num; rn.disabled=false; rn.style.opacity='1'; }
-      const _rh=document.getElementById('e-refi-hasta'); if(_rh) _rh.value=c.refiHasta||0;
-      const _rd=document.getElementById('e-refi-desde'); if(_rd) _rd.value=c.refiDesde||0;
-    })();
+    // Refinanciación (editable, no usar set() que deshabilita). v1.0688: monto, desde qué mes, cuota N° de N.
+    _refiPrefill(c);
     setTimeout(actualizarRefiInfo,0);
     setTimeout(actualizarRefiInfo,0);
     const b=document.getElementById('e-ca-unlock');
@@ -3575,28 +3641,47 @@ function actualizarEscalonInfo(){
 function refiDesdeEsteMes(){
   // (compat) ya no se usa el botón, pero dejo la función por si quedó alguna referencia
 }
+// v1.0688: carga del formulario de refinanciación en Editar cliente.
+// Si ya tiene una refinanciación en curso, muestra "este mes, cuota <la próxima a cobrar>".
+// _refiIni guarda cómo arrancó el formulario: si al guardar no se tocó nada, no se cambia la refinanciación.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+let _refiIni='';
+function _refiPrefill(c){
+  const sel=document.getElementById('e-refi-inicio');
+  const hoy=_mesOpNum();
+  const key=(n)=>Math.floor(n/12)+'-'+String(n%12+1).padStart(2,'0');
+  if(sel){
+    let ops='';
+    for(let i=0;i<=12;i++){ const n=hoy+i; ops+='<option value="'+key(n)+'">'+(i===0?'Este mes ('+MESES_NOMBRE[n%12]+' '+Math.floor(n/12)+')':MESES_NOMBRE[n%12]+' '+Math.floor(n/12))+'</option>'; }
+    sel.innerHTML=ops; sel.disabled=false; sel.style.opacity='1';
+  }
+  const e=refiEstado(c);
+  const empieza=(e.empiezaEn&&_mesKeyNum(e.empiezaEn)>hoy)?e.empiezaEn:key(hoy);
+  if(sel){ if(![...sel.options].some(o=>o.value===empieza)) sel.insertAdjacentHTML('beforeend','<option value="'+empieza+'">'+_mesKeyNombre(empieza)+'</option>'); sel.value=empieza; }
+  const vals={ monto:e.tiene&&!e.terminada?e.monto:0, num:e.tiene&&!e.terminada?e.proxima:'', cant:e.tiene&&!e.terminada?e.total:'' };
+  const rm=document.getElementById('e-refi-monto'); if(rm){ rm.value=vals.monto||0; rm.disabled=false; rm.style.opacity='1'; }
+  const rn=document.getElementById('e-refi-num'); if(rn){ rn.value=vals.num; rn.disabled=false; rn.style.opacity='1'; }
+  const rc=document.getElementById('e-refi-cant'); if(rc){ rc.value=vals.cant; rc.disabled=false; rc.style.opacity='1'; }
+  _refiIni=_refiFormValor();
+  setTimeout(actualizarRefiInfo,0);
+}
+function _refiFormValor(){
+  const v=(id)=>((document.getElementById(id)||{}).value||'');
+  return [+v('e-refi-monto')||0, v('e-refi-inicio'), +v('e-refi-num')||0, +v('e-refi-cant')||0].join('|');
+}
 function actualizarRefiInfo(){
   const info=document.getElementById('e-refi-info');
-  const caEl=document.getElementById('e-ca-visible')||document.getElementById('e-ca');
   const montoEl=document.getElementById('e-refi-monto');
   const numEl=document.getElementById('e-refi-num');
   const cantEl=document.getElementById('e-refi-cant');
-  const hastaEl=document.getElementById('e-refi-hasta');
-  const desdeEl=document.getElementById('e-refi-desde');
-  if(!info||!montoEl||!numEl||!cantEl||!hastaEl||!desdeEl) return;
-  const ca=+((caEl||{}).value)||1;
-  const monto=+montoEl.value||0;
-  const num=+numEl.value||0;   // cuál cuota de refi es la de ESTE mes
-  const cant=+cantEl.value||0; // total de cuotas de refi
-  if(monto<=0||num<=0||cant<=0){ hastaEl.value=0; desdeEl.value=0; info.style.display='none'; return; }
-  // Anclar: la cuota 'num' de refi = la cuota operativa actual (ca)
-  // => la refi arrancó en la cuota del plan: ca - (num - 1)
-  const desde=ca-(num-1);
-  const hasta=desde+cant-1;
-  desdeEl.value=desde;
-  hastaEl.value=hasta;
+  const selEl=document.getElementById('e-refi-inicio');
+  if(!info||!montoEl||!numEl||!cantEl) return;
+  const monto=+montoEl.value||0, num=+numEl.value||0, cant=+cantEl.value||0;
+  if(monto<=0||num<=0||cant<=0){ info.style.display='none'; return; }
   info.style.display='block';
-  info.textContent='💠 Refinanciación: este mes es la cuota '+num+' de '+cant+' ('+fmtPeso(monto)+'). Se cobra junto a la cuota y cae en Caja de Mora. Avanza sola cada mes hasta la '+cant+'.';
+  if(num>cant){ info.textContent='⚠️ La cuota N° no puede ser mayor que el total de cuotas.'; return; }
+  const mes=selEl&&selEl.value?_mesKeyNombre(selEl.value):'este mes';
+  info.textContent='💠 En '+mes+' paga la cuota '+num+' de '+cant+' ('+fmtPeso(monto)+' fijos, no suben con el ICC). Se cobra junto a la cuota y va a Ingresos Extras. Avanza cuando se cobra: si un mes no paga, no se pierde.';
 }
 
 function cobrarPorTransferencia(id){
@@ -3604,7 +3689,7 @@ function cobrarPorTransferencia(id){
   elegirTipoTransferencia(id,'admin',undefined);
 }
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
-function elegirTipoTransferencia(id,ctx,interes){
+function elegirTipoTransferencia(id,ctx,interes,refiCant){
   let m=document.getElementById('form-cobro-modal');
   if(!m){
     m=document.createElement('div');
@@ -3612,7 +3697,7 @@ function elegirTipoTransferencia(id,ctx,interes){
     m.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:16px';
     document.body.appendChild(m);
   }
-  window._fcPend={id,ctx,interes};
+  window._fcPend={id,ctx,interes,refiCant};
   m.innerHTML='<div style="background:var(--card);border-radius:14px;max-width:380px;width:100%;padding:1.25rem" onclick="event.stopPropagation()">'
     +'<div style="font-size:16px;font-weight:800;margin-bottom:12px;text-align:center">🏦 ¿Cómo paga la transferencia?</div>'
     +'<button onclick="fcElegir(\'total\')" style="width:100%;padding:12px;border:2px solid #a78bfa;background:#7c3aed;color:#fff;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;margin-bottom:8px">Cobro TOTAL por transferencia<br><span style="font-weight:400;font-size:11px;opacity:.85">Toda la cuota transferida (sin efectivo)</span></button>'
@@ -3627,22 +3712,26 @@ function fcElegir(tipo){
   window._fcPend=null;
   if(p.ctx==='colab'&&tipo==='total'){
     // Colaborador: transferencia TOTAL requiere clave de admin
-    confirmarConClave(()=>abrirFormCobro(p.id,{ctx:p.ctx,transfer:true,transferTipo:'total',interes:p.interes}));
+    confirmarConClave(()=>abrirFormCobro(p.id,{ctx:p.ctx,transfer:true,transferTipo:'total',interes:p.interes,refiCant:p.refiCant}));
     return;
   }
-  abrirFormCobro(p.id,{ctx:p.ctx,transfer:true,transferTipo:tipo,interes:p.interes});
+  abrirFormCobro(p.id,{ctx:p.ctx,transfer:true,transferTipo:tipo,interes:p.interes,refiCant:p.refiCant});
 }
 
+// v1.0688: − / + de la refinanciación en el formulario de cobro (vuelve a armar el formulario con el total nuevo)
+function fcRefiCambiar(d){
+  const x=window._fcCtx; if(!x) return;
+  abrirFormCobro(x.id, {...(x.opts||{}), refiCant:Math.max(0,(x.refiCant||0)+d)});
+}
 // v1.0438: cambiar método de pago dentro del formulario
 function fcCambiarMetodo(metodo){
   const x=window._fcCtx; if(!x) return;
   const id=x.id, ctx=x.ctx, interes=x.interes;
   if(metodo==='efectivo'){
-    abrirFormCobro(id,{ctx,interes});
+    abrirFormCobro(id,{ctx,interes,refiCant:x.refiCant});
   } else {
     // transferencia: mostrar el submenú total/parcial
-    window._fcPend={id,ctx,interes};
-    elegirTipoTransferencia(id,ctx,interes);
+    elegirTipoTransferencia(id,ctx,interes,x.refiCant);
   }
 }
 
@@ -3653,13 +3742,16 @@ function abrirFormCobro(id, opts){
   const c=loadData().find(x=>x.id===id);
   if(!c||c.pago) return;
   const _mc=montoCobrable(c);
-  const _refi=refiCobrable(c);
+  // v1.0688: refinanciación — por defecto 1 cuota si debe alguna; se puede cambiar con − / + (opts.refiCant)
+  const _re=refiEstado(c);
+  const _refiCant=(opts.refiCant!==undefined)?Math.max(0,Math.min(Math.floor(opts.refiCant)||0,_re.quedan)):refiACobrar(c).cant;
+  const _refiMonto=_refiCant*(_re.monto||0);
   const mora=(opts.interes!==undefined)?{interes:opts.interes||0,pct:0,dias:0}:(esPrimeraCuotaFutura(c)?{interes:0,pct:0,dias:0}:calcInteresAuto(_mc.total));
   const adelantos=(typeof _adelantoCuotas!=='undefined'&&Array.isArray(_adelantoCuotas))?[..._adelantoCuotas]:[];
   const totalAdel=adelantos.reduce((s,q)=>s+(q.monto||0),0);
-  const totalCuota=_mc.total+(mora.interes||0)+totalAdel+(_refi.monto||0);
+  const totalCuota=_mc.total+(mora.interes||0)+totalAdel+_refiMonto;
   const cur=c.moneda==='USD'?'USD ':'';
-  window._fcCtx={id,totalCuota,base:_mc.base,adicional:_mc.adicional,escalonActivo:_mc.escalonActivo,refiMonto:_refi.monto,refiNumero:_refi.numero,refiTotal:_refi.total,interes:mora.interes||0,moraPct:mora.pct,moraDias:mora.dias,adelantos,totalAdel,cur,transfer:!!opts.transfer,transferTipo:opts.transferTipo||'',ctx:opts.ctx||'admin',moneda:c.moneda||'ARS'};
+  window._fcCtx={id,totalCuota,base:_mc.base,adicional:_mc.adicional,escalonActivo:_mc.escalonActivo,refiMonto:_refiMonto,refiCant:_refiCant,refiProxima:_re.proxima,refiTotal:_re.total,interes:mora.interes||0,moraPct:mora.pct,moraDias:mora.dias,adelantos,totalAdel,cur,transfer:!!opts.transfer,transferTipo:opts.transferTipo||'',ctx:opts.ctx||'admin',moneda:c.moneda||'ARS',opts};
   const esTotal=opts.transfer&&opts.transferTipo==='total';
   const esParcial=opts.transfer&&opts.transferTipo!=='total';
   let m=document.getElementById('form-cobro-modal');
@@ -3672,7 +3764,17 @@ function abrirFormCobro(id, opts){
   const fila=(l,v,color)=>'<div style="display:flex;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--border);font-size:13px"><span style="color:'+(color||'var(--text2)')+'">'+l+'</span><span style="font-weight:700;color:'+(color||'var(--text)')+'">'+v+'</span></div>';
   let desg=fila('Cuota'+( _mc.escalonActivo?' pura':''),cur+fmtPeso(_mc.base));
   if(_mc.escalonActivo) desg+=fila('🪜 Escalonado','+'+cur+fmtPeso(_mc.adicional),'#0369a1');
-  if(_refi.monto) desg+=fila('💠 Refinanciación (cuota '+_refi.numero+' de '+_refi.total+')','+'+cur+fmtPeso(_refi.monto),'#c084fc');
+  if(_re.activa&&_re.quedan>0){
+    // Refinanciación: se elige cuántas cuotas se cobran (0 = este mes no la paga)
+    const _b=(d,dis)=>'<button type="button" onclick="fcRefiCambiar('+d+')" '+(dis?'disabled ':'')+'style="width:24px;height:24px;border-radius:6px;border:1.5px solid #c084fc;background:none;color:#c084fc;font-weight:800;cursor:'+(dis?'default':'pointer')+';opacity:'+(dis?'.35':'1')+'">'+(d<0?'−':'+')+'</button>';
+    desg+='<div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:13px;color:#c084fc">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'
+      +'<span>💠 Refinanciación '+(_refiCant?_refiCuotasTxt(_re.proxima,_refiCant,_re.total):'(este mes no se cobra)')+'</span>'
+      +'<span style="font-weight:700;white-space:nowrap">'+(_refiCant?'+'+cur+fmtPeso(_refiMonto):'—')+'</span></div>'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-top:4px;font-size:11px">'+_b(-1,_refiCant<=0)+'<b style="min-width:14px;text-align:center">'+_refiCant+'</b>'+_b(1,_refiCant>=_re.quedan)
+      +'<span style="color:var(--text3)">cuota'+(_refiCant===1?'':'s')+' de '+cur+fmtPeso(_re.monto)+(_re.debe>1?' · ⚠️ debe '+_re.debe:'')+(_re.debe===0?' · la de este mes ya está cobrada':'')+'</span></div>'
+      +'</div>';
+  }
   if(mora.interes) desg+=fila('⚠️ Mora'+(mora.pct?' ('+mora.dias+' días × 2% = '+mora.pct+'%)':''),'+'+cur+fmtPeso(mora.interes),'var(--red)');
   if(totalAdel) desg+=fila('⏭ Adelantos x'+adelantos.length,'+'+cur+fmtPeso(totalAdel),'#0369a1');
   m.innerHTML='<div style="background:var(--card);border-radius:14px;max-width:420px;width:100%;max-height:92vh;overflow-y:auto;padding:1.25rem" onclick="event.stopPropagation()">'
@@ -3795,9 +3897,11 @@ function fcConfirmar(){
   window._cobroAdelanto=(x.totalAdel||0);
   window._cobroCuotaNum=c.ca; // número de cuota que se está pagando (antes de avanzar)
   try{ marcarPago(id, x.interes||0); } finally { window._cobroTransferencia=false; window._cobroCuotaNum=null; }
-  // Refinanciación → Caja de Mora (extra, con su descripción "cuota X de Y")
-  if(x.refiMonto>0){
-    try{ registrarRefiEnMora(c, x.refiMonto, x.refiNumero, x.refiTotal, ts, fecha); }catch(e){ console.warn('refi mora error',e); }
+  // v1.0688: Refinanciación → 💼 Gastos e Ingresos Extras, como INGRESO (una línea por cuota). Nunca a mora.
+  // Solo si el cobro quedó hecho (si estaba bloqueado, marcarPago no marcó nada).
+  let _nRefi=0;
+  if(x.refiCant>0 && (loadData().find(cl=>cl.id===id)||{}).pago){
+    try{ _nRefi=registrarRefiCobro(c, x.refiCant, ts, fecha, fullTransf?'transferencia':(x.transfer?'transferencia parcial':'efectivo')); }catch(e){ console.warn('refi error',e); }
   }
   if(x.adelantos.length) registrarAdelanto(id, x.adelantos);
   try{_adelantoCuotas=[];_adelantoVerMas=5;}catch(e){}
@@ -3827,6 +3931,7 @@ function fcConfirmar(){
     const data=loadData();const c2=data.find(cl=>cl.id===id);
     if(c2){
       c2.pago=true; c2.pagoTs=ts;
+      if(_nRefi) c2.refiProxima=(Math.max(1,Number(c2.refiProxima)||1))+_nRefi;   // v1.0688: avanza la refinanciación cobrada
       if(dif!==0){ c2.saldo=(Number(c2.saldo)||0)+dif; c2.saldoDifUltimoCobro=dif; } else { c2.saldoDifUltimoCobro=0; }
       saveData(data);
       setPagoState(id,true,ts);
@@ -3837,7 +3942,9 @@ function fcConfirmar(){
   setTimeout(()=>{
     try{
       const d2=loadData();const c3=d2.find(cl=>cl.id===id);
-      if(c3&&!c3.pago){c3.pago=true;c3.pagoTs=ts;saveData(d2);setPagoState(id,true,ts);}
+      // v1.0688: solo si el cobro sigue en la caja (si lo anularon enseguida, no se vuelve a marcar)
+      const _sigue=(loadBalances().cajaFisica||[]).some(p=>p.id===id&&p.ts===ts);
+      if(c3&&!c3.pago&&_sigue){c3.pago=true;c3.pagoTs=ts;saveData(d2);setPagoState(id,true,ts);}
     }catch(e){}
   },4000);
   cerrarFormCobro();
@@ -10231,6 +10338,7 @@ function renderAdminDet(id){
         <div class="det-monto-label">${c.pago?'Cuota '+mesEnCurso+' — Pagada':esPrimeraCuotaFutura(c)?'Cuota '+nombreMesPrimeraCuota(c):'Cuota '+mesEnCurso}</div>`}
 
       <!-- 3. Cuotas morosas históricas -->
+      ${refiCajaHtml(c,cur)}
       ${moraHtml}
 
       <!-- 4. Info del cliente -->
@@ -11473,9 +11581,10 @@ function cobrarTodoColab(clienteId){
   const _mes=_cuotaMesParaCobrarTodo(c);
   const cuotaActual=_mes.cuota;
   const interesMes=_mes.interes;
-  const grandTotal=totalMoraCapital+totalMoraInteres+cuotaActual+interesMes;
+  const _rT=refiACobrar(c);   // v1.0688: refinanciación del mes (se puede cambiar con − / +)
+  const grandTotal=totalMoraCapital+totalMoraInteres+cuotaActual+interesMes+_rT.monto;
 
-  _moraPanelState={clienteId,seleccionadas:moraConInteres,totalMonto:totalMoraCapital,totalInteresAuto:totalMoraInteres,cur,_incluyeMesActual:true,cuotaActual,interesMes,_esColab:true};
+  _moraPanelState={clienteId,seleccionadas:moraConInteres,totalMonto:totalMoraCapital,totalInteresAuto:totalMoraInteres,cur,_incluyeMesActual:true,cuotaActual,interesMes,refiCant:_rT.cant,refiUnit:_rT.e.monto||0,refiQuedan:_rT.e.quedan||0,refiProxima:_rT.e.proxima||0,refiTotal:_rT.e.total||0,refiDebe:_rT.e.debe||0,refiActiva:!!_rT.e.activa,_esColab:true};
 
   const filasHtml=moraConInteres.map(cm=>
     '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid rgba(252,165,165,.3)">'
@@ -11512,6 +11621,7 @@ function cobrarTodoColab(clienteId){
     +'</div>'
     +(interesMes>0?'<div style="font-size:11px;color:var(--red);margin-top:3px">'+_mes.dias+' día(s) de atraso · '+_mes.pct+'% · el interés va a Caja de Mora</div>':'')
     +'</div>'
+    +_refiTodoHtml()
     // v1.0678: la cuenta a la vista
     +'<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;font-size:13px">'
     +'<div style="display:flex;justify-content:space-between;padding:2px 0"><span>Cuota pura ('+(cuotasMora.length+1)+' cuota'+(cuotasMora.length?'s':'')+')</span><span style="font-weight:700">'+fmtCur(totalMoraCapital+cuotaActual,cur)+'</span></div>'
@@ -11559,7 +11669,8 @@ function admConfirmarTodoColab(){
   const _r=_interesesCobrarTodo();   // v1.0678
   const interes=_r.mora, interesMesCobrado=_r.mes;
   const selConInteres=_repartirInteresEnCuotas(seleccionadas, interes);   // v1.0678: cierra exacto al peso
-  const grandTotal=totalMonto+interes+(cuotaActual||0)+interesMesCobrado;
+  const grandTotal=totalMonto+interes+(cuotaActual||0)+interesMesCobrado+_refiTodoMonto();
+  const _refiCantSel=(_moraPanelState.refiCant||0);   // v1.0688
   // Leer efectivo/vuelto (la cuota del mes va a caja física; SAF/SEC sobre el total)
   const eEl=document.getElementById('mora-ca-entrego'), vEl=document.getElementById('mora-ca-vuelto');
   const entregoTotal=(window._moraEfectivoTocado&&eEl)?caNum(eEl.value):grandTotal;
@@ -11581,6 +11692,8 @@ function admConfirmarTodoColab(){
       const bal=loadBalances();
       (bal.cajaFisica=bal.cajaFisica||[]).push({id:clienteId,mz:cX.mz,lote:cX.lote,titular:cX.titular,moneda:cX.moneda||'ARS',cuotaLista:(cuotaActual||0),adelanto:0,transferido:0,entrego:efectivoMes,vuelto:0,efectivo:efectivoMes,dif:difGlobal,ts,fecha});
       saveBalances(bal);
+      // v1.0688: refinanciación → Ingresos Extras (una línea por cuota) y avanza la del cliente
+      if(_refiCantSel>0&&cX.pago){ const _nR=registrarRefiCobro(cX,_refiCantSel,ts,fecha,'efectivo'); if(_nR){ cX.refiProxima=Math.max(1,Number(cX.refiProxima)||1)+_nR; saveData(dataX); } }
       if(difGlobal!==0){
         cX.saldo=(Number(cX.saldo)||0)+difGlobal; cX.saldoDifUltimoCobro=difGlobal; saveData(dataX);
         addHist('pago',(difGlobal>0?'SAF ':'SEC ')+fmtPeso(Math.abs(difGlobal))+' — '+cX.mz+' Lote '+cX.lote+' (cobro mora+mes colab, cargado al saldo)',clienteId);
@@ -11617,10 +11730,11 @@ function cobrarTodoAdmin(clienteId){
   const _mes=_cuotaMesParaCobrarTodo(c);
   const cuotaActual=_mes.cuota;
   const interesMes=_mes.interes;
-  const grandTotal=totalMoraCapital+totalMoraInteres+cuotaActual+interesMes;
+  const _rT=refiACobrar(c);   // v1.0688: refinanciación del mes (se puede cambiar con − / +)
+  const grandTotal=totalMoraCapital+totalMoraInteres+cuotaActual+interesMes+_rT.monto;
 
   // Guardar en estado global
-  _moraPanelState={clienteId,seleccionadas:moraConInteres,totalMonto:totalMoraCapital,totalInteresAuto:totalMoraInteres,cur,_incluyeMesActual:true,cuotaActual,interesMes};
+  _moraPanelState={clienteId,seleccionadas:moraConInteres,totalMonto:totalMoraCapital,totalInteresAuto:totalMoraInteres,cur,_incluyeMesActual:true,cuotaActual,interesMes,refiCant:_rT.cant,refiUnit:_rT.e.monto||0,refiQuedan:_rT.e.quedan||0,refiProxima:_rT.e.proxima||0,refiTotal:_rT.e.total||0,refiDebe:_rT.e.debe||0,refiActiva:!!_rT.e.activa};
 
   // Construir filas desglose
   const filasHtml=moraConInteres.map(cm=>
@@ -11660,6 +11774,7 @@ function cobrarTodoAdmin(clienteId){
     +'</div>'
     +(interesMes>0?'<div style="font-size:11px;color:var(--red);margin-top:3px">'+_mes.dias+' día(s) de atraso · '+_mes.pct+'% · el interés va a Caja de Mora</div>':'')
     +'</div>'
+    +_refiTodoHtml()
     // Total
     // v1.0678: la cuenta a la vista
     +'<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;font-size:13px">'
@@ -11712,6 +11827,26 @@ function moraCalcVuelto(){
 }
 
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+// v1.0688: refinanciación dentro de "⚡ Cobrar todo" (mismo − / + que en el formulario de cobro)
+function _refiTodoMonto(){ const s=_moraPanelState||{}; return (s.refiCant||0)*(s.refiUnit||0); }
+function _refiTodoHtml(){
+  const s=_moraPanelState||{};
+  if(!s.refiActiva||!s.refiQuedan) return '<div id="ct-refi"></div>';
+  const cur=s.cur||'', n=s.refiCant||0;
+  const b=(d,dis)=>'<button type="button" onclick="ctRefiCambiar('+d+')" '+(dis?'disabled ':'')+'style="width:24px;height:24px;border-radius:6px;border:1.5px solid #c084fc;background:none;color:#c084fc;font-weight:800;cursor:'+(dis?'default':'pointer')+';opacity:'+(dis?'.35':'1')+'">'+(d<0?'−':'+')+'</button>';
+  return '<div id="ct-refi" style="background:rgba(192,132,252,.10);border:1.5px solid #c084fc;border-radius:var(--r);padding:12px;margin-bottom:10px;color:#c084fc">'
+    +'<div style="font-size:11px;font-weight:700;margin-bottom:4px">💠 REFINANCIACIÓN (va a Ingresos Extras)</div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:13px"><span>'+(n?_refiCuotasTxt(s.refiProxima,n,s.refiTotal):'Este mes no se cobra')+'</span><span style="font-weight:700">'+(n?'+'+fmtCur(n*s.refiUnit,cur):'—')+'</span></div>'
+    +'<div style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px">'+b(-1,n<=0)+'<b style="min-width:14px;text-align:center">'+n+'</b>'+b(1,n>=s.refiQuedan)
+    +'<span style="color:var(--text3)">cuota'+(n===1?'':'s')+' de '+fmtCur(s.refiUnit,cur)+(s.refiDebe>1?' · ⚠️ debe '+s.refiDebe:'')+(s.refiDebe===0?' · la de este mes ya está cobrada':'')+'</span></div>'
+    +'</div>';
+}
+function ctRefiCambiar(d){
+  const s=_moraPanelState; if(!s) return;
+  s.refiCant=Math.max(0,Math.min((s.refiCant||0)+d, s.refiQuedan||0));
+  const el=document.getElementById('ct-refi'); if(el) el.outerHTML=_refiTodoHtml();
+  admUpdateMoraPanelTodo();
+}
 function admUpdateMoraPanelTodo(){
   const totalMoraCapital=_moraPanelState.totalMonto||0;
   const totalMoraInteres=_moraPanelState.totalInteresAuto||0;
@@ -11724,7 +11859,7 @@ function admUpdateMoraPanelTodo(){
   const val=parseFloat(valInput?.value)||0;
   const _r=_interesesCobrarTodo();   // v1.0678: % y monto sobre el interés total (mora + mes)
   const interes=_r.mora;
-  const total=totalMoraCapital+cuotaActual+_r.total;
+  const total=totalMoraCapital+cuotaActual+_r.total+_refiTodoMonto();
   const ctI=document.getElementById('ct-intereses'); if(ctI) ctI.textContent=fmtCur(_r.total,cur);
   const ctD=document.getElementById('ct-intereses-det'); if(ctD) ctD.textContent=_textoInteresesCobrarTodo(_r,cur);
   const totalEl=document.getElementById('cobrar-todo-total');
@@ -11748,7 +11883,8 @@ function admConfirmarTodo(){
   const _r=_interesesCobrarTodo();   // v1.0678
   const interes=_r.mora, interesMesCobrado=_r.mes;
   const selConInteres=_repartirInteresEnCuotas(seleccionadas, interes);   // v1.0678: cierra exacto al peso
-  const grandTotal=totalMonto+interes+(cuotaActual||0)+interesMesCobrado;
+  const grandTotal=totalMonto+interes+(cuotaActual||0)+interesMesCobrado+_refiTodoMonto();
+  const _refiCantSel=(_moraPanelState.refiCant||0);   // v1.0688
   // Leer efectivo/vuelto (la cuota del mes va a caja física; el SAF/SEC se calcula sobre el total)
   const eEl=document.getElementById('mora-ca-entrego'), vEl=document.getElementById('mora-ca-vuelto');
   const entregoTotal=eEl?caNum(eEl.value):grandTotal;
@@ -11769,6 +11905,8 @@ function admConfirmarTodo(){
       const bal=loadBalances();
       (bal.cajaFisica=bal.cajaFisica||[]).push({id:clienteId,mz:cX.mz,lote:cX.lote,titular:cX.titular,moneda:cX.moneda||'ARS',cuotaLista:(cuotaActual||0),adelanto:0,transferido:0,entrego:efectivoMes,vuelto:0,efectivo:efectivoMes,dif:difGlobal,ts,fecha});
       saveBalances(bal);
+      // v1.0688: refinanciación → Ingresos Extras (una línea por cuota) y avanza la del cliente
+      if(_refiCantSel>0&&cX.pago){ const _nR=registrarRefiCobro(cX,_refiCantSel,ts,fecha,'efectivo'); if(_nR){ cX.refiProxima=Math.max(1,Number(cX.refiProxima)||1)+_nR; saveData(dataX); } }
       // Cargar SAF/SEC al saldo del cliente
       if(difGlobal!==0){
         cX.saldo=(Number(cX.saldo)||0)+difGlobal; cX.saldoDifUltimoCobro=difGlobal; saveData(dataX);
@@ -14321,6 +14459,8 @@ function desmarcarPagoAdmin(id){
       const _ent=bal.cajaFisica[_idxF];
       // Revertir el SAF/SEC que se había cargado al saldo
       if(_ent&&_ent.dif){ c.saldo=(Number(c.saldo)||0)-_ent.dif; }
+      // v1.0688: la refinanciación de este cobro sale de Ingresos Extras y vuelve a quedar pendiente
+      try{ _revertirRefiCobro(c, _ent&&_ent.ts); }catch(e){ console.warn('refi revertir',e); }
       bal.cajaFisica.splice(_idxF,1);
     }
 
@@ -14468,7 +14608,8 @@ function renderAdminTable(){
           if(c.pago) return fmtPeso(montoCobrable(c).total);
           if(esPrimeraCuotaFutura(c)) return fmtPeso(montoCobrable(c).total);
           const m=calcInteresAuto(montoCobrable(c).total);
-          return m.interes>0?'<span style="color:var(--red)">'+fmtPeso(montoCobrable(c).total+m.interes)+'</span>':fmtPeso(montoCobrable(c).total);
+          const _rf=refiACobrar(c).monto, _rfTag=_rf?'<span title="Incluye refinanciación" style="color:#c084fc">💠</span>':'';   // v1.0688
+          return m.interes>0?_rfTag+'<span style="color:var(--red)">'+fmtPeso(montoCobrable(c).total+m.interes+_rf)+'</span>':_rfTag+fmtPeso(montoCobrable(c).total+_rf);
         })()}</span>
       </div>
       <div style="display:flex;align-items:center;gap:12px">
@@ -14576,17 +14717,22 @@ function saveCliente(){
           addHist('edit','🪜 Escalonado modificado: '+_antes+' → '+_desp+' — '+mz+' Lote '+lote,newId);
         }
       }
-      // Refinanciación (siempre editable, no depende de desbloquear la cuota pura)
-      {
-        const _rM=+((document.getElementById('e-refi-monto')||{}).value)||0;
-        const _rH=+((document.getElementById('e-refi-hasta')||{}).value)||0;
-        const _rD=+((document.getElementById('e-refi-desde')||{}).value)||0;
-        if(_rM!==(c.refiMonto||0)||_rH!==(c.refiHasta||0)||_rD!==(c.refiDesde||0)){
-          const _antesR=(c.refiMonto||0)?fmtPeso(c.refiMonto)+' (cuota '+(c.refiDesde||0)+' a '+(c.refiHasta||0)+')':'sin refinanciación';
-          c.refiMonto=_rM; c.refiHasta=_rH; c.refiDesde=_rD;
-          const _despR=_rM?fmtPeso(_rM)+' (cuota '+_rD+' a '+_rH+')':'sin refinanciación';
-          addHist('edit','💠 Refinanciación modificada: '+_antesR+' → '+_despR+' — '+mz+' Lote '+lote,newId);
+      // Refinanciación (siempre editable, no depende de desbloquear la cuota pura). v1.0688:
+      // solo se cambia si se tocó el formulario; arranca de nuevo desde el mes y la cuota elegidos.
+      if(_refiFormValor()!==_refiIni){
+        const _v=(id)=>((document.getElementById(id)||{}).value||'');
+        const _rM=+_v('e-refi-monto')||0, _rI=_v('e-refi-inicio')||null, _rN=+_v('e-refi-num')||0, _rC=+_v('e-refi-cant')||0;
+        const _eA=refiEstado(c);
+        const _antesR=_eA.tiene&&!_eA.terminada?fmtPeso(_eA.monto)+' (próxima cuota '+_eA.proxima+' de '+_eA.total+')':'sin refinanciación';
+        if(_rM>0&&_rC>0&&_rN>0){
+          if(_rN>_rC){ alert('Refinanciación: la cuota N° ('+_rN+') no puede ser mayor que el total ('+_rC+').'); return; }
+          c.refiMonto=_rM; c.refiTotal=_rC; c.refiPrimera=_rN; c.refiProxima=_rN; c.refiInicio=_rI;
+        } else {
+          c.refiMonto=0; c.refiTotal=0; c.refiPrimera=0; c.refiProxima=0; c.refiInicio=null;
         }
+        c.refiDesde=0; c.refiHasta=0; // formato viejo, sin uso
+        const _despR=c.refiMonto?fmtPeso(c.refiMonto)+' (en '+_mesKeyNombre(c.refiInicio)+' cuota '+c.refiPrimera+' de '+c.refiTotal+')':'sin refinanciación';
+        addHist('edit','💠 Refinanciación: '+_antesR+' → '+_despR+' — '+mz+' Lote '+lote,newId);
       }
       c.ct=+safe2('e-ct')||c.ct||48;
       if((c.saldo||0)!==(saldo||0)){ addHist('edit','Ajuste manual de saldo en '+mz+' Lote '+lote+': '+(c.saldo||0)+' → '+saldo+((saldo>0)?' (a favor)':(saldo<0?' (en contra)':'')),editId); }
@@ -15639,7 +15785,7 @@ function renderColab(){
         <span style="font-weight:600;font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.titular}</span>
         ${cantMora>0?`<span style="background:#dc2626;color:#fff;border-radius:99px;font-size:10px;font-weight:800;padding:1px 6px;flex-shrink:0">${cantMora}</span>`:''}
         <span style="font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0">${c.ca||1}/${c.ct}</span>
-        <span style="font-weight:800;font-size:15px;white-space:nowrap;flex-shrink:0;min-width:90px;text-align:right;${(!c.pago && !c.autopago && c.est!=='finalizado' && !_esFutura)?'filter:blur(6px);user-select:none;':''}">${fmtPeso(montoCobrable(c).total)}</span>
+        <span style="font-weight:800;font-size:15px;white-space:nowrap;flex-shrink:0;min-width:90px;text-align:right;${(!c.pago && !c.autopago && c.est!=='finalizado' && !_esFutura)?'filter:blur(6px);user-select:none;':''}">${fmtPeso(montoCobrable(c).total+refiACobrar(c).monto)}</span>
       </div>
       <div style="display:flex;align-items:center;gap:12px">
         <div style="display:flex;align-items:center;gap:6px;min-width:90px">
@@ -16250,6 +16396,7 @@ function colabVerCuota(id){
     montoVal.style.userSelect='auto';
     montoVal.textContent=fmtPeso(montoCobrable(c).total);
   }
+  { const rb=document.getElementById('refi-colab-'+id); if(rb){ rb.style.filter='none'; rb.style.userSelect='auto'; } }   // v1.0688
   // Mostrar botones de cobro
   const _otrosDuenoColab=lotesDelDueno(id).length;
   el.innerHTML=`
@@ -16266,6 +16413,7 @@ function colabVerCuotaMora(id){
   const panel=document.getElementById('mora-colab-panel-'+id);
   if(tapa) tapa.style.display='none';
   if(panel) panel.style.display='block';
+  { const rb=document.getElementById('refi-colab-'+id); if(rb){ rb.style.filter='none'; rb.style.userSelect='auto'; } }   // v1.0688
   _colabBloquearLista();
 }
 function colabCobrarYVerde(id, interes){
@@ -16480,6 +16628,7 @@ function renderDetColab(id){
         </div>
         <div class="det-monto-label">${c.pago?'Cuota '+mesEnCurso+' — Pagada':esPrimeraCuotaFutura(c)?'Cuota '+nombreMesPrimeraCuota(c):'Cuota '+mesEnCurso}</div>`}
 
+      ${refiCajaHtml(c,cur,'refi-colab-'+id)}
       ${moraHtml}
 
       <div class="det-row"><span class="det-label">Cuota N°</span><span class="det-val">${esPrimeraCuotaFutura(c)?'— de '+c.ct:cuotaOperativa(c)+' de '+c.ct}</span></div>
@@ -16870,6 +17019,11 @@ function desmarcarPago(id){
     addHist('edit','Se revirtió el saldo del cobro anulado en '+c.mz+' Lote '+c.lote+': '+(difRev>0?'-SAF ':'+SEC ')+fmtPeso(Math.abs(difRev)),id);
     c.saldoDifUltimoCobro=0;
   }
+  // v1.0688: la refinanciación de este cobro sale de Ingresos Extras y vuelve a quedar pendiente
+  try{
+    const _cf=(loadBalances().cajaFisica||[]).filter(p=>p.id===id).pop();
+    _revertirRefiCobro(c, _cf&&_cf.ts);
+  }catch(e){ console.warn('refi revertir',e); }
   saveData(data);
   const bal=loadBalances();
   bal.abierto=_quitarUltimoDeLista(bal.abierto||[], id);
