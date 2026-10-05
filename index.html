@@ -912,7 +912,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0688';
+const APP_VERSION='v1.0689';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -1987,6 +1987,13 @@ function importarDatos(input){
 }
 
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+// v1.0689: si el cliente tiene 2 o más titulares cargados, el nombre que se ve (lista, cobros, recibos, avisos)
+// los lleva a todos: "Natalia Castro y Luis Araujo". Si tiene uno solo, queda como estaba.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _titularDe(sc,b){
+  const ts=Array.isArray(sc.titulares)?sc.titulares.map(t=>t&&String(t.nombre||'').trim()).filter(Boolean):[];
+  return ts.length>1 ? ts.join(' y ') : (sc.titular||b.titular);
+}
 function loadData(){
   const _SK=dKey('data');
   try{
@@ -2001,7 +2008,7 @@ function loadData(){
           const b=BASE.find(x=>x.id===sc.id)||sc;
           const pagoTs=pagoStore[sc.id]||null;
           return {
-            id:sc.id, mz:sc.mz||b.mz, lote:sc.lote||b.lote, titular:sc.titular||b.titular,
+            id:sc.id, mz:sc.mz||b.mz, lote:sc.lote||b.lote, titular:_titularDe(sc,b),
             tri:sc.tri||b.tri, ca:sc.ca, ct:sc.ct, monto:sc.monto,
             saldo:sc.saldo, est:sc.est, msg:sc.msg||b.msg||'',
             moneda:sc.moneda||b.moneda||'ARS',
@@ -14681,6 +14688,9 @@ function saveCliente(){
     if(i===0) titularPrincipal=nombre;
   });
   if(!titularPrincipal){alert('El nombre del primer titular es obligatorio');return;}
+  // v1.0689: el nombre que se ve en la lista (y en cobros, recibos y avisos) lleva a TODOS los titulares
+  // ("Natalia Castro y Luis Araujo"). Antes quedaba solo el primero y el otro desaparecía de la lista.
+  const titularTodos=titulares.map(t=>t.nombre).filter(Boolean).join(' y ');
   // Saldo
   // Saldo viene de cada lote individualmente
   const saldo = !editId
@@ -14697,7 +14707,7 @@ function saveCliente(){
     const c=data.find(x=>x.id===editId);
     if(c){
       c.mz=mz;c.lote=lote;c.id=newId;
-      c.titular=titularPrincipal;c.titulares=titulares;
+      c.titular=titularTodos;c.titulares=titulares;
       c.tel=tel;c.dni=dni;c.fechaFirma=fechaFirma;
       const safe2=(eid)=>{const el=document.getElementById(eid);return el?el.value:null;};
       const _caAnt=c.ca;
@@ -14739,7 +14749,7 @@ function saveCliente(){
       c.saldo=saldo;
       if(safe2('e-tri')) c.tri=safe2('e-tri');
       if(safe2('e-est')) c.est=safe2('e-est');
-      addHist('edit','Editado: '+mz+' Lote '+lote+' — '+titularPrincipal,newId);
+      addHist('edit','Editado: '+mz+' Lote '+lote+' — '+titularTodos,newId);
     }
   } else {
     // Todos los datos vienen de _lotesSeleccionados
@@ -14774,7 +14784,7 @@ function saveCliente(){
       const adicionalHasta = s.adicionalHasta || 0;
       return {
         id: isMz+'-'+isLote, mz: isMz, lote: isLote,
-        titular: titularPrincipal, titulares,
+        titular: titularTodos, titulares,
         tri, ca, ct, monto,
         saldo: isSaldo,
         est: estVal, msg:'', tel, dni, obs:[], pago:false, hist:[],
@@ -14790,7 +14800,7 @@ function saveCliente(){
     const _cliPrin=buildClienteFromSlot(s0, mz, lote, saldo);
     data.push(_cliPrin);
     if(_cliPrin&&_cliPrin.id) quitarBorrado(_cliPrin.id);
-    addHist('edit','Nuevo cliente: '+mz+' Lote '+lote+' — '+titularPrincipal, mz+'-'+lote);
+    addHist('edit','Nuevo cliente: '+mz+' Lote '+lote+' — '+titularTodos, mz+'-'+lote);
 
     // Lotes extra
     slots0.slice(1).forEach(s=>{
@@ -14803,7 +14813,7 @@ function saveCliente(){
       const _cliExtra=buildClienteFromSlot(sIgualado, emz, elote, 0);
       data.push(_cliExtra);
       if(_cliExtra&&_cliExtra.id) quitarBorrado(_cliExtra.id);
-      addHist('edit','Nuevo cliente: '+emz+' Lote '+elote+' — '+titularPrincipal, emz+'-'+elote);
+      addHist('edit','Nuevo cliente: '+emz+' Lote '+elote+' — '+titularTodos, emz+'-'+elote);
     });
   }
   // Auto-detect agrimensor
