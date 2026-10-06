@@ -365,7 +365,7 @@ tr:hover td{background:var(--bg)}
     window.addEventListener('online', () => window._syncFlush());
     window.addEventListener('beforeunload', (e) => {
       // (antes de la bajada inicial lo encolado es viejo y se descarta: no hace falta avisar)
-      if (window._cargaInicialOk && Object.keys(window._syncQueue).length) {
+      if (window._cargaInicialOk && !window._recargaSinAviso && Object.keys(window._syncQueue).length) {
         e.preventDefault();
         e.returnValue = 'Hay cambios sin guardar en la nube. Si cerrás ahora se pueden perder.';
         return e.returnValue;
@@ -382,6 +382,11 @@ tr:hover td{background:var(--bg)}
         callback(snap.exists() ? snap.val() : null);
       });
     };
+
+    // v1.0690: Firebase avisa al instante si se corta o vuelve la conexión (ver _nubeConectada).
+    onValue(ref(db, '.info/connected'), (snap) => {
+      if (typeof window._nubeConectada === 'function') window._nubeConectada(snap.val() === true);
+    });
 
     window._firebaseReady = true;
     console.log('Firebase ready');
@@ -912,7 +917,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0689';
+const APP_VERSION='v1.0690';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -17133,9 +17138,115 @@ function _conectandoReintentar(){
   if(!window._firebaseReady){ location.reload(); return; }
   if(_conectandoDespertar) _conectandoDespertar();
 }
+
+// ══════ v1.0690: NUNCA TRABAJAR CON DATOS VIEJOS ══════
+// Pasaba (5 y 6/10/2026): una compu con la app abierta se dormía (reposo, Edge suspende la pestaña, se corta
+// el internet), otra cobraba mientras tanto, y al despertar la primera tenía datos viejos y quería subirlos.
+// Ahora la app vigila dos cosas:
+//  - la conexión con la nube (Firebase avisa al instante: _nubeConectada);
+//  - un "latido" cada 10 s: si entre dos latidos pasaron más de 3 minutos, la compu o la pestaña estuvieron dormidas.
+// Si se corta: un cartel traba la app ("Sin conexión") para que nadie cobre con datos viejos.
+// Al volver (después de más de 30 s) o al despertar: primero sube lo que quedó pendiente (un cobro hecho justo
+// antes del corte), después vuelve a bajar TODO de la nube (como al abrirla) y redibuja la pantalla. No cierra la sesión.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+let _desconectadaDesde=null, _bloqueoTimer=null, _refrescando=false, _refrescarAlVolver=false, _ultimoLatido=Date.now();
+const _CORTE_LARGO_MS=30000, _SUENO_MS=180000;
+function _bloqueoMostrar(tipo, motivo){
+  let el=document.getElementById('bloqueo-nube');
+  if(!el){ el=document.createElement('div'); el.id='bloqueo-nube'; document.body.appendChild(el); }
+  el.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(10,14,20,.72);display:flex;align-items:center;justify-content:center;padding:20px';
+  const giro='<style>@keyframes bloqueoGiro{to{transform:rotate(360deg)}}</style><div style="width:34px;height:34px;border:3px solid var(--border,#ddd);border-top-color:var(--acc,#16a34a);border-radius:50%;margin:0 auto 12px;animation:bloqueoGiro .9s linear infinite"></div>';
+  const cuerpo = tipo==='desconectada'
+    ? '<div style="font-size:34px;margin-bottom:6px">📡</div><div style="font-size:17px;font-weight:800;margin-bottom:6px">Sin conexión con la nube</div>'
+      +'<div style="font-size:13px;color:var(--text2,#555);line-height:1.5">No cobres ni cambies nada hasta que vuelva.<br>Cuando vuelva, la app se pone al día sola.</div>'
+    : tipo==='pendiente'
+      ? giro+'<div style="font-size:16px;font-weight:800;margin-bottom:4px">Subiendo lo último que guardaste…</div><div style="font-size:13px;color:var(--text2,#555);line-height:1.5">No cierres la app. En cuanto se suba, se pone al día sola.</div>'
+      : giro+'<div style="font-size:16px;font-weight:800;margin-bottom:4px">Poniéndose al día con la nube…</div><div style="font-size:13px;color:var(--text2,#555)">'+(motivo||'Bajando los datos actualizados.')+'</div>';
+  el.innerHTML='<div style="background:var(--surface,#fff);color:var(--text,#111);border:1px solid var(--border,#ddd);border-radius:16px;padding:26px 28px;max-width:380px;width:100%;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.35)">'+cuerpo+'</div>';
+}
+function _bloqueoOcultar(){
+  clearTimeout(_bloqueoTimer); _bloqueoTimer=null;
+  const el=document.getElementById('bloqueo-nube'); if(el) el.remove();
+}
+// La llama el módulo de Firebase cada vez que cambia la conexión (.info/connected).
+function _nubeConectada(ok){
+  if(!window._cargaInicialOk && !_refrescando) return;   // durante la carga inicial manda el cartel "Conectando…"
+  if(!ok){
+    if(_desconectadaDesde===null) _desconectadaDesde=Date.now();
+    clearTimeout(_bloqueoTimer);
+    _bloqueoTimer=setTimeout(()=>{ if(_desconectadaDesde!==null && !_refrescando) _bloqueoMostrar('desconectada'); }, 3000);   // un corte de 1 segundo ni se ve
+    return;
+  }
+  const duro = _desconectadaDesde===null ? 0 : Date.now()-_desconectadaDesde;
+  _desconectadaDesde=null;
+  if(_refrescarAlVolver || duro>_CORTE_LARGO_MS){ _refrescarAlVolver=false; _refrescarConNube(duro>_CORTE_LARGO_MS?'Volvió la conexión.':'La compu estuvo en reposo.'); }
+  else if(!_refrescando) _bloqueoOcultar();
+}
+// Sube lo pendiente, vuelve a bajar todo de la nube y redibuja. Si no hay conexión, espera a que vuelva.
+async function _refrescarConNube(motivo){
+  if(_refrescando) return;
+  if(_desconectadaDesde!==null){ _refrescarAlVolver=true; _bloqueoMostrar('desconectada'); return; }
+  _refrescando=true;
+  try{
+    // 1) Lo que quedó por subir (hecho con datos frescos, justo antes del corte) se sube primero.
+    const hayPendiente=()=>Object.keys(window._syncQueue||{}).length>0;
+    if(hayPendiente()){
+      _bloqueoMostrar('pendiente');
+      for(let i=0;i<60 && hayPendiente();i++){
+        try{ await window._syncFlush(); }catch(e){}
+        if(hayPendiente()) await new Promise(r=>setTimeout(r,2000));
+      }
+      if(hayPendiente()){ _refrescando=false; _refrescarAlVolver=true; return; }   // sigue trabada; reintenta al volver la conexión
+    }
+    // 2) Bajar todo de nuevo (sin volver a registrar los oyentes) y reemplazar lo local.
+    _bloqueoMostrar('refrescando', motivo);
+    window._datosFrescos=false;
+    for(;;){
+      try{ await _cargaInicialNube({sinOyentes:true}); break; }
+      catch(e){ console.warn('No se pudo volver a bajar la nube:', e); await new Promise(r=>setTimeout(r,5000)); }
+    }
+    // 3) Redibujar la pantalla que estaba abierta (sin cerrar la sesión).
+    try{
+      const pa=document.getElementById('page-admin'), pc=document.getElementById('page-colab');
+      if(pa && pa.classList.contains('active')){ initAdminFilters(); adminTab(window._adminTabActiva||'inicio'); }
+      if(pc && pc.classList.contains('active')){ initCobFilters(); renderColab(); }
+    }catch(e){ console.warn('Redibujar después de ponerse al día:', e); }
+    // Si quedó trabado un aviso de conflicto de antes, ya no corresponde.
+    window._syncConflicto=false;
+    try{ window._syncRender(); }catch(e){}
+    console.log('🔄 Se puso al día con la nube: '+(motivo||''));   // (no va al historial: serían muchos renglones)
+  }finally{
+    _refrescando=false;
+    _ultimoLatido=Date.now();
+    if(_desconectadaDesde===null) _bloqueoOcultar();
+  }
+}
+setInterval(()=>{
+  const ahora=Date.now(), salto=ahora-_ultimoLatido;
+  _ultimoLatido=ahora;
+  if(window._cargaInicialOk && !_refrescando && salto>_SUENO_MS) _refrescarConNube('La compu estuvo en reposo.');
+}, 10000);
+// Edge/Chrome "congelan" las pestañas en segundo plano: al volver avisan con 'resume'.
+document.addEventListener('resume', ()=>{ if(window._cargaInicialOk) _refrescarConNube('La pestaña estuvo suspendida.'); });
+// Pedido de Marcos: al volver a la pestaña (o a la ventana) después de más de 2 minutos en otra cosa, se pone al
+// día sola, sin pedir la contraseña. Un rato corto (mandar un WhatsApp) no hace falta: conectada se actualiza sola.
+let _afueraDesde=null;
+const _AFUERA_MS=120000;
+function _salio(){ if(_afueraDesde===null) _afueraDesde=Date.now(); }
+function _volvio(){
+  const afuera=_afueraDesde===null?0:Date.now()-_afueraDesde;
+  _afueraDesde=null;
+  if(window._cargaInicialOk && !_refrescando && afuera>_AFUERA_MS) _refrescarConNube('Volviste a la app.');
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') _salio(); else _volvio(); });
+window.addEventListener('blur', _salio);
+window.addEventListener('focus', _volvio);
+_refrescarConNube.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 // Baja TODO de la nube, reemplaza lo local y deja los listeners. Si algo falla, tira error y se reintenta.
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
-async function _cargaInicialNube(){
+async function _cargaInicialNube(opts){
+  // v1.0690: { sinOyentes:true } = volver a bajar todo (al reconectar o despertar) sin registrar de nuevo los oyentes.
+  const sinOyentes = !!(opts && opts.sinOyentes);
   let histParaSubir=null;
   // v1.0676: las 22 lecturas se piden TODAS A LA VEZ (antes de a una: ~6 s; ahora ~1 s).
   const [
@@ -17171,6 +17282,7 @@ async function _cargaInicialNube(){
   if(fbIccMensual) _lsSet(dKey('iccMensual'), JSON.stringify(fbIccMensual));
   if(fbHitos) localStorage.setItem('fj_hitos_respaldo', JSON.stringify(fbHitos));
   console.log('Firebase data loaded');
+  if(!sinOyentes){
   // Escuchar cambios en tiempo real
   let _fbInitDone = false;
   setTimeout(() => { _fbInitDone = true; }, 3000); // No re-render durante carga inicial
@@ -17227,7 +17339,12 @@ async function _cargaInicialNube(){
         // Si la cuota es la misma pero el monto o saldo cambió, puede ser una versión vieja
         else if((r.ca||0)===(c.ca||0) && ((r.monto||0)!==(c.monto||0) || (r.saldo||0)!==(c.saldo||0))) montoViejo++;
       });
-      if(faltan > 0 || atrasados > 2 || montoViejo > 5){
+      // v1.0690: saldos o montos distintos con la misma cuota es lo NORMAL (otra compu cobró y cargó la diferencia,
+      // o se aplicó el ICC): se toma lo de la nube. Antes se re-subía lo de esta compu y, si era la vieja, pisaba
+      // los cobros nuevos (pasó el 5 y el 6/10/2026). Solo frena si en la nube FALTAN clientes o hay cuotas que
+      // volvieron para atrás en varios clientes: eso nunca es normal.
+      if(montoViejo > 0 && !(faltan > 0 || atrasados > 2)) console.info('Sync: '+montoViejo+' saldo(s)/monto(s) actualizados desde la nube.');
+      if(faltan > 0 || atrasados > 2){
         console.warn('SYNC BLOQUEADO: remoto tiene '+faltan+' clientes menos, '+atrasados+' con cuota atrasada, '+montoViejo+' con monto/saldo distinto.');
         if(!window._syncConflicto){
           window._syncConflicto = true;
@@ -17270,6 +17387,7 @@ async function _cargaInicialNube(){
   window._fbListen('moraDesactivada', (d) => { if(d!==null&&d!==undefined) localStorage.setItem('fj_mora_desactivada', String(d)); });
   window._fbListen('notasMora', (d) => { if(d) localStorage.setItem('fj_notas_mora', JSON.stringify(d)); });
   window._fbListen('hitosRespaldo', (d) => { if(d){ localStorage.setItem('fj_hitos_respaldo', JSON.stringify(d)); try{ renderCicloEstado(); }catch(e){} try{ const pc=document.getElementById('page-colab'); if(pc&&pc.classList.contains('active')) renderColab(); }catch(e){} } });
+  } // fin de los oyentes (v1.0690: solo la primera vez)
   // Todo lo que se encoló MIENTRAS no teníamos la nube salió de datos viejos de este dispositivo: se descarta.
   window._syncQueue = {};
   if(histParaSubir) window._syncQueue.hist = histParaSubir;   // (como antes: el historial nunca pierde renglones)
