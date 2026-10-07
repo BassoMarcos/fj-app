@@ -77,4 +77,4 @@
 ## Estrategia a largo plazo
 
 - Esta app eventualmente migra módulo por módulo al pilar **Administración** de MasterPlan (repo `masterplan-management`). Primero se terminan todas sus features administrativas, después se integra.
-- Mapa neuronal interactivo (`mapa.html` + `mapa-data.json`, en el repo de MasterPlan) conecta ambos sistemas y es accesible desde ambas apps con el botón 🧠.
+- Mapa neuronal interactivo (`mapa.html` + `mapa-data.json`, en el repo de MasterPlan, privado) conecta ambos sistemas. Desde 2026-10-07 solo lo ve el SuperAdmin en MasterPlan (`/superadmin/mapa`); el botón 🧠 de esta app lleva hasta allá.

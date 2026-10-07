@@ -180,7 +180,5 @@ Rediseño basado en la lógica real del negocio, conversada y confirmada con el 
 
 ## Mapa de arquitectura (🧠 cerebro) — v1.0593+
 
-- **`mapa.html`** en la raíz del repo (`bassomarcos.github.io/fj-app/mapa.html`): visualización tipo red neuronal de App de Administración + MasterPlan y sus conexiones. Botón **"🧠 Mapa"** en la navbar admin (abre en pestaña nueva).
-- Datos NO hardcodeados: lee `mapa-data.json` por raw de GitHub desde el repo de MasterPlan (`raw.githubusercontent.com/BassoMarcos/masterplan-management/main/mapa-data.json`). **Fuente única** — editar ahí y se actualiza en ambas apps.
-- Mismo `mapa.html` está en MasterPlan (`public/mapa.html`, botón en modal ⚙️ Ajustes). firebase.json tiene rewrite exception para servirlo directo.
-- Para agregar/quitar módulos del cerebro: editar `mapa-data.json` (nodos + aristas + grupos). NO tocar `mapa.html`.
+- **(2026-10-07) El mapa ya NO se publica acá** (este sitio es público). Vive en MasterPlan: lo entrega el servidor y solo lo ve el SuperAdmin (`/superadmin/mapa`). Fuente: `mapa.html` + `mapa-data.json` en el repo de MasterPlan (privado).
+- `mapa.html` de este repo es solo una página que redirige a MasterPlan (el botón **"🧠 Mapa"** de la navbar admin sigue funcionando). `mapa-data.json` se borró de acá.
