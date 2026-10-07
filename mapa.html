@@ -345,7 +345,9 @@ document.getElementById('sideToggle').onclick=function(){
   this.textContent=s.classList.contains('hidden')?'☰':'✕';
 };
 // ============ CARGA DE DATOS ============
-const DATA_URL='https://raw.githubusercontent.com/BassoMarcos/masterplan-management/main/mapa-data.json';
+// (2026-10-07) El código de MasterPlan pasó a privado: el mapa usa su propia copia de los datos, acá al lado.
+// Para actualizarla: copiar mapa-data.json del repositorio de MasterPlan a este.
+const DATA_URL='mapa-data.json';
 function arrancar(data){ initData(data); buildList(); loop(); }
 fetch(DATA_URL+'?t='+Date.now())
   .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
