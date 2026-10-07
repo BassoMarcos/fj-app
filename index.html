@@ -917,7 +917,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0690';
+const APP_VERSION='v1.0691';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -2038,7 +2038,9 @@ function loadData(){
             refiTotal:sc.refiTotal||0,
             refiProxima:sc.refiProxima||0,
             refiPrimera:sc.refiPrimera||0,
-            refiInicio:sc.refiInicio||null
+            refiInicio:sc.refiInicio||null,
+            // v1.0691: cómo estaba el lote antes de TERMINAR (para deshacerlo si se desmarca la última cuota)
+            finPrevio:sc.finPrevio||null
           };
         });
       }
@@ -2116,7 +2118,8 @@ function saveData(d){
     refiTotal:c.refiTotal||0,
     refiProxima:c.refiProxima||0,
     refiPrimera:c.refiPrimera||0,
-    refiInicio:c.refiInicio||null
+    refiInicio:c.refiInicio||null,
+    finPrevio:c.finPrevio||null
   }));
 
   _lsSet(dKey('data'),JSON.stringify(full));
@@ -14475,6 +14478,8 @@ function desmarcarPagoAdmin(id){
       try{ _revertirRefiCobro(c, _ent&&_ent.ts); }catch(e){ console.warn('refi revertir',e); }
       bal.cajaFisica.splice(_idxF,1);
     }
+    // v1.0691: si este pago había TERMINADO el lote (última cuota), vuelve a activo como estaba
+    if(!_deshacerFinalizacion(c,'se desmarcó el pago de la última cuota')) _avisoTerminadoSinPrevio(c);
 
     saveData(data);
     saveBalances(bal);
@@ -16037,7 +16042,12 @@ function deshacerAdelanto(idx){
     // Devolver las cuotas al total del lote
     const data=loadData();
     const c=data.find(x=>x.id===ad.id);
-    if(c){ c.ct = (Number(c.ct)||0) + ad.cuotas.length; saveData(data); }
+    if(c){
+      c.ct = (Number(c.ct)||0) + ad.cuotas.length;
+      // v1.0691: si ese adelanto había terminado el lote, vuelve a activo como estaba
+      if(c.ca<c.ct) _deshacerFinalizacion(c,'se deshizo el adelanto');
+      saveData(data);
+    }
     // El adelanto vuelve a pendiente
     ad.estado='pendiente';
     delete ad.fechaAprobacion;
@@ -16064,7 +16074,7 @@ function aprobarAdelanto(idx){
       // Antes solo se detectaba al cobrar, así que un lote que terminaba por un adelanto
       // quedaba activo en 19/19 y no pasaba a Lotes Finalizados.
       if(c.ca>=c.ct && c.est==='activo'){
-        c.est='finalizado'; c.monto=0; c.saldo=0; finalizo=true;
+        _finalizarLote(c); finalizo=true;   // v1.0691: guarda cómo estaba
       }
       saveData(data);
       if(finalizo){
@@ -16960,6 +16970,35 @@ function esNoCobrable(id){
   }catch(e){ return false; }
 }
 
+// ══════ v1.0691: TERMINAR un lote guardando cómo estaba, para poder deshacerlo ══════
+// Antes: al cobrar la última cuota el lote pasaba a "finalizado" (cuota y saldo en 0) y, si después se DESMARCABA
+// ese pago (ej. error en el vuelto), la plata salía de la caja pero el lote quedaba terminado igual.
+// Ahora se guarda finPrevio = {monto, saldo, saldoDif, ts} y al desmarcar (o deshacer el adelanto) vuelve todo.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _finalizarLote(c, ts){
+  c.finPrevio={monto:c.monto, saldo:Number(c.saldo)||0, saldoDif:Number(c.saldoDifUltimoCobro)||0, ts:ts||new Date().toISOString()};
+  c.est='finalizado'; c.monto=0; c.saldo=0;
+}
+// Vuelve el lote a como estaba antes de terminar. true si lo hizo. (Cambia c: quien llama guarda con saveData.)
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _deshacerFinalizacion(c, motivo){
+  if(!c || c.est!=='finalizado' || c.autopago || !c.finPrevio) return false;
+  const p=c.finPrevio;
+  c.est='activo'; c.monto=Number(p.monto)||0; c.saldo=Number(p.saldo)||0; c.saldoDifUltimoCobro=Number(p.saldoDif)||0;
+  c.finPrevio=null;
+  try{
+    const certs=loadLotesCerts();
+    if(certs[c.id]){ delete certs[c.id].fecha; if(!Object.keys(certs[c.id]).length) delete certs[c.id]; saveLotesCerts(certs); }
+  }catch(e){ console.warn('certs deshacer',e); }
+  try{ addHist('edit','🔄 '+c.mz+' Lote '+c.lote+' — '+c.titular+' vuelve a ACTIVO ('+motivo+'): cuota '+c.ca+'/'+c.ct+' '+fmtPeso(c.monto)+', saldo '+fmtPeso(c.saldo),c.id); }catch(e){}
+  setTimeout(()=>{ try{ actualizarBadgeFinalizados(); }catch(e){} },0);
+  return true;
+}
+// Lote terminado ANTES de v1.0691 (sin finPrevio): no se sabe cómo estaba → avisar cómo arreglarlo a mano.
+function _avisoTerminadoSinPrevio(c){
+  if(!c || c.est!=='finalizado' || c.autopago || c.finPrevio) return;
+  setTimeout(()=>alert('⚠️ '+c.mz+' Lote '+c.lote+' quedó TERMINADO (se había terminado con este pago).\n\nPara volverlo a activo: Editar cliente → Estado "Activo" y cargá la cuota. Avisale al administrador.'),0);
+}
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function marcarPago(id, interesOverride){
   if(_bloqueaCobroSinRespaldo()) return;
@@ -16982,9 +17021,7 @@ function marcarPago(id, interesOverride){
     const data2=loadData();
     const c2=data2.find(x=>x.id===id);
     if(c2){
-      c2.est='finalizado';
-      c2.monto=0;            // v1.0402: deja de sumar en los totales
-      c2.saldo=0;
+      _finalizarLote(c2, ts);   // v1.0402: cuota y saldo en 0 (deja de sumar). v1.0691: guarda cómo estaba
       saveData(data2);
     }
     // Registrar fecha de finalización en lotesCerts
@@ -17039,6 +17076,8 @@ function desmarcarPago(id){
     const _cf=(loadBalances().cajaFisica||[]).filter(p=>p.id===id).pop();
     _revertirRefiCobro(c, _cf&&_cf.ts);
   }catch(e){ console.warn('refi revertir',e); }
+  // v1.0691: si este pago había TERMINADO el lote (última cuota), vuelve a activo como estaba
+  if(!_deshacerFinalizacion(c,'se desmarcó el pago de la última cuota')) _avisoTerminadoSinPrevio(c);
   saveData(data);
   const bal=loadBalances();
   bal.abierto=_quitarUltimoDeLista(bal.abierto||[], id);
