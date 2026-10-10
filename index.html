@@ -917,7 +917,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0691';
+const APP_VERSION='v1.0692';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -1528,7 +1528,64 @@ function refiEstado(c){
   return {tiene:true,activa:true,monto,total,proxima,quedan,debe,empiezaEn:null,terminada:false};
 }
 // Lo que se cobra de refinanciación si no se elige otra cosa: 1 cuota si debe alguna (lo normal), si no 0.
-function refiACobrar(c){ const e=refiEstado(c); const cant=(e.activa&&e.debe>0)?1:0; return {cant, monto:cant*e.monto, e}; }
+// v1.0692: si quedó una cuota de refi a medias y ya debe la siguiente, por defecto se cobran las dos (lo que falta + la del mes)
+function refiACobrar(c){ const e=refiEstado(c); const cant=(e.activa&&e.debe>0)?((e.debe>1&&refiYaPagado(c)>0)?2:1):0; return {cant, monto:refiMontoDe(c,cant), e}; }
+// ══════ v1.0692: REFINANCIACIÓN PARCIAL (solo admin) ══════
+// Si el cliente no trae toda la plata, el admin elige "Parcial": primero se completa la cuota y lo que sobra va a la
+// refinanciación. La cuota de refi NO avanza hasta completarse: queda c.refiParcial = {n, pagado} (n = refiProxima).
+// Lo que falta se cobra después con "💠 Completar refinanciación" (detalle del cliente, solo admin), aunque la cuota
+// del mes ya esté paga. Cada pago es una línea en Ingresos Extras con el monto real que entró.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function refiYaPagado(c){
+  const e=refiEstado(c), p=c&&c.refiParcial;
+  return (e.tiene&&!e.terminada&&p&&Number(p.n)===e.proxima&&Number(p.pagado)>0)?Math.min(Number(p.pagado),e.monto):0;
+}
+// Lo que hay que pagar por "cant" cuotas de refi, descontando lo que ya pagó de la primera.
+function refiMontoDe(c, cant){
+  cant=Math.max(0,Math.floor(Number(cant)||0)); if(!cant) return 0;
+  const e=refiEstado(c); return Math.max(0, cant*(e.monto||0)-refiYaPagado(c));
+}
+// Registra $monto de refinanciación (puede ser parcial). Completa la cuota pendiente, sigue con las próximas y lo que
+// no alcanza a completar una cuota queda "pagado a medias". Devuelve {proxima, parcial, avanzo} para guardar en el cliente.
+// Cada línea de Ingresos Extras guarda cómo estaba antes (prevProxima/prevParcial) para poder anular el cobro.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function registrarRefiPago(c, monto, ts, fecha, medio){
+  const e=refiEstado(c);
+  const prevProxima=e.proxima, prevParcial=c.refiParcial||null;
+  let resto=Math.max(0,Math.round(Number(monto)||0));
+  let n=e.proxima, ya=refiYaPagado(c), avanzo=0, i=0;
+  if(!e.tiene||e.terminada||!e.monto||!resto) return {proxima:prevProxima, parcial:prevParcial, avanzo:0};
+  const ex=loadExtras(), tag=formatLoteTag(c.mz,c.lote), t0=Date.parse(ts)||Date.now(), med=(medio&&medio!=='efectivo')?' ('+medio+')':'';
+  const textos=[];
+  while(resto>0&&n<=e.total){
+    const falta=e.monto-ya, paga=Math.min(resto,falta), completa=(paga===falta);
+    const desc=completa
+      ?(ya>0?'💠 Refinanciación cuota '+n+' de '+e.total+' — completa (faltaban '+fmtPeso(falta)+')':'💠 Refinanciación cuota '+n+' de '+e.total)
+      :'💠 Cobro parcial refinanciación cuota '+n+' de '+e.total+': '+fmtPeso(ya+paga)+' de '+fmtPeso(e.monto)+(ya>0?' (este pago '+fmtPeso(paga)+')':'');
+    ex.push({ id:'refi-'+t0+'-'+n+'-'+(i++), tipo:'ingreso', origen:'refi', clienteId:c.id, refiNumero:n, refiTotal:e.total, refiParcial:!completa,
+      cobroTs:ts, prevProxima, prevParcial, desc:desc+' — '+tag+' '+(c.titular||'')+med, monto:paga, medio:medio||'efectivo', fecha, ts });
+    textos.push(completa?('cuota '+n+(ya>0?' completa':'')):('cuota '+n+' parcial '+fmtPeso(ya+paga)+' de '+fmtPeso(e.monto)));
+    resto-=paga;
+    if(completa){ n++; ya=0; avanzo++; } else { ya+=paga; }
+  }
+  saveExtras(ex);
+  addHist('pago','💠 Refinanciación '+textos.join(', ')+' — '+c.mz+' Lote '+c.lote+' — '+fmtPeso(Math.round(Number(monto)||0)-resto)+' (a Ingresos Extras)',c.id);
+  return {proxima:n, parcial:ya>0?{n,pagado:ya}:null, avanzo};
+}
+// ══════ v1.0692: FRENO DE COBROS CON PLATA DE MENOS ══════
+// Si al cliente le faltan $15.000 o más del total, no se cobra (que traiga el resto y vuelva). Vale para admin y
+// colaborador y para todos los cobros en PESOS (en dólares no). Excepción: si tiene saldo a favor, puede faltar hasta
+// ese saldo. La refinanciación "Parcial" del admin no cuenta como faltante (lo que falta queda pendiente).
+const LIMITE_FALTANTE_COBRO=15000;
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _frenoCobro(faltante, saldoAFavor, moneda){
+  if(moneda==='USD') return '';
+  faltante=Math.round(Number(faltante)||0); if(faltante<LIMITE_FALTANTE_COBRO) return '';
+  const saf=Math.max(0,Math.round(Number(saldoAFavor)||0));
+  if(faltante<=saf) return '';
+  return '⛔ Le faltan '+fmtPeso(faltante)+'. Con tanta diferencia no se puede cobrar: que busque el resto y vuelva a pagar.'
+    +(saf>0?' (Tiene '+fmtPeso(saf)+' a favor: puede faltar hasta eso.)':' (Se permite menos de '+fmtPeso(LIMITE_FALTANTE_COBRO)+' de diferencia.)');
+}
 function _refiCuotasTxt(desde,cant,total){ return cant>1?('cuotas '+desde+' a '+(desde+cant-1)+' de '+total):('cuota '+desde+' de '+total); }
 // Registra lo cobrado de refinanciación en 💼 Gastos e Ingresos Extras (una línea por cuota). Devuelve cuántas.
 // El que llama suma esa cantidad a c.refiProxima al guardar el cliente.
@@ -1537,6 +1594,8 @@ function registrarRefiCobro(c, cant, ts, fecha, medio){
   const e=refiEstado(c);
   cant=Math.max(0,Math.min(Math.floor(Number(cant)||0), e.quedan));
   if(!cant||!e.monto) return 0;
+  // v1.0692: se cobra por monto (descuenta lo ya pagado a medias). Devuelve cuántas cuotas avanzaron.
+  if(true){ const r=registrarRefiPago(c, refiMontoDe(c,cant), ts, fecha, medio); c._refiRes=r; return r.avanzo; }
   const ex=loadExtras(), tag=formatLoteTag(c.mz,c.lote), t0=Date.parse(ts)||Date.now();
   for(let i=0;i<cant;i++){
     const n=e.proxima+i;
@@ -1555,8 +1614,12 @@ function _revertirRefiCobro(c, ts){
   const ex=loadExtras();
   const mios=ex.filter(e=>e&&e.origen==='refi'&&e.clienteId===c.id&&e.cobroTs===ts);
   if(!mios.length) return 0;
+  // v1.0692: si DESPUÉS de este cobro hubo otros pagos de refi del cliente (ej. "Completar"), avisar para revisarlos
+  if(ex.some(e=>e&&e.origen==='refi'&&e.clienteId===c.id&&e.cobroTs&&e.cobroTs>ts)) setTimeout(()=>alert('⚠️ Ojo: después de este cobro hubo otros pagos de refinanciación de este cliente. La refinanciación volvió a como estaba antes de este cobro: revisá 💼 Ingresos Extras.'),0);
   saveExtras(ex.filter(e=>!mios.includes(e)));
-  c.refiProxima=Math.min(...mios.map(e=>Number(e.refiNumero)||1));
+  const _conPrev=mios.find(e=>e.prevProxima!==undefined);   // v1.0692: vuelve a como estaba antes de ese cobro
+  if(_conPrev){ c.refiProxima=Number(_conPrev.prevProxima)||1; c.refiParcial=_conPrev.prevParcial||null; }
+  else c.refiProxima=Math.min(...mios.map(e=>Number(e.refiNumero)||1));
   addHist('desmarcar','💠 Refinanciación revertida ('+mios.length+' cuota'+(mios.length>1?'s':'')+', vuelve a quedar pendiente) — '+c.mz+' Lote '+c.lote,c.id);
   return mios.length;
 }
@@ -1567,11 +1630,59 @@ function refiCajaHtml(c, cur, idBlur){
   if(!e.tiene||e.terminada) return '';
   const caja=(txt)=>'<div'+(idBlur?' id="'+idBlur+'"':'')+' style="background:rgba(192,132,252,.10);border:1.5px solid #c084fc;border-radius:var(--r);padding:8px 12px;margin:.25rem 0 .5rem;font-size:13px;color:#c084fc'+(idBlur&&!c.pago?';filter:blur(6px);user-select:none':'')+'">'+txt+'</div>';
   if(e.empiezaEn) return caja('💠 Refinanciación: empieza en '+_mesKeyNombre(e.empiezaEn)+' (cuota '+e.proxima+' de '+e.total+', '+(cur||'')+fmtPeso(e.monto)+')');
-  if(!e.debe) return caja('💠 Refinanciación de este mes ya cobrada · próxima: cuota '+e.proxima+' de '+e.total);
+  const _ya=refiYaPagado(c);   // v1.0692
+  if(!e.debe&&!_ya) return caja('💠 Refinanciación de este mes ya cobrada · próxima: cuota '+e.proxima+' de '+e.total);
+  if(_ya&&(!e.debe||c.pago)) return caja('💠 Refinanciación cuota '+e.proxima+' de '+e.total+': pagó '+(cur||'')+fmtPeso(_ya)+' · <b>faltan '+(cur||'')+fmtPeso(e.monto-_ya)+'</b>');
   const r=refiACobrar(c);
-  return caja('<div style="display:flex;justify-content:space-between;gap:8px;font-weight:700"><span>💠 + Refinanciación cuota '+e.proxima+' de '+e.total+'</span><span>+'+(cur||'')+fmtPeso(r.monto)+'</span></div>'
+  return caja('<div style="display:flex;justify-content:space-between;gap:8px;font-weight:700"><span>💠 + Refinanciación '+_refiCuotasTxt(e.proxima,r.cant||1,e.total)+'</span><span>+'+(cur||'')+fmtPeso(r.monto)+'</span></div>'
     +'<div style="display:flex;justify-content:space-between;gap:8px;margin-top:3px"><span>Cuota + refinanciación</span><span style="font-weight:800">'+(cur||'')+fmtPeso(montoCobrable(c).total+r.monto)+'</span></div>'
+    +(_ya?'<div style="font-size:11px;margin-top:3px">De la cuota '+e.proxima+' ya pagó '+(cur||'')+fmtPeso(_ya)+'</div>':'')
     +(e.debe>1?'<div style="font-size:11px;margin-top:3px">⚠️ Debe '+e.debe+' cuotas de refinanciación (al cobrar podés sumar las atrasadas)</div>':''));
+}
+// v1.0692: botón del admin para completar lo que falta de una cuota de refinanciación pagada a medias.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function refiCompletarHtml(c, cur){
+  const _ya=refiYaPagado(c); if(!_ya) return '';
+  const e=refiEstado(c);
+  return '<button onclick="refiCompletar(\''+c.id+'\')" style="width:100%;margin:-.2rem 0 .5rem;padding:9px;border:1.5px dashed #c084fc;background:rgba(192,132,252,.08);color:#c084fc;border-radius:var(--r);font-weight:800;font-size:13px;cursor:pointer">💠 Completar refinanciación cuota '+e.proxima+': faltan '+(cur||'')+fmtPeso(e.monto-_ya)+'</button>';
+}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function refiCompletar(id){
+  const c=loadData().find(x=>x.id===id); if(!c) return;
+  const _ya=refiYaPagado(c); if(!_ya){ alert('No hay refinanciación a medias para completar.'); return; }
+  const e=refiEstado(c), falta=e.monto-_ya, cur=c.moneda==='USD'?'USD ':'';
+  const ov=document.createElement('div'); ov.id='refi-completar-modal';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML='<div style="background:var(--card);border-radius:14px;max-width:380px;width:100%;padding:1.25rem" onclick="event.stopPropagation()">'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:2px">💠 Completar refinanciación</div>'
+    +'<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+formatLoteTag(c.mz,c.lote)+' — '+c.titular+'</div>'
+    +'<div style="font-size:13px;margin-bottom:10px">Cuota '+e.proxima+' de '+e.total+': ya pagó '+cur+fmtPeso(_ya)+' de '+cur+fmtPeso(e.monto)+'. <b>Faltan '+cur+fmtPeso(falta)+'</b>.</div>'
+    +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">PAGA AHORA</div>'
+    +'<input id="rc-monto" type="text" inputmode="numeric" value="'+cur+(falta).toLocaleString('es-AR')+'" oninput="(function(el){const d=String(el.value||\'\').replace(/[^\\d]/g,\'\');el.value=d===\'\'?\'\':\''+cur+'\'+Number(d).toLocaleString(\'es-AR\');})(this)" style="width:100%;padding:9px 10px;border:2px solid #c084fc;border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text);margin-bottom:8px">'
+    +'<div style="font-size:12px;color:var(--text2);margin-bottom:12px">💵 La refinanciación se paga solo en efectivo.</div>'
+    +'<div style="display:flex;gap:8px"><button onclick="document.getElementById(\'refi-completar-modal\').remove()" style="flex:1;padding:10px;border:1px solid var(--border2);background:var(--surface);border-radius:8px;font-weight:700;cursor:pointer">Cancelar</button>'
+    +'<button onclick="refiCompletarConfirmar(\''+id+'\')" style="flex:2;padding:10px;border:none;background:#7c3aed;color:#fff;border-radius:8px;font-weight:800;cursor:pointer">✓ Cobrar</button></div></div>';
+  ov.onclick=()=>ov.remove();
+  document.body.appendChild(ov);
+  setTimeout(()=>{const el=document.getElementById('rc-monto'); if(el){el.focus(); el.select();}},60);
+}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function refiCompletarConfirmar(id){
+  const el=document.getElementById('rc-monto'); const monto=el?(parseFloat(String(el.value||'').replace(/[^\d]/g,''))||0):0;
+  const medio='efectivo';   // la refinanciación se paga solo en efectivo
+  const data=loadData(); const c=data.find(x=>x.id===id); if(!c) return;
+  const _ya=refiYaPagado(c), e=refiEstado(c);
+  if(!_ya){ alert('No hay refinanciación a medias para completar.'); return; }
+  if(monto<=0){ alert('Poné cuánto paga.'); return; }
+  if(monto>e.monto-_ya){ alert('Es más de lo que falta ('+fmtPeso(e.monto-_ya)+'). Para cobrar más cuotas de refinanciación usá el cobro normal.'); return; }
+  const ts=new Date().toISOString(), fecha=new Date().toLocaleDateString('es-AR');
+  const r=registrarRefiPago(c, monto, ts, fecha, medio);
+  c.refiProxima=r.proxima; c.refiParcial=r.parcial;
+  saveData(data);
+  document.getElementById('refi-completar-modal')?.remove();
+  if(typeof mostrarToastCobro==='function') mostrarToastCobro(r.parcial?'💠 Pago parcial de refinanciación registrado':'💠 Refinanciación completa');
+  if(typeof renderAdminDet==='function') renderAdminDet(id);
+  if(typeof renderAdminTable==='function') renderAdminTable();
 }
 refiEstado.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 // Monto que se debe GUARDAR en el historial de cuotas.
@@ -2040,7 +2151,9 @@ function loadData(){
             refiPrimera:sc.refiPrimera||0,
             refiInicio:sc.refiInicio||null,
             // v1.0691: cómo estaba el lote antes de TERMINAR (para deshacerlo si se desmarca la última cuota)
-            finPrevio:sc.finPrevio||null
+            finPrevio:sc.finPrevio||null,
+            // v1.0692: refinanciación pagada a medias {n, pagado} (ver refiYaPagado)
+            refiParcial:sc.refiParcial||null
           };
         });
       }
@@ -2119,7 +2232,8 @@ function saveData(d){
     refiProxima:c.refiProxima||0,
     refiPrimera:c.refiPrimera||0,
     refiInicio:c.refiInicio||null,
-    finPrevio:c.finPrevio||null
+    finPrevio:c.finPrevio||null,
+    refiParcial:c.refiParcial||null
   }));
 
   _lsSet(dKey('data'),JSON.stringify(full));
@@ -3738,6 +3852,14 @@ function fcRefiCambiar(d){
   const x=window._fcCtx; if(!x) return;
   abrirFormCobro(x.id, {...(x.opts||{}), refiCant:Math.max(0,(x.refiCant||0)+d)});
 }
+// v1.0692: el admin elige si la refi se paga total, parcial o no se paga (el colaborador no elige: va siempre la del mes)
+function fcRefiModo(modo){
+  const x=window._fcCtx; if(!x) return;
+  const o={...(x.opts||{}), refiModo:modo};
+  const def=refiACobrar(loadData().find(c=>c.id===x.id)||{}).cant;
+  o.refiCant=modo==='no'?0:(modo==='parcial'?Math.max(1,def):def);
+  abrirFormCobro(x.id, o);
+}
 // v1.0438: cambiar método de pago dentro del formulario
 function fcCambiarMetodo(metodo){
   const x=window._fcCtx; if(!x) return;
@@ -3759,14 +3881,20 @@ function abrirFormCobro(id, opts){
   const _mc=montoCobrable(c);
   // v1.0688: refinanciación — por defecto 1 cuota si debe alguna; se puede cambiar con − / + (opts.refiCant)
   const _re=refiEstado(c);
-  const _refiCant=(opts.refiCant!==undefined)?Math.max(0,Math.min(Math.floor(opts.refiCant)||0,_re.quedan)):refiACobrar(c).cant;
-  const _refiMonto=_refiCant*(_re.monto||0);
+  const _esColabFC=(opts.ctx==='colab');
+  let _refiCant=(opts.refiCant!==undefined&&!_esColabFC)?Math.max(0,Math.min(Math.floor(opts.refiCant)||0,_re.quedan)):refiACobrar(c).cant;
+  // v1.0692: modo de la refi (solo admin): total (lo normal) / parcial / no
+  let _refiModo=_esColabFC?'total':(opts.refiModo||'total');
+  if(_refiModo==='no') _refiCant=0;
+  if(_refiModo==='parcial'&&!_refiCant&&_re.activa&&_re.quedan>0) _refiCant=1;
+  const _refiMonto=refiMontoDe(c,_refiCant);
+  const _refiYa=refiYaPagado(c);
   const mora=(opts.interes!==undefined)?{interes:opts.interes||0,pct:0,dias:0}:(esPrimeraCuotaFutura(c)?{interes:0,pct:0,dias:0}:calcInteresAuto(_mc.total));
   const adelantos=(typeof _adelantoCuotas!=='undefined'&&Array.isArray(_adelantoCuotas))?[..._adelantoCuotas]:[];
   const totalAdel=adelantos.reduce((s,q)=>s+(q.monto||0),0);
   const totalCuota=_mc.total+(mora.interes||0)+totalAdel+_refiMonto;
   const cur=c.moneda==='USD'?'USD ':'';
-  window._fcCtx={id,totalCuota,base:_mc.base,adicional:_mc.adicional,escalonActivo:_mc.escalonActivo,refiMonto:_refiMonto,refiCant:_refiCant,refiProxima:_re.proxima,refiTotal:_re.total,interes:mora.interes||0,moraPct:mora.pct,moraDias:mora.dias,adelantos,totalAdel,cur,transfer:!!opts.transfer,transferTipo:opts.transferTipo||'',ctx:opts.ctx||'admin',moneda:c.moneda||'ARS',opts};
+  window._fcCtx={id,totalCuota,base:_mc.base,adicional:_mc.adicional,escalonActivo:_mc.escalonActivo,refiMonto:_refiMonto,refiCant:_refiCant,refiModo:_refiModo,refiYa:_refiYa,tBase:totalCuota-_refiMonto,saldoAFavor:Math.max(0,Number(c.saldo)||0),moneda:c.moneda||'ARS',refiProxima:_re.proxima,refiTotal:_re.total,interes:mora.interes||0,moraPct:mora.pct,moraDias:mora.dias,adelantos,totalAdel,cur,transfer:!!opts.transfer,transferTipo:opts.transferTipo||'',ctx:opts.ctx||'admin',moneda:c.moneda||'ARS',opts};
   const esTotal=opts.transfer&&opts.transferTipo==='total';
   const esParcial=opts.transfer&&opts.transferTipo!=='total';
   let m=document.getElementById('form-cobro-modal');
@@ -3779,15 +3907,25 @@ function abrirFormCobro(id, opts){
   const fila=(l,v,color)=>'<div style="display:flex;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--border);font-size:13px"><span style="color:'+(color||'var(--text2)')+'">'+l+'</span><span style="font-weight:700;color:'+(color||'var(--text)')+'">'+v+'</span></div>';
   let desg=fila('Cuota'+( _mc.escalonActivo?' pura':''),cur+fmtPeso(_mc.base));
   if(_mc.escalonActivo) desg+=fila('🪜 Escalonado','+'+cur+fmtPeso(_mc.adicional),'#0369a1');
-  if(_re.activa&&_re.quedan>0){
+  if(_re.activa&&_re.quedan>0&&!_esColabFC){
+    // v1.0692: el admin elige Total / Parcial / No paga
+    const _mb=(m,txt)=>'<button type="button" onclick="fcRefiModo(\''+m+'\')" style="flex:1;padding:5px 4px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;border:1.5px solid #c084fc;background:'+(_refiModo===m?'#c084fc':'none')+';color:'+(_refiModo===m?'#fff':'#c084fc')+'">'+txt+'</button>';
+    desg+='<div style="display:flex;gap:4px;padding:7px 12px 0">'+_mb('total','Paga total')+_mb('parcial','Parcial')+_mb('no','No paga')+'</div>';
+  }
+  if(_re.activa&&_re.quedan>0&&_refiModo==='parcial'){
+    desg+='<div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:13px;color:#c084fc">'
+      +'<div style="display:flex;justify-content:space-between;gap:8px"><span>💠 Refinanciación cuota '+_re.proxima+' de '+_re.total+' — <b>PARCIAL</b></span><span style="font-weight:700;white-space:nowrap">hasta '+cur+fmtPeso(_refiMonto)+'</span></div>'
+      +'<div style="font-size:11px;margin-top:3px;color:var(--text3)">Primero se completa la cuota; lo que sobre va a la refinanciación y lo que falte queda pendiente'+(_refiYa?' (de esta cuota ya pagó '+cur+fmtPeso(_refiYa)+')':'')+'.</div>'
+      +'</div>';
+  } else if(_re.activa&&_re.quedan>0){
     // Refinanciación: se elige cuántas cuotas se cobran (0 = este mes no la paga)
     const _b=(d,dis)=>'<button type="button" onclick="fcRefiCambiar('+d+')" '+(dis?'disabled ':'')+'style="width:24px;height:24px;border-radius:6px;border:1.5px solid #c084fc;background:none;color:#c084fc;font-weight:800;cursor:'+(dis?'default':'pointer')+';opacity:'+(dis?'.35':'1')+'">'+(d<0?'−':'+')+'</button>';
     desg+='<div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:13px;color:#c084fc">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'
       +'<span>💠 Refinanciación '+(_refiCant?_refiCuotasTxt(_re.proxima,_refiCant,_re.total):'(este mes no se cobra)')+'</span>'
       +'<span style="font-weight:700;white-space:nowrap">'+(_refiCant?'+'+cur+fmtPeso(_refiMonto):'—')+'</span></div>'
-      +'<div style="display:flex;align-items:center;gap:6px;margin-top:4px;font-size:11px">'+_b(-1,_refiCant<=0)+'<b style="min-width:14px;text-align:center">'+_refiCant+'</b>'+_b(1,_refiCant>=_re.quedan)
-      +'<span style="color:var(--text3)">cuota'+(_refiCant===1?'':'s')+' de '+cur+fmtPeso(_re.monto)+(_re.debe>1?' · ⚠️ debe '+_re.debe:'')+(_re.debe===0?' · la de este mes ya está cobrada':'')+'</span></div>'
+      +((_esColabFC||_refiModo==='no')?'<div style="margin-top:4px;font-size:11px">':('<div style="display:flex;align-items:center;gap:6px;margin-top:4px;font-size:11px">'+_b(-1,_refiCant<=0)+'<b style="min-width:14px;text-align:center">'+_refiCant+'</b>'+_b(1,_refiCant>=_re.quedan)))
+      +'<span style="color:var(--text3)">cuota'+(_refiCant===1?'':'s')+' de '+cur+fmtPeso(_re.monto)+(_re.debe>1?' · ⚠️ debe '+_re.debe:'')+(_re.debe===0?' · la de este mes ya está cobrada':'')+(_refiYa?' · ya pagó '+cur+fmtPeso(_refiYa)+' de la '+_re.proxima:'')+'</span></div>'
       +'</div>';
   }
   if(mora.interes) desg+=fila('⚠️ Mora'+(mora.pct?' ('+mora.dias+' días × 2% = '+mora.pct+'%)':''),'+'+cur+fmtPeso(mora.interes),'var(--red)');
@@ -3803,22 +3941,23 @@ function abrirFormCobro(id, opts){
     +desg
     +'<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--green-bg)"><span style="font-weight:800">Total cuota</span><span style="font-size:17px;font-weight:800;color:var(--green)">'+cur+fmtPeso(totalCuota)+'</span></div>'
     +'</div>'
-    +(esTotal?(()=>{const debe=Math.round(totalCuota*1.21),imp=debe-totalCuota;return '<div style="background:rgba(124,58,237,.10);border:2px solid #a78bfa;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center">'
+    +(esTotal?(()=>{const _tb=totalCuota-_refiMonto,debe=Math.round(_tb*1.21),imp=debe-_tb;return '<div style="background:rgba(124,58,237,.10);border:2px solid #a78bfa;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center">'
       +'<div style="font-size:11px;font-weight:700;color:#a78bfa">DEBE TRANSFERIR</div>'
       +'<div style="font-size:24px;font-weight:800;color:#a78bfa">'+cur+fmtPeso(debe)+'</div>'
-      +'<div style="font-size:12px;color:#a78bfa">'+cur+fmtPeso(totalCuota)+' cuota + '+cur+fmtPeso(imp)+' impuestos 21%</div>'
+      +'<div style="font-size:12px;color:#a78bfa">'+cur+fmtPeso(_tb)+' cuota + '+cur+fmtPeso(imp)+' impuestos 21%</div>'
+      +(_refiMonto>0?'<div style="font-size:12px;color:#c084fc;margin-top:6px;font-weight:700">💠 + la refinanciación ('+cur+fmtPeso(_refiMonto)+') en EFECTIVO</div>':'')
       +'</div>';})():'')
     +(esParcial?('<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:3px">🏦 PARTE DE CUOTA POR TRANSFERENCIA</div>'
       +'<input type="text" inputmode="numeric" id="fc-transf" placeholder="$0" oninput="fcFmt(this);fcAutoCompletar(\'transf\');fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid #a78bfa;border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)">'
       +'<div id="fc-transf-info" style="display:none;font-size:12px;color:#a78bfa;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.35);border-radius:6px;padding:6px 8px;margin-top:4px"></div></div>'):'')
-    +(esTotal?'':('<div style="display:flex;gap:8px;margin-bottom:8px">'
-    +'<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">ENTREGÓ EFECTIVO *</div><input type="text" inputmode="numeric" id="fc-entrego" placeholder="Obligatorio" oninput="fcFmt(this);'+(esParcial?'fcAutoCompletar(\'entrego\');':'')+'fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid var(--border2);border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)"></div>'
+    +((esTotal&&!_refiMonto)?'':('<div style="display:flex;gap:8px;margin-bottom:8px">'
+    +'<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">'+(esTotal?'EFECTIVO DE LA REFI *':'ENTREGÓ EFECTIVO *')+'</div><input type="text" inputmode="numeric" id="fc-entrego" placeholder="Obligatorio" oninput="fcFmt(this);'+(esParcial?'fcAutoCompletar(\'entrego\');':'')+'fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid var(--border2);border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)"></div>'
     +'<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:3px">VUELTO *</div><input type="text" inputmode="numeric" id="fc-vuelto" placeholder="0 si no hubo" oninput="fcFmt(this);fcRecalc()" style="width:100%;padding:9px 10px;border:2px solid var(--border2);border-radius:8px;font-size:15px;font-weight:700;background:var(--bg);color:var(--text)"></div>'
     +'</div>'))
-    +'<div id="fc-live" style="border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700;text-align:center;background:var(--surface);border:1px dashed var(--border2);color:var(--text2);margin-bottom:10px">'+(esTotal?'✓ Listo para cobrar — todo por transferencia':'Completá los campos')+'</div>'
+    +'<div id="fc-live" style="border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700;text-align:center;background:var(--surface);border:1px dashed var(--border2);color:var(--text2);margin-bottom:10px">'+((esTotal&&!_refiMonto)?'✓ Listo para cobrar — todo por transferencia':(esTotal?'La refinanciación va en efectivo: completá cuánto entregó':'Completá los campos'))+'</div>'
     +'<div style="display:flex;gap:8px">'
     +'<button onclick="cerrarFormCobro()" style="flex:1;padding:10px;border:1px solid var(--border2);background:var(--surface);border-radius:8px;font-weight:700;cursor:pointer">Cancelar</button>'
-    +'<button id="fc-ok" onclick="fcConfirmar()" '+(esTotal?'':'disabled')+' style="flex:2;padding:10px;border:none;background:#16a34a;color:#fff;border-radius:8px;font-weight:800;cursor:pointer;opacity:'+(esTotal?'1':'.4')+'">✓ Confirmar cobro</button>'
+    +'<button id="fc-ok" onclick="fcConfirmar()" '+((esTotal&&!_refiMonto)?'':'disabled')+' style="flex:2;padding:10px;border:none;background:#16a34a;color:#fff;border-radius:8px;font-weight:800;cursor:pointer;opacity:'+((esTotal&&!_refiMonto)?'1':'.4')+'">✓ Confirmar cobro</button>'
     +'</div>'
     +((opts&&opts.ctx==='colab')?'<button onclick="fcNoCobre()" style="width:100%;margin-top:8px;padding:9px;border:1.5px solid #dc2626;background:none;color:#dc2626;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">✗ No cobré la cuota</button>':'')
     +'</div>';
@@ -3857,15 +3996,23 @@ function fcAutoCompletar(origen){
     fcSet(eEl,x.totalCuota-t);
   } else {
     const e=fcNum(eEl.value);
-    fcSet(tEl,x.totalCuota-e);
+    fcSet(tEl,Math.min(x.tBase!==undefined?x.tBase:x.totalCuota, Math.max(0,x.totalCuota-e)));   // v1.0692: la refi va en efectivo
   }
   const vEl=document.getElementById('fc-vuelto');
   if(vEl&&fcVacio(vEl.value)) fcSet(vEl,0);
 }
+// v1.0692: cuánto va a la refi y cuál es la diferencia. En "parcial" la cuota va primero y la refi toma lo que sobra.
+function _fcCalcRefi(x, neto){
+  if(x.refiModo!=='parcial') return {refiAp:x.refiMonto||0, refiPendiente:0, dif:neto-x.totalCuota};
+  const minimo=x.totalCuota-(x.refiMonto||0);
+  const refiAp=Math.min(x.refiMonto||0, Math.max(0, neto-minimo));
+  return {refiAp, refiPendiente:(x.refiMonto||0)-refiAp, dif:neto-minimo-refiAp};
+}
 function fcRecalc(){
   const x=window._fcCtx; if(!x) return;
   const g=(eid)=>{const el=document.getElementById(eid);return el?el.value:'';};
-  const t=x.transfer?fcNum(g('fc-transf')):0;
+  const _tb=(x.tBase!==undefined?x.tBase:x.totalCuota);   // v1.0692: tope de la transferencia = la cuota (la refi va en efectivo)
+  const t=(x.transfer&&x.transferTipo==='total')?_tb:(x.transfer?fcNum(g('fc-transf')):0);
   const eStr=g('fc-entrego'), vStr=g('fc-vuelto');
   const e=fcNum(eStr), v=fcNum(vStr);
   const info=document.getElementById('fc-transf-info');
@@ -3879,12 +4026,15 @@ function fcRecalc(){
   const live=document.getElementById('fc-live');
   const ok=document.getElementById('fc-ok');
   const completo=!fcVacio(eStr)&&!fcVacio(vStr)&&(!x.transfer||t>0);
-  let valido=completo&&e>=0&&v>=0&&(!x.transfer||t<=x.totalCuota);
-  if(x.transfer&&t>x.totalCuota){ if(live){live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent='La transferencia no puede superar el total de la cuota';} if(ok){ok.disabled=true;ok.style.opacity='.4';} return; }
+  let valido=completo&&e>=0&&v>=0&&(!x.transfer||t<=_tb);
+  if(x.transfer&&t>_tb){ if(live){live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent=(_tb<x.totalCuota?'La transferencia solo puede cubrir la cuota: la refinanciación va en efectivo':'La transferencia no puede superar el total de la cuota');} if(ok){ok.disabled=true;ok.style.opacity='.4';} return; }
   if(!completo){ if(live){live.style.background='var(--surface)';live.style.color='var(--text2)';live.textContent='Completá los campos'+(x.transfer?' (transferencia, entregó y vuelto)':' (entregó y vuelto, 0 si no hubo)');} if(ok){ok.disabled=true;ok.style.opacity='.4';} return; }
   const neto=t+e-v;
-  const dif=neto-x.totalCuota;
-  if(live){
+  const _p=_fcCalcRefi(x,neto), dif=_p.dif;   // v1.0692: refi parcial (admin) + freno
+  const _freno=dif<0?_frenoCobro(-dif,x.saldoAFavor,x.moneda):'';
+  if(_freno){ valido=false; if(live){live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent=_freno;} if(ok){ok.disabled=true;ok.style.opacity='.4';} return; }
+  if(live&&x.refiModo==='parcial'&&_p.refiPendiente>0&&dif>=0){live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='✓ Cuota completa · 💠 Refi: '+x.cur+fmtPeso(_p.refiAp)+' de '+x.cur+fmtPeso(x.refiMonto)+' — quedan '+x.cur+fmtPeso(_p.refiPendiente)+' pendientes';}
+  else if(live){
     if(dif===0){live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='✓ Justo — pagó '+x.cur+fmtPeso(neto);}
     else if(dif>0){live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='SAF (a favor): '+x.cur+fmtPeso(dif)+' — pagó '+x.cur+fmtPeso(neto);}
     else {live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent='SEC (en contra): '+x.cur+fmtPeso(-dif)+' — pagó '+x.cur+fmtPeso(neto);}
@@ -3896,15 +4046,20 @@ function fcConfirmar(){
   const x=window._fcCtx; if(!x) return;
   const esTotal=x.transfer&&x.transferTipo==='total';
   const g=(eid)=>{const el=document.getElementById(eid);return el?el.value:'';};
-  const t=esTotal?x.totalCuota:(x.transfer?fcNum(g('fc-transf')):0);
-  const e=esTotal?0:fcNum(g('fc-entrego')), v=esTotal?0:fcNum(g('fc-vuelto'));
-  if(!esTotal&&(fcVacio(g('fc-entrego'))||fcVacio(g('fc-vuelto')))){alert('Entregó y vuelto son obligatorios (poné 0 si no hubo).');return;}
+  const _tb=(x.tBase!==undefined?x.tBase:x.totalCuota);   // v1.0692
+  const _sinEfectivo=esTotal&&!(x.refiMonto>0);
+  const t=esTotal?_tb:(x.transfer?fcNum(g('fc-transf')):0);
+  const e=_sinEfectivo?0:fcNum(g('fc-entrego')), v=_sinEfectivo?0:fcNum(g('fc-vuelto'));
+  if(x.transfer&&t>_tb){ alert('La transferencia solo puede cubrir la cuota: la refinanciación se paga en efectivo.'); return; }
+  if(!_sinEfectivo&&(fcVacio(g('fc-entrego'))||fcVacio(g('fc-vuelto')))){alert('Entregó y vuelto son obligatorios (poné 0 si no hubo).');return;}
   if(!esTotal&&x.transfer&&t<=0){alert('Ingresá el monto de la transferencia.');return;}
   const id=x.id;
   const c=loadData().find(cl=>cl.id===id); if(!c) return;
   const ts=new Date().toISOString(), fecha=new Date().toLocaleDateString('es-AR');
-  const neto=t+e-v, dif=neto-x.totalCuota;
-  const fullTransf=x.transfer&&t>=x.totalCuota;
+  const neto=t+e-v;
+  const _p=_fcCalcRefi(x,neto), dif=_p.dif;   // v1.0692
+  { const _fr=dif<0?_frenoCobro(-dif,x.saldoAFavor,x.moneda):''; if(_fr){ alert(_fr); return; } }
+  const fullTransf=x.transfer&&t>=_tb;   // v1.0692: "total" = toda la cuota transferida (la refi va aparte, en efectivo)
   window._cobroTransferencia=fullTransf;
   // Detalle USD para que sobreviva en cierres (cuota/entregado/SAF-SEC)
   if(c.moneda==='USD'){ window._cobroDetalleUSD={cuota:x.totalCuota,entrego:e,dif:dif}; }
@@ -3914,9 +4069,9 @@ function fcConfirmar(){
   try{ marcarPago(id, x.interes||0); } finally { window._cobroTransferencia=false; window._cobroCuotaNum=null; }
   // v1.0688: Refinanciación → 💼 Gastos e Ingresos Extras, como INGRESO (una línea por cuota). Nunca a mora.
   // Solo si el cobro quedó hecho (si estaba bloqueado, marcarPago no marcó nada).
-  let _nRefi=0;
-  if(x.refiCant>0 && (loadData().find(cl=>cl.id===id)||{}).pago){
-    try{ _nRefi=registrarRefiCobro(c, x.refiCant, ts, fecha, fullTransf?'transferencia':(x.transfer?'transferencia parcial':'efectivo')); }catch(e){ console.warn('refi error',e); }
+  let _refiRes=null;   // v1.0692: se registra el monto real que fue a la refi (puede ser parcial)
+  if(_p.refiAp>0 && (loadData().find(cl=>cl.id===id)||{}).pago){
+    try{ _refiRes=registrarRefiPago(c, _p.refiAp, ts, fecha, 'efectivo'); }catch(e){ console.warn('refi error',e); }
   }
   if(x.adelantos.length) registrarAdelanto(id, x.adelantos);
   try{_adelantoCuotas=[];_adelantoVerMas=5;}catch(e){}
@@ -3935,8 +4090,8 @@ function fcConfirmar(){
     // Efectivo físico = lo que se ingresó en el campo de efectivo (la plata que tenés en la mano).
     // NO se resta el vuelto (eso es SAF, tiene su propia cuenta) ni el interés (también entró en efectivo).
     // Solo se restan adelanto y refi, que son plata de otras cajas.
-    const efectivoPuro=e-(x.totalAdel||0)-(x.refiMonto||0);
-    (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:cuotaPura,adelanto:(x.totalAdel||0),refi:(x.refiMonto||0),moraInteres:(x.interes||0),transferido:t,transfTotal:!!fullTransf,entrego:e,vuelto:v,efectivo:efectivoPuro,dif,ts,fecha});
+    const efectivoPuro=e-(x.totalAdel||0)-(_p.refiAp||0);
+    (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:cuotaPura,adelanto:(x.totalAdel||0),refi:(_p.refiAp||0),moraInteres:(x.interes||0),transferido:t,transfTotal:!!fullTransf,entrego:e,vuelto:v,efectivo:efectivoPuro,dif,ts,fecha});
     saveBalances(bal);
   }
   // Confirmación final en UNA escritura: reasegurar pago marcado + SAF/SEC
@@ -3946,7 +4101,7 @@ function fcConfirmar(){
     const data=loadData();const c2=data.find(cl=>cl.id===id);
     if(c2){
       c2.pago=true; c2.pagoTs=ts;
-      if(_nRefi) c2.refiProxima=(Math.max(1,Number(c2.refiProxima)||1))+_nRefi;   // v1.0688: avanza la refinanciación cobrada
+      if(_refiRes){ c2.refiProxima=_refiRes.proxima; c2.refiParcial=_refiRes.parcial; }   // v1.0692: avanza la refi (o queda a medias)
       if(dif!==0){ c2.saldo=(Number(c2.saldo)||0)+dif; c2.saldoDifUltimoCobro=dif; } else { c2.saldoDifUltimoCobro=0; }
       saveData(data);
       setPagoState(id,true,ts);
@@ -9990,6 +10145,7 @@ function caEjecutarCobro(){
     // Diferencia por moneda
     const difGlobal=(entregoTotal!==null?(entregoTotal-vueltoTotal):totPesos)-totPesos;
     const difGlobalUSD=(entregoTotalUSD!==null?(entregoTotalUSD-vueltoTotalUSD):totUSDesp)-totUSDesp;
+    { const _saf=pesosLotes.reduce((s,c)=>s+Math.max(0,Number(c.saldo)||0),0); const _fr=difGlobal<0?_frenoCobro(-difGlobal,_saf,'ARS'):''; if(_fr){ alert(_fr); return; } }   // v1.0692
     const primerPesoId=pesosLotes.length?pesosLotes[0].id:null;
     const primerUSDId=usdLotes.length?usdLotes[0].id:null;
     // Reparto del vuelto cuando hay cajas distintas (normal vs agrimensor)
@@ -10354,6 +10510,7 @@ function renderAdminDet(id){
 
       <!-- 3. Cuotas morosas históricas -->
       ${refiCajaHtml(c,cur)}
+      ${refiCompletarHtml(c,cur)}
       ${moraHtml}
 
       <!-- 4. Info del cliente -->
@@ -11599,7 +11756,7 @@ function cobrarTodoColab(clienteId){
   const _rT=refiACobrar(c);   // v1.0688: refinanciación del mes (se puede cambiar con − / +)
   const grandTotal=totalMoraCapital+totalMoraInteres+cuotaActual+interesMes+_rT.monto;
 
-  _moraPanelState={clienteId,seleccionadas:moraConInteres,totalMonto:totalMoraCapital,totalInteresAuto:totalMoraInteres,cur,_incluyeMesActual:true,cuotaActual,interesMes,refiCant:_rT.cant,refiUnit:_rT.e.monto||0,refiQuedan:_rT.e.quedan||0,refiProxima:_rT.e.proxima||0,refiTotal:_rT.e.total||0,refiDebe:_rT.e.debe||0,refiActiva:!!_rT.e.activa,_esColab:true};
+  _moraPanelState={clienteId,seleccionadas:moraConInteres,totalMonto:totalMoraCapital,totalInteresAuto:totalMoraInteres,cur,_incluyeMesActual:true,cuotaActual,interesMes,refiCant:_rT.cant,refiUnit:_rT.e.monto||0,refiQuedan:_rT.e.quedan||0,refiProxima:_rT.e.proxima||0,refiTotal:_rT.e.total||0,refiDebe:_rT.e.debe||0,refiActiva:!!_rT.e.activa,refiYa:refiYaPagado(c),_esColab:true};
 
   const filasHtml=moraConInteres.map(cm=>
     '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid rgba(252,165,165,.3)">'
@@ -11691,6 +11848,7 @@ function admConfirmarTodoColab(){
   const entregoTotal=(window._moraEfectivoTocado&&eEl)?caNum(eEl.value):grandTotal;
   const vueltoTotal=(window._moraEfectivoTocado&&vEl)?caNum(vEl.value):0;
   const difGlobal=(entregoTotal-vueltoTotal)-grandTotal;
+  { const _cF=loadData().find(x=>x.id===clienteId)||{}; const _fr=difGlobal<0?_frenoCobro(-difGlobal,Math.max(0,Number(_cF.saldo)||0),_cF.moneda):''; if(_fr){ alert(_fr); return; } }   // v1.0692
 
   const ejecutar=()=>{
     document.getElementById('mora-panel-overlay')?.remove();
@@ -11708,7 +11866,7 @@ function admConfirmarTodoColab(){
       (bal.cajaFisica=bal.cajaFisica||[]).push({id:clienteId,mz:cX.mz,lote:cX.lote,titular:cX.titular,moneda:cX.moneda||'ARS',cuotaLista:(cuotaActual||0),adelanto:0,transferido:0,entrego:efectivoMes,vuelto:0,efectivo:efectivoMes,dif:difGlobal,ts,fecha});
       saveBalances(bal);
       // v1.0688: refinanciación → Ingresos Extras (una línea por cuota) y avanza la del cliente
-      if(_refiCantSel>0&&cX.pago){ const _nR=registrarRefiCobro(cX,_refiCantSel,ts,fecha,'efectivo'); if(_nR){ cX.refiProxima=Math.max(1,Number(cX.refiProxima)||1)+_nR; saveData(dataX); } }
+      if(_refiCantSel>0&&cX.pago){ const _rR=registrarRefiPago(cX,_refiTodoMonto(),ts,fecha,'efectivo'); cX.refiProxima=_rR.proxima; cX.refiParcial=_rR.parcial; saveData(dataX); }   // v1.0692
       if(difGlobal!==0){
         cX.saldo=(Number(cX.saldo)||0)+difGlobal; cX.saldoDifUltimoCobro=difGlobal; saveData(dataX);
         addHist('pago',(difGlobal>0?'SAF ':'SEC ')+fmtPeso(Math.abs(difGlobal))+' — '+cX.mz+' Lote '+cX.lote+' (cobro mora+mes colab, cargado al saldo)',clienteId);
@@ -11749,7 +11907,7 @@ function cobrarTodoAdmin(clienteId){
   const grandTotal=totalMoraCapital+totalMoraInteres+cuotaActual+interesMes+_rT.monto;
 
   // Guardar en estado global
-  _moraPanelState={clienteId,seleccionadas:moraConInteres,totalMonto:totalMoraCapital,totalInteresAuto:totalMoraInteres,cur,_incluyeMesActual:true,cuotaActual,interesMes,refiCant:_rT.cant,refiUnit:_rT.e.monto||0,refiQuedan:_rT.e.quedan||0,refiProxima:_rT.e.proxima||0,refiTotal:_rT.e.total||0,refiDebe:_rT.e.debe||0,refiActiva:!!_rT.e.activa};
+  _moraPanelState={clienteId,seleccionadas:moraConInteres,totalMonto:totalMoraCapital,totalInteresAuto:totalMoraInteres,cur,_incluyeMesActual:true,cuotaActual,interesMes,refiCant:_rT.cant,refiUnit:_rT.e.monto||0,refiQuedan:_rT.e.quedan||0,refiProxima:_rT.e.proxima||0,refiTotal:_rT.e.total||0,refiDebe:_rT.e.debe||0,refiActiva:!!_rT.e.activa,refiYa:refiYaPagado(c)};
 
   // Construir filas desglose
   const filasHtml=moraConInteres.map(cm=>
@@ -11843,7 +12001,7 @@ function moraCalcVuelto(){
 
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 // v1.0688: refinanciación dentro de "⚡ Cobrar todo" (mismo − / + que en el formulario de cobro)
-function _refiTodoMonto(){ const s=_moraPanelState||{}; return (s.refiCant||0)*(s.refiUnit||0); }
+function _refiTodoMonto(){ const s=_moraPanelState||{}; const n=s.refiCant||0; return n?Math.max(0,n*(s.refiUnit||0)-(s.refiYa||0)):0; }   // v1.0692: descuenta lo ya pagado a medias
 function _refiTodoHtml(){
   const s=_moraPanelState||{};
   if(!s.refiActiva||!s.refiQuedan) return '<div id="ct-refi"></div>';
@@ -11851,9 +12009,9 @@ function _refiTodoHtml(){
   const b=(d,dis)=>'<button type="button" onclick="ctRefiCambiar('+d+')" '+(dis?'disabled ':'')+'style="width:24px;height:24px;border-radius:6px;border:1.5px solid #c084fc;background:none;color:#c084fc;font-weight:800;cursor:'+(dis?'default':'pointer')+';opacity:'+(dis?'.35':'1')+'">'+(d<0?'−':'+')+'</button>';
   return '<div id="ct-refi" style="background:rgba(192,132,252,.10);border:1.5px solid #c084fc;border-radius:var(--r);padding:12px;margin-bottom:10px;color:#c084fc">'
     +'<div style="font-size:11px;font-weight:700;margin-bottom:4px">💠 REFINANCIACIÓN (va a Ingresos Extras)</div>'
-    +'<div style="display:flex;justify-content:space-between;font-size:13px"><span>'+(n?_refiCuotasTxt(s.refiProxima,n,s.refiTotal):'Este mes no se cobra')+'</span><span style="font-weight:700">'+(n?'+'+fmtCur(n*s.refiUnit,cur):'—')+'</span></div>'
-    +'<div style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px">'+b(-1,n<=0)+'<b style="min-width:14px;text-align:center">'+n+'</b>'+b(1,n>=s.refiQuedan)
-    +'<span style="color:var(--text3)">cuota'+(n===1?'':'s')+' de '+fmtCur(s.refiUnit,cur)+(s.refiDebe>1?' · ⚠️ debe '+s.refiDebe:'')+(s.refiDebe===0?' · la de este mes ya está cobrada':'')+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:13px"><span>'+(n?_refiCuotasTxt(s.refiProxima,n,s.refiTotal):'Este mes no se cobra')+'</span><span style="font-weight:700">'+(n?'+'+fmtCur(_refiTodoMonto(),cur):'—')+'</span></div>'
+    +(s._esColab?'<div style="margin-top:6px;font-size:11px">':('<div style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px">'+b(-1,n<=0)+'<b style="min-width:14px;text-align:center">'+n+'</b>'+b(1,n>=s.refiQuedan)))
+    +'<span style="color:var(--text3)">cuota'+(n===1?'':'s')+' de '+fmtCur(s.refiUnit,cur)+(s.refiDebe>1?' · ⚠️ debe '+s.refiDebe:'')+(s.refiDebe===0?' · la de este mes ya está cobrada':'')+(s.refiYa?' · ya pagó '+fmtCur(s.refiYa,cur)+' de la '+s.refiProxima:'')+'</span></div>'
     +'</div>';
 }
 function ctRefiCambiar(d){
@@ -11905,6 +12063,7 @@ function admConfirmarTodo(){
   const entregoTotal=eEl?caNum(eEl.value):grandTotal;
   const vueltoTotal=vEl?caNum(vEl.value):0;
   const difGlobal=(entregoTotal-vueltoTotal)-grandTotal; // SAF (+) / SEC (-)
+  { const _cF=loadData().find(x=>x.id===clienteId)||{}; const _fr=difGlobal<0?_frenoCobro(-difGlobal,Math.max(0,Number(_cF.saldo)||0),_cF.moneda):''; if(_fr){ alert(_fr); return; } }   // v1.0692
   mostrarConfirmAdmin('Confirmar cobro total',fmtCur(grandTotal,cur),()=>{
     document.getElementById('mora-panel-overlay')?.remove();
     // 1. Cobrar mora (capital + interés → caja de mora)
@@ -11921,7 +12080,7 @@ function admConfirmarTodo(){
       (bal.cajaFisica=bal.cajaFisica||[]).push({id:clienteId,mz:cX.mz,lote:cX.lote,titular:cX.titular,moneda:cX.moneda||'ARS',cuotaLista:(cuotaActual||0),adelanto:0,transferido:0,entrego:efectivoMes,vuelto:0,efectivo:efectivoMes,dif:difGlobal,ts,fecha});
       saveBalances(bal);
       // v1.0688: refinanciación → Ingresos Extras (una línea por cuota) y avanza la del cliente
-      if(_refiCantSel>0&&cX.pago){ const _nR=registrarRefiCobro(cX,_refiCantSel,ts,fecha,'efectivo'); if(_nR){ cX.refiProxima=Math.max(1,Number(cX.refiProxima)||1)+_nR; saveData(dataX); } }
+      if(_refiCantSel>0&&cX.pago){ const _rR=registrarRefiPago(cX,_refiTodoMonto(),ts,fecha,'efectivo'); cX.refiProxima=_rR.proxima; cX.refiParcial=_rR.parcial; saveData(dataX); }   // v1.0692
       // Cargar SAF/SEC al saldo del cliente
       if(difGlobal!==0){
         cX.saldo=(Number(cX.saldo)||0)+difGlobal; cX.saldoDifUltimoCobro=difGlobal; saveData(dataX);
@@ -12079,6 +12238,7 @@ function admConfirmarMoraPanel(){
   const entrego=(window._moraEfectivoTocado&&eEl)?caNum(eEl.value):totalTotal;
   const vuelto=(window._moraEfectivoTocado&&vEl)?caNum(vEl.value):0;
   const dif=(entrego-vuelto)-totalTotal;
+  { const _cF=loadData().find(x=>x.id===clienteId)||{}; const _fr=dif<0?_frenoCobro(-dif,Math.max(0,Number(_cF.saldo)||0),_cF.moneda):''; if(_fr){ alert(_fr); return; } }   // v1.0692
 
   const ejecutar=()=>{
     document.getElementById('mora-panel-overlay')?.remove();
