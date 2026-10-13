@@ -917,7 +917,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0693';
+const APP_VERSION='v1.0694';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -9040,13 +9040,14 @@ function renderStats(){
     const monto={};
     (b.abierto||[]).forEach(p=>{ monto[p.id]=(monto[p.id]||0)+(p.monto||0); });
     (b.cierres||[]).forEach(ci=>(ci.pagos||[]).forEach(p=>{ monto[p.id]=(monto[p.id]||0)+(p.monto||0); }));
-    let ars=0, usd=0, n=0;
+    let ars=0, usd=0, n=0; const lotes=[];
     data.forEach(c=>{
       if(c.est!=='finalizado'||c.autopago||esAgrimensor(c.id)) return;
       const m=monto[c.id]; if(!m) return;              // solo si su pago está en este ciclo
       n++; if(c.moneda==='USD') usd+=m; else ars+=m;
+      lotes.push({id:c.id,mz:c.mz,moneda:c.moneda,monto:m});   // v1.0694
     });
-    return {ars,usd,n};
+    return {ars,usd,n,lotes};
   })();
   const cobradoARStot=cobradoARS+_finCiclo.ars;
   const cobradoUSDtot=cobradoUSD+_finCiclo.usd;
@@ -9101,30 +9102,41 @@ function renderStats(){
     html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem">';
     html+='<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:10px">🎯 TOTAL A COBRAR ESTE MES</div>';
     html+='<div style="display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap">';
-    html+='<div style="text-align:center"><div style="font-size:11px;color:var(--text2)">💰 Pesos</div><div style="font-size:24px;font-weight:800;color:var(--green)">'+fmtPeso(_totARS)+'</div><div style="font-size:10px;color:var(--text3)">'+_cobrARS.length+' lotes</div></div>';
-    html+='<div style="text-align:center"><div style="font-size:11px;color:var(--text2)">💵 Dólares</div><div style="font-size:24px;font-weight:800;color:var(--green)">USD '+fmtPeso(_totUSD)+'</div><div style="font-size:10px;color:var(--text3)">'+_cobrUSD.length+' lotes</div></div>';
+    // v1.0694: los que terminaron este mes suman y quedan aclarados
+    const _finA=_finCiclo.lotes.filter(x=>x.moneda!=='USD'), _finU=_finCiclo.lotes.filter(x=>x.moneda==='USD');
+    const _nTxt=(n,nf)=>(n+nf)+' lotes'+(nf?' <span style="color:var(--blue)">(incluye '+nf+' terminado'+(nf>1?'s':'')+')</span>':'');
+    html+='<div style="text-align:center"><div style="font-size:11px;color:var(--text2)">💰 Pesos</div><div style="font-size:24px;font-weight:800;color:var(--green)">'+fmtPeso(_totARS)+'</div><div style="font-size:10px;color:var(--text3)">'+_nTxt(_cobrARS.length,_finA.length)+'</div></div>';
+    html+='<div style="text-align:center"><div style="font-size:11px;color:var(--text2)">💵 Dólares</div><div style="font-size:24px;font-weight:800;color:var(--green)">USD '+fmtPeso(_totUSD)+'</div><div style="font-size:10px;color:var(--text3)">'+_nTxt(_cobrUSD.length,_finU.length)+'</div></div>';
     html+='</div>';
+    if(_finCiclo.lotes.length){
+      html+='<div style="margin-top:10px;font-size:11px;color:var(--text2);background:var(--blue-bg,rgba(59,130,246,.08));border:1px solid var(--border);border-radius:8px;padding:6px 10px;text-align:center">'
+        +'🏁 Incluye '+_finCiclo.lotes.length+' lote'+(_finCiclo.lotes.length>1?'s':'')+' que terminaron este mes (ya cobrados): '
+        +_finCiclo.lotes.map(x=>'<b>'+x.id+'</b> '+(x.moneda==='USD'?'USD ':'')+fmtPeso(x.monto)).join(' · ')+'</div>';
+    }
     html+='<button onclick="const d=document.getElementById(\'stats-etapas\');d.style.display=d.style.display===\'none\'?\'block\':\'none\';this.textContent=d.style.display===\'none\'?\'▼ Ver por etapa y manzana\':\'▲ Ocultar detalle\'" style="width:100%;margin-top:10px;padding:7px;background:none;border:1px dashed var(--border2);color:var(--text2);border-radius:8px;font-size:12px;cursor:pointer">▼ Ver por etapa y manzana</button>';
     html+='<div id="stats-etapas" style="display:none;margin-top:8px">';
     const grupos={};
-    cobrables.forEach(c=>{
+    const _sumar=(c,m,fin)=>{   // v1.0694: fin = terminó este mes (ya cobrado)
       const et=getEtapa(c.mz), mz=String(c.mz).toUpperCase();
-      if(!grupos[et]) grupos[et]={mzs:{},totARS:0,totUSD:0,n:0};
-      if(!grupos[et].mzs[mz]) grupos[et].mzs[mz]={ars:0,usd:0,n:0};
-      const m=montoCobrable(c).total;
+      if(!grupos[et]) grupos[et]={mzs:{},totARS:0,totUSD:0,n:0,fin:0};
+      if(!grupos[et].mzs[mz]) grupos[et].mzs[mz]={ars:0,usd:0,n:0,fin:0};
       if(c.moneda==='USD'){grupos[et].mzs[mz].usd+=m;grupos[et].totUSD+=m;}
       else {grupos[et].mzs[mz].ars+=m;grupos[et].totARS+=m;}
       grupos[et].mzs[mz].n++;grupos[et].n++;
-    });
+      if(fin){grupos[et].mzs[mz].fin++;grupos[et].fin++;}
+    };
+    cobrables.forEach(c=>_sumar(c,montoCobrable(c).total,false));
+    _finCiclo.lotes.forEach(x=>_sumar(x,x.monto,true));
+    const _finTxt=(nf)=>nf?' <span style="color:var(--blue)">🏁 '+nf+' terminado'+(nf>1?'s':'')+'</span>':'';
     const ordenEt=['Etapa 1','Etapa 2','Etapa 3','Etapa 4','Otra'].filter(e=>grupos[e]);
     html+=ordenEt.map(et=>{
       const g=grupos[et]; const mzKeys=Object.keys(g.mzs).sort();
       return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden">'
         +'<div style="display:flex;justify-content:space-between;padding:8px 12px;background:var(--hov);font-weight:800;font-size:13px">'
-        +'<span>'+et+' <span style="font-weight:400;color:var(--text2);font-size:11px">('+g.n+' lotes)</span></span>'
+        +'<span>'+et+' <span style="font-weight:400;color:var(--text2);font-size:11px">('+g.n+' lotes'+_finTxt(g.fin)+')</span></span>'
         +'<span style="color:var(--green)">'+(g.totARS?fmtPeso(g.totARS):'')+(g.totARS&&g.totUSD?' · ':'')+(g.totUSD?'USD '+fmtPeso(g.totUSD):'')+'</span></div>'
         +mzKeys.map(mz=>'<div style="display:flex;justify-content:space-between;padding:5px 12px 5px 24px;border-top:1px solid var(--border);font-size:12px">'
-          +'<span style="color:var(--text2)">'+mz+' <span style="font-size:10px">('+g.mzs[mz].n+')</span></span>'
+          +'<span style="color:var(--text2)">'+mz+' <span style="font-size:10px">('+g.mzs[mz].n+_finTxt(g.mzs[mz].fin)+')</span></span>'
           +'<span style="font-weight:600">'+(g.mzs[mz].ars?fmtPeso(g.mzs[mz].ars):'')+(g.mzs[mz].ars&&g.mzs[mz].usd?' · ':'')+(g.mzs[mz].usd?'USD '+fmtPeso(g.mzs[mz].usd):'')+'</span></div>').join('')
         +'</div>';
     }).join('')||'<div style="font-size:12px;color:var(--text2)">Sin lotes cobrables</div>';
@@ -11824,7 +11836,7 @@ function cobrarTodoColab(clienteId){
     +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanelTodo()"> $ Monto</label>'
     +'</div>'
     +'<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanelTodo()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
-    +'<button onclick="admConfirmarTodoColab()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Confirmar</button>'
+    +'<button onclick="admAplicarInteresTodo()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Aplicar interés</button>'
     +'</div>'
     // Tarjeta efectivo/vuelto — solo la cuota del mes va a caja física
     +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:10px">'
@@ -11846,6 +11858,21 @@ function cobrarTodoColab(clienteId){
 }
 cobrarTodoColab.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+// v1.0694: "Aplicar interés" de "Cobrar todo": SOLO anota el interés elegido (no cobra). Se cobra con "Confirmar cobro total".
+function admAplicarInteresTodo(){
+  const tipo=document.querySelector('input[name="mora-adm-panel-tipo"]:checked')?.value||'auto';
+  const valInput=document.getElementById('mora-adm-panel-val');
+  const raw=valInput?String(valInput.value).trim():'';
+  if(tipo!=='auto'&&(raw===''||isNaN(parseFloat(raw))||parseFloat(raw)<0)){ alert('Ingresá un valor válido'); return; }
+  admUpdateMoraPanelTodo();
+  window._moraEfectivoTocado=false;   // "Entregó" quedó en el total nuevo
+  const _r=_interesesCobrarTodo(), cur=(_moraPanelState&&_moraPanelState.cur)||'';
+  const panel=document.getElementById('mora-adm-panel-manual');
+  if(panel) panel.style.display='none';
+  const msg='✓ Interés aplicado: '+fmtCur(_r.total,cur)+' — Total '+fmtCur(window._moraCaGrandTotal||0,cur)+'. Todavía NO se cobró: tocá "Confirmar cobro total".';
+  try{ mostrarToastCobro(msg); }catch(e){ alert(msg); }
+}
 function admConfirmarTodoColab(){
   const {clienteId,seleccionadas,totalMonto,cur,cuotaActual}=_moraPanelState;
   const tipo=document.querySelector('input[name="mora-adm-panel-tipo"]:checked')?.value||'auto';
@@ -11984,6 +12011,7 @@ function cobrarTodoAdmin(clienteId){
     +'<label style="display:flex;align-items:center;gap:4px;flex:1;font-size:12px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px"><input type="radio" name="mora-adm-panel-tipo" value="monto" onchange="admUpdateMoraPanelTodo()"> $ Monto</label>'
     +'</div>'
     +'<input id="mora-adm-panel-val" type="number" placeholder="Ingresá el valor..." oninput="admUpdateMoraPanelTodo()" style="display:none;width:100%;padding:8px 12px;border:1.5px solid #fed7aa;border-radius:var(--r);font-size:14px;box-sizing:border-box;margin-bottom:8px">'
+    +'<button onclick="admAplicarInteresTodo()" style="width:100%;background:#ea580c;color:#fff;border:none;border-radius:var(--r);padding:7px;font-size:13px;font-weight:700;cursor:pointer">Aplicar interés</button>'
     +'</div>'
     // Tarjeta efectivo/vuelto — solo la cuota del mes va a caja física; SAF/SEC sobre el total
     +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:10px">'
