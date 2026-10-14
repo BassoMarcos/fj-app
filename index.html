@@ -917,7 +917,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0694';
+const APP_VERSION='v1.0695';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -1174,9 +1174,70 @@ function _dispRefrescarChipLocal(){
     cont.title=hayVieja?'Hay dispositivos con versión desactualizada':'Dispositivos conectados';
   }
 }
+// v1.0695: desde dónde se conecta cada compu. Es APROXIMADO: sale de la conexión a internet (IP pública), no del GPS.
+// Se anota en dispositivos/{id}/red. La "oficina" es una conexión que marca el admin (dispositivosOficina).
+const _FB_DISP_OFI='https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/dispositivosOficina';
+let _dispRedActual=null, _dispOficina=null;
+function _dispEsc(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+async function _dispBuscarRed(){
+  const servicios=[
+    ['https://get.geojs.io/v1/ip/geo.json', j=>({ip:j.ip, ciudad:j.city, region:j.region, pais:j.country, proveedor:j.organization_name})],
+    ['https://ipapi.co/json/', j=>({ip:j.ip, ciudad:j.city, region:j.region, pais:j.country_name, proveedor:j.org})],
+  ];
+  for(const [url,leer] of servicios){
+    try{
+      const r=await fetch(url,{cache:'no-store'}); if(!r.ok) continue;
+      const x=leer((await r.json())||{}); if(!x||!x.ip) continue;
+      Object.keys(x).forEach(k=>{ if(x[k]==null||x[k]==='') delete x[k]; else x[k]=String(x[k]).slice(0,80); });
+      return x;
+    }catch(e){}
+  }
+  return null;
+}
+async function _dispRed(){
+  const x=await _dispBuscarRed(); if(!x) return;
+  x.ts=new Date().toISOString();
+  _dispRedActual=x;
+  try{ await fetch(_FB_DISP+'/'+_dispId()+'/red.json',{method:'PUT',body:JSON.stringify(x)}); }catch(e){}
+}
+function _dispLugar(x){ return x?[x.ciudad,x.region].filter(Boolean).join(', '):''; }
+function _dispRedHtml(d){
+  const red=d.red, ofi=_dispOficina&&_dispOficina.ip;
+  if(!red||!red.ip) return '<div style="font-size:10px;color:var(--text3);margin-top:3px">🌐 Ubicación: se ve cuando vuelva a entrar con la versión nueva</div>';
+  const chip=!ofi?'':(red.ip===ofi
+    ?' <span style="background:rgba(22,163,74,.15);color:#4ade80;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px">🏢 Oficina</span>'
+    :' <span style="background:rgba(245,158,11,.18);color:#f59e0b;font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px">Otra conexión</span>');
+  return '<div style="font-size:11px;color:var(--text2);margin-top:3px" title="Aproximado: sale de la conexión a internet, no del GPS">🌐 '
+    +_dispEsc(_dispLugar(red)||'Zona desconocida')+(red.proveedor?' · '+_dispEsc(red.proveedor):'')+chip
+    +' <span style="color:var(--text3)">· IP '+_dispEsc(red.ip)+'</span></div>';
+}
+// Línea de la oficina arriba de la lista, con el botón para marcar la conexión de esta compu
+function _dispOficinaHtml(){
+  const ofi=_dispOficina, yo=_dispRedActual;
+  const btn=(txt)=>'<button onclick="_dispMarcarOficina()" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px">'+txt+'</button>';
+  if(!ofi||!ofi.ip) return '<div style="font-size:11px;color:var(--text2);margin-top:3px">🏢 Oficina: sin marcar'+(yo?btn('Marcar esta conexión como la oficina'):'')+'</div>';
+  const aca=yo&&yo.ip===ofi.ip;
+  return '<div style="font-size:11px;color:var(--text2);margin-top:3px">🏢 Oficina: '+_dispEsc(_dispLugar(ofi)||'—')+' · IP '+_dispEsc(ofi.ip)
+    +(aca?' <b style="color:#4ade80">(esta compu está en la oficina)</b>':(yo?btn('Esta conexión es la oficina'):''))+'</div>';
+}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+async function _dispMarcarOficina(){
+  const x=_dispRedActual;
+  if(!x||!x.ip){ alert('Todavía no se pudo ver la conexión de esta compu. Probá en un minuto.'); return; }
+  if(!confirm('¿Marcar la internet de esta compu como la de la oficina?\n\n'+(_dispLugar(x)||'')+(x.proveedor?' · '+x.proveedor:'')+' · IP '+x.ip
+    +'\n\nLas compus que se conecten desde esta misma internet van a decir "🏢 Oficina". Si la internet de la oficina cambia de IP (a veces pasa), volvé a marcarla desde una compu de la oficina.')) return;
+  try{
+    const r=await fetch(_FB_DISP_OFI+'.json',{method:'PUT',body:JSON.stringify({ip:x.ip,ciudad:x.ciudad||'',region:x.region||'',proveedor:x.proveedor||'',ts:new Date().toISOString()})});
+    if(!r.ok) throw new Error('http '+r.status);
+  }catch(e){ alert('No se pudo guardar. Probá de nuevo.'); return; }
+  _dispRefrescarVistas();
+}
 window.addEventListener('load',()=>{
   setTimeout(_dispLatido,3000);
   setTimeout(_dispEscucharPropio,3500);
+  setTimeout(_dispRed,5000);   // v1.0695: desde dónde se conecta (y cada 30 min, por si cambia de internet)
+  setInterval(_dispRed,30*60000);
   setInterval(_dispLatido,30000);
   setInterval(_dispRefrescarChip,60000);
   setTimeout(_dispRefrescarChip,6000);
@@ -1184,8 +1245,9 @@ window.addEventListener('load',()=>{
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function _dispLeerTodos(){
   try{
-    const r=await fetch(_FB_DISP+'.json?cb='+Date.now(),{cache:'no-store'});
+    const [r,o]=await Promise.all([fetch(_FB_DISP+'.json?cb='+Date.now(),{cache:'no-store'}), fetch(_FB_DISP_OFI+'.json?cb='+Date.now(),{cache:'no-store'}).catch(()=>null)]);
     _dispCache=(await r.json())||{};
+    if(o&&o.ok){ try{ _dispOficina=await o.json(); }catch(e){} }   // v1.0695
   }catch(e){ _dispCache={}; }
   return _dispCache;
 }
@@ -1238,6 +1300,7 @@ function _dispFilas(mapa){
         +sesion+' '+estado+'</div>'
       +'<div style="font-size:10px;color:var(--text3);margin-top:3px">Última conexión: '+_dispFmtFecha(d.ts)
         +(logueado&&typeof d.inactivoMin==='number'?' · inactivo '+d.inactivoMin+' min':'')+'</div>'
+      +_dispRedHtml(d)   // v1.0695
       +'</div>'
       +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
       +'<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;'
@@ -1259,7 +1322,7 @@ async function abrirModalDispositivos(){
   ov.innerHTML='<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;max-width:720px;width:100%;max-height:86vh;overflow:auto">'
     +'<div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:0;background:var(--card);z-index:1">'
     +'<div><div style="font-size:16px;font-weight:800">📱 Dispositivos</div>'
-    +'<div style="font-size:11px;color:var(--text2)">Versión actual: '+APP_VERSION+' · cierre por inactividad: '+_DISP_INACTIVIDAD_MIN+' min</div></div>'
+    +'<div style="font-size:11px;color:var(--text2)">Versión actual: '+APP_VERSION+' · cierre por inactividad: '+_DISP_INACTIVIDAD_MIN+' min</div><div id="disp-ofi-linea">'+_dispOficinaHtml()+'</div></div>'
     +'<div style="display:flex;gap:6px">'
     +'<button onclick="_dispRefrescarModal()" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">🔄 Actualizar</button>'
     +'<button onclick="document.getElementById(\'disp-modal\').remove()" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer">Cerrar</button>'
@@ -1273,6 +1336,7 @@ async function _dispRefrescarModal(){
   const body=document.getElementById('disp-modal-body'); if(!body) return;
   const mapa=await _dispLeerTodos();
   body.innerHTML=_dispFilas(mapa);
+  { const l=document.getElementById('disp-ofi-linea'); if(l) l.innerHTML=_dispOficinaHtml(); }   // v1.0695
   _dispRefrescarChip();
 }
 async function renderDispositivosPanel(){
@@ -1281,7 +1345,7 @@ async function renderDispositivosPanel(){
   el.innerHTML='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden">'
     +'<div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
     +'<div><div style="font-size:14px;font-weight:800">📱 Dispositivos</div>'
-    +'<div style="font-size:11px;color:var(--text2)">Versión actual: '+APP_VERSION+'</div></div>'
+    +'<div style="font-size:11px;color:var(--text2)">Versión actual: '+APP_VERSION+'</div>'+_dispOficinaHtml()+'</div>'
     +'<button onclick="renderDispositivosPanel()" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">🔄 Actualizar</button>'
     +'</div>'+_dispFilas(mapa)+'</div>';
 }
