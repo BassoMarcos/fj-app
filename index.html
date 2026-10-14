@@ -917,7 +917,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0695';
+const APP_VERSION='v1.0696';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -3957,8 +3957,10 @@ function abrirFormCobro(id, opts){
   const adelantos=(typeof _adelantoCuotas!=='undefined'&&Array.isArray(_adelantoCuotas))?[..._adelantoCuotas]:[];
   const totalAdel=adelantos.reduce((s,q)=>s+(q.monto||0),0);
   const totalCuota=_mc.total+(mora.interes||0)+totalAdel+_refiMonto;
+  // v1.0696: si es la ÚLTIMA cuota y tiene saldo en contra, se suma al total (se cobra con la cuota: se puede transferir también)
+  const _secPrev=(c.ca>=c.ct&&c.est==='activo'&&!c.autopago)?Math.max(0,-(Number(c.saldo)||0)):0;
   const cur=c.moneda==='USD'?'USD ':'';
-  window._fcCtx={id,totalCuota,base:_mc.base,adicional:_mc.adicional,escalonActivo:_mc.escalonActivo,refiMonto:_refiMonto,refiCant:_refiCant,refiModo:_refiModo,refiYa:_refiYa,tBase:totalCuota-_refiMonto,saldoAFavor:Math.max(0,Number(c.saldo)||0),moneda:c.moneda||'ARS',refiProxima:_re.proxima,refiTotal:_re.total,interes:mora.interes||0,moraPct:mora.pct,moraDias:mora.dias,adelantos,totalAdel,cur,transfer:!!opts.transfer,transferTipo:opts.transferTipo||'',ctx:opts.ctx||'admin',moneda:c.moneda||'ARS',opts};
+  window._fcCtx={id,totalCuota,secPrev:_secPrev,base:_mc.base,adicional:_mc.adicional,escalonActivo:_mc.escalonActivo,refiMonto:_refiMonto,refiCant:_refiCant,refiModo:_refiModo,refiYa:_refiYa,tBase:totalCuota-_refiMonto+_secPrev,saldoAFavor:Math.max(0,Number(c.saldo)||0),moneda:c.moneda||'ARS',refiProxima:_re.proxima,refiTotal:_re.total,interes:mora.interes||0,moraPct:mora.pct,moraDias:mora.dias,adelantos,totalAdel,cur,transfer:!!opts.transfer,transferTipo:opts.transferTipo||'',ctx:opts.ctx||'admin',moneda:c.moneda||'ARS',opts};
   const esTotal=opts.transfer&&opts.transferTipo==='total';
   const esParcial=opts.transfer&&opts.transferTipo!=='total';
   let m=document.getElementById('form-cobro-modal');
@@ -3994,6 +3996,7 @@ function abrirFormCobro(id, opts){
   }
   if(mora.interes) desg+=fila('⚠️ Mora'+(mora.pct?' ('+mora.dias+' días × 2% = '+mora.pct+'%)':''),'+'+cur+fmtPeso(mora.interes),'var(--red)');
   if(totalAdel) desg+=fila('⏭ Adelantos x'+adelantos.length,'+'+cur+fmtPeso(totalAdel),'#0369a1');
+  if(_secPrev) desg+=fila('⚠️ Saldo en contra que debía (última cuota)','+'+cur+fmtPeso(_secPrev),'var(--red)');   // v1.0696
   m.innerHTML='<div style="background:var(--card);border-radius:14px;max-width:420px;width:100%;max-height:92vh;overflow-y:auto;padding:1.25rem" onclick="event.stopPropagation()">'
     +'<div style="font-size:16px;font-weight:800;margin-bottom:2px">'+(opts.transfer?'🏦 Cobro con transferencia':'✓ Cobrar cuota')+'</div>'
     +'<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+formatLoteTag(c.mz,c.lote)+' — '+c.titular+'</div>'
@@ -4003,9 +4006,9 @@ function abrirFormCobro(id, opts){
     +'</div>'
     +'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px">'
     +desg
-    +'<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--green-bg)"><span style="font-weight:800">Total cuota</span><span style="font-size:17px;font-weight:800;color:var(--green)">'+cur+fmtPeso(totalCuota)+'</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--green-bg)"><span style="font-weight:800">'+(_secPrev?'Total a cobrar':'Total cuota')+'</span><span style="font-size:17px;font-weight:800;color:var(--green)">'+cur+fmtPeso(totalCuota+_secPrev)+'</span></div>'
     +'</div>'
-    +(esTotal?(()=>{const _tb=totalCuota-_refiMonto,debe=Math.round(_tb*1.21),imp=debe-_tb;return '<div style="background:rgba(124,58,237,.10);border:2px solid #a78bfa;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center">'
+    +(esTotal?(()=>{const _tb=totalCuota-_refiMonto+_secPrev,debe=Math.round(_tb*1.21),imp=debe-_tb;return '<div style="background:rgba(124,58,237,.10);border:2px solid #a78bfa;border-radius:10px;padding:12px;margin-bottom:10px;text-align:center">'
       +'<div style="font-size:11px;font-weight:700;color:#a78bfa">DEBE TRANSFERIR</div>'
       +'<div style="font-size:24px;font-weight:800;color:#a78bfa">'+cur+fmtPeso(debe)+'</div>'
       +'<div style="font-size:12px;color:#a78bfa">'+cur+fmtPeso(_tb)+' cuota + '+cur+fmtPeso(imp)+' impuestos 21%</div>'
@@ -4057,20 +4060,22 @@ function fcAutoCompletar(origen){
   if(!tEl||!eEl) return;
   if(origen==='transf'){
     const t=fcNum(tEl.value);
-    fcSet(eEl,x.totalCuota-t);
+    fcSet(eEl,x.totalCuota+(x.secPrev||0)-t);   // v1.0696: + lo que debía (última cuota)
   } else {
     const e=fcNum(eEl.value);
-    fcSet(tEl,Math.min(x.tBase!==undefined?x.tBase:x.totalCuota, Math.max(0,x.totalCuota-e)));   // v1.0692: la refi va en efectivo
+    fcSet(tEl,Math.min(x.tBase!==undefined?x.tBase:x.totalCuota, Math.max(0,x.totalCuota+(x.secPrev||0)-e)));   // v1.0692: la refi va en efectivo · v1.0696: + lo que debía
   }
   const vEl=document.getElementById('fc-vuelto');
   if(vEl&&fcVacio(vEl.value)) fcSet(vEl,0);
 }
 // v1.0692: cuánto va a la refi y cuál es la diferencia. En "parcial" la cuota va primero y la refi toma lo que sobra.
 function _fcCalcRefi(x, neto){
-  if(x.refiModo!=='parcial') return {refiAp:x.refiMonto||0, refiPendiente:0, dif:neto-x.totalCuota};
+  const sec=x.secPrev||0;   // v1.0696: saldo en contra que se cobra con la última cuota
+  if(x.refiModo!=='parcial'){ const dif=neto-x.totalCuota; return {refiAp:x.refiMonto||0, refiPendiente:0, dif, difTotal:dif-sec}; }
   const minimo=x.totalCuota-(x.refiMonto||0);
-  const refiAp=Math.min(x.refiMonto||0, Math.max(0, neto-minimo));
-  return {refiAp, refiPendiente:(x.refiMonto||0)-refiAp, dif:neto-minimo-refiAp};
+  const refiAp=Math.min(x.refiMonto||0, Math.max(0, neto-minimo-sec));
+  const dif=neto-minimo-refiAp;
+  return {refiAp, refiPendiente:(x.refiMonto||0)-refiAp, dif, difTotal:dif-sec};
 }
 function fcRecalc(){
   const x=window._fcCtx; if(!x) return;
@@ -4094,14 +4099,14 @@ function fcRecalc(){
   if(x.transfer&&t>_tb){ if(live){live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent=(_tb<x.totalCuota?'La transferencia solo puede cubrir la cuota: la refinanciación va en efectivo':'La transferencia no puede superar el total de la cuota');} if(ok){ok.disabled=true;ok.style.opacity='.4';} return; }
   if(!completo){ if(live){live.style.background='var(--surface)';live.style.color='var(--text2)';live.textContent='Completá los campos'+(x.transfer?' (transferencia, entregó y vuelto)':' (entregó y vuelto, 0 si no hubo)');} if(ok){ok.disabled=true;ok.style.opacity='.4';} return; }
   const neto=t+e-v;
-  const _p=_fcCalcRefi(x,neto), dif=_p.dif;   // v1.0692: refi parcial (admin) + freno
+  const _p=_fcCalcRefi(x,neto), dif=_p.difTotal;   // v1.0692: refi parcial (admin) + freno · v1.0696: contra el total (con lo que debía)
   const _freno=dif<0?_frenoCobro(-dif,x.saldoAFavor,x.moneda):'';
   if(_freno){ valido=false; if(live){live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent=_freno;} if(ok){ok.disabled=true;ok.style.opacity='.4';} return; }
   if(live&&x.refiModo==='parcial'&&_p.refiPendiente>0&&dif>=0){live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='✓ Cuota completa · 💠 Refi: '+x.cur+fmtPeso(_p.refiAp)+' de '+x.cur+fmtPeso(x.refiMonto)+' — quedan '+x.cur+fmtPeso(_p.refiPendiente)+' pendientes';}
   else if(live){
-    if(dif===0){live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='✓ Justo — pagó '+x.cur+fmtPeso(neto);}
+    if(dif===0){live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='✓ Justo — pagó '+x.cur+fmtPeso(neto)+(x.secPrev?' (con lo que debía)':'');}
     else if(dif>0){live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='SAF (a favor): '+x.cur+fmtPeso(dif)+' — pagó '+x.cur+fmtPeso(neto);}
-    else {live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent='SEC (en contra): '+x.cur+fmtPeso(-dif)+' — pagó '+x.cur+fmtPeso(neto);}
+    else {live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent='SEC (en contra): '+x.cur+fmtPeso(-dif)+' — pagó '+x.cur+fmtPeso(neto)+(x.secPrev?' · queda debiendo':'');}
   }
   if(ok){ok.disabled=!valido;ok.style.opacity=valido?'1':'.4';}
 }
@@ -4122,7 +4127,7 @@ function fcConfirmar(){
   const ts=new Date().toISOString(), fecha=new Date().toLocaleDateString('es-AR');
   const neto=t+e-v;
   const _p=_fcCalcRefi(x,neto), dif=_p.dif;   // v1.0692
-  { const _fr=dif<0?_frenoCobro(-dif,x.saldoAFavor,x.moneda):''; if(_fr){ alert(_fr); return; } }
+  { const _dT=_p.difTotal; const _fr=_dT<0?_frenoCobro(-_dT,x.saldoAFavor,x.moneda):''; if(_fr){ alert(_fr); return; } }   // v1.0696: contra el total
   // v1.0693: si pagó de menos, lo que falta sale primero del INTERÉS: la Caja de Mora anota el interés que entró de
   // verdad y la Caja Física cuadra con eso. El saldo en contra del cliente queda igual (dif).
   const _absInt=Math.min(x.interes||0, Math.max(0,-dif)), _intEf=(x.interes||0)-_absInt;
@@ -4158,7 +4163,7 @@ function fcConfirmar(){
     // NO se resta el vuelto (eso es SAF, tiene su propia cuenta) ni el interés (también entró en efectivo).
     // Solo se restan adelanto y refi, que son plata de otras cajas.
     const efectivoPuro=e-(x.totalAdel||0)-(_p.refiAp||0);
-    (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:cuotaPura,adelanto:(x.totalAdel||0),refi:(_p.refiAp||0),moraInteres:_intEf,transferido:t,transfTotal:!!fullTransf,entrego:e,vuelto:v,efectivo:efectivoPuro,dif:dif+_absInt,difSaldo:dif,ts,fecha});
+    (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:cuotaPura,adelanto:(x.totalAdel||0),refi:(_p.refiAp||0),moraInteres:_intEf,transferido:t,transfTotal:!!fullTransf,entrego:e,vuelto:v,efectivo:efectivoPuro,dif:dif+_absInt,difSaldo:dif,pagoSaldoPrev:Math.min(x.secPrev||0,Math.max(0,dif)),ts,fecha});
     saveBalances(bal);
   }
   // Confirmación final en UNA escritura: reasegurar pago marcado + SAF/SEC
@@ -4173,7 +4178,10 @@ function fcConfirmar(){
       saveData(data);
       setPagoState(id,true,ts);
     }
-    if(dif!==0){ addHist('pago',(dif>0?'SAF ':'SEC ')+fmtPeso(Math.abs(dif))+' — '+c.mz+' Lote '+c.lote+' (cargado al saldo)',id); registrarSafSec(c,dif,ts,fecha); }
+    { const _sh=(x.secPrev>0&&dif>0)?dif-Math.min(x.secPrev,dif):dif;   // v1.0696: lo que tapa lo que debía no es "a favor"
+      if(_sh!==0) addHist('pago',(_sh>0?'SAF ':'SEC ')+fmtPeso(Math.abs(_sh))+' — '+c.mz+' Lote '+c.lote+' (cargado al saldo)',id);
+      if(dif!==0) registrarSafSec(c,dif,ts,fecha); }
+    if(x.secPrev>0){ const _pg=Math.min(x.secPrev,Math.max(0,dif)); addHist('pago','💳 Última cuota — '+c.mz+' Lote '+c.lote+': '+(_pg>=x.secPrev?'pagó todo lo que debía ('+fmtPeso(x.secPrev)+')':'pagó '+fmtPeso(_pg)+' de los '+fmtPeso(x.secPrev)+' que debía'),id); }   // v1.0696
   }
   // Reaseguro tardío por si llega un eco viejo justo después
   setTimeout(()=>{
@@ -17252,7 +17260,8 @@ function esNoCobrable(id){
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _finalizarLote(c, ts){
   c.finPrevio={monto:c.monto, saldo:Number(c.saldo)||0, saldoDif:Number(c.saldoDifUltimoCobro)||0, ts:ts||new Date().toISOString()};
-  c.est='finalizado'; c.monto=0; c.saldo=0;
+  c.est='finalizado'; c.monto=0;
+  c.saldo=Math.min(0, Number(c.saldo)||0);   // v1.0696: lo que DEBE no se borra (queda en el saldo); a favor se pone en 0 como antes
 }
 // Vuelve el lote a como estaba antes de terminar. true si lo hizo. (Cambia c: quien llama guarda con saveData.)
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
