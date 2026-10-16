@@ -967,7 +967,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0702';
+const APP_VERSION='v1.0703';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -2049,7 +2049,14 @@ function _datosPagoTabla(p,c,bal,ultimos){
   if(despues===null&&esUltimo&&hoy!==null){ despues=hoy; despuesEsHoy=true; }
   if(antes===null&&despues!==null&&esUltimo&&dif!==null){ antes=despues-dif; aprox=true; }
   const cambioDespues=(despues!==null&&!despuesEsHoy&&hoy!==null&&Math.abs(despues-hoy)>0.005)?hoy:null;
-  return {usd,cuota,aPagar,entrego,vuelto,transferido,dif,antes,despues,despuesEsHoy,aprox,cambioDespues};
+  // v1.0703: en dólares, si en ese cobro hubo adelanto y/o interés (lo que se pagó de más sobre la cuota, sin la refi)
+  let adelUSD=0, interesUSD=0;
+  if(usd){
+    const cfU=_cfDelPago(p,bal);
+    adelUSD=Number(p.adelanto)||0;
+    interesUSD=Math.max(0,Math.round((aPagar-cuota-adelUSD-(cfU?Number(cfU.refi)||0:0))*100)/100);
+  }
+  return {usd,cuota,aPagar,entrego,vuelto,transferido,dif,antes,despues,despuesEsHoy,aprox,cambioDespues,adelUSD,interesUSD};
 }
 // v1.0701: tabla de pagos (una fila por pago): Lote/cliente · Cuota · Entregó · Diferencia · Su cuenta antes · después
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
@@ -2069,6 +2076,11 @@ function _pgSaldo(v,usd){
   if(Math.abs(v)<0.005) return '<span class="pg-ok">sin saldo</span>';
   return v>0?'<span class="pg-fav">a favor '+_pgNum(v,usd)+'</span>':'<span class="pg-debe">debe '+_pgNum(v,usd)+'</span>';
 }
+// v1.0703: debajo de la cuota (solo dólares): si hubo adelanto y si se cobró interés
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _pgExtrasUSD(adel,interes){
+  return [adel>0.005?'+ adelanto '+_pgNum(adel,true):'',interes>0.005?'+ interés '+_pgNum(interes,true):''].filter(Boolean).join(' · ');
+}
 function _pgCelda(i,valor,abajo){
   return '<div class="pg-n pg-c'+i+'"><span class="pg-et">'+_PG_TITULOS[i]+'</span>'+valor+(abajo?'<div class="pg-sub">'+abajo+'</div>':'')+'</div>';
 }
@@ -2084,7 +2096,7 @@ function _filaPagoHtml(p,c,bal,ult,extra){
   const nom=String(c.titular||'').replace(/"/g,'&quot;');
   return '<div class="pg-fila">'
     +'<div class="pg-cli"><div class="pg-cli1" title="'+nom+'"><span class="pg-lote">'+formatLoteTag(c.mz,c.lote)+'</span><span class="pg-nom">'+(c.titular||'')+'</span></div><div class="pg-sub">'+sub+'</div></div>'
-    +_pgCelda(0,n(d.cuota,d.usd),Math.abs(d.aPagar-d.cuota)>0.005?'a pagar '+n(d.aPagar,d.usd):'')
+    +_pgCelda(0,n(d.cuota,d.usd),_pgExtrasUSD(d.adelUSD,d.interesUSD))   // v1.0703: sin "a pagar"; en dólares, adelanto / interés
     +_pgCelda(1,entrego,entregoSub)
     +_pgCelda(2,_pgDif(d.dif,d.usd))
     +_pgCelda(3,(d.aprox&&d.antes!==null?'<span style="color:var(--text3)" title="Calculado con el saldo de hoy (pago de antes de la versión 1.0698)">≈ </span>':'')+_pgSaldo(d.antes,d.usd))
@@ -2103,17 +2115,17 @@ function _totalPagosHtml(pagos,bal,ult,data){
   if(!pagos.length) return '';
   const usd=pagos[0].moneda==='USD';
   if(pagos.some(p=>(p.moneda==='USD')!==usd)) return '';   // monedas mezcladas: no se suman
-  let cuota=0, aPagar=0, entrego=0, saf=0, sec=0, hayDif=false;
+  let cuota=0, adel=0, interes=0, entrego=0, saf=0, sec=0, hayDif=false;
   pagos.forEach(p=>{
     const d=_datosPagoTabla(p,data.find(x=>x.id===p.id),bal,ult);
-    cuota+=d.cuota; aPagar+=d.aPagar; entrego+=(d.entrego||0)+(d.transferido||0)-(d.vuelto||0);
+    cuota+=d.cuota; adel+=d.adelUSD; interes+=d.interesUSD; entrego+=(d.entrego||0)+(d.transferido||0)-(d.vuelto||0);
     if(d.dif!==null){ hayDif=true; if(d.dif>0) saf+=d.dif; else sec+=-d.dif; }
   });
   const n=_pgNum, neto=saf-sec;
   const difSub=(saf>0.005&&sec>0.005)?'<span style="color:var(--green)">+'+n(saf,usd)+'</span> · <span style="color:var(--red)">−'+n(sec,usd)+'</span>':'';
   return '<div class="pg-fila pg-tot">'
     +'<div class="pg-cli">Total · '+pagos.length+' pago'+(pagos.length!==1?'s':'')+'</div>'
-    +_pgCelda(0,n(cuota,usd),Math.abs(aPagar-cuota)>0.005?'a pagar '+n(aPagar,usd):'')
+    +_pgCelda(0,n(cuota,usd),usd?_pgExtrasUSD(adel,interes):'')
     +_pgCelda(1,n(entrego,usd))
     +_pgCelda(2,hayDif?_pgDif(neto,usd):'—',difSub)
     +'<div class="pg-n pg-vacio"></div><div class="pg-n pg-vacio"></div>'
@@ -7365,7 +7377,7 @@ function renderBalances(seccion){
     const _ultPag=_ultimoPagoPorCliente(bal);   // v1.0698
     const renderPago1=(p)=>{   // v1.0701: misma fila que los cierres (cada número con su título)
       const c=data.find(x=>x.id===p.id);
-      const adelInfo=(p.adelanto>0)?'<div style="font-size:10.5px;color:var(--blue);margin-top:2px">⏭ incluye adelanto '+(p.moneda==='USD'?'USD ':'')+fmtPeso(p.adelanto)+'</div>':'';
+      const adelInfo=(p.adelanto>0&&p.moneda!=='USD')?'<div style="font-size:10.5px;color:var(--blue);margin-top:2px">⏭ incluye adelanto '+(p.moneda==='USD'?'USD ':'')+fmtPeso(p.adelanto)+'</div>':'';
       return _filaPagoHtml(p,c,bal,_ultPag,adelInfo);
     };
     // Divide una lista (de una moneda) en normales y agrimensores, y arma su HTML
