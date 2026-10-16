@@ -511,6 +511,7 @@ tr:hover td{background:var(--bg)}
             <select class="fsel" id="a-moneda" onchange="renderAdminTable()">
               <option value="">Todos</option>
               <option value="USD">💵 USD</option>
+              <option value="prestamo">🤝 Préstamos</option>
             </select>
           </div>
           <div class="cob-list" id="admin-mob-list"></div>
@@ -538,6 +539,7 @@ tr:hover td{background:var(--bg)}
           <select class="fsel" id="a-moneda-desk" onchange="renderAdminTable()" style="width:100%;font-size:11px;padding:3px 4px">
             <option value="">Todos</option>
             <option value="USD">💵 USD</option>
+            <option value="prestamo">🤝 Préstamos</option>
           </select>
           <select class="fsel" id="a-tri-desk" onchange="renderAdminTable()" style="width:100%;font-size:11px;padding:3px 4px">
             <option value="">Trimestre</option>
@@ -917,7 +919,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0699';
+const APP_VERSION='v1.0700';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -14914,7 +14916,9 @@ function renderAdminTable(){
   if(etapa) data=data.filter(c=>getEtapa(c.mz)===etapa);
   if(mz) data=data.filter(c=>String(c.mz)===mz);
   if(lote) data=data.filter(c=>String(c.lote)===lote);
-  if(moneda) data=data.filter(c=>c.moneda===moneda);
+  // v1.0700: "🤝 Préstamos" = lotes que se pagan solos (autopago), sin contar los que paga la empresa (empresaPaga)
+  if(moneda==="prestamo") data=data.filter(c=>c.autopago&&!c.empresaPaga);
+  else if(moneda) data=data.filter(c=>c.moneda===moneda);
   if(tri) data=data.filter(c=>c.tri===tri);
   if(pagoFiltro==='pagado') data=data.filter(c=>c.pago===true);
   if(pagoFiltro==='pendiente') data=data.filter(c=>!c.pago);
