@@ -269,6 +269,54 @@ table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);font-weight:600;color:var(--text2);font-size:12px}
 td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
 tr:hover td{background:var(--bg)}
+/* v1.0702: lista de pagos (cierres, caja del día, agrimensores): un renglón por pago, títulos una sola vez arriba */
+/* 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse */
+.pg-lista{font-variant-numeric:tabular-nums;border:1px solid var(--border);border-radius:8px;background:var(--surface);container-type:inline-size}
+.pg-cab,.pg-fila{display:grid;grid-template-columns:minmax(170px,1.6fr) minmax(92px,.8fr) minmax(92px,.8fr) minmax(118px,1fr) minmax(135px,1.1fr) minmax(135px,1.1fr);gap:0 12px;align-items:center;padding:5px 10px}
+.pg-cab{position:sticky;top:0;z-index:2;background:var(--card);border-bottom:1.5px solid var(--border2);border-radius:8px 8px 0 0;font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--text2);padding-top:7px;padding-bottom:7px}
+.pg-fila{border-bottom:1px solid var(--border);font-size:12.5px;color:var(--text);line-height:1.3}
+.pg-fila:nth-of-type(odd){background:rgba(255,255,255,.025)}
+.pg-fila:hover{background:rgba(255,255,255,.06)}
+.pg-fila:last-child{border-bottom:none}
+.pg-cli{min-width:0}
+.pg-cli1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pg-lote{font-weight:800;margin-right:5px}
+.pg-nom{color:var(--text2)}
+.pg-n{text-align:right;white-space:nowrap;min-width:0}
+.pg-cab .pg-n{white-space:normal}
+.pg-sub{font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pg-cuo{color:var(--acc2);font-weight:700}
+.pg-pill{display:inline-block;padding:1px 7px;border-radius:999px;font-weight:700;font-size:11.5px}
+.pg-saf{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.pg-sec{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.pg-ok{color:var(--text2)}
+.pg-fav{color:var(--green);font-weight:700}
+.pg-debe{color:var(--red);font-weight:700}
+.pg-extra{grid-column:1/-1}
+.pg-tot{background:var(--card)!important;border-top:1.5px solid var(--border2);font-weight:800;border-radius:0 0 8px 8px}
+.pg-et{display:none}
+.pg-nota{font-size:10px;color:var(--text3);margin-top:5px}
+/* angosta (celular, o la lista en un lugar chico): cada pago en tarjetita, con el título chiquito arriba de cada número */
+@media(max-width:700px){
+  .pg-cab{display:none}
+  .pg-fila{grid-template-columns:repeat(6,minmax(0,1fr));gap:4px 10px;padding:7px 8px;align-items:start}
+  .pg-cli{grid-column:1/-1;margin-bottom:2px}
+  .pg-n{text-align:left}
+  .pg-c0,.pg-c1,.pg-c2{grid-column:span 2}
+  .pg-c3,.pg-c4{grid-column:span 3}
+  .pg-et{display:block;font-size:8.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--text3)}
+  .pg-tot .pg-vacio{display:none}
+}
+@container (max-width:839px){
+  .pg-cab{display:none}
+  .pg-fila{grid-template-columns:repeat(6,minmax(0,1fr));gap:4px 10px;padding:7px 8px;align-items:start}
+  .pg-cli{grid-column:1/-1;margin-bottom:2px}
+  .pg-n{text-align:left}
+  .pg-c0,.pg-c1,.pg-c2{grid-column:span 2}
+  .pg-c3,.pg-c4{grid-column:span 3}
+  .pg-et{display:block;font-size:8.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--text3)}
+  .pg-tot .pg-vacio{display:none}
+}
 
 .select-group select:disabled{opacity:0.4;cursor:not-allowed;background-color:#f1f5f9}
 </style>
@@ -919,7 +967,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0701';
+const APP_VERSION='v1.0702';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -2005,40 +2053,81 @@ function _datosPagoTabla(p,c,bal,ultimos){
 }
 // v1.0701: tabla de pagos (una fila por pago): Lote/cliente · Cuota · Entregó · Diferencia · Su cuenta antes · después
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
-// v1.0701: un pago en una fila: lote, cliente y fecha arriba; abajo cada número con su título
-// (Cuota · Entregó · Diferencia · Su cuenta antes · Su cuenta después). extra = algo más debajo (ej. adelanto).
+// v1.0702: un pago = un renglón. Columnas: Lote · cliente | Cuota | Entregó | Diferencia | Su cuenta antes | después.
+// Los títulos van una sola vez arriba (_listaPagosHtml); en el celular cada número lleva su título chiquito.
+// extra = algo más debajo del renglón (ej. adelanto).
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+const _PG_TITULOS=['Cuota','Entregó','Diferencia','Su cuenta antes','Su cuenta después'];
+function _pgNum(v,usd){ return (usd?'USD ':'')+fmtPeso(Math.abs(v)); }   // fmtPeso ya pone el $
+function _pgDif(v,usd){
+  if(v===null) return '<span style="color:var(--text3)">—</span>';
+  if(Math.abs(v)<0.005) return '<span class="pg-ok">✓ justo</span>';
+  return v>0?'<span class="pg-pill pg-saf">+'+_pgNum(v,usd)+' SAF</span>':'<span class="pg-pill pg-sec">−'+_pgNum(v,usd)+' SEC</span>';
+}
+function _pgSaldo(v,usd){
+  if(v===null) return '<span style="color:var(--text3)">—</span>';
+  if(Math.abs(v)<0.005) return '<span class="pg-ok">sin saldo</span>';
+  return v>0?'<span class="pg-fav">a favor '+_pgNum(v,usd)+'</span>':'<span class="pg-debe">debe '+_pgNum(v,usd)+'</span>';
+}
+function _pgCelda(i,valor,abajo){
+  return '<div class="pg-n pg-c'+i+'"><span class="pg-et">'+_PG_TITULOS[i]+'</span>'+valor+(abajo?'<div class="pg-sub">'+abajo+'</div>':'')+'</div>';
+}
 function _filaPagoHtml(p,c,bal,ult,extra){
   c=c||{mz:'?',lote:'?',titular:p.id};
-  const n=(v,usd)=>(usd?'USD ':'')+fmtPeso(Math.abs(v));   // fmtPeso ya pone el $
-  const nada='<span style="color:var(--text3)">—</span>';
-  const saldo=(v,usd)=>v===null?nada:Math.abs(v)<0.005?'<span style="color:var(--text2)">sin saldo</span>':v>0?'<span style="color:var(--green);font-weight:700">a favor '+n(v,usd)+'</span>':'<span style="color:var(--red);font-weight:700">debe '+n(v,usd)+'</span>';
-  const celda=(titulo,valor,abajo)=>'<div style="min-width:0"><div style="font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);margin-bottom:2px">'+titulo+'</div><div style="font-size:12.5px;color:var(--text);white-space:nowrap">'+valor+'</div>'+(abajo?'<div style="font-size:10.5px;color:var(--text2)">'+abajo+'</div>':'')+'</div>';
+  const n=_pgNum;
   const d=_datosPagoTabla(p,c,bal,ult);
   const fh=p.ts?new Date(p.ts).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})+' '+new Date(p.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'';
-  const difTxt=d.dif===null?nada:Math.abs(d.dif)<0.005?'<span style="color:var(--text2)">✓ justo</span>':d.dif>0?'<span style="color:var(--green);font-weight:700">+'+n(d.dif,d.usd)+' SAF</span>':'<span style="color:var(--red);font-weight:700">−'+n(d.dif,d.usd)+' SEC</span>';
-  const cuotaN=(p.cuotaNum!==undefined&&p.cuotaNum!==null)?' <span style="font-size:10.5px;color:var(--acc2);font-weight:700">cuota '+p.cuotaNum+'</span>':'';
-  return '<div style="padding:9px 2px;border-bottom:1px solid var(--border)">'
-    +'<div style="font-size:12.5px;color:var(--text);margin-bottom:6px"><b>'+formatLoteTag(c.mz,c.lote)+'</b> <span style="color:var(--text2)">'+(c.titular||'')+'</span>'+cuotaN+' <span style="font-size:10.5px;color:var(--text3)">· '+fh+(p.transf?' · 🏦 transferencia':'')+'</span></div>'
-    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:6px 12px">'
-    +celda('Cuota',n(d.cuota,d.usd),Math.abs(d.aPagar-d.cuota)>0.005?'a pagar '+n(d.aPagar,d.usd):'')
-    +(d.entrego!==null&&d.entrego<0.005&&d.transferido>0
-      ? celda('Transfirió',n(d.transferido,d.usd))   // todo por transferencia: no mostrar "Entregó $0"
-      : celda('Entregó',d.entrego===null?nada:n(d.entrego,d.usd),[d.vuelto>0?'vuelto '+n(d.vuelto,d.usd):'',d.transferido>0?'+ transf. '+n(d.transferido,d.usd):''].filter(Boolean).join(' · ')))
-    +celda('Diferencia',difTxt)
-    +celda('Su cuenta antes',(d.aprox&&d.antes!==null?'<span style="color:var(--text3)" title="Calculado con el saldo de hoy (pago de antes de la versión 1.0698)">≈ </span>':'')+saldo(d.antes,d.usd))
-    +celda('Su cuenta después',saldo(d.despues,d.usd),d.despuesEsHoy?'(es el saldo de hoy)':(d.cambioDespues!==null?'hoy: '+saldo(d.cambioDespues,d.usd):''))
-    +'</div>'+(extra||'')+'</div>';
+  const sub=[(p.cuotaNum!==undefined&&p.cuotaNum!==null)?'<span class="pg-cuo">cuota '+p.cuotaNum+'</span>':'',fh,p.transf?'🏦 transferencia':''].filter(Boolean).join(' · ');
+  const todoTransf=d.entrego!==null&&d.entrego<0.005&&d.transferido>0;   // todo por transferencia: no mostrar "Entregó $0"
+  const entrego=todoTransf?n(d.transferido,d.usd):(d.entrego===null?'<span style="color:var(--text3)">—</span>':n(d.entrego,d.usd));
+  const entregoSub=todoTransf?'por transferencia':[d.vuelto>0?'vuelto '+n(d.vuelto,d.usd):'',d.transferido>0?'+ transf. '+n(d.transferido,d.usd):''].filter(Boolean).join(' · ');
+  const nom=String(c.titular||'').replace(/"/g,'&quot;');
+  return '<div class="pg-fila">'
+    +'<div class="pg-cli"><div class="pg-cli1" title="'+nom+'"><span class="pg-lote">'+formatLoteTag(c.mz,c.lote)+'</span><span class="pg-nom">'+(c.titular||'')+'</span></div><div class="pg-sub">'+sub+'</div></div>'
+    +_pgCelda(0,n(d.cuota,d.usd),Math.abs(d.aPagar-d.cuota)>0.005?'a pagar '+n(d.aPagar,d.usd):'')
+    +_pgCelda(1,entrego,entregoSub)
+    +_pgCelda(2,_pgDif(d.dif,d.usd))
+    +_pgCelda(3,(d.aprox&&d.antes!==null?'<span style="color:var(--text3)" title="Calculado con el saldo de hoy (pago de antes de la versión 1.0698)">≈ </span>':'')+_pgSaldo(d.antes,d.usd))
+    +_pgCelda(4,_pgSaldo(d.despues,d.usd),d.cambioDespues!==null?'hoy: '+_pgSaldo(d.cambioDespues,d.usd):'')
+    +(extra?'<div class="pg-extra">'+extra+'</div>':'')
+    +'</div>';
 }
-// v1.0701: la lista de pagos de un cierre
+// v1.0702: la lista: títulos una sola vez arriba (quedan fijos al bajar) + los renglones (+ total si se pasa)
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _listaPagosHtml(filas,total){
+  return '<div class="pg-lista"><div class="pg-cab"><div>Lote · cliente</div>'+_PG_TITULOS.map(t=>'<div class="pg-n">'+t+'</div>').join('')+'</div>'
+    +filas+(total||'')+'</div>';
+}
+// v1.0702: renglón de total (cuota, entregó y diferencia) de una lista de una sola moneda
+function _totalPagosHtml(pagos,bal,ult,data){
+  if(!pagos.length) return '';
+  const usd=pagos[0].moneda==='USD';
+  if(pagos.some(p=>(p.moneda==='USD')!==usd)) return '';   // monedas mezcladas: no se suman
+  let cuota=0, aPagar=0, entrego=0, saf=0, sec=0, hayDif=false;
+  pagos.forEach(p=>{
+    const d=_datosPagoTabla(p,data.find(x=>x.id===p.id),bal,ult);
+    cuota+=d.cuota; aPagar+=d.aPagar; entrego+=(d.entrego||0)+(d.transferido||0)-(d.vuelto||0);
+    if(d.dif!==null){ hayDif=true; if(d.dif>0) saf+=d.dif; else sec+=-d.dif; }
+  });
+  const n=_pgNum, neto=saf-sec;
+  const difSub=(saf>0.005&&sec>0.005)?'<span style="color:var(--green)">+'+n(saf,usd)+'</span> · <span style="color:var(--red)">−'+n(sec,usd)+'</span>':'';
+  return '<div class="pg-fila pg-tot">'
+    +'<div class="pg-cli">Total · '+pagos.length+' pago'+(pagos.length!==1?'s':'')+'</div>'
+    +_pgCelda(0,n(cuota,usd),Math.abs(aPagar-cuota)>0.005?'a pagar '+n(aPagar,usd):'')
+    +_pgCelda(1,n(entrego,usd))
+    +_pgCelda(2,hayDif?_pgDif(neto,usd):'—',difSub)
+    +'<div class="pg-n pg-vacio"></div><div class="pg-n pg-vacio"></div>'
+    +'</div>';
+}
+// v1.0701: la lista de pagos de un cierre (v1.0702: compacta, con total)
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _tablaPagosHtml(pagos,data,bal){
   if(!pagos.length) return '<div style="font-size:12px;color:var(--text2)">Sin pagos</div>';
   const ult=_ultimoPagoPorCliente(bal);
-  return pagos.map(p=>_filaPagoHtml(p,data.find(x=>x.id===p.id),bal,ult)).join('')
-    +'<div style="font-size:10.5px;color:var(--text3);margin-top:6px">≈ calculado con el saldo de hoy (pagos de antes de la versión 1.0698).</div>';
+  const hayAprox=pagos.some(p=>_datosPagoTabla(p,data.find(x=>x.id===p.id),bal,ult).aprox);
+  return _listaPagosHtml(pagos.map(p=>_filaPagoHtml(p,data.find(x=>x.id===p.id),bal,ult)).join(''),_totalPagosHtml(pagos,bal,ult,data))
+    +(hayAprox?'<div class="pg-nota">≈ calculado con el saldo de hoy (pagos de antes de la versión 1.0698).</div>':'');
 }
-
 function _saldoCuentaHtml(p,c,bal,ultimos){
   if(!p||!c||c.saldo===undefined) return '';
   const cur=p.moneda==='USD'?'USD ':'';
@@ -7276,7 +7365,7 @@ function renderBalances(seccion){
     const _ultPag=_ultimoPagoPorCliente(bal);   // v1.0698
     const renderPago1=(p)=>{   // v1.0701: misma fila que los cierres (cada número con su título)
       const c=data.find(x=>x.id===p.id);
-      const adelInfo=(p.adelanto>0)?'<div style="font-size:10.5px;color:var(--blue);margin-top:4px">⏭ incluye adelanto '+(p.moneda==='USD'?'USD ':'')+fmtPeso(p.adelanto)+'</div>':'';
+      const adelInfo=(p.adelanto>0)?'<div style="font-size:10.5px;color:var(--blue);margin-top:2px">⏭ incluye adelanto '+(p.moneda==='USD'?'USD ':'')+fmtPeso(p.adelanto)+'</div>':'';
       return _filaPagoHtml(p,c,bal,_ultPag,adelInfo);
     };
     // Divide una lista (de una moneda) en normales y agrimensores, y arma su HTML
@@ -7292,12 +7381,12 @@ function renderBalances(seccion){
       // Normales
       h+='<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--text2);padding:6px 0 2px">'
         +'<span>Cuotas normales</span><span>'+cur+fmtPeso(totNorm)+'</span></div>';
-      h+=norm.length?norm.slice().reverse().map(renderPago1).join(''):'<div style="font-size:12px;color:var(--text2);padding:4px 0">Sin cuotas normales</div>';
+      h+=norm.length?_listaPagosHtml(norm.slice().reverse().map(renderPago1).join('')):'<div style="font-size:12px;color:var(--text2);padding:4px 0">Sin cuotas normales</div>';   // v1.0702
       // Agrimensores
       if(agr.length){
         h+='<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--acc3);padding:8px 0 2px;margin-top:6px;border-top:1px dashed var(--border)">'
           +'<span>⚖️ Agrimensores</span><span>'+cur+fmtPeso(totAgr)+'</span></div>';
-        h+=agr.slice().reverse().map(renderPago1).join('');
+        h+=_listaPagosHtml(agr.slice().reverse().map(renderPago1).join(''));   // v1.0702
       }
       // Adelantos (solo informativo, no suma)
       if(adel.length){
@@ -8123,9 +8212,9 @@ function renderBalances(seccion){
       return arr;
     };
     const _ultPagAgr=_ultimoPagoPorCliente(bal);   // v1.0698: saldo de la cuenta antes → luego del pago
-    const renderPagos=(list)=>list.length?ordenar(list).map(p=>{   // v1.0701: misma fila que los cierres
+    const renderPagos=(list)=>list.length?_listaPagosHtml(ordenar(list).map(p=>{   // v1.0701: misma fila que los cierres (v1.0702: compacta)
       return _filaPagoHtml(p,data.find(x=>x.id===p.id),bal,_ultPagAgr);
-    }).join(''):'<div style="font-size:13px;color:var(--text2)">Sin pagos</div>';
+    }).join('')):'<div style="font-size:13px;color:var(--text2)">Sin pagos</div>';
 
     // Mora de agrimensores — agrupada por lote, con mes/fecha/interés
     const renderMoraAgr=(list)=>{
