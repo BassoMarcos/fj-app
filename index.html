@@ -917,7 +917,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0696';
+const APP_VERSION='v1.0697';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -1958,16 +1958,20 @@ function registrarPagoEnCaja(id,monto,ts){
   const extraUSD=detUSD?{cuotaUSD:detUSD.cuota,entregoUSD:detUSD.entrego,difUSD:detUSD.dif}:{};
   const adelInfo=(window._cobroAdelanto>0)?{adelanto:window._cobroAdelanto}:{};
   const cuotaNum=(window._cobroCuotaNum!==undefined&&window._cobroCuotaNum!==null)?window._cobroCuotaNum:(c?c.ca:null);
+  // v1.0697: con qué saldo queda la cuenta del cliente después de este pago (lo avisa cada forma de cobro)
+  const _difS=window._cobroDifSaldo;
+  const saldoInfo=(c&&_difS!==undefined&&_difS!==null)?{saldoDesp:Math.round(((Number(c.saldo)||0)+(Number(_difS)||0))*100)/100}:{};
   if(esAgrimensor(id)){
     // Anti-duplicado: mirar solo pagos de CUOTA normal (no los de mora, que conviven con la cuota del mes)
     if(!(bal.agrimensores||[]).some(p=>p.id===id && !p.esMora))
-      (bal.agrimensores=bal.agrimensores||[]).push({id,monto,ts,fecha,moneda,transf,cuotaNum,...extraUSD,...adelInfo});
+      (bal.agrimensores=bal.agrimensores||[]).push({id,monto,ts,fecha,moneda,transf,cuotaNum,...extraUSD,...adelInfo,...saldoInfo});
   } else {
     (bal.abierto=bal.abierto||[]).push({id,monto,ts,fecha,moneda,transf,cuotaNum,...extraUSD,...adelInfo});
   }
   saveBalances(bal);
   window._cobroDetalleUSD=null; // consumir
   window._cobroAdelanto=null; // consumir
+  window._cobroDifSaldo=null; // consumir
 }
 
 
@@ -4138,7 +4142,8 @@ function fcConfirmar(){
   // Adelanto para mostrarlo en caja del día (no suma al total)
   window._cobroAdelanto=(x.totalAdel||0);
   window._cobroCuotaNum=c.ca; // número de cuota que se está pagando (antes de avanzar)
-  try{ marcarPago(id, _intEf); } finally { window._cobroTransferencia=false; window._cobroCuotaNum=null; }
+  window._cobroDifSaldo=dif;   // v1.0697: para anotar con qué saldo queda la cuenta
+  try{ marcarPago(id, _intEf); } finally { window._cobroTransferencia=false; window._cobroCuotaNum=null; window._cobroDifSaldo=null; }
   // v1.0688: Refinanciación → 💼 Gastos e Ingresos Extras, como INGRESO (una línea por cuota). Nunca a mora.
   // Solo si el cobro quedó hecho (si estaba bloqueado, marcarPago no marcó nada).
   let _refiRes=null;   // v1.0692: se registra el monto real que fue a la refi (puede ser parcial)
@@ -8013,6 +8018,18 @@ function renderBalances(seccion){
       } else arr.reverse(); // fecha: más reciente arriba
       return arr;
     };
+    // v1.0697: saldo de la cuenta del cliente luego del pago. Los pagos de antes de esta versión no lo tienen
+    // anotado: si es el último pago de ese cliente, el saldo de hoy es el mismo (se marca "hoy").
+    const _ultimoAgr={}; agrDia.forEach(p=>{ if(!_ultimoAgr[p.id]||String(p.ts||'')>String(_ultimoAgr[p.id].ts||'')) _ultimoAgr[p.id]=p; });
+    const saldoAgrHtml=(p,c)=>{
+      let sal=null, hoy=false;
+      if(p.saldoDesp!==undefined&&p.saldoDesp!==null) sal=Number(p.saldoDesp)||0;
+      else if(_ultimoAgr[p.id]===p&&c&&c.saldo!==undefined){ sal=Number(c.saldo)||0; hoy=true; }
+      if(sal===null) return '';
+      const cur=p.moneda==='USD'?'USD ':'';
+      const txt=sal===0?'<span style="color:var(--text2)">sin saldo</span>':sal>0?'<span style="color:var(--green);font-weight:700">a favor '+cur+fmtPeso(sal)+'</span>':'<span style="color:var(--red);font-weight:700">debe '+cur+fmtPeso(Math.abs(sal))+'</span>';
+      return '<div style="font-size:11px;color:var(--text2);margin-top:2px">Saldo en su cuenta'+(hoy?' (hoy)':' luego del pago')+': '+txt+'</div>';
+    };
     const renderPagos=(list)=>list.length?ordenar(list).map(p=>{
       const c=data.find(x=>x.id===p.id)||{mz:'?',lote:'?',titular:p.id};
       const hora=p.ts?new Date(p.ts).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
@@ -8022,7 +8039,7 @@ function renderBalances(seccion){
         <div style="display:flex;justify-content:space-between">
           <span>${formatLoteTag(c.mz,c.lote)} — ${c.titular}${(p.cuotaNum!==undefined&&p.cuotaNum!==null)?' <span style="font-size:10px;color:var(--acc2);font-weight:700">cuota '+p.cuotaNum+'</span>':''}${hora?' <span style="font-size:10px;color:var(--text3)">'+hora+'</span>':''}</span>
           <span style="font-weight:600">${p.moneda==='USD'?'USD ':''}${fmtPeso(p.monto||0)}</span>
-        </div>${detU}
+        </div>${detU}${saldoAgrHtml(p,c)}
       </div>`;
     }).join(''):'<div style="font-size:13px;color:var(--text2)">Sin pagos</div>';
 
@@ -10287,7 +10304,8 @@ function caEjecutarCobro(){
       const adelPre=adelantosPorLote[id]||[];
       window._cobroAdelanto=adelPre.reduce((s,q)=>s+(q.monto||0),0);
       // 1. Cobro real (motor) — rutea agrimensor a su caja automáticamente
-      marcarPago(id, 0);
+      window._cobroDifSaldo=difLote;   // v1.0697: con qué saldo queda la cuenta
+      try{ marcarPago(id, 0); } finally { window._cobroDifSaldo=null; }
       // 2. Adelantos
       const adel=adelantosPorLote[id]||[];
       let totalAdel=0;
@@ -11968,7 +11986,8 @@ function admConfirmarTodoColab(){
     // 1. Mora (capital + interés → caja de mora)
     _ejecutarCobroAdmMora(_selEf,clienteId,(cur||''),totalMonto+interes-_qMora);
     // 2. Cuota mes actual (caja del día)
-    marcarPago(clienteId,_intMesEf);   // interés del mes (con el descuento si lo hay; v1.0693: menos lo que faltó)
+    window._cobroDifSaldo=difGlobal;   // v1.0697: con qué saldo queda la cuenta
+     try{ marcarPago(clienteId,_intMesEf); } finally { window._cobroDifSaldo=null; }   // interés del mes (con el descuento si lo hay; v1.0693: menos lo que faltó)
     // 3. Cuota del mes → Caja Física + SAF/SEC sobre el total
     const dataX=loadData();
     const cX=dataX.find(x=>x.id===clienteId);
@@ -12187,7 +12206,8 @@ function admConfirmarTodo(){
     // 1. Cobrar mora (capital + interés → caja de mora)
     _ejecutarCobroAdmMora(_selEf,clienteId,(cur||''),totalMonto+interes-_qMora);
     // 2. Cobrar cuota mes actual (caja del día)
-    marcarPago(clienteId, _intMesEf);   // interés del mes (con el descuento si lo hay; v1.0693: menos lo que faltó)
+    window._cobroDifSaldo=difGlobal;   // v1.0697: con qué saldo queda la cuenta
+     try{ marcarPago(clienteId, _intMesEf); } finally { window._cobroDifSaldo=null; }   // interés del mes (con el descuento si lo hay; v1.0693: menos lo que faltó)
     // 3. Registrar la cuota del mes en Caja Física + SAF/SEC sobre el total
     const dataX=loadData();
     const cX=dataX.find(x=>x.id===clienteId);
