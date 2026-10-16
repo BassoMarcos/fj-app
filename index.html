@@ -917,7 +917,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0698';
+const APP_VERSION='v1.0699';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -1647,8 +1647,20 @@ function _frenoCobro(faltante, saldoAFavor, moneda){
   faltante=Math.round(Number(faltante)||0); if(faltante<LIMITE_FALTANTE_COBRO) return '';
   const saf=Math.max(0,Math.round(Number(saldoAFavor)||0));
   if(faltante<=saf) return '';
+  // v1.0699: el freno es SOLO para el colaborador. El admin puede cobrar igual (le pide confirmar al guardar).
+  if(typeof loginRole!=='undefined'&&loginRole==='admin') return '';
   return '⛔ Le faltan '+fmtPeso(faltante)+'. Con tanta diferencia no se puede cobrar: que busque el resto y vuelva a pagar.'
     +(saf>0?' (Tiene '+fmtPeso(saf)+' a favor: puede faltar hasta eso.)':' (Se permite menos de '+fmtPeso(LIMITE_FALTANTE_COBRO)+' de diferencia.)');
+}
+// v1.0699: el admin cobra con mucha diferencia (lo que al colaborador lo frena): se le pide confirmar, y lo que falta
+// queda como deuda en su cuenta (SEC). Devuelve true si se puede seguir.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _confirmarFaltanteAdmin(faltante, saldoAFavor, moneda){
+  if(typeof loginRole==='undefined'||loginRole!=='admin'||moneda==='USD') return true;
+  faltante=Math.round(Number(faltante)||0); if(faltante<LIMITE_FALTANTE_COBRO) return true;
+  const saf=Math.max(0,Math.round(Number(saldoAFavor)||0));
+  if(faltante<=saf) return true;
+  return confirm('⚠️ Le faltan '+fmtPeso(faltante)+'. ¿Cobrar igual?\n\nLo que falta queda como deuda en su cuenta (SEC).\n(El colaborador no puede cobrar con tanta diferencia: solo el admin.)');
 }
 function _refiCuotasTxt(desde,cant,total){ return cant>1?('cuotas '+desde+' a '+(desde+cant-1)+' de '+total):('cuota '+desde+' de '+total); }
 // Registra lo cobrado de refinanciación en 💼 Gastos e Ingresos Extras (una línea por cuota). Devuelve cuántas.
@@ -4175,7 +4187,7 @@ function fcConfirmar(){
   const ts=new Date().toISOString(), fecha=new Date().toLocaleDateString('es-AR');
   const neto=t+e-v;
   const _p=_fcCalcRefi(x,neto), dif=_p.dif;   // v1.0692
-  { const _dT=_p.difTotal; const _fr=_dT<0?_frenoCobro(-_dT,x.saldoAFavor,x.moneda):''; if(_fr){ alert(_fr); return; } }   // v1.0696: contra el total
+  { const _dT=_p.difTotal; const _fr=_dT<0?_frenoCobro(-_dT,x.saldoAFavor,x.moneda):''; if(_fr){ alert(_fr); return; } if(_dT<0&&!_confirmarFaltanteAdmin(-_dT,x.saldoAFavor,x.moneda)) return; }   // v1.0696: contra el total
   // v1.0693: si pagó de menos, lo que falta sale primero del INTERÉS: la Caja de Mora anota el interés que entró de
   // verdad y la Caja Física cuadra con eso. El saldo en contra del cliente queda igual (dif).
   const _absInt=Math.min(x.interes||0, Math.max(0,-dif)), _intEf=(x.interes||0)-_absInt;
@@ -10285,7 +10297,7 @@ function caEjecutarCobro(){
     // Diferencia por moneda
     const difGlobal=(entregoTotal!==null?(entregoTotal-vueltoTotal):totPesos)-totPesos;
     const difGlobalUSD=(entregoTotalUSD!==null?(entregoTotalUSD-vueltoTotalUSD):totUSDesp)-totUSDesp;
-    { const _saf=pesosLotes.reduce((s,c)=>s+Math.max(0,Number(c.saldo)||0),0); const _fr=difGlobal<0?_frenoCobro(-difGlobal,_saf,'ARS'):''; if(_fr){ alert(_fr); return; } }   // v1.0692
+    { const _saf=pesosLotes.reduce((s,c)=>s+Math.max(0,Number(c.saldo)||0),0); const _fr=difGlobal<0?_frenoCobro(-difGlobal,_saf,'ARS'):''; if(_fr){ alert(_fr); return; } if(difGlobal<0&&!_confirmarFaltanteAdmin(-difGlobal,_saf,'ARS')) return; }   // v1.0692
     const primerPesoId=pesosLotes.length?pesosLotes[0].id:null;
     const primerUSDId=usdLotes.length?usdLotes[0].id:null;
     // Reparto del vuelto cuando hay cajas distintas (normal vs agrimensor)
@@ -12013,7 +12025,7 @@ function admConfirmarTodoColab(){
   const entregoTotal=(window._moraEfectivoTocado&&eEl)?caNum(eEl.value):grandTotal;
   const vueltoTotal=(window._moraEfectivoTocado&&vEl)?caNum(vEl.value):0;
   const difGlobal=(entregoTotal-vueltoTotal)-grandTotal;
-  { const _cF=loadData().find(x=>x.id===clienteId)||{}; const _fr=difGlobal<0?_frenoCobro(-difGlobal,Math.max(0,Number(_cF.saldo)||0),_cF.moneda):''; if(_fr){ alert(_fr); return; } }   // v1.0692
+  { const _cF=loadData().find(x=>x.id===clienteId)||{}; const _fr=difGlobal<0?_frenoCobro(-difGlobal,Math.max(0,Number(_cF.saldo)||0),_cF.moneda):''; if(_fr){ alert(_fr); return; } if(difGlobal<0&&!_confirmarFaltanteAdmin(-difGlobal,Math.max(0,Number(_cF.saldo)||0),_cF.moneda)) return; }   // v1.0692
   // v1.0693: lo que falta sale primero del interés (del mes y después el de mora); el saldo en contra queda igual
   const _faltaI=Math.max(0,-difGlobal), _qMes=Math.min(interesMesCobrado,_faltaI), _qMora=Math.min(interes,_faltaI-_qMes);
   const _absI=_qMes+_qMora, _intMesEf=interesMesCobrado-_qMes, _selEf=_qMora?_repartirInteresEnCuotas(seleccionadas, interes-_qMora):selConInteres;
@@ -12235,7 +12247,7 @@ function admConfirmarTodo(){
   const entregoTotal=eEl?caNum(eEl.value):grandTotal;
   const vueltoTotal=vEl?caNum(vEl.value):0;
   const difGlobal=(entregoTotal-vueltoTotal)-grandTotal; // SAF (+) / SEC (-)
-  { const _cF=loadData().find(x=>x.id===clienteId)||{}; const _fr=difGlobal<0?_frenoCobro(-difGlobal,Math.max(0,Number(_cF.saldo)||0),_cF.moneda):''; if(_fr){ alert(_fr); return; } }   // v1.0692
+  { const _cF=loadData().find(x=>x.id===clienteId)||{}; const _fr=difGlobal<0?_frenoCobro(-difGlobal,Math.max(0,Number(_cF.saldo)||0),_cF.moneda):''; if(_fr){ alert(_fr); return; } if(difGlobal<0&&!_confirmarFaltanteAdmin(-difGlobal,Math.max(0,Number(_cF.saldo)||0),_cF.moneda)) return; }   // v1.0692
   // v1.0693: lo que falta sale primero del interés (del mes y después el de mora); el saldo en contra queda igual
   const _faltaI=Math.max(0,-difGlobal), _qMes=Math.min(interesMesCobrado,_faltaI), _qMora=Math.min(interes,_faltaI-_qMes);
   const _absI=_qMes+_qMora, _intMesEf=interesMesCobrado-_qMes, _selEf=_qMora?_repartirInteresEnCuotas(seleccionadas, interes-_qMora):selConInteres;
@@ -12416,7 +12428,7 @@ function admConfirmarMoraPanel(){
   const entrego=(window._moraEfectivoTocado&&eEl)?caNum(eEl.value):totalTotal;
   const vuelto=(window._moraEfectivoTocado&&vEl)?caNum(vEl.value):0;
   const dif=(entrego-vuelto)-totalTotal;
-  { const _cF=loadData().find(x=>x.id===clienteId)||{}; const _fr=dif<0?_frenoCobro(-dif,Math.max(0,Number(_cF.saldo)||0),_cF.moneda):''; if(_fr){ alert(_fr); return; } }   // v1.0692
+  { const _cF=loadData().find(x=>x.id===clienteId)||{}; const _fr=dif<0?_frenoCobro(-dif,Math.max(0,Number(_cF.saldo)||0),_cF.moneda):''; if(_fr){ alert(_fr); return; } if(dif<0&&!_confirmarFaltanteAdmin(-dif,Math.max(0,Number(_cF.saldo)||0),_cF.moneda)) return; }   // v1.0692
 
   // v1.0693: lo que falta sale primero del interés (la Caja de Mora anota lo que entró); el saldo en contra queda igual
   const _absI=Math.min(interes,Math.max(0,-dif)), _selEf=_absI?_repartirInteresEnCuotas(seleccionadas, interes-_absI):selConInteres;
