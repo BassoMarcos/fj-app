@@ -967,7 +967,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0704';
+const APP_VERSION='v1.0705';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -9344,6 +9344,8 @@ function renderStats(){
     });
     return {ars,usd,n,lotes};
   })();
+  // v1.0705: los terminados este mes con su ficha: cuentan como pagados (con lo que pagaron) en la barra y por etapa
+  const _finObjs=_finCiclo.lotes.map(x=>({c:data.find(d=>d.id===x.id),monto:x.monto})).filter(x=>x.c);
   const cobradoARStot=cobradoARS+_finCiclo.ars;
   const cobradoUSDtot=cobradoUSD+_finCiclo.usd;
   const agrPag=agrim.filter(c=>c.pago).length;
@@ -9355,7 +9357,7 @@ function renderStats(){
   // ── Encabezado ──
   html+='<div style="margin-bottom:1rem">';
   html+='<div style="font-size:18px;font-weight:800">📅 '+mesOp.toUpperCase()+' '+anioOp+' — Cobranza del mes</div>';
-  html+='<div style="font-size:12px;color:var(--text2)">Sobre '+cobrables.length+' lotes cobrables (sin agrimensores, préstamos, finalizados ni 1ª cuota futura)</div>';
+  html+='<div style="font-size:12px;color:var(--text2)">Sobre '+(cobrables.length+_finObjs.length)+' lotes cobrables'+(_finObjs.length?' (incluye '+_finObjs.length+' que terminaron este mes)':'')+' · sin agrimensores, préstamos, finalizados de antes ni 1ª cuota futura</div>';
   html+='</div>';
 
   // ── Botón de informe (adaptativo: inicio de mes / cierre de mes) v1.0418 ──
@@ -9372,10 +9374,13 @@ function renderStats(){
   // ── Barra grande de progreso ──
   html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:12px">';
   html+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">';
-  html+='<span style="font-size:26px;font-weight:800;color:'+(pct>=70?'var(--green)':pct>=40?'#d97706':'var(--red)')+'">'+pct+'% cobrado</span>';
-  html+='<span style="font-size:14px;color:var(--text2)"><b style="color:var(--green)">'+pagados.length+'</b> pagados · <b style="color:#d97706">'+pendientes.length+'</b> pendientes</span>';
+  // v1.0705: con los que terminaron este mes (pagaron su última cuota)
+  const _nTot=cobrables.length+_finObjs.length, _nPag=pagados.length+_finObjs.length;
+  const pctT=_nTot?Math.round(_nPag/_nTot*100):0;
+  html+='<span style="font-size:26px;font-weight:800;color:'+(pctT>=70?'var(--green)':pctT>=40?'#d97706':'var(--red)')+'">'+pctT+'% cobrado</span>';
+  html+='<span style="font-size:14px;color:var(--text2)"><b style="color:var(--green)">'+_nPag+'</b> pagados'+(_finObjs.length?' <span style="font-size:11px;color:var(--blue)">(🏁 '+_finObjs.length+' terminado'+(_finObjs.length>1?'s':'')+')</span>':'')+' · <b style="color:#d97706">'+pendientes.length+'</b> pendientes</span>';
   html+='</div>';
-  html+='<div style="background:var(--border2);border-radius:99px;height:18px;overflow:hidden"><div style="background:linear-gradient(90deg,#16a34a,#4ade80);width:'+pct+'%;height:100%;border-radius:99px;transition:width .5s"></div></div>';
+  html+='<div style="background:var(--border2);border-radius:99px;height:18px;overflow:hidden"><div style="background:linear-gradient(90deg,#16a34a,#4ade80);width:'+pctT+'%;height:100%;border-radius:99px;transition:width .5s"></div></div>';
   html+='</div>';
   html+=_bloqueAuditoriaCaja();
 
@@ -9469,16 +9474,21 @@ function renderStats(){
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:6px">';
   etapas.forEach((e,i)=>{
     const cl=cobrables.filter(c=>getEtapa(c.mz)===e);
-    if(!cl.length) return;
+    // v1.0705: los que terminaron este mes en esta etapa (pagaron su última cuota) cuentan como pagados
+    const finE=_finObjs.filter(x=>getEtapa(x.c.mz)===e), _trX=_transfIds;
+    if(!cl.length&&!finE.length) return;
     const pag=cl.filter(c=>c.pago);
-    const p=Math.round(pag.length/cl.length*100);
+    const tot=cl.length+finE.length, pagN=pag.length+finE.length;
+    const p=Math.round(pagN/tot*100);
+    const finA=finE.filter(x=>x.c.moneda!=='USD').reduce((t,x)=>t+x.monto,0);
+    const finTr=finE.filter(x=>x.c.moneda!=='USD'&&_trX.has(x.c.id)).reduce((t,x)=>t+x.monto,0);
     // Efectivo real: los que pagaron pero transfirieron NO son efectivo (van al pendiente). El % de arriba no se toca.
-    const $c=sum(cl.filter(c=>c.pago&&!_transfIds.has(c.id)));
-    const $p=sum(cl.filter(c=>!c.pago||_transfIds.has(c.id)));
+    const $c=sum(cl.filter(c=>c.pago&&!_transfIds.has(c.id)))+finA-finTr;
+    const $p=sum(cl.filter(c=>!c.pago||_transfIds.has(c.id)))+finTr;
     html+='<div onclick="statsToggleEtapa('+i+')" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;cursor:pointer">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-weight:800">'+e+'</span><span style="font-size:20px;font-weight:800;color:'+(p>=70?'var(--green)':p>=40?'#d97706':'var(--red)')+'">'+p+'%</span></div>';
     html+='<div style="background:var(--border2);border-radius:99px;height:10px;overflow:hidden;margin-bottom:8px"><div style="background:#4f46e5;width:'+p+'%;height:100%;border-radius:99px"></div></div>';
-    html+='<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)"><span>'+pag.length+'/'+cl.length+' lotes</span><span style="color:var(--green);font-weight:700">'+fmtPeso($c)+'</span></div>';
+    html+='<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)"><span>'+pagN+'/'+tot+' lotes'+(finE.length?' <span style="color:var(--blue)" title="Terminaron este mes: pagaron su última cuota">🏁 '+finE.length+'</span>':'')+'</span><span style="color:var(--green);font-weight:700">'+fmtPeso($c)+'</span></div>';
     html+='<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>pendiente</span><span style="color:#d97706;font-weight:700">'+fmtPeso($p)+'</span></div>';
     html+='<div id="stats-etapa-'+i+'" style="display:none;margin-top:8px;border-top:1px dashed var(--border);padding-top:6px">';
     // por manzana
@@ -9501,6 +9511,16 @@ function renderStats(){
         if(c.moneda!=='USD') mzs[mz].pend$+=montoCobrable(c).total;
         mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,mora:calcInteresAuto(montoCobrable(c).total).interes>0,usd:c.moneda==='USD'});
       }
+    });
+    // v1.0705: los que terminaron este mes, como pagados en su manzana (con lo que pagaron)
+    finE.forEach(x=>{
+      const cx=x.c, mz=String(cx.mz).toUpperCase();
+      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],agrPend:[],efec:0,pend$:0,total:0};
+      mzs[mz].t++; mzs[mz].p++;
+      if(cx.moneda==='USD') return;
+      if(mzs[mz].total!==undefined) mzs[mz].total+=x.monto;
+      if(_trX.has(cx.id)){ mzs[mz].pend$+=x.monto; mzs[mz].pend.push({lote:String(cx.lote).toUpperCase(),id:cx.id,transf:true,usd:false}); }
+      else mzs[mz].efec+=x.monto;
     });
     // Agrimensores impagos de esta etapa (no cuentan en % ni en plata, pero se ordenan junto al resto)
     agrim.filter(c=>getEtapa(c.mz)===e&&!c.pago).forEach(c=>{
@@ -9623,19 +9643,24 @@ function renderStats(){
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:6px">';
   etapas.forEach((e,i)=>{
     const cl=cobrablesD.filter(c=>getEtapa(c.mz)===e);
-    if(!cl.length) return;
+    // v1.0705: los que terminaron este mes en esta etapa (pagaron su última cuota) cuentan como pagados
+    const finE=_finObjs.filter(x=>getEtapa(x.c.mz)===e), _trX=_transfIdsD;
+    if(!cl.length&&!finE.length) return;
     const pag=cl.filter(c=>c.pago);
-    const p=Math.round(pag.length/cl.length*100);
+    const tot=cl.length+finE.length, pagN=pag.length+finE.length;
+    const p=Math.round(pagN/tot*100);
+    const finA=finE.filter(x=>x.c.moneda!=='USD').reduce((t,x)=>t+x.monto,0);
+    const finTr=finE.filter(x=>x.c.moneda!=='USD'&&_trX.has(x.c.id)).reduce((t,x)=>t+x.monto,0);
     // Efectivo real: los que pagaron pero transfirieron NO son efectivo (van al pendiente). El % de arriba no se toca.
-    const $c=sum(cl.filter(c=>c.pago&&!_transfIdsD.has(c.id)));
-    const $p=sum(cl.filter(c=>!c.pago||_transfIdsD.has(c.id)));
+    const $c=sum(cl.filter(c=>c.pago&&!_transfIdsD.has(c.id)))+finA-finTr;
+    const $p=sum(cl.filter(c=>!c.pago||_transfIdsD.has(c.id)))+finTr;
     // Total a cobrar si pagan TODOS (incluye préstamos, en pesos)
-    const $total=sum(cl.filter(c=>c.moneda!=='USD'));
+    const $total=sum(cl.filter(c=>c.moneda!=='USD'))+finA;
     html+='<div onclick="duenosToggleEtapa('+i+')" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;cursor:pointer">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-weight:800">'+e+'</span><span style="font-size:20px;font-weight:800;color:'+(p>=70?'var(--green)':p>=40?'#d97706':'var(--red)')+'">'+p+'%</span></div>';
     html+='<div style="background:var(--border2);border-radius:99px;height:10px;overflow:hidden;margin-bottom:8px"><div style="background:#4f46e5;width:'+p+'%;height:100%;border-radius:99px"></div></div>';
     html+='<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);border-bottom:1px dashed var(--border);padding-bottom:4px;margin-bottom:4px"><span style="font-weight:700">Total a cobrar</span><span style="color:var(--text);font-weight:800">'+fmtPeso($total)+'</span></div>';
-    html+='<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)"><span>'+pag.length+'/'+cl.length+' lotes</span><span style="color:var(--green);font-weight:700">'+fmtPeso($c)+'</span></div>';
+    html+='<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)"><span>'+pagN+'/'+tot+' lotes'+(finE.length?' <span style="color:var(--blue)" title="Terminaron este mes: pagaron su última cuota">🏁 '+finE.length+'</span>':'')+'</span><span style="color:var(--green);font-weight:700">'+fmtPeso($c)+'</span></div>';
     html+='<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>pendiente</span><span style="color:#d97706;font-weight:700">'+fmtPeso($p)+'</span></div>';
     html+='<div id="duenos-etapa-'+i+'" style="display:none;margin-top:8px;border-top:1px dashed var(--border);padding-top:6px">';
     // por manzana
@@ -9659,6 +9684,16 @@ function renderStats(){
         if(c.moneda!=='USD') mzs[mz].pend$+=montoCobrable(c).total;
         mzs[mz].pend.push({lote:String(c.lote).toUpperCase(),id:c.id,mora:calcInteresAuto(montoCobrable(c).total).interes>0,usd:c.moneda==='USD'});
       }
+    });
+    // v1.0705: los que terminaron este mes, como pagados en su manzana (con lo que pagaron)
+    finE.forEach(x=>{
+      const cx=x.c, mz=String(cx.mz).toUpperCase();
+      if(!mzs[mz])mzs[mz]={t:0,p:0,pend:[],agrPend:[],efec:0,pend$:0,total:0};
+      mzs[mz].t++; mzs[mz].p++;
+      if(cx.moneda==='USD') return;
+      if(mzs[mz].total!==undefined) mzs[mz].total+=x.monto;
+      if(_trX.has(cx.id)){ mzs[mz].pend$+=x.monto; mzs[mz].pend.push({lote:String(cx.lote).toUpperCase(),id:cx.id,transf:true,usd:false}); }
+      else mzs[mz].efec+=x.monto;
     });
     // Agrimensores impagos de esta etapa (no cuentan en % ni en plata, pero se ordenan junto al resto)
     agrim.filter(c=>getEtapa(c.mz)===e&&!c.pago).forEach(c=>{
