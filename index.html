@@ -967,7 +967,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0703';
+const APP_VERSION='v1.0704';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -8451,6 +8451,25 @@ function renderBalances(seccion){
   }
 
   if(seccion==='adelantos'){
+    // v1.0704: cada adelanto va en la moneda de su lote. Totales separados (pesos / dólares), cada uno con la
+    // distribución programada (la misma de los cierres, ej. 70% / 30%), y la cuota pura de cada lote.
+    // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+    const _usdAd=a=>{const cl=data.find(x=>x.id===a.id);return !!(cl&&cl.moneda==='USD');};
+    const _mAd=(v,usd)=>(usd?'USD ':'')+fmtPeso(v);   // fmtPeso ya pone el $
+    const dpA=getDistPct(), dpA2=100-dpA;
+    const _totAd=(lista)=>({ars:lista.filter(a=>!_usdAd(a)).reduce((t,a)=>t+(a.total||0),0), usd:lista.filter(a=>_usdAd(a)).reduce((t,a)=>t+(a.total||0),0)});
+    const _filaTotAd=(v,usd)=>'<div style="margin-top:6px"><div style="font-size:18px;font-weight:800;color:var(--text)">'+_mAd(v,usd)+'</div>'
+      +(v>0?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">'
+      +'<span style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:4px;padding:2px 8px;font-size:11.5px;font-weight:700">'+dpA+'% '+_mAd(Math.round(v*dpA/100),usd)+'</span>'
+      +'<span style="background:var(--red-bg);border:1px solid var(--red-border);color:var(--red);border-radius:4px;padding:2px 8px;font-size:11.5px;font-weight:700">'+dpA2+'% '+_mAd(Math.round(v*dpA2/100),usd)+'</span>'
+      +'</div>':'')+'</div>';
+    const _bloqueTotAd=(lista)=>{const t=_totAd(lista);let h='';if(t.ars>0||!t.usd) h+=_filaTotAd(t.ars,false);if(t.usd>0) h+=_filaTotAd(t.usd,true);return h;};
+    const _cuotaPuraAd=(a)=>{
+      const qs=(a.cuotas||[]).map(q=>({n:Number(q.num||q.numeroCuota||q.nro)||0,m:Number(q.monto)||0}));
+      if(!qs.length) return '';
+      const usd=_usdAd(a), igual=qs.every(q=>Math.abs(q.m-qs[0].m)<0.5);
+      return 'Cuota pura: <b style="color:var(--text)">'+(igual?_mAd(qs[0].m,usd):qs.slice().sort((x,y)=>y.n-x.n).map(q=>(q.n?'#'+q.n+' ':'')+_mAd(q.m,usd)).join(' · '))+'</b>';
+    };
 
     el.innerHTML=backBtn+`
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
@@ -8463,13 +8482,13 @@ function renderBalances(seccion){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem">
         <div style="background:var(--card);border:1px solid var(--amber-border);border-radius:var(--r);padding:.875rem">
           <div style="font-size:11px;font-weight:700;color:var(--amber)">⏳ PENDIENTES</div>
-          <div style="font-size:18px;font-weight:800">${fmtPeso(totalPendientes)}</div>
-          <div style="font-size:11px;color:var(--text2)">${pendientes.length} adelanto${pendientes.length!==1?'s':''}</div>
+          ${_bloqueTotAd(pendientes)}
+          <div style="font-size:11px;color:var(--text2);margin-top:6px">${pendientes.length} adelanto${pendientes.length!==1?'s':''}</div>
         </div>
         <div style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:var(--r);padding:.875rem">
           <div style="font-size:11px;font-weight:700;color:var(--green)">✅ APROBADOS</div>
-          <div style="font-size:18px;font-weight:800">${fmtPeso(totalAprobados)}</div>
-          <div style="font-size:11px;color:var(--text2)">${aprobados.length} adelanto${aprobados.length!==1?'s':''}</div>
+          ${_bloqueTotAd(aprobados)}
+          <div style="font-size:11px;color:var(--text2);margin-top:6px">${aprobados.length} adelanto${aprobados.length!==1?'s':''}</div>
         </div>
       </div>
       ${pendientes.length?`
@@ -8483,8 +8502,9 @@ function renderBalances(seccion){
                 <div style="font-weight:700;font-size:14px">${formatLoteTag(a.mz,a.lote)} — ${a.titular}${(()=>{const dc=data.find(x=>x.id===a.id);return dc&&dc.agrimensor?'<span style="font-size:11px;background:var(--card);color:var(--acc2);border:1px solid #fed7aa;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px">⚖️ Agrimensor</span>':'';})()} </div>
                 <div style="font-size:12px;color:var(--text2)">${a.fecha} · ${a.cuotas.length} cuota${a.cuotas.length>1?'s':''}</div>
                 <div style="font-size:12px;color:#5eb0ef;margin-top:2px">Cuotas: ${a.cuotas.map(q=>q.num).sort((x,y)=>y-x).join(', ')}</div>
+                <div style="font-size:12px;color:var(--text2);margin-top:2px">${_cuotaPuraAd(a)}</div>
               </div>
-              <div style="font-weight:800;font-size:16px">${fmtPeso(a.total)}</div>
+              <div style="font-weight:800;font-size:16px">${_mAd(a.total,_usdAd(a))}</div>
             </div>
             <div style="display:flex;gap:8px">
               <button onclick="aprobarAdelanto(${gi})" style="flex:1;padding:8px;background:#16a34a;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">✓ Aprobar</button>
@@ -8501,9 +8521,10 @@ function renderBalances(seccion){
               <div>
                 <div style="font-weight:600">${formatLoteTag(a.mz,a.lote)} — ${a.titular}${(()=>{const dc=data.find(x=>x.id===a.id);return dc&&dc.agrimensor?'<span style="font-size:11px;background:var(--card);color:var(--acc2);border:1px solid #fed7aa;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px">⚖️ Agrimensor</span>':'';})()}</div>
                 <div style="font-size:12px;color:var(--text2)"><b style="color:var(--green)">${a.cuotas.length} cuota${a.cuotas.length!==1?'s':''}</b> · Cuotas: ${a.cuotas.map(q=>q.num||q.numeroCuota||q.nro||'').filter(Boolean).sort((x,y)=>y-x).join(', ')} · ${fmtFechaAdel(a.fechaAprobacion||a.fecha)}</div>
+                <div style="font-size:12px;color:var(--text2);margin-top:2px">${_cuotaPuraAd(a)}</div>
               </div>
               <div style="display:flex;align-items:center;gap:10px">
-                <div style="font-weight:700">${fmtPeso(a.total)}</div>
+                <div style="font-weight:700">${_mAd(a.total,_usdAd(a))}</div>
                 <button onclick="deshacerAdelanto(${gi})" title="Deshacer: devuelve la(s) cuota(s) al total del lote" style="background:var(--amber-bg);border:1px solid var(--amber-border);color:var(--amber);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">↩ Deshacer</button>
                 <button onclick="borrarRegistroAdelanto(${gi})" title="Borra solo el registro visual, sin tocar cuotas ni aprobación" style="background:var(--red-bg);border:1px solid #fca5a5;color:var(--red);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🗑 Borrar registro</button>
               </div>
