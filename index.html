@@ -967,7 +967,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0706';
+const APP_VERSION='v1.0707';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -4197,6 +4197,7 @@ function abrirFormCobro(id, opts){
   }
   const fila=(l,v,color)=>'<div style="display:flex;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--border);font-size:13px"><span style="color:'+(color||'var(--text2)')+'">'+l+'</span><span style="font-weight:700;color:'+(color||'var(--text)')+'">'+v+'</span></div>';
   let desg=fila('Cuota'+( _mc.escalonActivo?' pura':''),cur+fmtPeso(_mc.base));
+  { const _mr=getMesRendido(); if(_mr&&!esTotal&&!esPrimeraCuotaFutura(c)) desg='<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;background:rgba(217,119,6,.12);color:#d97706;font-weight:700">🏢 '+_mr.mesNombre+' ya se rindió en la oficina: este pago va a la Caja de Mora (cuota + interés)</div>'+desg; }   // v1.0707
   if(_mc.escalonActivo) desg+=fila('🪜 Escalonado','+'+cur+fmtPeso(_mc.adicional),'#0369a1');
   if(_re.activa&&_re.quedan>0&&!_esColabFC){
     // v1.0692: el admin elige Total / Parcial / No paga
@@ -4799,7 +4800,7 @@ function desmararPagoMoraCaja(btn){
 function desmarcarTodasMoraCaja(btn){
   const cid=btn.dataset.cid;
   const rend=loadCajaMoraRendidos();
-  const cand=loadMora().filter(p=>p&&p.id===cid&&!p.esInteresMes&&!p.esRefi&&!_moraRendida(p,rend));
+  const cand=loadMora().filter(p=>p&&p.id===cid&&!p.esInteresMes&&!p.esRefi&&!p.postCierre&&!_moraRendida(p,rend));   // v1.0707: los del mes rendido se anulan desde la ficha
   if(!cand.length){ alert('Este lote no tiene cuotas de mora cobradas para desmarcar.'); return; }
   const cur=cand[0].moneda==='USD'?'USD ':'$';
   const total=cand.reduce((s,p)=>s+(p.cuotaAgrimensor||p.cuota||0)+(p.interes||0),0);
@@ -6577,6 +6578,8 @@ function _auditarPagosVsCaja(){
   (bal.cierres||[]).forEach(ci=>(ci.pagos||[]).forEach(p=>{ enCaja[p.id]=(enCaja[p.id]||0)+(p.monto||0); }));
   (bal.agrimensores||[]).forEach(p=>{ if(!p.esMora) enCaja[p.id]=(enCaja[p.id]||0)+(p.monto||0); });
   (bal.transferencias||[]).forEach(p=>{ enCaja[p.id]=(enCaja[p.id]||0)+(p.cuotaParte||p.monto||0); });
+  { const _m=_mesQueSeCierra(), _mn=MESES_NOMBRE[_m.mes]+' '+_m.anio;   // v1.0707: los cobrados con el mes rendido (Caja de Mora)
+    loadMora().forEach(p=>{ if(p&&p.postCierre&&p.mesNombre===_mn) enCaja[p.id]=(enCaja[p.id]||0)+(p.cuota||p.cuotaAgrimensor||0); }); }
 
   // Lotes marcados como pagados (activos, sin préstamos)
   const pagados=data.filter(c=>c.est==='activo'&&c.pago&&!c.autopago&&!esPrimeraCuotaFutura(c));
@@ -7752,6 +7755,7 @@ function renderBalances(seccion){
         </div>
       </div>
 
+      ${_bloqueMesRendido()}
       <!-- CIERRES PESOS -->
       <div style="margin-bottom:1.25rem">
         <div style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:8px">💵 CIERRES EN PESOS</div>
@@ -7911,12 +7915,14 @@ function renderBalances(seccion){
           const editBtn='<button data-cid="'+p.id+'" data-ts="'+p.ts+'" data-mes="'+(p.mesNombre||'').replace(/"/g,'&quot;')+'" onclick="editarInteresMora(this.dataset.cid,this.dataset.ts,this.dataset.mes)" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">✏️ Interés</button>';
           const desmarcaBtn='<button data-cid="'+p.id+'" data-ts="'+p.ts+'" data-mes="'+(p.mesNombre||'').replace(/"/g,'&quot;')+'" data-num="'+(p.numeroCuota||0)+'" data-tipo="'+(p.esRefi?'refi':(p.esInteresMes?'int':''))+'" onclick="desmararPagoMoraCaja(this)" style="background:none;border:1px solid #fca5a5;color:var(--red);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">↩ Desmarcar</button>';
           return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 6px 14px;border-bottom:1px dashed var(--border);font-size:12px">'
-            +'<div><span style="font-weight:600">'+(p.esRefi?'💠 Refinanciación cuota '+p.refiNumero+' de '+p.refiTotal:(p.esInteresMes?'🔴 Interés del mes (cuota '+(p.numeroCuota||'')+')':(p.mesNombre||('Cuota'+(p.numeroCuota?' '+p.numeroCuota:'')))))+'</span> <span style="font-size:10px;color:var(--text2)">'+p.fecha+'</span></div>'
+            +'<div><span style="font-weight:600">'+(p.esRefi?'💠 Refinanciación cuota '+p.refiNumero+' de '+p.refiTotal:(p.esInteresMes?'🔴 Interés del mes (cuota '+(p.numeroCuota||'')+')':(p.mesNombre||('Cuota'+(p.numeroCuota?' '+p.numeroCuota:'')))))+'</span> <span style="font-size:10px;color:var(--text2)">'+p.fecha+'</span>'
+            +(p.postCierre?'<div style="font-size:10.5px;color:#d97706;margin-top:2px">🏢 Cobrada después de rendir el mes en la oficina'+(p.numeroCuota?' (cuota '+p.numeroCuota+')':'')+(p.deAbierto?' · venía de la caja del día; su interés ya está en Ingresos':'')+'</div>':'')+'</div>'
             +'<div style="display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end">'
             +(p.cuotaAgrimensor?'<span style="color:var(--acc2);font-size:11px">⚖️ '+cur+fmtPeso(p.cuotaAgrimensor)+'</span>':'<span style="font-size:11px">'+cur+fmtPeso(p.cuota||0)+'</span>')
             +'<span style="color:var(--red);font-size:11px;margin-left:6px">+ '+cur+fmtPeso(p.interes||0)+'</span>'
             +'<span style="font-weight:700;font-size:12px;margin-left:8px">'+cur+fmtPeso((p.cuotaAgrimensor||p.cuota||0)+(p.interes||0))+'</span>'
-            +extraBtn+editBtn+desmarcaBtn+'</div></div>';
+            +(p.deAbierto?'<button data-id="'+p.id+'" data-ts="'+p.ts+'" onclick="event.stopPropagation();devolverACajaDelDia(this.dataset.id,this.dataset.ts)" title="Vuelve a la caja del día, como estaba" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;margin-left:6px">↩ A caja del día</button>'
+              :(p.postCierre?extraBtn+editBtn:extraBtn+editBtn+desmarcaBtn))+'</div></div>';   // v1.0707: un cobro del mes rendido se anula con "Desmarcar pago" en la ficha
         }).join('');
         return '<div style="border-bottom:1px solid var(--border)">'
           +'<div data-k="'+key+'" onclick="toggleMoraCajaGrupo(this.dataset.k)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:13px;cursor:pointer">'
@@ -8580,6 +8586,126 @@ function rellenarTransferencia(ts){
     alert('✓ Rellenado '+fmtPeso(m)+'. La Caja Física quedó completada y salió de Ingresos.');
     renderBalances('caja');
   });
+}
+
+// ══════ v1.0707: "✓ YA RENDÍ EL MES" (pedido de Marcos, 29/10/2026) ══════
+// Cuando en la oficina se termina de rendir el mes (antes del cierre final de la app), se aprieta este botón en Cierres.
+// Desde ese momento, la cuota de ese mes que se cobre va a la CAJA DE MORA JUNTO CON SU INTERÉS, como un pago de meses
+// atrás (no pasa por la caja del día). Las transferencias TOTALES siguen igual (esa plata no está en la oficina); el
+// efectivo y las transferencias PARCIALES (esa plata está acá y se repone lo transferido) van a la Caja de Mora.
+// Al apretarlo se puede pasar también lo que ya estaba en la caja del día (solo la cuota: su interés ya está en Ingresos).
+// Se apaga solo con el cierre final (o a mano). Se guarda en la nube (mesRendido) para que lo vean todas las compus.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function getMesRendido(){ try{ const v=JSON.parse(localStorage.getItem('fj_mes_rendido')||'null'); return v&&v.activo?v:null; }catch(e){ return null; } }
+function _setMesRendido(v){
+  if(v) localStorage.setItem('fj_mes_rendido',JSON.stringify(v)); else localStorage.removeItem('fj_mes_rendido');
+  window._fbSet('mesRendido',v||null).catch(e=>console.warn('FB mesRendido:',e));
+}
+// Cuántos pagos de la caja del día (efectivo o transferencia parcial) se pueden pasar a la Caja de Mora.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _abiertoParaMora(){ return (loadBalances().abierto||[]).filter(p=>p&&!p.transf); }
+
+// El botón: explica y pregunta si pasar también lo que ya está en la caja del día.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function activarMesRendido(){
+  if(getMesRendido()){ alert('Ya está marcado.'); return; }
+  const m=_mesQueSeCierra(); const mes=MESES_NOMBRE[m.mes]+' '+m.anio;
+  const ab=_abiertoParaMora();
+  const totP=ab.filter(p=>p.moneda!=='USD').reduce((s,p)=>s+(p.monto||0),0), totU=ab.filter(p=>p.moneda==='USD').reduce((s,p)=>s+(p.monto||0),0);
+  const plata=(totP?fmtPeso(totP):'')+(totP&&totU?' + ':'')+(totU?'USD '+fmtPeso(totU):'');
+  const ov=document.createElement('div');
+  ov.id='mr-modal';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:99999;padding:1rem';
+  ov.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:480px;width:100%;padding:1.2rem 1.25rem;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <div style="font-size:16px;font-weight:800">🏢 Ya rendí ${mes} en la oficina</div>
+    <div style="font-size:12.5px;color:var(--text2);margin-top:6px;line-height:1.55">Desde ahora, la cuota de ${mes} que se cobre <b>va a la Caja de Mora junto con su interés</b>, como un pago de meses atrás (no pasa por la caja del día).<br>• Efectivo y transferencias <b>parciales</b>: a la Caja de Mora.<br>• Transferencias <b>totales</b>: siguen igual.<br>Se apaga solo con el cierre final (o con "Deshacer").</div>
+    ${ab.length?`<label style="display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:10px 12px;border:1px solid var(--border2);border-radius:9px;font-size:12.5px;cursor:pointer">
+      <input type="checkbox" id="mr-abierto" checked style="width:16px;height:16px;margin-top:2px">
+      <span>Pasar también los <b>${ab.length} pago${ab.length>1?'s':''}</b> que ya están en la caja del día (<b>${plata}</b>). Pasa solo la cuota: el interés de esos pagos ya está en Ingresos.</span></label>`:''}
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button id="mr-cancel" style="flex:1;background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:9px;padding:11px;font-size:14px;font-weight:700;cursor:pointer">Cancelar</button>
+      <button id="mr-ok" style="flex:2;background:#d97706;border:none;color:#fff;border-radius:9px;padding:11px;font-size:14px;font-weight:800;cursor:pointer">Ya rendí ${mes}</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  const cerrar=()=>ov.remove();
+  ov.addEventListener('click',e=>{if(e.target===ov)cerrar();});
+  ov.querySelector('#mr-cancel').onclick=cerrar;
+  ov.querySelector('#mr-ok').onclick=()=>{
+    const chk=ov.querySelector('#mr-abierto'); const pasar=!!(chk&&chk.checked);
+    cerrar();
+    confirmarConClave(()=>{
+      const ts=new Date().toISOString();
+      _setMesRendido({activo:true,mesNombre:mes,desde:ts,fecha:new Date().toLocaleDateString('es-AR')});
+      let n=0;
+      if(pasar) n=_pasarAbiertoAMora(mes);
+      addHist('mora','🏢 Mes rendido en la oficina ('+mes+'): desde ahora la cuota de '+mes+' va a la Caja de Mora con su interés'+(n?' · se pasaron '+n+' pago(s) de la caja del día (solo la cuota)':''));
+      alert('✓ Listo: '+mes+' quedó rendido en la oficina.'+(n?'\n'+n+' pago(s) de la caja del día pasaron a la Caja de Mora.':''));
+      renderBalances('cierres');
+    });
+  };
+}
+// Pasa a la Caja de Mora los pagos de la caja del día (efectivo o transferencia parcial). Solo la cuota.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _pasarAbiertoAMora(mes){
+  const bal=loadBalances(); const data=loadData(); const mora=loadMora();
+  const mover=(bal.abierto||[]).filter(p=>p&&!p.transf);
+  if(!mover.length) return 0;
+  const ahora=Date.now();
+  mover.forEach((p,i)=>{
+    const c=data.find(x=>x.id===p.id)||{};
+    mora.push({
+      id:p.id, cuota:Number(p.monto)||0, interes:0, interesEnExtras:true,
+      ts:new Date(ahora+i).toISOString(), pagoTs:p.ts||null, fecha:p.fecha||'',
+      mz:c.mz, lote:c.lote, titular:c.titular||'', moneda:p.moneda||'ARS',
+      mesNombre:mes, numeroCuota:p.cuotaNum||0,
+      postCierre:true, deAbierto:true, pagoOriginal:p
+    });
+  });
+  const ids=new Set(mover);
+  bal.abierto=(bal.abierto||[]).filter(p=>!ids.has(p));
+  saveMora(mora); saveBalances(bal);
+  return mover.length;
+}
+// Deshacer el botón (apretado por error): vuelve a la caja del día lo que se había pasado y no está rendido.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function desactivarMesRendido(){
+  const mr=getMesRendido(); if(!mr) return;
+  if(!confirm('¿Deshacer "Ya rendí '+mr.mesNombre+'"?\n\nLos pagos que entren vuelven a ir a la caja del día. Lo que ya está en la Caja de Mora queda ahí (si alguno vino de la caja del día, lo podés devolver desde la Caja de Mora con "↩ A caja del día").')) return;
+  confirmarConClave(()=>{
+    _setMesRendido(null);
+    addHist('mora','↩ Se deshizo "Ya rendí '+mr.mesNombre+'": los pagos vuelven a ir a la caja del día');
+    renderBalances('cierres');
+  });
+}
+// Un pago que se pasó desde la caja del día vuelve a la caja del día (si no está rendido ni con su % en Ingresos).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function devolverACajaDelDia(id, ts){
+  const mora=loadMora(); const p=mora.find(x=>x&&x.id===id&&x.ts===ts&&x.deAbierto);
+  if(!p){alert('No se encontró ese pago.');return;}
+  if(_moraRendida(p,loadCajaMoraRendidos())){alert('Ese cobro ya está RENDIDO: primero reactivalo (carpeta Rendidos).');return;}
+  if(p.sep30){alert('A ese cobro ya se le pasó el % a Ingresos: primero sacá esa línea de Ingresos.');return;}
+  confirmarConClave(()=>{
+    const mora2=loadMora(); const i=mora2.findIndex(x=>x&&x.id===id&&x.ts===ts&&x.deAbierto);
+    if(i<0) return;
+    const q=mora2.splice(i,1)[0];
+    const bal=loadBalances(); (bal.abierto=bal.abierto||[]).push(q.pagoOriginal||{id:q.id,monto:q.cuota,ts:q.pagoTs,fecha:q.fecha,moneda:q.moneda,transf:false,cuotaNum:q.numeroCuota});
+    saveMora(mora2); saveBalances(bal);
+    addHist('mora','↩ Pago de '+formatLoteTag(q.mz,q.lote)+' devuelto de la Caja de Mora a la caja del día',id);
+    renderBalances('mora');
+  });
+}
+// El cartel de Cierres: el botón, o "rendido" con Deshacer.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _bloqueMesRendido(){
+  const mr=getMesRendido();
+  if(mr) return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:1rem;padding:10px 14px;border:1.5px solid #d97706;border-radius:var(--r);background:rgba(217,119,6,.1);font-size:13px">
+    <span>🏢 <b>${mr.mesNombre} rendido en la oficina</b> (desde el ${mr.fecha||''}): los pagos en efectivo o con transferencia parcial van a la <b>Caja de Mora</b> con su interés. Se apaga solo con el cierre final.</span>
+    <button onclick="desactivarMesRendido()" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">Deshacer</button></div>`;
+  const m=_mesQueSeCierra();
+  return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:1rem;padding:10px 14px;border:1px dashed var(--border2);border-radius:var(--r);font-size:12.5px;color:var(--text2)">
+    <span>¿Ya rendiste ${MESES_NOMBRE[m.mes]} en la oficina? Desde ese momento, lo que se cobre de ese mes va a la Caja de Mora.</span>
+    <button onclick="activarMesRendido()" style="background:#d97706;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer">✓ Ya rendí el mes</button></div>`;
 }
 
 // ══════ v1.0706: EL 30% DE LA CAJA DE MORA, POR LOTE (pedido de Marcos, 29/10/2026) ══════
@@ -12868,6 +12994,7 @@ function borrarCierreFinalYReaplicar(){
     saveData(data);
     saveMesActual({mes,anio,mesNombre,ts});
     saveCierreFinal({ts,fecha,hora,mes,anio,mesNombre});
+    try{ if(getMesRendido()) _setMesRendido(null); }catch(e){}   // v1.0707: el mes nuevo vuelve a la caja del día
     renderBalances('cierres');
     if(document.getElementById('atab-lista')&&document.getElementById('atab-lista').style.display!=='none') renderAdminTable();
     const _fin=(window._finalizadosEnCierre||[]);
@@ -14509,6 +14636,7 @@ function ejecutarCierreFinal(){
     saveData(data);
     saveMesActual({mes,anio,mesNombre,ts});
     saveCierreFinal({ts,fecha,hora,mes,anio,mesNombre});
+    try{ if(getMesRendido()) _setMesRendido(null); }catch(e){}   // v1.0707: el mes nuevo vuelve a la caja del día
     renderBalances('cierres');
     if(document.getElementById('atab-lista')&&document.getElementById('atab-lista').style.display!=='none') renderAdminTable();
     renderColab();
@@ -14664,6 +14792,7 @@ function hacerCierreFinal(){
     saveMesActual({mes, anio, mesNombre, ts});
 
     saveCierreFinal({ts,fecha,hora,mes,anio,mesNombre});
+    try{ if(getMesRendido()) _setMesRendido(null); }catch(e){}   // v1.0707: el mes nuevo vuelve a la caja del día
     renderBalances('cierres');
     if(document.getElementById('atab-lista')&&document.getElementById('atab-lista').style.display!=='none') renderAdminTable();
     renderColab();
@@ -17351,7 +17480,7 @@ function renderDetColab(id){
 // Guarda una foto COMPLETA de la app cuando el usuario verifica que los números están bien.
 const FB_CLAVES=['data','cuotasMora','pagoStore','mora','balances','extras','adelantos','icc','iccMensual',
   'cierreFinal','mesActual','agrimensorLotes','lotesCerts','hist','pendientesAprobacion','notifMora','notasMora',
-  'cierreEstados','distPct','moraDesactivada','lotesLibresE123'];
+  'cierreEstados','distPct','moraDesactivada','lotesLibresE123','mesRendido'];
 
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _totalesActuales(){
@@ -17698,7 +17827,17 @@ function marcarPago(id, interesOverride){
     try{ actualizarBadgeFinalizados(); }catch(e){}
   }
 
-  if(tieneMora){
+  // v1.0707: "✓ Ya rendí el mes" (Cierres): la cuota de ese mes va a la Caja de Mora JUNTO CON SU INTERÉS, como un pago de
+  // meses atrás. Las transferencias TOTALES siguen igual (esa plata no está en la oficina); efectivo y parciales, sí.
+  const _mr=getMesRendido();
+  const _aMora=!!(_mr && !window._cobroTransferencia && !esPrimeraCuotaFutura(c));
+  if(_aMora){
+    const _mo=loadMora();
+    const _fechaM=new Date(ts).toLocaleDateString('es-AR');
+    registrarCobroCuotaMora(_mo, {id, clienteId:id, monto:_mc.total, mesNombre:_mr.mesNombre, numeroCuota:c.ca, mz:c.mz, lote:c.lote, titular:c.titular, moneda:c.moneda||'ARS'}, interes||0, ts, _fechaM);
+    const _e=_mo[_mo.length-1]; if(_e){ _e.postCierre=true; _e.mesRendido=true; }
+    saveMora(_mo);
+  } else if(tieneMora){
     // La cuota del mes en curso va a CAJA DEL DÍA (cobro normal).
     // El interés por los días de atraso va SOLO a Caja de Mora.
     registrarPagoEnCaja(id, _mc.total, ts);
@@ -17709,7 +17848,7 @@ function marcarPago(id, interesOverride){
     registrarPagoEnCaja(id, _mc.total, ts);
   }
 
-  addHist('pago','Pago — '+c.mz+' Lote '+c.lote+' — '+c.titular+' — Cuota '+c.ca+'/'+c.ct+' — '+fmtPeso(_mc.base)+(_mc.adicional?' + escalón '+fmtPeso(_mc.adicional):'')+(interes?' + interés '+fmtPeso(interes):''),id);
+  addHist('pago','Pago — '+c.mz+' Lote '+c.lote+' — '+c.titular+' — Cuota '+c.ca+'/'+c.ct+' — '+fmtPeso(_mc.base)+(_mc.adicional?' + escalón '+fmtPeso(_mc.adicional):'')+(interes?' + interés '+fmtPeso(interes):'')+(_aMora?' → Caja de Mora (mes rendido en la oficina)':''),id);
   // Toast confirmación
   const _cf2=loadCierreFinal();
   const _mesNombreToast=_cf2&&_cf2.mesNombre?_cf2.mesNombre:MESES_NOMBRE[new Date().getMonth()]+' '+new Date().getFullYear();
@@ -18088,6 +18227,7 @@ async function _cargaInicialNube(opts){
   window._fbListen('distPct', (d) => { if(d) localStorage.setItem('fj_dist_pct', d); });
   setTimeout(backupDiarioAuto, 12000);
   window._fbListen('moraDesactivada', (d) => { if(d!==null&&d!==undefined) localStorage.setItem('fj_mora_desactivada', String(d)); });
+  window._fbListen('mesRendido', (d) => { if(d&&d.activo) localStorage.setItem('fj_mes_rendido', JSON.stringify(d)); else localStorage.removeItem('fj_mes_rendido'); });   // v1.0707
   window._fbListen('notasMora', (d) => { if(d) localStorage.setItem('fj_notas_mora', JSON.stringify(d)); });
   window._fbListen('hitosRespaldo', (d) => { if(d){ localStorage.setItem('fj_hitos_respaldo', JSON.stringify(d)); try{ renderCicloEstado(); }catch(e){} try{ const pc=document.getElementById('page-colab'); if(pc&&pc.classList.contains('active')) renderColab(); }catch(e){} } });
   } // fin de los oyentes (v1.0690: solo la primera vez)
