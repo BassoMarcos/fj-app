@@ -967,7 +967,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0705';
+const APP_VERSION='v1.0706';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -4742,6 +4742,7 @@ function _mismaEntradaMora(p, ref){
 function _revertirCobroMoraEnEstado(st, ref){
   const i=st.mora.findIndex(p=>_mismaEntradaMora(p,ref));
   if(i<0) return {ok:false};
+  (st.quitadas=st.quitadas||[]).push(st.mora[i]);   // v1.0706: para descontar su % de Ingresos si ya estaba pasado
   st.mora.splice(i,1);
   // Lotes agrimensor: el cobro de mora también quedó espejado en bal.agrimensores
   const ag=(st.bal&&st.bal.agrimensores)||[];
@@ -4767,6 +4768,7 @@ function _estadoMoraCargar(){ return {mora:loadMora(),cuotasMora:loadCuotasMora(
 function _estadoMoraGuardar(st){
   saveMora(st.mora); saveCuotasMora(st.cuotasMora); saveData(st.data);
   if(st.tocoBal) saveBalances(st.bal);
+  _descontarMora30(st.quitadas);
 }
 function _refrescarTrasDesmarcarMora(){
   actualizarBadgeMora();
@@ -7926,6 +7928,9 @@ function renderBalances(seccion){
           +'<div style="color:var(--text2);font-size:11px">Cuotas: <b>'+cur+fmtPeso(g.cuota)+'</b></div>'
           +'<div style="color:var(--red);font-size:11px">Interés: <b>'+cur+fmtPeso(g.interes)+'</b></div>'
           +'<div style="font-weight:700">'+cur+fmtPeso(g.cuota+g.interes)+'</div>'
+          +(()=>{ if(isUSD) return ''; const _dp2=100-getDistPct(); const _pend=g.items.reduce((s,p)=>s+_mora30De(p,_dp2),0); const _ya=g.items.reduce((s,p)=>s+(Number(p.sep30)||0),0);
+              return _pend>0?'<button data-id="'+g.id+'" onclick="event.stopPropagation();traspasoMora30(this.dataset.id)" title="Pasar el '+_dp2+'% de la cuota de este lote a Ingresos" style="background:none;border:1px solid #c7d2fe;color:#818cf8;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-top:3px;display:block;margin-left:auto">➡️ '+_dp2+'% · '+fmtPeso(_pend)+'</button>'
+                :(_ya>0?'<div style="font-size:10px;color:var(--green);margin-top:3px">✓ '+_dp2+'% pasado ('+fmtPeso(_ya)+')</div>':''); })()
           +(g.items.some(p=>p.interes&&!p.interesEnExtras)?'<button data-id="'+g.id+'" onclick="event.stopPropagation();pasarInteresesGrupo(this.dataset.id)" style="background:none;border:1px solid #c7d2fe;color:#4f46e5;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-top:3px">→ Pasar intereses a Extras</button>':'')
           +(g.items.filter(p=>!p.esRefi).length>1?'<button data-cid="'+g.id+'" onclick="event.stopPropagation();desmarcarTodasMoraCaja(this)" title="Desmarca de una vez todas las cuotas de mora cobradas de este lote" style="display:block;margin-left:auto;background:none;border:1px solid #fca5a5;color:var(--red);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-top:4px">↩ Desmarcar todas ('+g.items.filter(p=>!p.esRefi).length+')</button>':'')
           +'<label onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:5px;justify-content:flex-end;margin-top:5px;font-size:10px;color:var(--text2);cursor:pointer"><input type="checkbox" data-mid="'+g.id+'" onchange="toggleCajaMoraSel(\''+g.id+'\')" style="width:15px;height:15px;cursor:pointer" '+(window._cajaMoraSel&&window._cajaMoraSel[g.id]?'checked':'')+'> rendir</label>'
@@ -8577,28 +8582,133 @@ function rellenarTransferencia(ts){
   });
 }
 
-function traspasoMora30(){
+// ══════ v1.0706: EL 30% DE LA CAJA DE MORA, POR LOTE (pedido de Marcos, 29/10/2026) ══════
+// De los cobros de mora que NO están rendidos, se pasa a 💼 Ingresos el % de la distribución (ej. 30%) de la CUOTA.
+// (El interés va aparte, con "Pasar intereses"; la cuota de agrimensor no entra: esa plata ya está en la caja del
+// agrimensor.) Se pasa de todos juntos, de los lotes tildados o de a un lote (botón en cada lote). Cada cobro queda
+// marcado (sep30 = lo que se pasó) para no pasarlo dos veces: si el lote paga otra cuota en mora, solo aparece lo nuevo.
+// En Ingresos queda una línea por lote con los cobros que incluye (moraRefs). Si después se desmarca uno de esos cobros,
+// se descuenta de su línea (si esa línea ya estaba rendida, no se toca y queda anotado en el historial).
+// Antes (hasta v1.0705) se calculaba sobre TODA la caja de mora, también lo ya rendido y la cuota de agrimensor.
+const _claveMora30=(p)=>p.id+'|'+p.ts+'|'+(p.numeroCuota||0)+'|'+(p.mesNombre||'');
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _mora30De(p,dp2){
+  if(!p||p.moneda==='USD'||p.esInteresMes||p.esRefi||p.sep30) return 0;
+  return Math.round((Number(p.cuota)||0)*dp2/100);
+}
+// Los lotes con cobros de mora sin rendir que todavía tienen su % para pasar.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _mora30PorLote(){
   const dp2=100-getDistPct();
-  const mora=loadMora();
-  const totalCuotaP=mora.filter(p=>p.moneda!=='USD').reduce((s,p)=>s+(p.cuota||0)+(p.cuotaAgrimensor||0),0);
-  const tope=Math.round(totalCuotaP*dp2/100);
-  const extras=loadExtras();
-  const yaPasado=extras.filter(e=>e.origen==='mora30'&&e.tipo==='ingreso').reduce((s,e)=>s+e.monto,0);
-  const disp=Math.max(0,tope-yaPasado);
-  if(disp<=0){alert('No hay plata disponible del '+dp2+'% de la caja de mora.\n(Tope actual: '+fmtPeso(tope)+' — ya pasado: '+fmtPeso(yaPasado)+')');return;}
-  const val=prompt('➡️ PASAR PLATA DEL '+dp2+'% DE MORA A INGRESOS\n\nDisponible: '+fmtPeso(disp)+'\n('+dp2+'% de las cuotas morosas cobradas: '+fmtPeso(tope)+' — ya pasado antes: '+fmtPeso(yaPasado)+')\n\nIngresá el monto:', String(disp));
-  if(val===null) return;
-  const m=Math.round(parseFloat(String(val).replace(/[^\d]/g,''))||0);
-  if(m<=0){alert('Monto inválido.');return;}
-  if(m>disp){alert('Supera lo disponible ('+fmtPeso(disp)+').');return;}
+  const rend=loadCajaMoraRendidos();
+  const grupos={};
+  loadMora().forEach(p=>{
+    if(!p||_moraRendida(p,rend)) return;
+    const m=_mora30De(p,dp2); if(!m) return;
+    const g=grupos[p.id]||(grupos[p.id]={id:p.id,mz:p.mz,lote:p.lote,titular:p.titular||'',cuota:0,monto:0,claves:[]});
+    g.cuota+=Number(p.cuota)||0; g.monto+=m; g.claves.push(_claveMora30(p));
+  });
+  const lotes=Object.values(grupos).sort((a,b)=>formatLoteTag(a.mz,a.lote).localeCompare(formatLoteTag(b.mz,b.lote),'es',{numeric:true}));
+  return {dp2,lotes};
+}
+// La ventana: los lotes con su cuota y su %, tildados (o solo uno, si viene soloId). Pasa los tildados.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function traspasoMora30(soloId){
+  const {dp2,lotes:todos}=_mora30PorLote();
+  const lotes=soloId?todos.filter(g=>g.id===soloId):todos;
+  if(!lotes.length){alert(soloId?'Este lote ya tiene su '+dp2+'% pasado a Ingresos.':'No hay nada para pasar: todo lo que no está rendido ya tiene su '+dp2+'% pasado a Ingresos.');return;}
+  const sel=new Set(lotes.map(g=>g.id));
+  const ov=document.createElement('div');
+  ov.id='m30-modal';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:99999;padding:1rem';
+  const pintar=()=>{
+    const elegidos=lotes.filter(g=>sel.has(g.id));
+    const total=elegidos.reduce((s,g)=>s+g.monto,0);
+    ov.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:520px;width:100%;max-height:calc(100vh - 2rem);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+      <div style="padding:1.1rem 1.25rem .6rem">
+        <div style="font-size:16px;font-weight:800">➡️ Pasar el ${dp2}% de la mora a Ingresos</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.45">${soloId?'De este lote':'De los lotes de la Caja de Mora que todavía no rendiste'}: el ${dp2}% de la cuota (el interés va aparte). Cada cobro se pasa una sola vez.</div>
+      </div>
+      ${lotes.length>1?`<div style="padding:0 1.25rem 6px;display:flex;gap:12px;font-size:12px"><a href="#" id="m30-todos" style="color:#818cf8">Tildar todos</a><a href="#" id="m30-ninguno" style="color:var(--text2)">Ninguno</a></div>`:''}
+      <div style="overflow-y:auto;padding:0 1.25rem;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+        ${lotes.map(g=>`<label style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--border);font-size:13px;cursor:pointer">
+          <input type="checkbox" data-m30="${g.id}" ${sel.has(g.id)?'checked':''} style="width:16px;height:16px;cursor:pointer">
+          <span style="flex:1;min-width:0"><b>${formatLoteTag(g.mz,g.lote)}</b> — ${g.titular}<br><span style="font-size:11px;color:var(--text2)">Cuota cobrada en mora: ${fmtPeso(g.cuota)} (${g.claves.length} cobro${g.claves.length>1?'s':''})</span></span>
+          <b style="white-space:nowrap">${fmtPeso(g.monto)}</b>
+        </label>`).join('')}
+      </div>
+      <div style="padding:.9rem 1.25rem 1.1rem">
+        <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:12px"><span>${elegidos.length} lote${elegidos.length===1?'':'s'} · ${dp2}%</span><b style="font-size:16px">${fmtPeso(total)}</b></div>
+        <div style="display:flex;gap:8px">
+          <button id="m30-cancel" style="flex:1;background:transparent;border:1.5px solid var(--border2);color:var(--text2);border-radius:9px;padding:11px;font-size:14px;font-weight:700;cursor:pointer">Cancelar</button>
+          <button id="m30-ok" ${total>0?'':'disabled'} style="flex:2;background:#4f46e5;border:none;color:#fff;border-radius:9px;padding:11px;font-size:14px;font-weight:800;cursor:pointer;opacity:${total>0?1:.5}">Pasar ${fmtPeso(total)} a Ingresos</button>
+        </div>
+      </div>
+    </div>`;
+    ov.querySelectorAll('[data-m30]').forEach(x=>x.onchange=()=>{ if(x.checked) sel.add(x.dataset.m30); else sel.delete(x.dataset.m30); pintar(); });
+    const t=ov.querySelector('#m30-todos'), n=ov.querySelector('#m30-ninguno');
+    if(t) t.onclick=(e)=>{e.preventDefault(); lotes.forEach(g=>sel.add(g.id)); pintar();};
+    if(n) n.onclick=(e)=>{e.preventDefault(); sel.clear(); pintar();};
+    ov.querySelector('#m30-cancel').onclick=()=>ov.remove();
+    ov.querySelector('#m30-ok').onclick=()=>{ const ids=[...sel]; if(!ids.length) return; ov.remove(); _pasarMora30(ids); };
+  };
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  document.body.appendChild(ov);
+  pintar();
+}
+// Pasa el % de los lotes elegidos (con la contraseña de administrador). Se vuelve a calcular con lo de ese momento.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _pasarMora30(ids){
   confirmarConClave(()=>{
-    const ex=loadExtras();
-    ex.push({id:Date.now().toString(),tipo:'ingreso',origen:'mora30',desc:'➡️ Desde '+dp2+'% caja de mora',monto:m,fecha:new Date().toLocaleDateString('es-AR'),ts:new Date().toISOString()});
-    saveExtras(ex);
-    addHist('pago','➡️ Traspaso de '+fmtPeso(m)+' del '+dp2+'% de la caja de mora a Ingresos');
-    alert('✓ '+fmtPeso(m)+' pasados a Ingresos.');
+    const {dp2,lotes}=_mora30PorLote();
+    const elegidos=lotes.filter(g=>ids.includes(g.id));
+    if(!elegidos.length){alert('Mientras tanto ya se pasó (o se rindió). No se pasó nada.');renderBalances('mora');return;}
+    const mora=loadMora(), ex=loadExtras();
+    const ts=new Date().toISOString(), fecha=new Date().toLocaleDateString('es-AR');
+    let total=0, n=0;
+    elegidos.forEach((g,i)=>{
+      let monto=0; const refs=[];
+      mora.forEach(p=>{
+        const k=_claveMora30(p);
+        if(!g.claves.includes(k)) return;
+        const m=_mora30De(p,dp2); if(!m) return;
+        p.sep30=m; p.sep30Ts=ts; monto+=m; refs.push(k);
+      });
+      if(!monto) return;
+      ex.push({id:(Date.now()+i).toString(),tipo:'ingreso',origen:'mora30',clienteId:g.id,desc:'➡️ '+dp2+'% de mora — '+formatLoteTag(g.mz,g.lote)+' — '+g.titular,monto,fecha,ts,moraRefs:refs});
+      total+=monto; n++;
+    });
+    if(!n){alert('No había nada para pasar.');renderBalances('mora');return;}
+    saveMora(mora); saveExtras(ex);
+    addHist('pago','➡️ '+dp2+'% de la caja de mora a Ingresos: '+fmtPeso(total)+' ('+n+' lote'+(n>1?'s':'')+': '+elegidos.slice(0,6).map(g=>formatLoteTag(g.mz,g.lote)).join(', ')+(elegidos.length>6?'…':'')+')');
+    alert('✓ '+fmtPeso(total)+' pasados a Ingresos ('+n+' lote'+(n>1?'s':'')+').\nEn 💼 Gastos e Ingresos queda una línea por lote.');
     renderBalances('mora');
   });
+}
+// Si se desmarca un cobro de mora que ya tenía su % pasado, se descuenta de su línea de Ingresos.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _descontarMora30(quitadas){
+  const con=(quitadas||[]).filter(p=>p&&p.sep30);
+  if(!con.length) return;
+  const ex=loadExtras(); let toco=false;
+  con.forEach(p=>{
+    const k=_claveMora30(p), tag=formatLoteTag(p.mz,p.lote);
+    const e=ex.find(x=>x&&x.origen==='mora30'&&Array.isArray(x.moraRefs)&&x.moraRefs.includes(k));
+    if(!e) return;
+    if(e.rendido){ addHist('mora','⚠️ Se desmarcó un cobro de mora de '+tag+' cuyo % ya estaba pasado y RENDIDO en Ingresos ('+fmtPeso(p.sep30)+'): no se tocó Ingresos',p.id); return; }
+    e.monto=Math.max(0,(Number(e.monto)||0)-p.sep30); e.moraRefs=e.moraRefs.filter(x=>x!==k); toco=true;
+    addHist('mora','↩ Se descontaron '+fmtPeso(p.sep30)+' de la línea del % de mora en Ingresos — '+tag,p.id);
+  });
+  if(toco) saveExtras(ex.filter(x=>!(x&&x.origen==='mora30'&&Array.isArray(x.moraRefs)&&!x.moraRefs.length&&(Number(x.monto)||0)<=0)));
+}
+// Saca el último cobro de mora de un lote (desmarcar pago) y descuenta su % de Ingresos si ya estaba pasado.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _quitarUltimoMora(id){
+  const mora=loadMora();
+  const i=mora.map(p=>p.id).lastIndexOf(id);
+  const q=i>=0?mora.splice(i,1)[0]:null;
+  saveMora(mora);
+  _descontarMora30([q]);
 }
 
 // v1.0664: excluir/incluir un pago puntual de la Caja Física (no lo borra, solo lo saca del total)
@@ -15006,7 +15116,7 @@ function desmarcarPagoAdmin(id){
     });
 
     // Remove from mora (solo el último registro, no todo el historial del cliente)
-    saveMora(_quitarUltimoDeLista(loadMora(), id));
+    _quitarUltimoMora(id);   // v1.0706 (descuenta su % de Ingresos si ya estaba pasado)
     // Eliminar adelantos pendientes del cliente
     const adelantos=loadAdelantos();
     const adelantosRemovidos=adelantos.filter(a=>a.id===id&&a.estado==='pendiente').length;
@@ -17643,7 +17753,7 @@ function desmarcarPago(id){
   if(_idxF>=0) bal.cajaFisica.splice(_idxF,1);
   saveBalances(bal);
   // Remove from mora
-  saveMora(_quitarUltimoDeLista(loadMora(), id));
+  _quitarUltimoMora(id);   // v1.0706 (descuenta su % de Ingresos si ya estaba pasado)
   // Eliminar adelantos pendientes del cliente
   saveAdelantos(loadAdelantos().filter(a=>!(a.id===id&&a.estado==='pendiente')));
   if(document.getElementById('colab-detalle')&&document.getElementById('colab-detalle').style.display!=='none'){
