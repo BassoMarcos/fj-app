@@ -969,7 +969,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0708';
+const APP_VERSION='v1.0709';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -13982,6 +13982,7 @@ function calcularFuturoRealEnIframe(){
         // Medir ANTES (resumen completo con funciones reales de la app)
         var dataAntes = loadData();
         var resumenAntes = calcularResumenCompleto(dataAntes);
+        var porLoteAntes = _aCobrarPorLote(dataAntes);   // v1.0709
 
         // v1.0673: anotar qué cuotas ya estaban en mora ANTES del cierre (para saber cuáles son nuevas)
         var moraAntesSet = {}; var yaEnMora = {};
@@ -13999,6 +14000,7 @@ function calcularFuturoRealEnIframe(){
         // Medir DESPUÉS (loadData ahora devuelve el estado ya cerrado, desde memoria)
         var dataDespues = loadData();
         var resumenDespues = calcularResumenCompleto(dataDespues);
+        var difsLotes = _difsDelCierre(porLoteAntes, _aCobrarPorLote(dataDespues));   // v1.0709
 
         // LISTA DE AVANCE REAL: cada lote, su cuota antes y después (según el cierre real)
         var antesById = {};
@@ -14023,7 +14025,7 @@ function calcularFuturoRealEnIframe(){
         });
 
         window.parent.postMessage({ tipo:'futuroReal', ok:true,
-          resumenAntes:resumenAntes, resumenDespues:resumenDespues, avance:avance, moraNuevas:moraNuevas }, '*');
+          resumenAntes:resumenAntes, resumenDespues:resumenDespues, avance:avance, moraNuevas:moraNuevas, difsLotes:difsLotes }, '*');
       }catch(err){
         window.parent.postMessage({ tipo:'futuroReal', ok:false, error:(err&&err.message?err.message:String(err)) }, '*');
       }
@@ -14084,7 +14086,7 @@ async function mostrarFuturoReal(){
     const r=await calcularFuturoRealEnIframe();
     const fut=r.resumenDespues;
     if(status) status.textContent='';
-    if(cont) cont.innerHTML=_renderComparativo(hoy, fut, Object.assign(_extrasSimulador(),{moraNuevas:r.moraNuevas||[]}));
+    if(cont) cont.innerHTML=_renderComparativo(hoy, fut, Object.assign(_extrasSimulador(),{moraNuevas:r.moraNuevas||[],difsLotes:r.difsLotes||[]}));
     if(r.avance) _actualizarListaAvanceReal(r.avance);
   }catch(err){
     if(status) status.textContent='';
@@ -14184,13 +14186,103 @@ function _bloqueCriolloSimulador(extra){
   h+='</div>';
   return h;
 }
+// ══════ v1.0709: EL SIMULADOR EXPLICA LAS DIFERENCIAS (pedido de Marcos, 30/10/2026) ══════
+// Compara lote por lote lo que cobra antes y después del cierre, y dice el motivo. Al final controla que lo explicado
+// sume exactamente la diferencia de la tabla: si queda algo sin explicar, lo avisa en rojo.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _cobrableDelMes(c){ return c.est==='activo' && !esAgrimensor(c.id) && !c.autopago && !c.empresaPaga && !esPrimeraCuotaFutura(c); }
+_cobrableDelMes.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
+// Lo que cobra cada lote, igual que "Total a cobrar" (calcularResumenCompleto).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _aCobrarPorLote(data){
+  const r={};
+  (data||[]).forEach(c=>{
+    const cobrable=_cobrableDelMes(c), m=montoCobrable(c);
+    r[c.id]={id:c.id,mz:c.mz,lote:c.lote,titular:c.titular,tri:c.tri||'(sin trimestre)',moneda:c.moneda==='USD'?'USD':'ARS',
+      est:c.est,futura:esPrimeraCuotaFutura(c),cobrable,monto:cobrable?m.total:0,base:m.base,adicional:m.adicional,hasta:m.hasta};
+  });
+  return r;
+}
+// Los lotes que cambian con el cierre, cada uno con su motivo. raro=true: el cierre no debería hacer eso, hay que revisarlo.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _difsDelCierre(antes, despues){
+  const out=[];
+  Object.keys({...antes,...despues}).forEach(id=>{
+    const a=antes[id]||{}, b=despues[id]||{}, x=b.id?b:a;
+    const aM=a.monto||0, bM=b.monto||0, dif=bM-aM;
+    if(!dif && !!a.futura===!!b.futura && a.est===b.est) return;
+    const din=n=>(x.moneda==='USD'?'USD ':'$')+Math.round(n||0).toLocaleString('es-AR');
+    let motivo='Cambió el monto', raro=true;
+    if(a.cobrable&&b.cobrable){
+      if((a.adicional||0)>0&&!b.adicional&&a.base===b.base){ motivo='Terminó su adicional escalonado de '+din(a.adicional)+' (era hasta la cuota '+a.hasta+')'; raro=false; }
+      else if(a.base!==b.base) motivo='Cambió el valor de la cuota';
+    } else if(!a.cobrable&&b.cobrable){
+      if(a.futura){ motivo='Le llega la primera cuota: empieza a pagar'; raro=false; } else motivo='Vuelve a cobrarse';
+    } else if(a.cobrable&&!b.cobrable){
+      if(b.est==='finalizado'){ motivo='Terminó de pagar'; raro=false; } else motivo='Deja de cobrarse';
+    } else if(a.futura&&!b.futura){ motivo='Le llega la primera cuota (no suma al total a cobrar)'; raro=false; }
+    else if(a.est!==b.est){ motivo='Pasa de '+(a.est||'—')+' a '+(b.est||'—'); raro=b.est!=='finalizado'; }
+    out.push({mz:x.mz,lote:x.lote,titular:x.titular,tri:x.tri,moneda:x.moneda,antes:aM,despues:bM,dif,motivo,raro});
+  });
+  return out.sort(_cmpLote);
+}
+// Bloque "de qué son las diferencias" del simulador. El control final compara contra los números de la tabla.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _bloqueDiferencias(hoy, fut, extra){
+  const din=(mon,n)=>(mon==='USD'?'USD ':'$')+Math.abs(Math.round(n||0)).toLocaleString('es-AR');
+  const signo=(mon,n)=>(n>0?'+':n<0?'-':'')+din(mon,n);
+  const difs=extra.difsLotes||[];
+  const suma=(l)=>l.reduce((s,d)=>s+d.dif,0);
+  const falta=[];
+  let h='<div style="background:var(--surface);border:1.5px solid var(--border2);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12.5px;line-height:1.6">';
+  h+='<div style="font-size:13px;font-weight:800;margin-bottom:6px">🔎 De qué son las diferencias</div>';
+  [['ARS','pesos',hoy.totalCobrar.ars,fut.totalCobrar.ars],['USD','dólares',hoy.totalCobrar.usd,fut.totalCobrar.usd]].forEach(([mon,nom,a,b])=>{
+    const lista=difs.filter(d=>d.moneda===mon), total=(b||0)-(a||0);
+    if(!total&&!lista.length) return;
+    h+='<div style="margin-top:6px">• Total a cobrar en '+nom+': <b style="color:'+(total>0?'#10b981':total<0?'#ef4444':'var(--text)')+'">'+(total?signo(mon,total):'no cambia')+'</b>'+(lista.length?' · '+lista.length+' lote'+(lista.length>1?'s':''):'')+'</div>';
+    if(lista.length){
+      h+='<div style="margin-top:4px;max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">';
+      lista.forEach((d,i)=>{
+        h+='<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:5px 10px;font-size:12px;'+(i?'border-top:1px solid var(--border)':'')+'">'
+          +'<span style="min-width:0"><b>'+formatLoteTag(d.mz,d.lote)+'</b> <span style="color:var(--text2)">'+String(d.titular||'').slice(0,28)+(mon==='ARS'?' · '+d.tri:'')+'</span>'
+          +'<div style="font-size:11px;font-weight:'+(d.raro?'800':'600')+';color:'+(d.raro?'#ef4444':'var(--text2)')+'">'+(d.raro?'🚩 Revisar: ':'')+d.motivo+'</div></span>'
+          +'<span style="white-space:nowrap;margin-left:auto">'+din(mon,d.antes)+' → '+din(mon,d.despues)+' <b style="color:'+(d.dif>0?'#10b981':d.dif<0?'#ef4444':'var(--text3)')+'">'+(d.dif?signo(mon,d.dif):'=')+'</b></span></div>';
+      });
+      h+='</div>';
+    }
+    const resto=Math.round(total-suma(lista));
+    if(resto) falta.push(signo(mon,resto)+' del total en '+nom);
+  });
+  // Los trimestres de la tabla tienen que dar lo mismo que los lotes explicados
+  [...new Set([...Object.keys(hoy.tris),...Object.keys(fut.tris)])].forEach(k=>{
+    const dT=((fut.tris[k]||{}).monto||0)-((hoy.tris[k]||{}).monto||0);
+    const resto=Math.round(dT-suma(difs.filter(d=>d.moneda==='ARS'&&d.tri===k)));
+    if(resto) falta.push(signo('ARS',resto)+' del trimestre '+k);
+  });
+  if(!difs.length&&hoy.totalCobrar.ars===fut.totalCobrar.ars&&hoy.totalCobrar.usd===fut.totalCobrar.usd) h+='<div>• El total a cobrar no cambia.</div>';
+  // La mora: tiene que ser justo lo que el cierre manda a mora
+  const nu=extra.moraNuevas||[];
+  const sumaMora=mon=>nu.filter(m=>(m.moneda==='USD'?'USD':'ARS')===mon).reduce((s,m)=>s+(m.monto||0),0);
+  const dMora=fut.mora.total-hoy.mora.total, dMoraU=(fut.mora.usd||0)-(hoy.mora.usd||0), dLotes=fut.mora.lotes-hoy.mora.lotes;
+  const nuevos=new Set(nu.filter(m=>!m.previas).map(m=>m.id)).size;
+  if(dMora||dMoraU) h+='<div style="margin-top:6px">• Mora acumulada: <b>'+[dMora?signo('ARS',dMora):'',dMoraU?signo('USD',dMoraU):''].filter(Boolean).join(' y ')+'</b>: son las cuotas de este mes que no se pagaron ('+new Set(nu.map(m=>m.id)).size+' lotes, en la lista de arriba).'+(dLotes?' Lotes con mora <b>'+(dLotes>0?'+':'')+dLotes+'</b>: los que entran nuevos.':'')+'</div>';
+  if(Math.round(dMora-sumaMora('ARS'))) falta.push(signo('ARS',dMora-sumaMora('ARS'))+' de la mora en pesos');
+  if(Math.round(dMoraU-sumaMora('USD'))) falta.push(signo('USD',dMoraU-sumaMora('USD'))+' de la mora en dólares');
+  if(dLotes!==nuevos) falta.push((dLotes-nuevos)+' lote(s) con mora');
+  h+=falta.length
+    ?'<div style="margin-top:8px;padding:8px 10px;border:1.5px solid #ef4444;border-radius:8px;background:rgba(239,68,68,.12);color:#ef4444;font-weight:800">⚠️ Sin explicar: '+falta.join(' · ')+'. Revisalo antes de cerrar.</div>'
+    :'<div style="margin-top:8px;color:#10b981;font-weight:700">✓ Esto explica todas las diferencias, hasta el último peso.</div>';
+  h+='</div>';
+  return h;
+}
+_bloqueDiferencias.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 function _renderComparativo(hoy, fut, extra){
   const fmt=n=>'$'+(Math.round(n)||0).toLocaleString('es-AR');
   const dif=(a,b)=>{ const d=b-a; if(d===0) return '<span style="color:var(--text3)">=</span>'; return '<span style="color:'+(d>0?'#10b981':'#ef4444')+'">'+(d>0?'+':'')+fmt(d)+'</span>'; };
   const difN=(a,b)=>{ const d=b-a; if(d===0) return '<span style="color:var(--text3)">=</span>'; return '<span style="color:'+(d>0?'#10b981':'#ef4444')+'">'+(d>0?'+':'')+d+'</span>'; };
   let h='<div style="margin-top:12px;border-top:1px dashed var(--border);padding-top:12px">';
   h+='<div style="font-size:12px;color:#10b981;font-weight:700;margin-bottom:10px">✓ Calculado por el cierre real en entorno aislado. Tus datos no se tocaron.</div>';
-  if(extra) h+=_bloqueCriolloSimulador(extra);
+  if(extra) h+=_bloqueCriolloSimulador(extra)+_bloqueDiferencias(hoy,fut,extra);
 
   // Encabezado de columnas
   h+='<div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 0.7fr;gap:6px;font-size:11px;font-weight:800;color:var(--text2);padding-bottom:6px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg)">'
@@ -14283,7 +14375,7 @@ function calcularResumenCompleto(data){
   const _num=s=>parseInt(String(s).replace(/\D/g,''))||0;
 
   // ── Cobrables (mismo filtro que la app: activo, no agrimensor, no autopago, no empresaPaga, no primera cuota futura) ──
-  const cobrables=data.filter(c=>c.est==='activo' && !esAgrimensor(c.id) && !c.autopago && !c.empresaPaga && !esPrimeraCuotaFutura(c));
+  const cobrables=data.filter(_cobrableDelMes);
   const cobrARS=cobrables.filter(c=>c.moneda!=='USD'), cobrUSD=cobrables.filter(c=>c.moneda==='USD');
   const totARS=cobrARS.reduce((s,c)=>s+montoCobrable(c).total,0);
   const totUSD=cobrUSD.reduce((s,c)=>s+montoCobrable(c).total,0);
