@@ -969,7 +969,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0710';
+const APP_VERSION='v1.0711';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -4802,6 +4802,7 @@ function desmararPagoMoraCaja(btn){
     const e=st.mora.find(p=>_mismaEntradaMora(p,ref));
     const r=_revertirCobroMoraEnEstado(st,ref);
     if(!r.ok){ alert('No se encontró ese cobro en la Caja de Mora (quizás ya se desmarcó).'); return; }
+    _reactivarSiDebeMora(st, ref.id);   // v1.0711
     _estadoMoraGuardar(st);
     addHist('mora','↩ Cobro de mora desmarcado — '+(e?e.mz+' Lote '+e.lote+' — '+(e.mesNombre||'')+' (cuota '+(e.numeroCuota||'?')+')':ref.id),ref.id);
     _refrescarTrasDesmarcarMora();
@@ -4823,6 +4824,7 @@ function desmarcarTodasMoraCaja(btn){
     let n=0;
     cand.forEach(e=>{ if(_revertirCobroMoraEnEstado(st,_refDeEntradaMora(e)).ok) n++; });
     if(!n){ alert('No se pudo desmarcar ninguna cuota (quizás ya se habían desmarcado).'); return; }
+    _reactivarSiDebeMora(st, cid);   // v1.0711
     _estadoMoraGuardar(st);
     addHist('mora','↩ Desmarcadas '+n+' cuota(s) de mora cobradas — '+cand[0].mz+' Lote '+cand[0].lote+' — '+(cand[0].titular||'')+' — '+cur+fmtPeso(total).replace('$',''),cid);
     _refrescarTrasDesmarcarMora();
@@ -6422,6 +6424,7 @@ function cobrarMoraSeleccionadas(clienteId){
     saveMora(mora);
   actualizarBadgeMora();
     addHist('mora','Cobro mora — '+seleccionadas[0].mz+' Lote '+seleccionadas[0].lote+' — '+seleccionadas.length+' cuota(s) — '+cur+fmtPeso(totalTotal), seleccionadas[0].clienteId);
+    _terminarLotesPorMora(seleccionadas.map(c=>c.clienteId), ts);   // v1.0711
     renderPanelMora();
     renderColab();
     alert('✓ Cobro registrado\n\n'+seleccionadas.length+' cuota(s)\nCuotas: '+cur+fmtPeso(totalMonto)+'\nIntereses: '+cur+fmtPeso(totalInteres)+'\nTotal: '+cur+fmtPeso(totalTotal));
@@ -6567,6 +6570,7 @@ function cobrarColabMoraSeleccionadas(clienteId){
     saveMora(mora);
   actualizarBadgeMora();
     addHist('mora','Cobro mora colab — '+seleccionadas[0].mz+' Lote '+seleccionadas[0].lote+' — '+seleccionadas.length+' cuota(s) — '+cur+fmtPeso(totalTotal), clienteId);
+    _terminarLotesPorMora(seleccionadas.map(c=>c.clienteId), ts);   // v1.0711
     renderDetColab(clienteId);
     renderColab();
     actualizarBadgeMora();
@@ -12421,6 +12425,7 @@ function _deshacerUltimoCobroMora(clienteId, esColab){
   const ultimo=pagosCliente.filter(p=>p.ts===pagosCliente[0].ts).slice(-1)[0];
   const st=_estadoMoraCargar();
   if(!_revertirCobroMoraEnEstado(st,_refDeEntradaMora(ultimo)).ok){alert('No se encontró ese cobro');return;}
+  _reactivarSiDebeMora(st, clienteId);   // v1.0711
   _estadoMoraGuardar(st);
 
   actualizarBadgeMora();
@@ -13043,6 +13048,12 @@ function admConfirmarMoraPanel(){
         try{ registrarSafSec(cX,dif,ts,fecha); }catch(e){}
         renderAdminDet(clienteId);
       }
+    }
+    // v1.0711: después del saldo, para que el saldo a favor de este cobro quede guardado en cómo estaba el lote
+    if(_terminarLotesPorMora([clienteId], new Date().toISOString()).length){
+      try{ renderAdminDet(clienteId); }catch(e){}
+      try{ if(typeof renderDetColab==='function') renderDetColab(clienteId); }catch(e){}
+      try{ renderColab(); }catch(e){}
     }
   };
   // Auto → clave colab. Interés diferente → clave admin
@@ -18058,6 +18069,38 @@ function _deshacerFinalizacion(c, motivo){
 function _avisoTerminadoSinPrevio(c){
   if(!c || c.est!=='finalizado' || c.autopago || c.finPrevio) return;
   setTimeout(()=>alert('⚠️ '+c.mz+' Lote '+c.lote+' quedó TERMINADO (se había terminado con este pago).\n\nPara volverlo a activo: Editar cliente → Estado "Activo" y cargá la cuota. Avisale al administrador.'),0);
+}
+// v1.0711: si la ÚLTIMA cuota se cobra como cuota en mora, el lote también se termina (antes solo lo terminaban el
+// cobro del mes y el cierre, y quedaba activo pidiendo la cuota otra vez). Se termina recién cuando ya no debe
+// ninguna cuota en mora. Igual que marcarPago: guarda cómo estaba y anota la fecha del certificado. Devuelve los terminados.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _terminarLotesPorMora(ids, ts){
+  const cm=loadCuotasMora(), data=loadData(), hechos=[];
+  [...new Set(ids)].forEach(id=>{
+    const c=data.find(x=>x.id===id);
+    if(!c || c.est!=='activo' || c.autopago || c.ca<c.ct) return;
+    if(cm.some(m=>m.clienteId===id&&!m.pagada)) return;                         // todavía debe cuotas en mora
+    if(!cm.some(m=>m.clienteId===id&&m.pagada&&m.numeroCuota>=c.ct)) return;   // la última cuota no se cobró en mora
+    _finalizarLote(c, ts);
+    hechos.push(c);
+  });
+  if(!hechos.length) return [];
+  saveData(data);
+  const certs=loadLotesCerts();
+  hechos.forEach(c=>{ if(!certs[c.id]) certs[c.id]={}; certs[c.id].fecha=ts.split('T')[0]; });
+  saveLotesCerts(certs);
+  hechos.forEach(c=>addHist('edit','🏁 Lote finalizado: '+c.mz+' Lote '+c.lote+' — '+c.titular+' (última cuota '+c.ct+'/'+c.ct+' cobrada en mora)',c.id));
+  setTimeout(()=>mostrarToastCobro('🏁 ¡Última cuota! Lote finalizado'),400);
+  try{ actualizarBadgeFinalizados(); }catch(e){}
+  return hechos;
+}
+_terminarLotesPorMora.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
+// v1.0711: al desmarcar un cobro de mora, si el lote había terminado y vuelve a deber, vuelve a activo como estaba.
+// (Cambia st.data: quien llama guarda con _estadoMoraGuardar.)
+function _reactivarSiDebeMora(st, id){
+  const c=st.data.find(x=>x.id===id);
+  if(c && c.est==='finalizado' && st.cuotasMora.some(m=>m.clienteId===id&&!m.pagada))
+    _deshacerFinalizacion(c,'se desmarcó el cobro de la última cuota en mora');
 }
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function marcarPago(id, interesOverride){
