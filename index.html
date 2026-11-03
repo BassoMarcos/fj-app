@@ -970,7 +970,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0712';
+const APP_VERSION='v1.0713';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -13260,6 +13260,7 @@ function borrarCierreFinalYReaplicar(){
       if((c.monto||0)<=0) return;
       const yaExiste=cuotasMoraExist.some(m=>m.clienteId===c.id&&m.mes===mes&&m.anio===anio);
       if(yaExiste) return;
+      if(_ultimaCuotaYaEnMora(cuotasMoraExist, c)) return;   // v1.0713
       cuotasMoraExist.push({
         clienteId:c.id, mz:c.mz, lote:c.lote, titular:c.titular,
         moneda:c.moneda||'ARS', numeroCuota:c.ca, totalCuotas:c.ct,
@@ -13996,7 +13997,8 @@ function mostrarResumenCierre(){
   const pausados=activos.filter(c=>esPrimeraCuotaFutura(c));
   const operativos=activos.filter(c=>!esPrimeraCuotaFutura(c));
   const pagados=operativos.filter(c=>c.pago);
-  const vanAMora=operativos.filter(c=>!c.pago&&(c.monto||0)>0).sort((a,b)=>{
+  const _cmResumen=loadCuotasMora();
+  const vanAMora=operativos.filter(c=>!c.pago&&(c.monto||0)>0&&!_ultimaCuotaYaEnMora(_cmResumen, c)).sort((a,b)=>{   // v1.0713
     const eo={'M1':1,'M2':2,'M3':3,'M4':4,'ETAPA 2':5,'ETAPA 3':6,'E4-M1':7,'E4-M2':8,'E4-M3':9,'E4-M4':10,'E4-M5':11};
     const ea=eo[String(a.mz||'').toUpperCase()]||99, eb=eo[String(b.mz||'').toUpperCase()]||99;
     if(ea!==eb)return ea-eb;
@@ -14732,6 +14734,7 @@ function simularCierre(){
     if(esPrimeraCuotaFutura(c)) return;
     const yaExiste=cuotasMoraExist.some(m=>m.clienteId===c.id&&m.mes===mes&&m.anio===anio);
     if(yaExiste) return;
+    if(_ultimaCuotaYaEnMora(cuotasMoraExist, c)) return;   // v1.0713
     mora.push({id:c.id, mz:c.mz, lote:c.lote, titular:c.titular, cuota:c.ca, ct:c.ct, monto:c.monto, moneda:c.moneda||'ARS'});
   });
 
@@ -14957,6 +14960,16 @@ function abrirVerificacionCierre(){
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function cerrarModalVerif(){ const m=document.getElementById('verif-modal'); if(m) m.remove(); }
 
+// v1.0713: ¿la ÚLTIMA cuota del lote ya está en mora? En la última cuota el cierre no avanza el número
+// (se queda en ct/ct), así que sin este control cada cierre la volvía a mandar a mora
+// (M1-11A: la cuota 48 entró en octubre y en noviembre iba a entrar otra vez). Regla de Marcos para todos los casos.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _ultimaCuotaYaEnMora(cuotasMora, c){
+  if(!c || !c.ct || (c.ca||0) < c.ct) return false;
+  return (cuotasMora||[]).some(m=>m && m.clienteId===c.id && Number(m.numeroCuota)===Number(c.ca));
+}
+_ultimaCuotaYaEnMora.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
+
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function ejecutarCierreFinal(){
   window._finalizadosEnCierre=[]; var _finalizadosEnCierre=window._finalizadosEnCierre;
@@ -14996,6 +15009,7 @@ function ejecutarCierreFinal(){
       if(esPrimeraCuotaFutura(c)) return;
       const yaExiste=cuotasMoraExist.some(m=>m.clienteId===c.id&&m.mes===mes&&m.anio===anio);
       if(yaExiste) return;
+      if(_ultimaCuotaYaEnMora(cuotasMoraExist, c)) return;   // v1.0713
       cuotasMoraExist.push({
         clienteId:c.id, mz:c.mz, lote:c.lote, titular:c.titular,
         moneda:c.moneda||'ARS', numeroCuota:c.ca, totalCuotas:c.ct,
@@ -15130,6 +15144,7 @@ function hacerCierreFinal(){
       // Verificar que no esté ya registrado para este mes
       const yaExiste=cuotasMoraExist.some(m=>m.clienteId===c.id&&m.mes===mes&&m.anio===anio);
       if(yaExiste) return;
+      if(_ultimaCuotaYaEnMora(cuotasMoraExist, c)) return;   // v1.0713
 
       // Registrar cuota morosa
       cuotasMoraExist.push({
