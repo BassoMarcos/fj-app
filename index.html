@@ -393,6 +393,7 @@ tr:hover td{background:var(--bg)}
         const v = window._syncQueue[k];
         try {
           await set(ref(db, 'eucaliptus/' + k), window._sanitizeUndefined(v));
+          try { if (window._anotarEscrituraNube) window._anotarEscrituraNube(k, v); } catch (e) {}   // v1.0712: caja negra
           if (window._syncQueue[k] === v) delete window._syncQueue[k];
           window._syncLastOk = new Date().toLocaleTimeString('es-AR');
         } catch (e) {
@@ -969,7 +970,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0711';
+const APP_VERSION='v1.0712';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -1115,6 +1116,114 @@ function _dispRol(){
   if(a&&a.classList.contains('active')) return 'admin';
   if(c&&c.classList.contains('active')) return 'colaborador';
   return 'sin sesión';
+}
+
+// ══════ v1.0712: CAJA NEGRA Y ALARMA DE LA NUBE ══════
+// El 2/11/2026 la nube se quedó sin las cuotas en mora, la Caja de Mora y el Historial, y no se pudo saber quién las borró.
+// Caja negra: cada vez que ESTA compu guarda una de esas 3 listas en la nube, lo anota (qué compu, hora, cuántos renglones).
+// Alarma: si una compu ve la nube sin una de esas listas y ella la tiene, avisa en pantalla y lo anota. NO sube nada sola.
+const _NUBE_VIGILADAS={cuotasMora:'las cuotas en mora', mora:'la Caja de Mora', hist:'el Historial'};
+const _FB_EUC='https://fj-app-44df3-default-rtdb.firebaseio.com/eucaliptus/';
+const _REGISTRO_NUBE_DIAS=15;   // la caja negra guarda los últimos 15 días
+const _alarmaNubeVista={};      // lista → true mientras siga vacía (se avisa una sola vez)
+const _ultimoAnotadoNube={};    // lista → último valor anotado (la cola de subida guarda lo mismo varias veces seguidas)
+function _nubeCant(v){
+  if(v===null||v===undefined) return 0;
+  if(Array.isArray(v)) return v.filter(x=>x!==null&&x!==undefined).length;
+  return typeof v==='object' ? Object.keys(v).length : 1;
+}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _anotarEscrituraNube(k, v){
+  if(!_NUBE_VIGILADAS[k] || _ultimoAnotadoNube[k]===v) return;
+  _ultimoAnotadoNube[k]=v;
+  try{
+    const ts=new Date().toISOString();
+    const nota=JSON.stringify({ts, lista:k, renglones:_nubeCant(v), compu:_dispId(), nombre:_dispNombreAuto(), rol:_dispRol(), version:APP_VERSION});
+    fetch(_FB_EUC+'registroNube/'+ts.slice(0,10)+'.json',{method:'POST',body:nota}).catch(()=>{});
+    fetch(_FB_EUC+'registroNube/ultimo/'+k+'.json',{method:'PUT',body:nota}).catch(()=>{});   // la última de cada lista no se borra con los días
+  }catch(e){}
+}
+_anotarEscrituraNube.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
+function _nubeCantLocal(k){
+  try{
+    if(k==='cuotasMora') return loadCuotasMora().length;
+    if(k==='mora') return loadMora().length;
+    if(k==='hist') return loadHist().length;
+  }catch(e){}
+  return 0;
+}
+// Última vez que una compu de la app guardó esa lista (caja negra de los últimos días), o null.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+async function _ultimaEscrituraNube(k){
+  for(let i=0;i<_REGISTRO_NUBE_DIAS;i++){
+    const dia=new Date(Date.now()-i*86400000).toISOString().slice(0,10);
+    const r=await fetch(_FB_EUC+'registroNube/'+dia+'.json?cb='+Date.now(),{cache:'no-store'}).then(x=>x.json()).catch(()=>null);
+    const delDia=Object.values(r||{}).filter(e=>e&&e.lista===k).sort((a,b)=>String(a.ts).localeCompare(String(b.ts)));
+    if(delDia.length) return delDia[delDia.length-1];
+  }
+  // Más de 15 días sin cambios en esa lista: la última anotación que se guarda aparte
+  return await fetch(_FB_EUC+'registroNube/ultimo/'+k+'.json?cb='+Date.now(),{cache:'no-store'}).then(x=>x.json()).catch(()=>null);
+}
+// La nube vino sin la lista k. Si esta compu la tiene: se espera unos segundos, se confirma y se avisa.
+// alVaciarlaLaApp: qué hace esta compu si la vació a propósito una compu de la app (solo la Caja de Mora).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _nubeVinoVacia(k, alVaciarlaLaApp){
+  if(!_NUBE_VIGILADAS[k] || _alarmaNubeVista[k]) return;
+  const local=_nubeCantLocal(k);
+  if(!local) return;   // esta compu tampoco la tiene: no hay con qué comparar
+  _alarmaNubeVista[k]=true;
+  setTimeout(async()=>{
+    try{
+      const sigue=await fetch(_FB_EUC+k+'.json?shallow=true&cb='+Date.now(),{cache:'no-store'}).then(x=>x.json());
+      if(sigue){ _alarmaNubeVista[k]=false; return; }   // alguien ya la volvió a subir
+      const ult=await _ultimaEscrituraNube(k);
+      const porLaApp=!!(ult && ult.renglones===0);
+      // La Caja de Mora se puede vaciar a propósito ("Limpiar"): si la vació una compu de la app, no es alarma
+      // y esta compu también la vacía (si no, en su próximo cobro de mora volvería a subir lo viejo).
+      if(k==='mora' && porLaApp){
+        _alarmaNubeVista[k]=false;
+        if(alVaciarlaLaApp) alVaciarlaLaApp();
+        return;
+      }
+      const hora=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});
+      const origen=porLaApp
+        ? 'la vació la compu '+(ult.nombre||'')+' ('+ult.compu+', '+(ult.rol||'')+', '+(ult.version||'')+') a las '+new Date(ult.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false})
+        : 'ninguna compu de la app anotó haberla vaciado';
+      fetch(_FB_EUC+'alarmasNube.json',{method:'POST',body:JSON.stringify({
+        ts:new Date().toISOString(), lista:k, renglonesEnEstaCompu:local, origen,
+        ultimaEscritura:ult||null, compu:_dispId(), nombre:_dispNombreAuto(), rol:_dispRol(), version:APP_VERSION
+      })}).catch(()=>{});
+      _mostrarAlarmaNube('⚠️ La nube se quedó sin '+_NUBE_VIGILADAS[k]+' ('+hora+'). Esta compu todavía la tiene ('+local+' renglones): '
+        +'no cierres esta pestaña, no borres nada y avisale a Marcos. ('+origen+')');
+    }catch(e){ _alarmaNubeVista[k]=false; }
+  }, 8000);
+}
+_nubeVinoVacia.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
+function _mostrarAlarmaNube(texto){
+  let b=document.getElementById('alarma-nube');
+  if(!b){
+    b=document.createElement('div');
+    b.id='alarma-nube';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:2147483646;background:#b91c1c;color:#fff;padding:10px 14px;font-size:13px;font-weight:700;display:flex;gap:10px;align-items:flex-start;box-shadow:0 4px 18px rgba(0,0,0,.4)';
+    const t=document.createElement('div'); t.className='alarma-textos'; t.style.flex='1';
+    const ok=document.createElement('button'); ok.textContent='Entendido';
+    ok.style.cssText='background:#fff;color:#b91c1c;border:none;border-radius:4px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap';
+    ok.onclick=()=>b.remove();
+    b.append(t, ok);
+    document.body.appendChild(b);
+  }
+  const p=document.createElement('div'); p.textContent=texto;
+  b.querySelector('.alarma-textos').appendChild(p);
+}
+// Borra de la caja negra los días viejos (una vez por día, junto con el respaldo diario).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+async function _podarRegistroNube(){
+  try{
+    const dias=await fetch(_FB_EUC+'registroNube.json?shallow=true').then(x=>x.json());
+    const limite=new Date(Date.now()-_REGISTRO_NUBE_DIAS*86400000).toISOString().slice(0,10);
+    // "ultimo" no es un día ("u" va después de "2"): no se borra
+    for(const d of Object.keys(dias||{})) if(d<limite) await fetch(_FB_EUC+'registroNube/'+d+'.json',{method:'DELETE'});
+  }catch(e){}
 }
 let _dispSesionTs=new Date().toISOString();
 let _dispUltimaActividad=Date.now();
@@ -6571,6 +6680,7 @@ function cobrarColabMoraSeleccionadas(clienteId){
   actualizarBadgeMora();
     addHist('mora','Cobro mora colab — '+seleccionadas[0].mz+' Lote '+seleccionadas[0].lote+' — '+seleccionadas.length+' cuota(s) — '+cur+fmtPeso(totalTotal), clienteId);
     _terminarLotesPorMora(seleccionadas.map(c=>c.clienteId), ts);   // v1.0711
+    try{ _colabDesbloquearLista(); }catch(e){}   // v1.0712: cobro hecho → destrabar la lista
     renderDetColab(clienteId);
     renderColab();
     actualizarBadgeMora();
@@ -11156,10 +11266,10 @@ function renderAdminDet(id){
         style="width:100%;margin-top:8px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;opacity:0.4;pointer-events:none">
         💰 Cobrar seleccionadas
       </button>
-      <button id="adm-mora-todo-btn-${id}" onclick="cobrarTodoAdmin('${id}')"
+      ${_ultimaCuotaEnMora(id)?'':`<button id="adm-mora-todo-btn-${id}" onclick="cobrarTodoAdmin('${id}')"
         style="width:100%;margin-top:6px;background:#7c3aed;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer">
         ⚡ Cobrar todo (mora + mes actual)
-      </button>
+      </button>`}
     </div>`;
   }
 
@@ -12446,6 +12556,13 @@ function cerrarMoraPanel(){
 // v1.0677: la cuota del mes en "Cobrar todo" se calcula IGUAL que en el cobro normal (marcarPago):
 // valor cobrable (con escalón) y, si ya pasó el día de vencimiento, su interés (que va a Caja de Mora).
 // Antes se sumaba c.monto pelado y el interés del mes quedaba en 0.
+// v1.0712: la ÚLTIMA cuota del lote ya pasó a mora (ej. M1-11A): no hay cuota del mes para sumar. "Cobrar todo"
+// la sumaría dos veces (la de mora + la "del mes"), así que en ese caso no se muestra: se cobra con "Cobrar seleccionadas".
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _ultimaCuotaEnMora(id){
+  const c=loadData().find(x=>x.id===id);
+  return !!c && c.ca>=c.ct && loadCuotasMora().some(m=>m.clienteId===id&&m.numeroCuota>=c.ct);
+}
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _cuotaMesParaCobrarTodo(c){
   const _mc=montoCobrable(c);
@@ -12497,6 +12614,7 @@ function _textoInteresesCobrarTodo(r,cur){
 }
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function cobrarTodoColab(clienteId){
+  if(_ultimaCuotaEnMora(clienteId)){ alert('La última cuota de este lote ya está en mora: no hay cuota del mes.\n\nCobrala con "Cobrar seleccionadas".'); return; }   // v1.0712
   window._moraEfectivoTocado=false;
   const data=loadData();
   const c=data.find(x=>x.id===clienteId);
@@ -12632,6 +12750,7 @@ function admConfirmarTodoColab(){
 
   const ejecutar=()=>{
     document.getElementById('mora-panel-overlay')?.remove();
+    try{ _colabDesbloquearLista(); }catch(e){}   // v1.0712: cobro hecho → la lista del colaborador no queda trabada
     // 1. Mora (capital + interés → caja de mora)
     _ejecutarCobroAdmMora(_selEf,clienteId,(cur||''),totalMonto+interes-_qMora);
     // 2. Cuota mes actual (caja del día)
@@ -12667,6 +12786,7 @@ function admConfirmarTodoColab(){
 }
 
 function cobrarTodoAdmin(clienteId){
+  if(_ultimaCuotaEnMora(clienteId)){ alert('La última cuota de este lote ya está en mora: no hay cuota del mes.\n\nCobrala con "Cobrar seleccionadas".'); return; }   // v1.0712
   window._moraEfectivoTocado=false;
   const data=loadData();
   const c=data.find(x=>x.id===clienteId);
@@ -13034,6 +13154,7 @@ function admConfirmarMoraPanel(){
   const _absI=Math.min(interes,Math.max(0,-dif)), _selEf=_absI?_repartirInteresEnCuotas(seleccionadas, interes-_absI):selConInteres;
   const ejecutar=()=>{
     document.getElementById('mora-panel-overlay')?.remove();
+    try{ _colabDesbloquearLista(); }catch(e){}   // v1.0712: cobrado con la clave del admin desde la vista del colaborador → destrabar
     _ejecutarCobroAdmMora(_selEf,clienteId,(cur||''),totalTotal-_absI);
     if(dif!==0){
       const dataX=loadData(); const cX=dataX.find(x=>x.id===clienteId);
@@ -14002,6 +14123,7 @@ async function backupDiarioAuto(){
     await window._fbSet('backups/dia'+dia, snap);
     localStorage.setItem('fj_ultimo_backup',hoy);
     console.log('Backup diario OK ('+data.length+' clientes) → backups/dia'+dia);
+    _podarRegistroNube();   // v1.0712: la caja negra guarda solo los últimos días
   }catch(e){ console.warn('Backup diario falló:',e); }
 }
 
@@ -15233,6 +15355,7 @@ function admConfirmarMoraPanelColab(){
 
   const ejecutar=()=>{
     document.getElementById('mora-panel-overlay')?.remove();
+    try{ _colabDesbloquearLista(); }catch(e){}   // v1.0712
     // Guardar como pendiente de aprobación del admin
     const c=loadData().find(x=>x.id===clienteId)||{};
     const ts=new Date().toISOString();
@@ -17636,10 +17759,10 @@ function renderDetColab(id){
           style="width:100%;margin-top:8px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;opacity:0.4;pointer-events:none">
           💰 Cobrar seleccionadas
         </button>
-        <button id="colab-mora-todo-btn-${id}" onclick="cobrarTodoColab('${id}')"
+        ${_ultimaCuotaEnMora(id)?'':`<button id="colab-mora-todo-btn-${id}" onclick="cobrarTodoColab('${id}')"
           style="width:100%;margin-top:6px;background:#7c3aed;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer">
           ⚡ Cobrar todo (mora + mes actual)
-        </button>
+        </button>`}
       </div>
     </div>`;
   }
@@ -18025,6 +18148,7 @@ function restaurarPunto(punto){
       // Restaurar
       for(const [k,v] of Object.entries(punto.datos)){
         await fetch(B+k+'.json',{method:'PUT',body:JSON.stringify(v)});
+        _anotarEscrituraNube(k, v);   // v1.0712: caja negra
       }
       alert('✅ Estado restaurado.\n\nLa app se va a recargar. Recordá recargar también los otros dispositivos con Ctrl+Shift+R.');
       location.reload();
@@ -18517,7 +18641,8 @@ async function _cargaInicialNube(opts){
   });
   window._fbListen('pagoStore', (d) => { if(d){ _lsSet(dKey('pagos'), JSON.stringify(d)); _fbRerender('lista'); _fbRerender('colab'); } });
   window._fbListen('borrados', (d) => { if(Array.isArray(d)){ localStorage.setItem('fj_borrados', JSON.stringify(d)); } });
-  window._fbListen('cuotasMora', (d) => { if(d){ localStorage.setItem('fj_cuotas_mora', JSON.stringify(d)); _fbRerender('mora'); } });
+  // v1.0712: si la nube viene SIN la lista (y esta compu la tiene) → alarma (ver _nubeVinoVacia)
+  window._fbListen('cuotasMora', (d) => { if(d){ _alarmaNubeVista.cuotasMora=false; localStorage.setItem('fj_cuotas_mora', JSON.stringify(d)); _fbRerender('mora'); } else _nubeVinoVacia('cuotasMora'); });
   window._fbListen('balances', (d) => { if(d){ _lsSet(dKey('balances'), JSON.stringify(d)); _fbRerender('balances'); } });
   window._fbListen('icc', (d) => { if(d) _lsSet(dKey('icc'), JSON.stringify(d)); });
   window._fbListen('adelantos', (d) => { if(d){ _lsSet(dKey('adelantos'), JSON.stringify(d)); _fbRerender('balances'); } });
@@ -18525,11 +18650,12 @@ async function _cargaInicialNube(opts){
   window._fbListen('lotesLibresE123', (d) => { if(d){ _lsSet(dKey('lotesLibresE123'), JSON.stringify(d)); } });
   window._fbListen('lotesCerts', (d) => { if(d){ _lsSet(dKey('lotesCerts'), JSON.stringify(d)); } });
   window._fbListen('iccMensual', (d) => { if(d){ _lsSet(dKey('iccMensual'), JSON.stringify(d)); } });
-  window._fbListen('mora', (d) => { if(d) localStorage.setItem('fj_mora', JSON.stringify(d)); });
+  // v1.0712: si la Caja de Mora la vació otra compu con "Limpiar", esta también la vacía
+  window._fbListen('mora', (d) => { if(d){ _alarmaNubeVista.mora=false; localStorage.setItem('fj_mora', JSON.stringify(d)); } else _nubeVinoVacia('mora', ()=>{ localStorage.setItem('fj_mora','[]'); _fbRerender('balances'); }); });
   window._fbListen('extras', (d) => { if(d) localStorage.setItem('fj_extras', JSON.stringify(d)); });
   window._fbListen('mesActual', (d) => { if(d) localStorage.setItem('fj_mes_actual', JSON.stringify(d)); });
   window._fbListen('cierreFinal', (d) => { if(d) localStorage.setItem('fj_cierre_final', JSON.stringify(d)); });
-  window._fbListen('hist', (d) => { if(d){ let l=[]; try{l=JSON.parse(_lsGet(dKey('hist'))||'[]');}catch(e){} if(d.length>=l.length) _lsSet(dKey('hist'), JSON.stringify(d)); } });
+  window._fbListen('hist', (d) => { if(d){ _alarmaNubeVista.hist=false; let l=[]; try{l=JSON.parse(_lsGet(dKey('hist'))||'[]');}catch(e){} if(d.length>=l.length) _lsSet(dKey('hist'), JSON.stringify(d)); } else _nubeVinoVacia('hist'); });
   window._fbListen('pendientesAprobacion', (d) => { if(d) localStorage.setItem('fj_pendientes_aprobacion', JSON.stringify(d)); });
   window._fbListen('notifMora', (d) => { if(d) localStorage.setItem('fj_notif_mora', JSON.stringify(d)); });
   window._fbListen('adelantosHist', (d) => { if(d) _lsSet(dKey('adelantosHist'), JSON.stringify(d)); });
