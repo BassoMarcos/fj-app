@@ -969,7 +969,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0711';
+const APP_VERSION='v1.0712';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -11156,10 +11156,10 @@ function renderAdminDet(id){
         style="width:100%;margin-top:8px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;opacity:0.4;pointer-events:none">
         💰 Cobrar seleccionadas
       </button>
-      <button id="adm-mora-todo-btn-${id}" onclick="cobrarTodoAdmin('${id}')"
+      ${_ultimaCuotaEnMora(id)?'':`<button id="adm-mora-todo-btn-${id}" onclick="cobrarTodoAdmin('${id}')"
         style="width:100%;margin-top:6px;background:#7c3aed;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer">
         ⚡ Cobrar todo (mora + mes actual)
-      </button>
+      </button>`}
     </div>`;
   }
 
@@ -12446,6 +12446,13 @@ function cerrarMoraPanel(){
 // v1.0677: la cuota del mes en "Cobrar todo" se calcula IGUAL que en el cobro normal (marcarPago):
 // valor cobrable (con escalón) y, si ya pasó el día de vencimiento, su interés (que va a Caja de Mora).
 // Antes se sumaba c.monto pelado y el interés del mes quedaba en 0.
+// v1.0712: la ÚLTIMA cuota del lote ya pasó a mora (ej. M1-11A): no hay cuota del mes para sumar. "Cobrar todo"
+// la sumaría dos veces (la de mora + la "del mes"), así que en ese caso no se muestra: se cobra con "Cobrar seleccionadas".
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _ultimaCuotaEnMora(id){
+  const c=loadData().find(x=>x.id===id);
+  return !!c && c.ca>=c.ct && loadCuotasMora().some(m=>m.clienteId===id&&m.numeroCuota>=c.ct);
+}
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _cuotaMesParaCobrarTodo(c){
   const _mc=montoCobrable(c);
@@ -12497,6 +12504,7 @@ function _textoInteresesCobrarTodo(r,cur){
 }
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function cobrarTodoColab(clienteId){
+  if(_ultimaCuotaEnMora(clienteId)){ alert('La última cuota de este lote ya está en mora: no hay cuota del mes.\n\nCobrala con "Cobrar seleccionadas".'); return; }   // v1.0712
   window._moraEfectivoTocado=false;
   const data=loadData();
   const c=data.find(x=>x.id===clienteId);
@@ -12667,6 +12675,7 @@ function admConfirmarTodoColab(){
 }
 
 function cobrarTodoAdmin(clienteId){
+  if(_ultimaCuotaEnMora(clienteId)){ alert('La última cuota de este lote ya está en mora: no hay cuota del mes.\n\nCobrala con "Cobrar seleccionadas".'); return; }   // v1.0712
   window._moraEfectivoTocado=false;
   const data=loadData();
   const c=data.find(x=>x.id===clienteId);
@@ -17636,10 +17645,10 @@ function renderDetColab(id){
           style="width:100%;margin-top:8px;background:#dc2626;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer;opacity:0.4;pointer-events:none">
           💰 Cobrar seleccionadas
         </button>
-        <button id="colab-mora-todo-btn-${id}" onclick="cobrarTodoColab('${id}')"
+        ${_ultimaCuotaEnMora(id)?'':`<button id="colab-mora-todo-btn-${id}" onclick="cobrarTodoColab('${id}')"
           style="width:100%;margin-top:6px;background:#7c3aed;color:#fff;border:none;border-radius:var(--r);padding:8px;font-size:13px;font-weight:700;cursor:pointer">
           ⚡ Cobrar todo (mora + mes actual)
-        </button>
+        </button>`}
       </div>
     </div>`;
   }
