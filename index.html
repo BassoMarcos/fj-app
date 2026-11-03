@@ -14006,6 +14006,7 @@ function mostrarResumenCierre(){
     const[an,al]=n(a.lote);const[bn,bl]=n(b.lote);
     return an!==bn?an-bn:al.localeCompare(bl);
   });
+  const ultimaEnMora=_lotesUltimaYaEnMora();   // v1.0713: no pagaron pero tampoco van a mora (aclarado abajo)
   const totalCobrado=pagados.reduce((s,c)=>s+(c.monto||0),0);
   const totalMora=vanAMora.reduce((s,c)=>s+(c.monto||0),0);
   const pct=operativos.length?Math.round(pagados.length/operativos.length*100):0;
@@ -14069,6 +14070,13 @@ function mostrarResumenCierre(){
       ${pausados.length?`<div style="margin:0 16px 10px;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:10px 12px">
         <div style="font-size:12px;font-weight:700;color:#64748b">🗓 ${pausados.length} cliente${pausados.length>1?'s':''} en pausa (primera cuota futura)</div>
         <div style="font-size:11px;color:#94a3b8;margin-top:3px">No entran al cierre ni generan mora</div>
+      </div>`:''}
+
+      <!-- v1.0713: última cuota ya en mora -->
+      ${ultimaEnMora.length?`<div style="margin:0 16px 10px;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:10px 12px">
+        <div style="font-size:12px;font-weight:700;color:var(--text)">🏁 ${ultimaEnMora.length} lote${ultimaEnMora.length>1?'s':''} en su última cuota, que ya está en mora</div>
+        ${ultimaEnMora.map(u=>`<div style="font-size:12px;margin-top:4px"><b style="color:var(--acc2)">${formatLoteTag(u.mz,u.lote)}</b> ${u.titular} · cuota ${u.ca} de ${u.ct}${u.desde?', en mora desde '+u.desde:''}</div>`).join('')}
+        <div style="font-size:11px;color:var(--text2);margin-top:5px">${_TEXTO_ULTIMA_EN_MORA} Por eso "Pagaron" + "Van a mora" da ${ultimaEnMora.length} menos que los operativos.</div>
       </div>`:''}
 
       <!-- Lista mora -->
@@ -14433,7 +14441,7 @@ function _extrasSimulador(){
   // Lotes que terminaron de pagar en este ciclo: Estadísticas los suma en "Total a cobrar", el Pre cierre no
   const finalizadosCiclo=data.filter(c=>c.est==='finalizado'&&!c.autopago&&!esAgrimensor(c.id)&&c.moneda!=='USD'&&mCaja[c.id])
     .map(c=>({mz:c.mz,lote:c.lote,titular:c.titular,monto:mCaja[c.id]}));
-  return {pagaron:cobr.filter(c=>c.pago).length, total:cobr.length, finalizadosCiclo};
+  return {pagaron:cobr.filter(c=>c.pago).length, total:cobr.length, finalizadosCiclo, ultimaEnMora:_lotesUltimaYaEnMora()};
 }
 // Bloque "qué va a pasar, en criollo" del simulador
 function _bloqueCriolloSimulador(extra){
@@ -14450,6 +14458,10 @@ function _bloqueCriolloSimulador(extra){
   h+='<div>• Pagaron <b>'+extra.pagaron+' de '+extra.total+'</b> lotes en pesos ('+pct+'%). Faltan <b>'+(extra.total-extra.pagaron)+'</b>.</div>';
   h+='<div>• Pasan a mora <b>'+lotes.size+' lotes</b> ('+(lotes.size-lotesUSD.size)+' en pesos'+(lotesUSD.size?' y '+lotesUSD.size+' en dólares':'')+'): <b>'+nuevos.size+' entran nuevos</b> a mora y <b>'+(lotes.size-nuevos.size)+' ya estaban</b> en mora y suman una cuota más.</div>';
   h+='<div>• La mora que se suma es <b>'+fmt(sumARS)+'</b> en pesos'+(sumUSD?' y <b>USD '+Math.round(sumUSD).toLocaleString('es-AR')+'</b> en dólares (aparte, no se mezclan)':'')+'.</div>';
+  const ulm=extra.ultimaEnMora||[];   // v1.0713
+  if(ulm.length){
+    h+='<div>• 🏁 <b>'+ulm.length+' lote'+(ulm.length>1?'s':'')+' en su última cuota, que ya está en mora</b> ('+ulm.map(u=>formatLoteTag(u.mz,u.lote)+' '+u.titular+', cuota '+u.ca+' de '+u.ct).join('; ')+'). '+_TEXTO_ULTIMA_EN_MORA+'</div>';
+  }
   const fin=extra.finalizadosCiclo||[];
   if(fin.length){
     h+='<div>• <b>'+fin.length+' lote'+(fin.length>1?'s':'')+' terminaron de pagar este mes</b> ('+fmt(fin.reduce((s,f)=>s+f.monto,0))+': '+fin.map(f=>formatLoteTag(f.mz,f.lote)).join(', ')+'). Estadísticas los suma en "Total a cobrar" y el Pre cierre no; por eso esos dos totales pueden diferir en ese monto.</div>';
@@ -14969,10 +14981,25 @@ function _ultimaCuotaYaEnMora(cuotasMora, c){
   return (cuotasMora||[]).some(m=>m && m.clienteId===c.id && Number(m.numeroCuota)===Number(c.ca));
 }
 _ultimaCuotaYaEnMora.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
+// Los lotes que este cierre NO manda a mora por esa regla, para aclararlo en pantalla (resumen, simulador y aviso final).
+// Pedido de Marcos: "que quede aclarado en cualquier caso, si no no lo vamos a entender".
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _lotesUltimaYaEnMora(){
+  const cm=loadCuotasMora();
+  return loadData().filter(c=>c&&c.est==='activo'&&!c.autopago&&!c.pago&&(c.monto||0)>0&&!esPrimeraCuotaFutura(c)&&_ultimaCuotaYaEnMora(cm,c))
+    .map(c=>{
+      const m=cm.find(x=>x&&x.clienteId===c.id&&Number(x.numeroCuota)===Number(c.ca));
+      return {id:c.id, mz:c.mz, lote:c.lote, titular:c.titular||'', ca:c.ca, ct:c.ct, desde:(m&&m.mesNombre)||''};
+    });
+}
+_lotesUltimaYaEnMora.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
+const _TEXTO_ULTIMA_EN_MORA='No se suma mora nueva: la última cuota ya pasó a mora en un cierre anterior y el cierre no la repite. '
+  +'Cuando se pague, se cobra como cuota en mora (con su interés) y entra a la Caja de Mora.';
 
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function ejecutarCierreFinal(){
   window._finalizadosEnCierre=[]; var _finalizadosEnCierre=window._finalizadosEnCierre;
+  const _ultimaEnMoraCierre=[];   // v1.0713: lotes que no suman mora nueva (se aclara en el aviso final)
   if(_syncBloqueaOperacion('HACER EL CIERRE')) return;
   // v1.0682: se cierra el mes siguiente al último cierre, y solo si ese mes ya empezó
   const _mc=_mesQueSeCierra();
@@ -15009,7 +15036,7 @@ function ejecutarCierreFinal(){
       if(esPrimeraCuotaFutura(c)) return;
       const yaExiste=cuotasMoraExist.some(m=>m.clienteId===c.id&&m.mes===mes&&m.anio===anio);
       if(yaExiste) return;
-      if(_ultimaCuotaYaEnMora(cuotasMoraExist, c)) return;   // v1.0713
+      if(_ultimaCuotaYaEnMora(cuotasMoraExist, c)){ _ultimaEnMoraCierre.push(formatLoteTag(c.mz,c.lote)+' '+(c.titular||'')); return; }   // v1.0713
       cuotasMoraExist.push({
         clienteId:c.id, mz:c.mz, lote:c.lote, titular:c.titular,
         moneda:c.moneda||'ARS', numeroCuota:c.ca, totalCuotas:c.ct,
@@ -15055,6 +15082,7 @@ function ejecutarCierreFinal(){
     alert('✓ Cierre final de '+mesNombre+' registrado el '+fecha+' a las '+hora+
       '\n\n📋 '+avanzados+' clientes avanzaron al mes siguiente'+
       '\n⚠️ '+nuevasMora+' cuotas pasaron a mora'+
+      (_ultimaEnMoraCierre.length?'\n\n🏁 '+_ultimaEnMoraCierre.length+' lote(s) en su última cuota, que ya estaba en mora: '+_ultimaEnMoraCierre.join(', ')+'.\n'+_TEXTO_ULTIMA_EN_MORA:'')+
       (_fin.length?'\n\n🏁 '+_fin.length+' lote(s) FINALIZARON su plan (pagaron todas las cuotas):\n'+_fin.join(', ')+'\n\nYa aparecen en "Lotes Finalizados".':'')+
       '\n\n📸 La foto de '+mesNombre+' quedó guardada en la nube (Informes mensuales).'+
       '\n\nDesde ahora los pagos pendientes van a Caja de Mora.');
