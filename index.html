@@ -2401,9 +2401,12 @@ const AGRIMENSOR_LOTES_DEFAULT = new Set([
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxljkv9fj6mYqkCOUz81Rp38K4xvFoML_WWegC-TkzpFeRHKTB7JmaIycf5sb0tbM0e/exec';
 
 // ===================== GOOGLE SHEETS SYNC =====================
+// v1.0713: solo la app de verdad (abierta desde bassomarcos.github.io) escribe en la planilla de respaldo.
+// El 3/11/2026 una copia de prueba abierta en una compu escribió ahí un cierre de mentira (se restauró desde la nube).
+const _PLANILLA_SITIO_REAL = location.hostname==='bassomarcos.github.io';
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function sheetsSet(sheet, rows){
-  if(!SHEETS_URL) return null;
+  if(!SHEETS_URL || !_PLANILLA_SITIO_REAL) return null;
   try{
     await fetch(SHEETS_URL, {
       method:'POST',
