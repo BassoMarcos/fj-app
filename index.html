@@ -1138,9 +1138,9 @@ function _anotarEscrituraNube(k, v){
   _ultimoAnotadoNube[k]=v;
   try{
     const ts=new Date().toISOString();
-    fetch(_FB_EUC+'registroNube/'+ts.slice(0,10)+'.json',{method:'POST',body:JSON.stringify({
-      ts, lista:k, renglones:_nubeCant(v), compu:_dispId(), nombre:_dispNombreAuto(), rol:_dispRol(), version:APP_VERSION
-    })}).catch(()=>{});
+    const nota=JSON.stringify({ts, lista:k, renglones:_nubeCant(v), compu:_dispId(), nombre:_dispNombreAuto(), rol:_dispRol(), version:APP_VERSION});
+    fetch(_FB_EUC+'registroNube/'+ts.slice(0,10)+'.json',{method:'POST',body:nota}).catch(()=>{});
+    fetch(_FB_EUC+'registroNube/ultimo/'+k+'.json',{method:'PUT',body:nota}).catch(()=>{});   // la última de cada lista no se borra con los días
   }catch(e){}
 }
 _anotarEscrituraNube.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
@@ -1161,11 +1161,13 @@ async function _ultimaEscrituraNube(k){
     const delDia=Object.values(r||{}).filter(e=>e&&e.lista===k).sort((a,b)=>String(a.ts).localeCompare(String(b.ts)));
     if(delDia.length) return delDia[delDia.length-1];
   }
-  return null;
+  // Más de 15 días sin cambios en esa lista: la última anotación que se guarda aparte
+  return await fetch(_FB_EUC+'registroNube/ultimo/'+k+'.json?cb='+Date.now(),{cache:'no-store'}).then(x=>x.json()).catch(()=>null);
 }
 // La nube vino sin la lista k. Si esta compu la tiene: se espera unos segundos, se confirma y se avisa.
+// alVaciarlaLaApp: qué hace esta compu si la vació a propósito una compu de la app (solo la Caja de Mora).
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
-function _nubeVinoVacia(k){
+function _nubeVinoVacia(k, alVaciarlaLaApp){
   if(!_NUBE_VIGILADAS[k] || _alarmaNubeVista[k]) return;
   const local=_nubeCantLocal(k);
   if(!local) return;   // esta compu tampoco la tiene: no hay con qué comparar
@@ -1176,8 +1178,13 @@ function _nubeVinoVacia(k){
       if(sigue){ _alarmaNubeVista[k]=false; return; }   // alguien ya la volvió a subir
       const ult=await _ultimaEscrituraNube(k);
       const porLaApp=!!(ult && ult.renglones===0);
-      // La Caja de Mora se puede vaciar a propósito ("Limpiar"): si la vació una compu de la app, no es alarma.
-      if(k==='mora' && porLaApp) return;
+      // La Caja de Mora se puede vaciar a propósito ("Limpiar"): si la vació una compu de la app, no es alarma
+      // y esta compu también la vacía (si no, en su próximo cobro de mora volvería a subir lo viejo).
+      if(k==='mora' && porLaApp){
+        _alarmaNubeVista[k]=false;
+        if(alVaciarlaLaApp) alVaciarlaLaApp();
+        return;
+      }
       const hora=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});
       const origen=porLaApp
         ? 'la vació la compu '+(ult.nombre||'')+' ('+ult.compu+', '+(ult.rol||'')+', '+(ult.version||'')+') a las '+new Date(ult.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false})
@@ -1214,6 +1221,7 @@ async function _podarRegistroNube(){
   try{
     const dias=await fetch(_FB_EUC+'registroNube.json?shallow=true').then(x=>x.json());
     const limite=new Date(Date.now()-_REGISTRO_NUBE_DIAS*86400000).toISOString().slice(0,10);
+    // "ultimo" no es un día ("u" va después de "2"): no se borra
     for(const d of Object.keys(dias||{})) if(d<limite) await fetch(_FB_EUC+'registroNube/'+d+'.json',{method:'DELETE'});
   }catch(e){}
 }
@@ -18642,7 +18650,8 @@ async function _cargaInicialNube(opts){
   window._fbListen('lotesLibresE123', (d) => { if(d){ _lsSet(dKey('lotesLibresE123'), JSON.stringify(d)); } });
   window._fbListen('lotesCerts', (d) => { if(d){ _lsSet(dKey('lotesCerts'), JSON.stringify(d)); } });
   window._fbListen('iccMensual', (d) => { if(d){ _lsSet(dKey('iccMensual'), JSON.stringify(d)); } });
-  window._fbListen('mora', (d) => { if(d){ _alarmaNubeVista.mora=false; localStorage.setItem('fj_mora', JSON.stringify(d)); } else _nubeVinoVacia('mora'); });
+  // v1.0712: si la Caja de Mora la vació otra compu con "Limpiar", esta también la vacía
+  window._fbListen('mora', (d) => { if(d){ _alarmaNubeVista.mora=false; localStorage.setItem('fj_mora', JSON.stringify(d)); } else _nubeVinoVacia('mora', ()=>{ localStorage.setItem('fj_mora','[]'); _fbRerender('balances'); }); });
   window._fbListen('extras', (d) => { if(d) localStorage.setItem('fj_extras', JSON.stringify(d)); });
   window._fbListen('mesActual', (d) => { if(d) localStorage.setItem('fj_mes_actual', JSON.stringify(d)); });
   window._fbListen('cierreFinal', (d) => { if(d) localStorage.setItem('fj_cierre_final', JSON.stringify(d)); });
