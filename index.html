@@ -970,12 +970,14 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0713';
+const APP_VERSION='v1.0714';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _updAplicarYa(){
+  // v1.0714: actualizarse no saca de la sesión, salvo que esté inactiva hace rato (igual que el cierre por inactividad)
+  try{ if(typeof _dispMinInactivo==='function' && _dispMinInactivo()>=_DISP_INACTIVIDAD_MIN) sessionStorage.removeItem('fj_sesion'); }catch(e){}
   const v=_updNuevaVersion||Date.now();
   location.replace(location.pathname+'?v='+encodeURIComponent(v));
 }
@@ -1555,7 +1557,22 @@ function setDesarrolloActivo(id){try{localStorage.setItem('fj_desarrollo_activo'
 function dKey(base){return 'fj_'+getDesarrolloActivo()+'_'+base;}
 function _lsGet(k){try{const v=localStorage.getItem(k);if(v!==null)return v;}catch(e){}return _memStore[k]||null;}
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
-function _lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}_memStore[k]=v;}
+// v1.0714: si el navegador NO deja guardar (memoria llena), antes quedaba la copia VIEJA y la app la seguía leyendo (la de
+// memoria, nueva, quedaba tapada): por ejemplo, la caja no mostraba los cobros nuevos hasta recargar. Ahora se borra la
+// vieja (así se lee la nueva, que queda en memoria) y se anota UNA vez en la caja negra para saber que pasó en esta compu.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _lsSet(k,v){
+  try{ localStorage.setItem(k,v); }
+  catch(e){
+    if(!/snapshot_cierre/.test(k)){ try{ localStorage.removeItem(k); }catch(e2){} }
+    if(!window._lsLleno){
+      window._lsLleno=true;
+      console.warn('La memoria del navegador está llena (no se pudo guardar '+k+'): se usa la copia en memoria.');
+      try{ if(typeof _anotarProblemaNube==='function') _anotarProblemaNube('memoria-llena', {clave:k, tam:String(v||'').length}); }catch(e3){}
+    }
+  }
+  _memStore[k]=v;
+}
 
 function loadMora(){try{return JSON.parse(localStorage.getItem('fj_mora')||'[]');}catch(e){return [];}}
 // ── Rendidos de la CAJA DE MORA (Balances): archiva los cobros de un lote para que no sumen ──
@@ -3260,19 +3277,39 @@ async function doLogin(){
   if(ok){
     // v1.0655: si el dispositivo está deshabilitado, no deja entrar
     try{ if(typeof dispPuedeIngresar==='function' && !(await dispPuedeIngresar())) return; }catch(e){}
-    volverHomeMain();
-    setDesarrolloActivo('eucaliptus');
-    document.getElementById('page-home').style.display='none';
-    showPage(loginRole==='admin'?'admin':'colab');
-    _dispSesionTs=new Date().toISOString();
-    _dispUltimaActividad=Date.now();
-    try{ _dispLatido(); }catch(e){}
-    if(loginRole==='admin') setTimeout(()=>{ adminTab('inicio'); actualizarBadgeFinalizados(); _dispRefrescarChip(); },50);
+    _entrarConRol();
+    // v1.0714: queda adentro en ESTA pestaña aunque se recargue (actualización, F5); ver _reanudarSesion
+    try{ sessionStorage.setItem('fj_sesion', JSON.stringify({rol:loginRole, ts:Date.now()})); }catch(e){}
   } else {
     document.getElementById('login-err').textContent='Contraseña incorrecta';
   }
 }
-function doLogout(){document.getElementById('page-home').style.display='block';document.getElementById('home-main').style.display='flex';document.getElementById('home-login').style.display='none';['admin','colab','public'].forEach(p=>{const el=document.getElementById('page-'+p);if(el){el.style.display='none';el.classList.remove('active');}});}
+// v1.0714: entrar como admin o colaborador (después de la contraseña, o al recargar la misma pestaña).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _entrarConRol(){
+  volverHomeMain();
+  setDesarrolloActivo('eucaliptus');
+  document.getElementById('page-home').style.display='none';
+  showPage(loginRole==='admin'?'admin':'colab');
+  _dispSesionTs=new Date().toISOString();
+  _dispUltimaActividad=Date.now();
+  try{ _dispLatido(); }catch(e){}
+  if(loginRole==='admin') setTimeout(()=>{ adminTab('inicio'); actualizarBadgeFinalizados(); _dispRefrescarChip(); },50);
+}
+// v1.0714 (pedido de Marcos: "me mata que cuando actualiza todo el tiempo me haga poner la contraseña"): la contraseña se
+// pide al abrir una pestaña NUEVA con el link o después de "Salir". Al recargar la MISMA pestaña (una actualización, F5)
+// se sigue adentro: la sesión se recuerda solo en esta pestaña (sessionStorage; otra pestaña o ventana no la ve) y se
+// borra al salir, al cerrarse por inactividad, o si el dispositivo está deshabilitado o fue expulsado.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+async function _reanudarSesion(){
+  let ses=null;
+  try{ ses=JSON.parse(sessionStorage.getItem('fj_sesion')||'null'); }catch(e){}
+  if(!ses || (ses.rol!=='admin' && ses.rol!=='colab') || window.location.hash==='#cliente') return;
+  try{ if(typeof dispPuedeIngresar==='function' && !(await dispPuedeIngresar())){ sessionStorage.removeItem('fj_sesion'); return; } }catch(e){}
+  loginRole=ses.rol;
+  _entrarConRol();
+}
+function doLogout(){try{ sessionStorage.removeItem('fj_sesion'); }catch(e){}document.getElementById('page-home').style.display='block';document.getElementById('home-main').style.display='flex';document.getElementById('home-login').style.display='none';['admin','colab','public'].forEach(p=>{const el=document.getElementById('page-'+p);if(el){el.style.display='none';el.classList.remove('active');}});}
 function showPage(p){
   document.getElementById('page-home').style.display='none';
   document.querySelectorAll('.page').forEach(x=>{x.classList.remove('active');x.style.display='none';});
@@ -4662,7 +4699,7 @@ function adminTab(t){
   });
   if(t==='inicio')renderInicio();
   if(t==='resumen')renderResumen();
-  if(t==='balances'){renderBalances();setTimeout(actualizarBadgeMora,50);}
+  if(t==='balances'){renderBalances();setTimeout(actualizarBadgeMora,50);setTimeout(()=>{ try{ _revisarCajaNube('al entrar a Balances'); }catch(e){} },300);}
   if(t==='lista')renderAdminTable();
   if(t==='historial')renderHistorial();
   if(t==='icc'){renderIccStatus();renderIccHist();}
@@ -18476,6 +18513,19 @@ const _CORTE_LARGO_MS=30000, _SUENO_MS=180000;
 function _bloqueoMostrar(tipo, motivo){
   let el=document.getElementById('bloqueo-nube');
   if(!el){ el=document.createElement('div'); el.id='bloqueo-nube'; document.body.appendChild(el); }
+  // v1.0714 (pedido de Marcos: "el cartel es molesto, que se vea que está actualizando pero sin molestar"): al ponerse al
+  // día (volver a la app, reposo) ya no se tapa la pantalla: un aviso chiquito arriba ("Actualizando…") que aparece
+  // recién si tarda más de medio segundo. Igual no se puede tocar nada esos segundos (así no se pierde lo que se haga
+  // mientras se bajan los datos). Los carteles grandes quedan solo para "Sin conexión" y "Subiendo lo último".
+  if(tipo==='refrescando'){
+    el.style.cssText='position:fixed;inset:0;z-index:2147483000;background:transparent;cursor:progress;display:flex;justify-content:center;align-items:flex-start;padding-top:12px';
+    el.title=motivo||'Actualizando con la nube';
+    el.innerHTML='<style>@keyframes bloqueoGiro{to{transform:rotate(360deg)}}@keyframes bloqueoAparece{from{opacity:0}to{opacity:1}}</style>'
+      +'<div style="display:flex;align-items:center;gap:8px;background:var(--surface,#fff);color:var(--text,#111);border:1px solid var(--border,#ddd);border-radius:999px;padding:6px 14px 6px 10px;font-size:12.5px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.18);opacity:0;animation:bloqueoAparece .2s ease .5s forwards">'
+      +'<span style="width:14px;height:14px;border:2px solid var(--border,#ddd);border-top-color:var(--acc,#16a34a);border-radius:50%;animation:bloqueoGiro .8s linear infinite;display:inline-block"></span>Actualizando…</div>';
+    return;
+  }
+  el.title='';
   el.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(10,14,20,.72);display:flex;align-items:center;justify-content:center;padding:20px';
   const giro='<style>@keyframes bloqueoGiro{to{transform:rotate(360deg)}}</style><div style="width:34px;height:34px;border:3px solid var(--border,#ddd);border-top-color:var(--acc,#16a34a);border-radius:50%;margin:0 auto 12px;animation:bloqueoGiro .9s linear infinite"></div>';
   const cuerpo = tipo==='desconectada'
@@ -18564,6 +18614,56 @@ document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState=
 window.addEventListener('blur', _salio);
 window.addEventListener('focus', _volvio);
 _refrescarConNube.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
+
+// ══════ v1.0714: LA CAJA DEL ADMIN SIEMPRE AL DÍA (pedido de Marcos 4/11/2026: "colaborador cobra pero el pago no impacta
+// en la caja hasta que actualizo la página") ══════
+// Lo normal: la nube le avisa al instante a esta compu lo que cobró otra (aviso en vivo). Por si ese aviso se traba sin
+// avisar, mientras el admin mira Balances se revisa cada 20 s cuántos pagos tienen la Caja del día y la de agrimensores
+// EN LA NUBE (un pedido chiquito: solo cuántos). Si no coincide con lo que tiene esta compu, se baja la caja (y los pagos)
+// de nuevo y se redibuja. También al entrar a Balances. Cuando pasa, se anota en la caja negra (registroNube) con el
+// motivo, para saber qué traba el aviso en vivo en esa compu.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _anotarProblemaNube(problema, extra){
+  try{
+    const ts=new Date().toISOString();
+    const nota=JSON.stringify(Object.assign({ts, problema, compu:_dispId(), nombre:_dispNombreAuto(), rol:_dispRol(), version:APP_VERSION}, extra||{}));
+    fetch(_FB_EUC+'registroNube/'+ts.slice(0,10)+'.json',{method:'POST',body:nota}).catch(()=>{});
+  }catch(e){}
+}
+let _cajaRevisando=false;
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+async function _revisarCajaNube(motivo){
+  if(_cajaRevisando || !window._cargaInicialOk || window._esFotoOffline || _refrescando) return;
+  _cajaRevisando=true;
+  try{
+    const cuantos=async(sub)=>{
+      const r=await fetch(_FB_EUC+'balances/'+sub+'.json?shallow=true&cb='+Date.now(),{cache:'no-store'});
+      if(!r.ok) throw new Error('nube '+r.status);
+      const j=await r.json();
+      return j&&typeof j==='object' ? Object.keys(j).length : 0;
+    };
+    const [nAbierto,nAgr]=await Promise.all([cuantos('abierto'),cuantos('agrimensores')]);
+    const bal=loadBalances();
+    const lAbierto=(bal.abierto||[]).filter(Boolean).length, lAgr=(bal.agrimensores||[]).filter(Boolean).length;
+    if(nAbierto===lAbierto && nAgr===lAgr) return;
+    // No estaba al día: bajar de nuevo la caja y los pagos, y redibujar
+    const [fbBal,fbPagos]=await Promise.all([window._fbGet('balances'), window._fbGet('pagoStore')]);
+    if(fbBal) _lsSet(dKey('balances'), JSON.stringify(fbBal));
+    if(fbPagos) _lsSet(dKey('pagos'), JSON.stringify(fbPagos));
+    const pa=document.getElementById('page-admin');
+    if(pa && pa.classList.contains('active') && window._adminTabActiva==='balances'){
+      if(window._balancesSeccion) renderBalances(window._balancesSeccion); else renderBalances();
+    }
+    console.warn('Caja: no estaba al día ('+motivo+'): nube '+nAbierto+'/'+nAgr+', esta compu '+lAbierto+'/'+lAgr+'. Se puso al día.');
+    _anotarProblemaNube('caja-desactualizada', {motivo, nube:nAbierto+'/'+nAgr, local:lAbierto+'/'+lAgr, memoriaLlena:!!window._lsLleno, visible:document.visibilityState});
+  }catch(e){ /* sin conexión: se reintenta en la próxima vuelta */ }
+  finally{ _cajaRevisando=false; }
+}
+setInterval(()=>{
+  const pa=document.getElementById('page-admin');
+  if(document.visibilityState==='visible' && pa && pa.classList.contains('active') && window._adminTabActiva==='balances') _revisarCajaNube('cada 20 s');
+}, 20000);
+_revisarCajaNube.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 // Baja TODO de la nube, reemplaza lo local y deja los listeners. Si algo falla, tira error y se reintenta.
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function _cargaInicialNube(opts){
@@ -18752,6 +18852,8 @@ async function init(){
     _conectandoOcultar();
   }
   initPublic();
+  // v1.0714: si esta pestaña ya estaba adentro (se recargó por una actualización o F5), sigue adentro sin contraseña
+  try{ await _reanudarSesion(); }catch(e){ console.warn('No se pudo seguir adentro:', e); }
   // Refrescar vista activa si el usuario ya estaba logueado
   try{
     const pageAdmin=document.getElementById('page-admin');
