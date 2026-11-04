@@ -970,7 +970,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0714';
+const APP_VERSION='v1.0715';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -8196,6 +8196,10 @@ function renderBalances(seccion){
     const pesos=mora.filter(p=>p.moneda!=='USD');
     const usd=mora.filter(p=>p.moneda==='USD');
     const totalCuotaP=pesos.reduce((s,p)=>s+(p.cuota||0),0);
+    // v1.0715 (pedido de Marcos 4/11/2026): del 30% de la caja, cuánto ya se pasó a Ingresos (lo marcado en cada cobro,
+    // sep30) y cuánto queda (el 30% menos lo pasado). Mismos cobros que el total de arriba (los que no están rendidos).
+    const treintaP=Math.round(totalCuotaP*dp2/100);
+    const pasadoP=pesos.reduce((s,p)=>s+(Number(p.sep30)||0),0);
     const totalInteresP=pesos.reduce((s,p)=>s+(p.interes||0),0);
     const totalCuotaU=usd.reduce((s,p)=>s+(p.cuota||0),0);
     const totalInteresU=usd.reduce((s,p)=>s+(p.interes||0),0);
@@ -8204,6 +8208,9 @@ function renderBalances(seccion){
     const totalIntMesPend=intMesPend.reduce((s,p)=>s+(p.interes||0),0);
     const cf=loadCierreFinal();
 
+    // v1.0715: lo que se puede devolver de cada lote (sus líneas del % de mora en Ingresos, sin rendir)
+    const _m30Dev={};
+    loadExtras().forEach(x=>{ if(x&&x.origen==='mora30'&&!x.rendido&&x.clienteId) _m30Dev[x.clienteId]=(_m30Dev[x.clienteId]||0)+(Number(x.monto)||0); });
     // v1.0364: agrupado por lote — línea resumen desplegable con el detalle por cuota adentro
     if(!window._moraCajaAbierto) window._moraCajaAbierto={};
     const renderMoraList=(lista,isUSD)=>{
@@ -8251,8 +8258,10 @@ function renderBalances(seccion){
           +'<div style="color:var(--red);font-size:11px">Interés: <b>'+cur+fmtPeso(g.interes)+'</b></div>'
           +'<div style="font-weight:700">'+cur+fmtPeso(g.cuota+g.interes)+'</div>'
           +(()=>{ if(isUSD) return ''; const _dp2=100-getDistPct(); const _pend=_mora30De(g.items,_dp2); const _ya=g.items.reduce((s,p)=>s+(Number(p.sep30)||0),0);
-              return _pend>0?'<button data-id="'+g.id+'" onclick="event.stopPropagation();traspasoMora30(this.dataset.id)" title="Pasar el '+_dp2+'% de la cuota de este lote a Ingresos" style="background:none;border:1px solid #c7d2fe;color:#818cf8;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-top:3px;display:block;margin-left:auto">➡️ '+_dp2+'% · '+fmtPeso(_pend)+'</button>'
-                :(_ya>0?'<div style="font-size:10px;color:var(--green);margin-top:3px">✓ '+_dp2+'% pasado ('+fmtPeso(_ya)+')</div>':''); })()
+              const _dev=_m30Dev[g.id]||0;
+              const _btnDev=_dev>0?'<button data-id="'+g.id+'" onclick="event.stopPropagation();devolverMora30(this.dataset.id)" title="Sacarlo de Ingresos y devolverlo a la Caja de Mora (como si nunca se hubiera pasado)" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-top:3px;display:block;margin-left:auto">↩ Devolver '+fmtPeso(_dev)+'</button>':'';
+              return (_pend>0?'<button data-id="'+g.id+'" onclick="event.stopPropagation();traspasoMora30(this.dataset.id)" title="Pasar el '+_dp2+'% de la cuota de este lote a Ingresos" style="background:none;border:1px solid #c7d2fe;color:#818cf8;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-top:3px;display:block;margin-left:auto">➡️ '+_dp2+'% · '+fmtPeso(_pend)+'</button>'
+                :(_ya>0?'<div style="font-size:10px;color:var(--green);margin-top:3px">✓ '+_dp2+'% pasado ('+fmtPeso(_ya)+')</div>':''))+_btnDev; })()
           +(g.items.some(p=>p.interes&&!p.interesEnExtras)?'<button data-id="'+g.id+'" onclick="event.stopPropagation();pasarInteresesGrupo(this.dataset.id)" style="background:none;border:1px solid #c7d2fe;color:#4f46e5;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-top:3px">→ Pasar intereses a Extras</button>':'')
           +(g.items.filter(p=>!p.esRefi).length>1?'<button data-cid="'+g.id+'" onclick="event.stopPropagation();desmarcarTodasMoraCaja(this)" title="Desmarca de una vez todas las cuotas de mora cobradas de este lote" style="display:block;margin-left:auto;background:none;border:1px solid #fca5a5;color:var(--red);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-top:4px">↩ Desmarcar todas ('+g.items.filter(p=>!p.esRefi).length+')</button>':'')
           +'<label onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:5px;justify-content:flex-end;margin-top:5px;font-size:10px;color:var(--text2);cursor:pointer"><input type="checkbox" data-mid="'+g.id+'" onchange="toggleCajaMoraSel(\''+g.id+'\')" style="width:15px;height:15px;cursor:pointer" '+(window._cajaMoraSel&&window._cajaMoraSel[g.id]?'checked':'')+'> rendir</label>'
@@ -8299,7 +8308,10 @@ function renderBalances(seccion){
     }
     moraHtml+='<div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px">PESOS</div>';
     moraHtml+='<div style="margin-bottom:4px">';
-    moraHtml+='<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:.75rem;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.12),0 1px 3px rgba(0,0,0,0.08)"><div style="font-size:11px;color:var(--text2)">Total CP Mora</div><div style="font-weight:700">'+fmtPeso(totalCuotaP)+'</div><div style="display:flex;gap:6px;margin-top:8px"><div style="flex:1;background:var(--green-bg);border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:var(--green)">'+dp+'%</div><div style="font-size:12px;font-weight:800;color:var(--green)">'+fmtPeso(Math.round(totalCuotaP*dp/100))+'</div></div><div style="flex:1;background:var(--red-bg);border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:var(--red)">'+dp2+'%</div><div style="font-size:12px;font-weight:800;color:var(--red)">'+fmtPeso(Math.round(totalCuotaP*dp2/100))+'</div></div></div></div>';
+    moraHtml+='<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:.75rem;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.12),0 1px 3px rgba(0,0,0,0.08)"><div style="font-size:11px;color:var(--text2)">Total CP Mora</div><div style="font-weight:700">'+fmtPeso(totalCuotaP)+'</div><div style="display:flex;gap:6px;margin-top:8px"><div style="flex:1;background:var(--green-bg);border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:var(--green)">'+dp+'%</div><div style="font-size:12px;font-weight:800;color:var(--green)">'+fmtPeso(Math.round(totalCuotaP*dp/100))+'</div></div><div style="flex:1;background:var(--red-bg);border-radius:6px;padding:4px"><div style="font-size:10px;font-weight:700;color:var(--red)">'+dp2+'%</div><div style="font-size:12px;font-weight:800;color:var(--red)">'+fmtPeso(treintaP)+'</div>'
+      +'<div style="border-top:1px dashed #fca5a5;margin-top:4px;padding-top:3px;font-size:10px;color:var(--text2)">➡️ Pasado a Ingresos: <b style="color:#818cf8">'+fmtPeso(pasadoP)+'</b></div>'
+      +'<div style="font-size:10px;color:var(--text2)">Queda: <b style="color:var(--text)">'+fmtPeso(Math.max(0,treintaP-pasadoP))+'</b></div>'
+      +'</div></div></div>';
     moraHtml+='<div style="padding:4px 0"><span style="background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-weight:700;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--green)">Intereses: '+fmtPeso(totalInteresP)+'</span></div>';
     moraHtml+='</div>';
     if(window._moraCajaEtapas){
@@ -9130,6 +9142,56 @@ function _pasarMora30(ids){
     alert('✓ '+fmtPeso(total)+' pasados a Ingresos ('+n+' lote'+(n>1?'s':'')+').\nEn 💼 Gastos e Ingresos queda una línea por lote.');
     renderBalances('mora');
   });
+}
+// v1.0715 (pedido de Marcos 4/11/2026): DEVOLVER el % que se pasó a Ingresos. "A veces entra buena plata a Ingresos
+// por intereses, entonces tengo que reponer ese 30% que saqué para luego dar el 30% completo." Devuelve TODO lo pasado
+// de ese lote que todavía no se rindió en Ingresos: esas líneas desaparecen de Ingresos, los cobros vuelven a tener su %
+// para pasar (se les borra sep30) y el lote sale de la línea del Historial del traspaso. Como si nunca se hubiera
+// pasado: no queda registro de ninguna de las dos cosas. Lo ya rendido en Ingresos no se toca (esa plata ya se entregó).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function devolverMora30(id){
+  const deLote=(lista)=>lista.filter(x=>x&&x.origen==='mora30'&&x.clienteId===id);
+  const lineas=deLote(loadExtras()), libres=lineas.filter(x=>!x.rendido);
+  if(!libres.length){alert(lineas.length?'Lo que se pasó de este lote ya está rendido en Ingresos: no se puede devolver.':'Este lote no tiene nada pasado a Ingresos.');return;}
+  const p0=loadMora().find(p=>p&&p.id===id)||{};
+  const tag=formatLoteTag(p0.mz,p0.lote);
+  const total=libres.reduce((s,x)=>s+(Number(x.monto)||0),0);
+  if(!confirm('¿Devolver '+fmtPeso(total)+' de '+tag+' a la Caja de Mora?\n\nSale de Ingresos como si nunca hubiera entrado y vuelve a quedar para pasar. No queda registro.'+(lineas.length>libres.length?'\n\n(Lo que ya está rendido en Ingresos no se toca.)':''))) return;
+  confirmarConClave(()=>{
+    // Se vuelve a leer todo en este momento (pudo cambiar mientras se escribía la contraseña)
+    const ex=loadExtras(), mora=loadMora();
+    const quitar=deLote(ex).filter(x=>!x.rendido);
+    if(!quitar.length){alert('Mientras tanto ya se devolvió o se rindió. No se tocó nada.');renderBalances('mora');return;}
+    const refs=new Set([].concat(...quitar.map(x=>Array.isArray(x.moraRefs)?x.moraRefs:[])));
+    mora.forEach(p=>{ if(p&&p.sep30&&refs.has(_claveMora30(p))){ delete p.sep30; delete p.sep30Ts; } });
+    const devuelto=quitar.reduce((s,x)=>s+(Number(x.monto)||0),0);
+    saveMora(mora);
+    saveExtras(ex.filter(x=>!quitar.includes(x)));
+    _sacarDelHistMora30(quitar,tag);
+    alert('✓ '+fmtPeso(devuelto)+' devueltos a la Caja de Mora ('+tag+').');
+    renderBalances('mora');
+  });
+}
+// Saca el lote de la línea del Historial de cada traspaso devuelto ("➡️ 30% de la caja de mora a Ingresos: $X (n lotes:
+// …)"): le resta su monto y su nombre; si era el único lote, borra la línea. Cada línea de Ingresos se reconoce por la
+// hora (el Historial se anota en el mismo momento del traspaso).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _sacarDelHistMora30(lineas,tag){
+  const h=loadHist(); let toco=false;
+  lineas.forEach(x=>{
+    const t=Date.parse(x.ts)||0;
+    const i=h.findIndex(e=>e&&/% de la caja de mora a Ingresos: /.test(e.desc||'')&&Math.abs((Date.parse(e.ts)||0)-t)<120000
+      &&(String(e.desc).indexOf(tag)>=0||/…\)$/.test(String(e.desc))));
+    if(i<0) return;
+    const m=/^(.*a Ingresos: )(\S+) \((\d+) lotes?: (.*?)(…?)\)$/.exec(h[i].desc||'');
+    toco=true;
+    if(!m||Number(m[3])<=1){ h.splice(i,1); return; }
+    const n=Number(m[3])-1;
+    const resto=Math.max(0,(Number(String(m[2]).replace(/[^\d]/g,''))||0)-(Number(x.monto)||0));
+    const tags=m[4].split(', ').filter(z=>z&&z!==tag);
+    h[i].desc=m[1]+fmtPeso(resto)+' ('+n+' lote'+(n>1?'s':'')+': '+tags.join(', ')+m[5]+')';
+  });
+  if(toco) saveHist(h);
 }
 // Si se desmarca un cobro de mora que ya tenía su % pasado, se descuenta de su línea de Ingresos.
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
