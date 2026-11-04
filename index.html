@@ -976,6 +976,8 @@ let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _updAplicarYa(){
+  // v1.0714: actualizarse no saca de la sesión, salvo que esté inactiva hace rato (igual que el cierre por inactividad)
+  try{ if(typeof _dispMinInactivo==='function' && _dispMinInactivo()>=_DISP_INACTIVIDAD_MIN) sessionStorage.removeItem('fj_sesion'); }catch(e){}
   const v=_updNuevaVersion||Date.now();
   location.replace(location.pathname+'?v='+encodeURIComponent(v));
 }
@@ -3275,19 +3277,39 @@ async function doLogin(){
   if(ok){
     // v1.0655: si el dispositivo está deshabilitado, no deja entrar
     try{ if(typeof dispPuedeIngresar==='function' && !(await dispPuedeIngresar())) return; }catch(e){}
-    volverHomeMain();
-    setDesarrolloActivo('eucaliptus');
-    document.getElementById('page-home').style.display='none';
-    showPage(loginRole==='admin'?'admin':'colab');
-    _dispSesionTs=new Date().toISOString();
-    _dispUltimaActividad=Date.now();
-    try{ _dispLatido(); }catch(e){}
-    if(loginRole==='admin') setTimeout(()=>{ adminTab('inicio'); actualizarBadgeFinalizados(); _dispRefrescarChip(); },50);
+    _entrarConRol();
+    // v1.0714: queda adentro en ESTA pestaña aunque se recargue (actualización, F5); ver _reanudarSesion
+    try{ sessionStorage.setItem('fj_sesion', JSON.stringify({rol:loginRole, ts:Date.now()})); }catch(e){}
   } else {
     document.getElementById('login-err').textContent='Contraseña incorrecta';
   }
 }
-function doLogout(){document.getElementById('page-home').style.display='block';document.getElementById('home-main').style.display='flex';document.getElementById('home-login').style.display='none';['admin','colab','public'].forEach(p=>{const el=document.getElementById('page-'+p);if(el){el.style.display='none';el.classList.remove('active');}});}
+// v1.0714: entrar como admin o colaborador (después de la contraseña, o al recargar la misma pestaña).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _entrarConRol(){
+  volverHomeMain();
+  setDesarrolloActivo('eucaliptus');
+  document.getElementById('page-home').style.display='none';
+  showPage(loginRole==='admin'?'admin':'colab');
+  _dispSesionTs=new Date().toISOString();
+  _dispUltimaActividad=Date.now();
+  try{ _dispLatido(); }catch(e){}
+  if(loginRole==='admin') setTimeout(()=>{ adminTab('inicio'); actualizarBadgeFinalizados(); _dispRefrescarChip(); },50);
+}
+// v1.0714 (pedido de Marcos: "me mata que cuando actualiza todo el tiempo me haga poner la contraseña"): la contraseña se
+// pide al abrir una pestaña NUEVA con el link o después de "Salir". Al recargar la MISMA pestaña (una actualización, F5)
+// se sigue adentro: la sesión se recuerda solo en esta pestaña (sessionStorage; otra pestaña o ventana no la ve) y se
+// borra al salir, al cerrarse por inactividad, o si el dispositivo está deshabilitado o fue expulsado.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+async function _reanudarSesion(){
+  let ses=null;
+  try{ ses=JSON.parse(sessionStorage.getItem('fj_sesion')||'null'); }catch(e){}
+  if(!ses || (ses.rol!=='admin' && ses.rol!=='colab') || window.location.hash==='#cliente') return;
+  try{ if(typeof dispPuedeIngresar==='function' && !(await dispPuedeIngresar())){ sessionStorage.removeItem('fj_sesion'); return; } }catch(e){}
+  loginRole=ses.rol;
+  _entrarConRol();
+}
+function doLogout(){try{ sessionStorage.removeItem('fj_sesion'); }catch(e){}document.getElementById('page-home').style.display='block';document.getElementById('home-main').style.display='flex';document.getElementById('home-login').style.display='none';['admin','colab','public'].forEach(p=>{const el=document.getElementById('page-'+p);if(el){el.style.display='none';el.classList.remove('active');}});}
 function showPage(p){
   document.getElementById('page-home').style.display='none';
   document.querySelectorAll('.page').forEach(x=>{x.classList.remove('active');x.style.display='none';});
@@ -18491,6 +18513,19 @@ const _CORTE_LARGO_MS=30000, _SUENO_MS=180000;
 function _bloqueoMostrar(tipo, motivo){
   let el=document.getElementById('bloqueo-nube');
   if(!el){ el=document.createElement('div'); el.id='bloqueo-nube'; document.body.appendChild(el); }
+  // v1.0714 (pedido de Marcos: "el cartel es molesto, que se vea que está actualizando pero sin molestar"): al ponerse al
+  // día (volver a la app, reposo) ya no se tapa la pantalla: un aviso chiquito arriba ("Actualizando…") que aparece
+  // recién si tarda más de medio segundo. Igual no se puede tocar nada esos segundos (así no se pierde lo que se haga
+  // mientras se bajan los datos). Los carteles grandes quedan solo para "Sin conexión" y "Subiendo lo último".
+  if(tipo==='refrescando'){
+    el.style.cssText='position:fixed;inset:0;z-index:2147483000;background:transparent;cursor:progress;display:flex;justify-content:center;align-items:flex-start;padding-top:12px';
+    el.title=motivo||'Actualizando con la nube';
+    el.innerHTML='<style>@keyframes bloqueoGiro{to{transform:rotate(360deg)}}@keyframes bloqueoAparece{from{opacity:0}to{opacity:1}}</style>'
+      +'<div style="display:flex;align-items:center;gap:8px;background:var(--surface,#fff);color:var(--text,#111);border:1px solid var(--border,#ddd);border-radius:999px;padding:6px 14px 6px 10px;font-size:12.5px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.18);opacity:0;animation:bloqueoAparece .2s ease .5s forwards">'
+      +'<span style="width:14px;height:14px;border:2px solid var(--border,#ddd);border-top-color:var(--acc,#16a34a);border-radius:50%;animation:bloqueoGiro .8s linear infinite;display:inline-block"></span>Actualizando…</div>';
+    return;
+  }
+  el.title='';
   el.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(10,14,20,.72);display:flex;align-items:center;justify-content:center;padding:20px';
   const giro='<style>@keyframes bloqueoGiro{to{transform:rotate(360deg)}}</style><div style="width:34px;height:34px;border:3px solid var(--border,#ddd);border-top-color:var(--acc,#16a34a);border-radius:50%;margin:0 auto 12px;animation:bloqueoGiro .9s linear infinite"></div>';
   const cuerpo = tipo==='desconectada'
@@ -18817,6 +18852,8 @@ async function init(){
     _conectandoOcultar();
   }
   initPublic();
+  // v1.0714: si esta pestaña ya estaba adentro (se recargó por una actualización o F5), sigue adentro sin contraseña
+  try{ await _reanudarSesion(); }catch(e){ console.warn('No se pudo seguir adentro:', e); }
   // Refrescar vista activa si el usuario ya estaba logueado
   try{
     const pageAdmin=document.getElementById('page-admin');
