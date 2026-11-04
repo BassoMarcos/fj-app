@@ -970,7 +970,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0713';
+const APP_VERSION='v1.0714';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -1555,7 +1555,22 @@ function setDesarrolloActivo(id){try{localStorage.setItem('fj_desarrollo_activo'
 function dKey(base){return 'fj_'+getDesarrolloActivo()+'_'+base;}
 function _lsGet(k){try{const v=localStorage.getItem(k);if(v!==null)return v;}catch(e){}return _memStore[k]||null;}
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
-function _lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}_memStore[k]=v;}
+// v1.0714: si el navegador NO deja guardar (memoria llena), antes quedaba la copia VIEJA y la app la seguía leyendo (la de
+// memoria, nueva, quedaba tapada): por ejemplo, la caja no mostraba los cobros nuevos hasta recargar. Ahora se borra la
+// vieja (así se lee la nueva, que queda en memoria) y se anota UNA vez en la caja negra para saber que pasó en esta compu.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _lsSet(k,v){
+  try{ localStorage.setItem(k,v); }
+  catch(e){
+    if(!/snapshot_cierre/.test(k)){ try{ localStorage.removeItem(k); }catch(e2){} }
+    if(!window._lsLleno){
+      window._lsLleno=true;
+      console.warn('La memoria del navegador está llena (no se pudo guardar '+k+'): se usa la copia en memoria.');
+      try{ if(typeof _anotarProblemaNube==='function') _anotarProblemaNube('memoria-llena', {clave:k, tam:String(v||'').length}); }catch(e3){}
+    }
+  }
+  _memStore[k]=v;
+}
 
 function loadMora(){try{return JSON.parse(localStorage.getItem('fj_mora')||'[]');}catch(e){return [];}}
 // ── Rendidos de la CAJA DE MORA (Balances): archiva los cobros de un lote para que no sumen ──
@@ -4662,7 +4677,7 @@ function adminTab(t){
   });
   if(t==='inicio')renderInicio();
   if(t==='resumen')renderResumen();
-  if(t==='balances'){renderBalances();setTimeout(actualizarBadgeMora,50);}
+  if(t==='balances'){renderBalances();setTimeout(actualizarBadgeMora,50);setTimeout(()=>{ try{ _revisarCajaNube('al entrar a Balances'); }catch(e){} },300);}
   if(t==='lista')renderAdminTable();
   if(t==='historial')renderHistorial();
   if(t==='icc'){renderIccStatus();renderIccHist();}
@@ -18564,6 +18579,56 @@ document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState=
 window.addEventListener('blur', _salio);
 window.addEventListener('focus', _volvio);
 _refrescarConNube.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
+
+// ══════ v1.0714: LA CAJA DEL ADMIN SIEMPRE AL DÍA (pedido de Marcos 4/11/2026: "colaborador cobra pero el pago no impacta
+// en la caja hasta que actualizo la página") ══════
+// Lo normal: la nube le avisa al instante a esta compu lo que cobró otra (aviso en vivo). Por si ese aviso se traba sin
+// avisar, mientras el admin mira Balances se revisa cada 20 s cuántos pagos tienen la Caja del día y la de agrimensores
+// EN LA NUBE (un pedido chiquito: solo cuántos). Si no coincide con lo que tiene esta compu, se baja la caja (y los pagos)
+// de nuevo y se redibuja. También al entrar a Balances. Cuando pasa, se anota en la caja negra (registroNube) con el
+// motivo, para saber qué traba el aviso en vivo en esa compu.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _anotarProblemaNube(problema, extra){
+  try{
+    const ts=new Date().toISOString();
+    const nota=JSON.stringify(Object.assign({ts, problema, compu:_dispId(), nombre:_dispNombreAuto(), rol:_dispRol(), version:APP_VERSION}, extra||{}));
+    fetch(_FB_EUC+'registroNube/'+ts.slice(0,10)+'.json',{method:'POST',body:nota}).catch(()=>{});
+  }catch(e){}
+}
+let _cajaRevisando=false;
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+async function _revisarCajaNube(motivo){
+  if(_cajaRevisando || !window._cargaInicialOk || window._esFotoOffline || _refrescando) return;
+  _cajaRevisando=true;
+  try{
+    const cuantos=async(sub)=>{
+      const r=await fetch(_FB_EUC+'balances/'+sub+'.json?shallow=true&cb='+Date.now(),{cache:'no-store'});
+      if(!r.ok) throw new Error('nube '+r.status);
+      const j=await r.json();
+      return j&&typeof j==='object' ? Object.keys(j).length : 0;
+    };
+    const [nAbierto,nAgr]=await Promise.all([cuantos('abierto'),cuantos('agrimensores')]);
+    const bal=loadBalances();
+    const lAbierto=(bal.abierto||[]).filter(Boolean).length, lAgr=(bal.agrimensores||[]).filter(Boolean).length;
+    if(nAbierto===lAbierto && nAgr===lAgr) return;
+    // No estaba al día: bajar de nuevo la caja y los pagos, y redibujar
+    const [fbBal,fbPagos]=await Promise.all([window._fbGet('balances'), window._fbGet('pagoStore')]);
+    if(fbBal) _lsSet(dKey('balances'), JSON.stringify(fbBal));
+    if(fbPagos) _lsSet(dKey('pagos'), JSON.stringify(fbPagos));
+    const pa=document.getElementById('page-admin');
+    if(pa && pa.classList.contains('active') && window._adminTabActiva==='balances'){
+      if(window._balancesSeccion) renderBalances(window._balancesSeccion); else renderBalances();
+    }
+    console.warn('Caja: no estaba al día ('+motivo+'): nube '+nAbierto+'/'+nAgr+', esta compu '+lAbierto+'/'+lAgr+'. Se puso al día.');
+    _anotarProblemaNube('caja-desactualizada', {motivo, nube:nAbierto+'/'+nAgr, local:lAbierto+'/'+lAgr, memoriaLlena:!!window._lsLleno, visible:document.visibilityState});
+  }catch(e){ /* sin conexión: se reintenta en la próxima vuelta */ }
+  finally{ _cajaRevisando=false; }
+}
+setInterval(()=>{
+  const pa=document.getElementById('page-admin');
+  if(document.visibilityState==='visible' && pa && pa.classList.contains('active') && window._adminTabActiva==='balances') _revisarCajaNube('cada 20 s');
+}, 20000);
+_revisarCajaNube.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 // Baja TODO de la nube, reemplaza lo local y deja los listeners. Si algo falla, tira error y se reintenta.
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 async function _cargaInicialNube(opts){
