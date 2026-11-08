@@ -391,6 +391,12 @@ tr:hover td{background:var(--bg)}
         // v1.0663: la lista de clientes espera a estar sincronizada antes de subirse
         if (k === 'data' && !window._datosFrescos) continue;
         const v = window._syncQueue[k];
+        // v1.0716: nada importante se vacía solo en la nube (ver _guardiaVaciado)
+        if (window._guardiaVaciado) {
+          let bloqueado = false;
+          try { bloqueado = await window._guardiaVaciado(k, v); } catch (e) {}
+          if (bloqueado) { if (window._syncQueue[k] === v) delete window._syncQueue[k]; continue; }
+        }
         try {
           await set(ref(db, 'eucaliptus/' + k), window._sanitizeUndefined(v));
           try { if (window._anotarEscrituraNube) window._anotarEscrituraNube(k, v); } catch (e) {}   // v1.0712: caja negra
@@ -405,6 +411,7 @@ tr:hover td{background:var(--bg)}
 
     window._fbSet = async (key, value) => {
       window._syncQueue[key] = value;   // siempre encolar primero
+      try { if (window._marcarOrigenNube) window._marcarOrigenNube(key, value); } catch (e) {}   // v1.0716
       window._syncRender();
       await window._syncFlush();
     };
@@ -970,7 +977,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0715';
+const APP_VERSION='v1.0716';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -1135,17 +1142,89 @@ function _nubeCant(v){
   return typeof v==='object' ? Object.keys(v).length : 1;
 }
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
-function _anotarEscrituraNube(k, v){
+function _anotarEscrituraNube(k, v, aProposito){
   if(!_NUBE_VIGILADAS[k] || _ultimoAnotadoNube[k]===v) return;
   _ultimoAnotadoNube[k]=v;
   try{
     const ts=new Date().toISOString();
-    const nota=JSON.stringify({ts, lista:k, renglones:_nubeCant(v), compu:_dispId(), nombre:_dispNombreAuto(), rol:_dispRol(), version:APP_VERSION});
+    const n=_nubeCant(v);
+    // v1.0716: si quedó vacía, si fue a propósito (Limpiar, revertir, restaurar…)
+    const ap=n===0 && (aProposito===true || (!!v && typeof v==='object' && _vaciosPermitidos.has(v)));
+    const nota=JSON.stringify({ts, lista:k, renglones:n, ...(ap?{aProposito:true}:{}), compu:_dispId(), nombre:_dispNombreAuto(), rol:_dispRol(), version:APP_VERSION});
     fetch(_FB_EUC+'registroNube/'+ts.slice(0,10)+'.json',{method:'POST',body:nota}).catch(()=>{});
     fetch(_FB_EUC+'registroNube/ultimo/'+k+'.json',{method:'PUT',body:nota}).catch(()=>{});   // la última de cada lista no se borra con los días
   }catch(e){}
 }
 _anotarEscrituraNube.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
+// ══════ v1.0716: NADA SE VACÍA SOLO EN LA NUBE ══════
+// Marcos (7/11/2026): "no tiene por qué vaciarse solo nada". Ese día, 1 segundo después de un cobro de mora, la compu del
+// colaborador subió VACÍAS las cuotas en mora y la Caja de Mora (sin que nadie lo pidiera) y las demás compus vaciaron
+// su Caja de Mora creyendo que era un "Limpiar". Ahora:
+//  - Las listas que nunca se vacían solas (clientes, cuotas en mora, Caja de Mora, Historial) NO se suben vacías si la
+//    nube tiene datos (3 renglones o más), salvo que se vacíen A PROPÓSITO: dentro de una acción con la contraseña de
+//    administrador (Limpiar, revertir el cierre…) o marcadas con _vacioPermitido (ej. "Limpiar rendidos").
+//  - Si se bloquea: no se sube, esta compu vuelve a tener lo de la nube y se anota en la caja negra y en las alarmas
+//    QUÉ parte del programa lo intentó (para encontrar la causa).
+//  - Las otras compus solo vacían su Caja de Mora si el vaciado fue a propósito (aProposito en la caja negra).
+// (pagoStore no va: el cierre del mes la reinicia.)
+const _NUBE_NO_VACIAR={
+  data:(t)=>_lsSet(dKey('data'),t),
+  cuotasMora:(t)=>localStorage.setItem('fj_cuotas_mora',t),
+  mora:(t)=>localStorage.setItem('fj_mora',t),
+  hist:(t)=>_lsSet(dKey('hist'),t),
+};
+const _vaciosPermitidos=new WeakSet();
+window._enAccionConClave=false;
+window._syncOrigen={};
+// Marca un valor como vaciado a propósito (devuelve el mismo valor, para usar adentro de saveX(...)).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _vacioPermitido(v){ try{ if(v&&typeof v==='object') _vaciosPermitidos.add(v); }catch(e){} return v; }
+// Al encolar: si es un vaciado, o es a propósito (acción con contraseña de admin) o se anota de dónde vino.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _marcarOrigenNube(k, v){
+  if(!_NUBE_NO_VACIAR[k] || _nubeCant(v)>0) return;
+  if(window._enAccionConClave){ _vacioPermitido(v); return; }
+  // (se saltan los renglones de esta función y de _fbSet: queda quién lo pidió)
+  window._syncOrigen[k]=String((new Error()).stack||'').split(String.fromCharCode(10)).slice(3).map(x=>x.trim()).join(' | ').slice(0,1500);
+}
+// Antes de subir: true = NO se sube (se bloqueó un vaciado que nadie pidió).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+const _guardiaEnCurso=new WeakMap();   // la cola puede revisar el mismo valor varias veces a la vez: se revisa y se anota UNA
+async function _guardiaVaciado(k, v){
+  if(!_NUBE_NO_VACIAR[k] || _nubeCant(v)>0) return false;
+  if(v && typeof v==='object'){
+    if(_vaciosPermitidos.has(v)) return false;   // a propósito
+    if(!_guardiaEnCurso.has(v)) _guardiaEnCurso.set(v, _guardiaRevisar(k, v));
+    return _guardiaEnCurso.get(v);
+  }
+  return _guardiaRevisar(k, v);
+}
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+async function _guardiaRevisar(k, v){
+  let enNube;
+  try{ enNube=_nubeCant(await fetch(_FB_EUC+k+'.json?shallow=true&cb='+Date.now(),{cache:'no-store'}).then(x=>x.json())); }
+  catch(e){ return true; }   // si no se puede mirar la nube, no se vacía (es más seguro)
+  if(enNube<3) return false;   // poco o nada en la nube: es normal (ej. se desmarcó el último cobro)
+  const nota={ts:new Date().toISOString(), problema:'vaciado-bloqueado', lista:k, renglonesEnNube:enNube,
+    origen:(window._syncOrigen&&window._syncOrigen[k])||'(sin anotar)',
+    pestana:{visible:document.visibilityState, foco:!!(document.hasFocus&&document.hasFocus()), segundosAbierta:Math.round(performance.now()/1000), conSesion:!!sessionStorage.getItem('fj_sesion')},
+    compu:_dispId(), nombre:_dispNombreAuto(), rol:_dispRol(), version:APP_VERSION};
+  try{ fetch(_FB_EUC+'registroNube/'+nota.ts.slice(0,10)+'.json',{method:'POST',body:JSON.stringify(nota)}).catch(()=>{}); }catch(e){}
+  try{ fetch(_FB_EUC+'alarmasNube.json',{method:'POST',body:JSON.stringify(nota)}).catch(()=>{}); }catch(e){}
+  console.warn('🛡️ Se bloqueó subir VACÍO '+k+' (la nube tiene '+enNube+'). Origen:', nota.origen);
+  // Esta compu vuelve a tener lo de la nube (si no, en su próximo guardado subiría casi nada)
+  try{
+    const full=await window._fbGet(k);
+    if(full){
+      _NUBE_NO_VACIAR[k](JSON.stringify(full));
+      const pa=document.getElementById('page-admin'), pc=document.getElementById('page-colab');
+      if(pc && pc.classList.contains('active')) renderColab();
+      else if(pa && pa.classList.contains('active') && window._adminTabActiva==='balances' && window._balancesSeccion) renderBalances(window._balancesSeccion);
+    }
+  }catch(e){}
+  return true;
+}
+_guardiaVaciado.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
 function _nubeCantLocal(k){
   try{
     if(k==='cuotasMora') return loadCuotasMora().length;
@@ -1179,7 +1258,7 @@ function _nubeVinoVacia(k, alVaciarlaLaApp){
       const sigue=await fetch(_FB_EUC+k+'.json?shallow=true&cb='+Date.now(),{cache:'no-store'}).then(x=>x.json());
       if(sigue){ _alarmaNubeVista[k]=false; return; }   // alguien ya la volvió a subir
       const ult=await _ultimaEscrituraNube(k);
-      const porLaApp=!!(ult && ult.renglones===0);
+      const porLaApp=!!(ult && ult.renglones===0 && ult.aProposito===true);   // v1.0716: solo si fue a propósito
       // La Caja de Mora se puede vaciar a propósito ("Limpiar"): si la vació una compu de la app, no es alarma
       // y esta compu también la vacía (si no, en su próximo cobro de mora volvería a subir lo viejo).
       if(k==='mora' && porLaApp){
@@ -1188,8 +1267,8 @@ function _nubeVinoVacia(k, alVaciarlaLaApp){
         return;
       }
       const hora=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});
-      const origen=porLaApp
-        ? 'la vació la compu '+(ult.nombre||'')+' ('+ult.compu+', '+(ult.rol||'')+', '+(ult.version||'')+') a las '+new Date(ult.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false})
+      const origen=(ult && ult.renglones===0)
+        ? 'la vació la compu '+(ult.nombre||'')+' ('+ult.compu+', '+(ult.rol||'')+', '+(ult.version||'')+') a las '+new Date(ult.ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false})+(porLaApp?'':' sin que nadie lo pidiera')
         : 'ninguna compu de la app anotó haberla vaciado';
       fetch(_FB_EUC+'alarmasNube.json',{method:'POST',body:JSON.stringify({
         ts:new Date().toISOString(), lista:k, renglonesEnEstaCompu:local, origen,
@@ -1623,7 +1702,7 @@ function limpiarCajaMoraRendidos(){
   if(!confirm('¿Limpiar los rendidos de la Caja de Mora?\n\nSe van a BORRAR definitivamente '+idsRendidos.length+' lote(s) rendido(s) ('+aBorrar+' cobro/s).\n\nEsto NO toca los cobros activos (no rendidos). No se puede deshacer.')) return;
   // Borrar de fj_mora los cobros marcados como rendidos, y limpiar las marcas
   const moraNueva=mora.filter(p=>!r[p.id]);
-  saveMora(moraNueva);
+  saveMora(_vacioPermitido(moraNueva));   // v1.0716: a propósito (lo confirmó)
   saveCajaMoraRendidos({});
   renderBalances('mora');
   alert('✓ Rendidos de la Caja de Mora limpiados. Lo activo quedó intacto.');
@@ -4635,7 +4714,7 @@ function confirmarConClave(accion){
   _claveAccion=accion;
   _claveEsColab=false;
   const modal=document.getElementById('modal-clave');
-  if(!modal){const p=prompt('Contraseña:');if(_rolesDeClave(p).admin)accion();return;}
+  if(!modal){const p=prompt('Contraseña:');if(_rolesDeClave(p).admin){ window._enAccionConClave=true; try{ accion(); } finally { window._enAccionConClave=false; } }return;}
   document.getElementById('modal-clave-titulo').textContent='Contraseña de administrador';
   document.getElementById('clave-error').textContent='';
   document.getElementById('clave-input').value='';
@@ -4651,12 +4730,14 @@ function _claveConfirmar(){
   if(_claveEsEdit) ok=_r.edit;
   else if(_claveEsColab) ok=(_r.colab||_r.admin);
   else ok=_r.admin;
+  const _claveEsColabAntes=_claveEsColab, _claveEsEditAntes=_claveEsEdit;   // v1.0716
   if(ok){
     document.getElementById('modal-clave').style.display='none';
     document.getElementById('modal-clave-titulo').textContent='Contraseña de administrador';
     _claveEsColab=false;
     _claveEsEdit=false;
-    if(_claveAccion){_claveAccion();_claveAccion=null;}
+    // v1.0716: lo que se guarde DURANTE una acción con contraseña de admin se puede vaciar (es a propósito)
+    if(_claveAccion){ const _a=_claveAccion, _esAdm=!_claveEsColabAntes&&!_claveEsEditAntes; _claveAccion=null; window._enAccionConClave=_esAdm; try{ _a(); } finally { window._enAccionConClave=false; } }
   } else {
     document.getElementById('clave-error').textContent='Contraseña incorrecta';
     document.getElementById('clave-input').value='';
@@ -18293,7 +18374,7 @@ function restaurarPunto(punto){
       // Restaurar
       for(const [k,v] of Object.entries(punto.datos)){
         await fetch(B+k+'.json',{method:'PUT',body:JSON.stringify(v)});
-        _anotarEscrituraNube(k, v);   // v1.0712: caja negra
+        _anotarEscrituraNube(k, v, true);   // v1.0712: caja negra (v1.0716: a propósito)
       }
       alert('✅ Estado restaurado.\n\nLa app se va a recargar. Recordá recargar también los otros dispositivos con Ctrl+Shift+R.');
       location.reload();
