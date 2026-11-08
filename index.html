@@ -395,6 +395,7 @@ tr:hover td{background:var(--bg)}
         if (window._guardiaVaciado) {
           let bloqueado = false;
           try { bloqueado = await window._guardiaVaciado(k, v); } catch (e) {}
+          if (bloqueado === 'esperar') continue;   // no se pudo mirar la nube: queda en la cola
           if (bloqueado) { if (window._syncQueue[k] === v) delete window._syncQueue[k]; continue; }
         }
         try {
@@ -1156,75 +1157,116 @@ function _anotarEscrituraNube(k, v, aProposito){
   }catch(e){}
 }
 _anotarEscrituraNube.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
-// ══════ v1.0716: NADA SE VACÍA SOLO EN LA NUBE ══════
-// Marcos (7/11/2026): "no tiene por qué vaciarse solo nada". Ese día, 1 segundo después de un cobro de mora, la compu del
-// colaborador subió VACÍAS las cuotas en mora y la Caja de Mora (sin que nadie lo pidiera) y las demás compus vaciaron
-// su Caja de Mora creyendo que era un "Limpiar". Ahora:
-//  - Las listas que nunca se vacían solas (clientes, cuotas en mora, Caja de Mora, Historial) NO se suben vacías si la
-//    nube tiene datos (3 renglones o más), salvo que se vacíen A PROPÓSITO: dentro de una acción con la contraseña de
-//    administrador (Limpiar, revertir el cierre…) o marcadas con _vacioPermitido (ej. "Limpiar rendidos").
-//  - Si se bloquea: no se sube, esta compu vuelve a tener lo de la nube y se anota en la caja negra y en las alarmas
-//    QUÉ parte del programa lo intentó (para encontrar la causa).
+// ══════ v1.0716: LAS CAJAS SOLO SE VACÍAN CON "LIMPIAR" Y LA CONTRASEÑA ══════
+// Marcos (8/11/2026): "las cajas solo se vacían cuando se presiona y se confirma limpiar, nada más; no puede un cobro
+// limpiar nada, ni ninguna otra cosa puede limpiar nada salvo apretar el botón de limpiar pero confirmado por
+// contraseña". El 7/11, 1 segundo después de un cobro de mora, la compu del colaborador subió VACÍAS las cuotas en
+// mora y la Caja de Mora (sin que nadie lo pidiera) y las demás compus vaciaron su Caja de Mora creyendo que era un
+// "Limpiar". Ahora, antes de subir algo a la nube (_syncFlush):
+//  - Clientes, cuotas en mora, Caja de Mora e Historial NO se suben vacíos si en la nube tienen algo.
+//  - Balances: ninguna caja (del día, física, agrimensores, cierres, transferencias) se sube vacía si en la nube tiene
+//    algo. Esa caja se completa con lo de la nube y lo demás (ej. un cobro nuevo) se sube igual.
+//  - Solo se puede vaciar lo que se guarda DURANTE una acción confirmada con la contraseña de ADMINISTRADOR (los
+//    "Limpiar", cerrar la caja del día, desmarcar en la Caja de Mora, revertir el cierre…), o al desmarcar UN pago desde
+//    la ficha (saca ese cobro; si era el único, la caja queda en 0): _vacioPermitido.
+//  - Si se bloquea, esta compu vuelve a tener lo de la nube y queda anotado (caja negra y alarmas) QUÉ parte del
+//    programa lo intentó, para encontrar la causa.
 //  - Las otras compus solo vacían su Caja de Mora si el vaciado fue a propósito (aProposito en la caja negra).
-// (pagoStore no va: el cierre del mes la reinicia.)
+//  - Sin internet no se decide: queda en la cola y se vuelve a mirar después (nunca se pierde un cobro nuevo).
+// (pagoStore no va: el cierre del mes la reinicia y no es una caja.)
 const _NUBE_NO_VACIAR={
   data:(t)=>_lsSet(dKey('data'),t),
   cuotasMora:(t)=>localStorage.setItem('fj_cuotas_mora',t),
   mora:(t)=>localStorage.setItem('fj_mora',t),
   hist:(t)=>_lsSet(dKey('hist'),t),
 };
+const _CAJAS_BALANCES=['abierto','cajaFisica','agrimensores','cierres','transferencias'];
 const _vaciosPermitidos=new WeakSet();
 window._enAccionConClave=false;
 window._syncOrigen={};
 // Marca un valor como vaciado a propósito (devuelve el mismo valor, para usar adentro de saveX(...)).
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _vacioPermitido(v){ try{ if(v&&typeof v==='object') _vaciosPermitidos.add(v); }catch(e){} return v; }
-// Al encolar: si es un vaciado, o es a propósito (acción con contraseña de admin) o se anota de dónde vino.
+// Qué partes de lo que se va a subir quedarían vacías (de las que no se pueden vaciar solas).
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _partesVacias(k, v){
+  if(_NUBE_NO_VACIAR[k]) return _nubeCant(v)===0 ? [k] : [];
+  if(k==='balances'){ const b=(v&&typeof v==='object')?v:{}; return _CAJAS_BALANCES.filter(c=>_nubeCant(b[c])===0); }
+  return [];
+}
+// Al encolar: si algo queda vacío, o es a propósito (acción con contraseña de admin) o se anota de dónde vino.
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function _marcarOrigenNube(k, v){
-  if(!_NUBE_NO_VACIAR[k] || _nubeCant(v)>0) return;
+  if(!_partesVacias(k, v).length) return;
   if(window._enAccionConClave){ _vacioPermitido(v); return; }
   // (se saltan los renglones de esta función y de _fbSet: queda quién lo pidió)
   window._syncOrigen[k]=String((new Error()).stack||'').split(String.fromCharCode(10)).slice(3).map(x=>x.trim()).join(' | ').slice(0,1500);
 }
-// Antes de subir: true = NO se sube (se bloqueó un vaciado que nadie pidió).
+// Antes de subir. Devuelve: false = se sube (tal cual o con las cajas completadas); true = NO se sube (se bloqueó un
+// vaciado que nadie pidió); 'esperar' = no se pudo mirar la nube: queda en la cola para después.
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
-const _guardiaEnCurso=new WeakMap();   // la cola puede revisar el mismo valor varias veces a la vez: se revisa y se anota UNA
+const _guardiaEnCurso=new WeakMap();   // la cola puede revisar el mismo valor varias veces a la vez: se revisa UNA
 async function _guardiaVaciado(k, v){
-  if(!_NUBE_NO_VACIAR[k] || _nubeCant(v)>0) return false;
+  const vacias=_partesVacias(k, v);
+  if(!vacias.length) return false;
   if(v && typeof v==='object'){
     if(_vaciosPermitidos.has(v)) return false;   // a propósito
-    if(!_guardiaEnCurso.has(v)) _guardiaEnCurso.set(v, _guardiaRevisar(k, v));
+    if(!_guardiaEnCurso.has(v)){
+      const pr=_guardiaRevisar(k, v, vacias);
+      _guardiaEnCurso.set(v, pr);
+      pr.then(r=>{ if(r==='esperar') _guardiaEnCurso.delete(v); }, ()=>_guardiaEnCurso.delete(v));   // sin internet: se vuelve a mirar
+    }
     return _guardiaEnCurso.get(v);
   }
-  return _guardiaRevisar(k, v);
+  return _guardiaRevisar(k, v, vacias);
 }
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
-async function _guardiaRevisar(k, v){
+async function _guardiaRevisar(k, v, vacias){
   let enNube;
-  try{ enNube=_nubeCant(await fetch(_FB_EUC+k+'.json?shallow=true&cb='+Date.now(),{cache:'no-store'}).then(x=>x.json())); }
-  catch(e){ return true; }   // si no se puede mirar la nube, no se vacía (es más seguro)
-  if(enNube<3) return false;   // poco o nada en la nube: es normal (ej. se desmarcó el último cobro)
-  const nota={ts:new Date().toISOString(), problema:'vaciado-bloqueado', lista:k, renglonesEnNube:enNube,
+  try{
+    const r=await fetch(_FB_EUC+k+'.json?shallow=true&cb='+Date.now(),{cache:'no-store'});
+    if(!r.ok) return 'esperar';
+    enNube=await r.json();
+  }catch(e){ return 'esperar'; }
+  if(k==='balances'){
+    const hay=Object.keys((enNube&&typeof enNube==='object')?enNube:{});
+    const pisadas=vacias.filter(c=>hay.includes(c));
+    if(!pisadas.length) return false;   // esas cajas tampoco tienen nada en la nube
+    // Esas cajas se completan con lo de la nube; lo demás (ej. un cobro nuevo) se sube igual
+    for(const c of pisadas){
+      try{ const sub=await window._fbGet('balances/'+c); if(!sub) return 'esperar'; v[c]=sub; }catch(e){ return 'esperar'; }
+    }
+    try{ _lsSet(dKey('balances'), JSON.stringify(v)); }catch(e){}
+    _anotarVaciadoBloqueado(k, pisadas.map(c=>'balances/'+c), null);
+    _redibujarTrasGuardia();
+    return false;
+  }
+  const n=_nubeCant(enNube);
+  if(n<1) return false;   // la nube tampoco tiene nada
+  _anotarVaciadoBloqueado(k, [k], n);
+  // Esta compu vuelve a tener lo de la nube (si no, en su próximo guardado subiría casi nada)
+  try{ const full=await window._fbGet(k); if(full){ _NUBE_NO_VACIAR[k](JSON.stringify(full)); _redibujarTrasGuardia(); } }catch(e){}
+  return true;
+}
+_guardiaVaciado.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _anotarVaciadoBloqueado(k, listas, renglonesEnNube){
+  const nota={ts:new Date().toISOString(), problema:'vaciado-bloqueado', lista:listas.join(', '),
+    ...(renglonesEnNube!==null?{renglonesEnNube}:{}),
     origen:(window._syncOrigen&&window._syncOrigen[k])||'(sin anotar)',
     pestana:{visible:document.visibilityState, foco:!!(document.hasFocus&&document.hasFocus()), segundosAbierta:Math.round(performance.now()/1000), conSesion:!!sessionStorage.getItem('fj_sesion')},
     compu:_dispId(), nombre:_dispNombreAuto(), rol:_dispRol(), version:APP_VERSION};
   try{ fetch(_FB_EUC+'registroNube/'+nota.ts.slice(0,10)+'.json',{method:'POST',body:JSON.stringify(nota)}).catch(()=>{}); }catch(e){}
   try{ fetch(_FB_EUC+'alarmasNube.json',{method:'POST',body:JSON.stringify(nota)}).catch(()=>{}); }catch(e){}
-  console.warn('🛡️ Se bloqueó subir VACÍO '+k+' (la nube tiene '+enNube+'). Origen:', nota.origen);
-  // Esta compu vuelve a tener lo de la nube (si no, en su próximo guardado subiría casi nada)
-  try{
-    const full=await window._fbGet(k);
-    if(full){
-      _NUBE_NO_VACIAR[k](JSON.stringify(full));
-      const pa=document.getElementById('page-admin'), pc=document.getElementById('page-colab');
-      if(pc && pc.classList.contains('active')) renderColab();
-      else if(pa && pa.classList.contains('active') && window._adminTabActiva==='balances' && window._balancesSeccion) renderBalances(window._balancesSeccion);
-    }
-  }catch(e){}
-  return true;
+  console.warn('🛡️ No se dejó vaciar '+nota.lista+'. Origen:', nota.origen);
 }
-_guardiaVaciado.__a="6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse";
+function _redibujarTrasGuardia(){
+  try{
+    const pa=document.getElementById('page-admin'), pc=document.getElementById('page-colab');
+    if(pc && pc.classList.contains('active')) renderColab();
+    else if(pa && pa.classList.contains('active') && window._adminTabActiva==='balances') renderBalances(window._balancesSeccion);
+  }catch(e){}
+}
 function _nubeCantLocal(k){
   try{
     if(k==='cuotasMora') return loadCuotasMora().length;
@@ -1700,12 +1742,16 @@ function limpiarCajaMoraRendidos(){
   const mora=loadMora();
   const aBorrar=mora.filter(p=>r[p.id]).length;
   if(!confirm('¿Limpiar los rendidos de la Caja de Mora?\n\nSe van a BORRAR definitivamente '+idsRendidos.length+' lote(s) rendido(s) ('+aBorrar+' cobro/s).\n\nEsto NO toca los cobros activos (no rendidos). No se puede deshacer.')) return;
-  // Borrar de fj_mora los cobros marcados como rendidos, y limpiar las marcas
-  const moraNueva=mora.filter(p=>!r[p.id]);
-  saveMora(_vacioPermitido(moraNueva));   // v1.0716: a propósito (lo confirmó)
-  saveCajaMoraRendidos({});
-  renderBalances('mora');
-  alert('✓ Rendidos de la Caja de Mora limpiados. Lo activo quedó intacto.');
+  // v1.0716: como todo "Limpiar", con la contraseña de administrador (se vuelve a leer todo en ese momento)
+  confirmarConClave(()=>{
+    const r2=loadCajaMoraRendidos();
+    // Borrar de fj_mora los cobros marcados como rendidos, y limpiar las marcas
+    const moraNueva=loadMora().filter(p=>!r2[p.id]);
+    saveMora(_vacioPermitido(moraNueva));
+    saveCajaMoraRendidos({});
+    renderBalances('mora');
+    alert('✓ Rendidos de la Caja de Mora limpiados. Lo activo quedó intacto.');
+  });
 }
 // v1.0634: Limpiar (borrar definitivamente) los extras rendidos. Solo toca lo rendido.
 function limpiarExtrasRendidos(){
@@ -2090,11 +2136,15 @@ function limpiarTransferencias(){
   const n=(bal.transferencias||[]).length;
   if(!n){ alert('No hay transferencias para limpiar.'); return; }
   if(!confirm('🧹 LIMPIAR TRANSFERENCIAS\n\nSe van a vaciar las '+n+' transferencia(s) de la lista.\n\nEsto NO desmarca los pagos de las cuotas: los lotes siguen cobrados. Solo se limpia el registro de transferencias de la caja.\n\n¿Continuar?')) return;
-  bal.transferencias=[];
-  saveBalances(bal);
-  addHist('edit','🧹 Se limpiaron '+n+' transferencia(s) de la caja (los pagos siguen intactos)');
-  if(typeof renderBalances==='function') renderBalances();
-  alert('✅ Transferencias limpiadas. Los pagos de las cuotas siguen intactos.');
+  // v1.0716: como todo "Limpiar", con la contraseña de administrador (se vuelve a leer en ese momento)
+  confirmarConClave(()=>{
+    const bal2=loadBalances();
+    bal2.transferencias=[];
+    saveBalances(bal2);
+    addHist('edit','🧹 Se limpiaron '+n+' transferencia(s) de la caja (los pagos siguen intactos)');
+    if(typeof renderBalances==='function') renderBalances();
+    alert('✅ Transferencias limpiadas. Los pagos de las cuotas siguen intactos.');
+  });
 }
 
 function loadBalances(){try{const b=JSON.parse(_lsGet(dKey('balances'))||'{"cierres":[],"abierto":[],"agrimensores":[]}');return {cierres:Array.isArray(b.cierres)?b.cierres:[],abierto:Array.isArray(b.abierto)?b.abierto:[],agrimensores:Array.isArray(b.agrimensores)?b.agrimensores:[],transferencias:Array.isArray(b.transferencias)?b.transferencias:[],cajaFisica:Array.isArray(b.cajaFisica)?b.cajaFisica:[],fusiones:Array.isArray(b.fusiones)?b.fusiones:[]};}catch(e){return {cierres:[],abierto:[],agrimensores:[],transferencias:[],cajaFisica:[],fusiones:[]};}}
@@ -9296,7 +9346,7 @@ function _quitarUltimoMora(id){
   const mora=loadMora();
   const i=mora.map(p=>p.id).lastIndexOf(id);
   const q=i>=0?mora.splice(i,1)[0]:null;
-  saveMora(mora);
+  saveMora(_vacioPermitido(mora));   // v1.0716: saca ese cobro (puede dejar la caja en 0)
   _descontarMora30([q]);
 }
 
@@ -15895,7 +15945,7 @@ function desmarcarPagoAdmin(id){
     if(!_deshacerFinalizacion(c,'se desmarcó el pago de la última cuota')) _avisoTerminadoSinPrevio(c);
 
     saveData(data);
-    saveBalances(bal);
+    saveBalances(_vacioPermitido(bal));   // v1.0716: saca ese cobro (puede dejar la caja en 0)
     setPagoState(id,false);
     addHist('desmarcar','Pago desmarcado — '+c.mz+' Lote '+c.lote+' — '+c.titular+(adelantosRemovidos?' ('+adelantosRemovidos+' adelantos revertidos)':''),id);
     renderAdminDet(id);
@@ -18554,7 +18604,7 @@ function desmarcarPago(id){
   if(_idxT>=0) bal.transferencias.splice(_idxT,1);
   const _idxF=(bal.cajaFisica||[]).map(p=>p.id).lastIndexOf(id);
   if(_idxF>=0) bal.cajaFisica.splice(_idxF,1);
-  saveBalances(bal);
+  saveBalances(_vacioPermitido(bal));   // v1.0716: saca ese cobro (puede dejar la caja en 0)
   // Remove from mora
   _quitarUltimoMora(id);   // v1.0706 (descuenta su % de Ingresos si ya estaba pasado)
   // Eliminar adelantos pendientes del cliente
