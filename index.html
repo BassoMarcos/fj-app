@@ -384,30 +384,53 @@ tr:hover td{background:var(--bg)}
       for (const k of Object.keys(v)) { if (v[k] !== undefined) o[k] = window._sanitizeUndefined(v[k]); }
       return o;
     };
-    window._syncFlush = async () => {
-      if (!window._firebaseReady || !window._cargaInicialOk) return;
-      const keys = Object.keys(window._syncQueue);
-      for (const k of keys) {
-        // v1.0663: la lista de clientes espera a estar sincronizada antes de subirse
-        if (k === 'data' && !window._datosFrescos) continue;
-        const v = window._syncQueue[k];
-        // v1.0716: nada importante se vacía solo en la nube (ver _guardiaVaciado)
-        if (window._guardiaVaciado) {
-          let bloqueado = false;
-          try { bloqueado = await window._guardiaVaciado(k, v); } catch (e) {}
-          if (bloqueado === 'esperar') continue;   // no se pudo mirar la nube: queda en la cola
-          if (bloqueado) { if (window._syncQueue[k] === v) delete window._syncQueue[k]; continue; }
-        }
+    // v1.0716 — LA CAUSA de que se vaciaran la Caja de Mora y las cuotas en mora (7/11/2026; y el 2/11 también el
+    // Historial): en un cobro se guardan varias cosas seguidas y cada una arrancaba OTRA subida, todas a la vez. Si una
+    // subida ya había subido una lista y la había sacado de la cola, otra (atrasada, por ejemplo esperando la lista de
+    // clientes que es grande) iba a buscarla, no la encontraba y subía "nada" → la nube BORRABA esa lista. Se reprodujo
+    // igual en una copia de prueba. Ahora: UNA sola subida a la vez (las demás esperan a esa, que da otra vuelta si
+    // entró algo nuevo) y una lista que ya no está en la cola no se vuelve a subir.
+    window._syncSubiendo = null; window._syncOtraVez = false;
+    window._syncFlush = () => {
+      if (!window._firebaseReady || !window._cargaInicialOk) return Promise.resolve();
+      if (window._syncSubiendo) { window._syncOtraVez = true; return window._syncSubiendo; }
+      const corrida = (async () => {
+        // (primero se anota que hay una subida en curso; si no, cuando no había nada para subir la marca quedaba
+        // puesta para siempre y no subía nada más)
+        await null;
         try {
-          await set(ref(db, 'eucaliptus/' + k), window._sanitizeUndefined(v));
-          try { if (window._anotarEscrituraNube) window._anotarEscrituraNube(k, v); } catch (e) {}   // v1.0712: caja negra
-          if (window._syncQueue[k] === v) delete window._syncQueue[k];
-          window._syncLastOk = new Date().toLocaleTimeString('es-AR');
-        } catch (e) {
-          console.warn('Sync pendiente (' + k + '):', e.message);
+          do {
+            window._syncOtraVez = false;
+            const keys = Object.keys(window._syncQueue);
+            for (const k of keys) {
+              if (!Object.prototype.hasOwnProperty.call(window._syncQueue, k)) continue;   // v1.0716: ya se subió
+              // v1.0663: la lista de clientes espera a estar sincronizada antes de subirse
+              if (k === 'data' && !window._datosFrescos) continue;
+              const v = window._syncQueue[k];
+              // v1.0716: las cajas solo se vacían con "Limpiar" y la contraseña (ver _guardiaVaciado)
+              if (window._guardiaVaciado) {
+                let bloqueado = false;
+                try { bloqueado = await window._guardiaVaciado(k, v); } catch (e) {}
+                if (bloqueado === 'esperar') continue;   // no se pudo mirar la nube: queda en la cola
+                if (bloqueado) { if (window._syncQueue[k] === v) delete window._syncQueue[k]; continue; }
+              }
+              try {
+                await set(ref(db, 'eucaliptus/' + k), window._sanitizeUndefined(v));
+                try { if (window._anotarEscrituraNube) window._anotarEscrituraNube(k, v); } catch (e) {}   // v1.0712: caja negra
+                if (window._syncQueue[k] === v) delete window._syncQueue[k];
+                window._syncLastOk = new Date().toLocaleTimeString('es-AR');
+              } catch (e) {
+                console.warn('Sync pendiente (' + k + '):', e.message);
+              }
+            }
+          } while (window._syncOtraVez);
+        } finally {
+          if (window._syncSubiendo === corrida) window._syncSubiendo = null;
+          try { window._syncRender(); } catch (e) {}
         }
-      }
-      window._syncRender();
+      })();
+      window._syncSubiendo = corrida;
+      return corrida;
     };
 
     window._fbSet = async (key, value) => {
