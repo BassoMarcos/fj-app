@@ -1001,7 +1001,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0716';
+const APP_VERSION='v1.0717';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -1393,18 +1393,14 @@ async function _dispLatido(){
         // Bloqueado por el admin
         if(d.bloqueado && rol!=='sin sesión' && !_dispCerrando){
           _dispCerrando=true;
-          alert('🚫 Este dispositivo fue deshabilitado por el administrador.');
-          try{ doLogout(); }catch(e){}
-          setTimeout(()=>{_dispCerrando=false;},3000);
+          _dispCerrarYRecargar('🚫 Este dispositivo fue deshabilitado por el administrador.');   // v1.0717
           return;
         }
         // Expulsado
         if(d.expulsar && String(d.expulsar)>String(_dispSesionTs) && !_dispCerrando){
           _dispCerrando=true;
           try{ await fetch(_FB_DISP+'/'+id+'/expulsar.json',{method:'DELETE'}); }catch(e){}
-          alert('🔒 Tu sesión fue cerrada desde el panel de administración.');
-          try{ doLogout(); }catch(e){}
-          location.reload();
+          _dispCerrarYRecargar('🔒 Tu sesión fue cerrada desde el panel de administración.');   // v1.0717
         }
       }
     }
@@ -1418,6 +1414,39 @@ async function _dispLatido(){
     _dispUltimaActividad=Date.now();
     setTimeout(()=>{_dispCerrando=false;},3000);
   }
+}
+// v1.0717 (pedido de Marcos): al DESCONECTAR o DESHABILITAR esta compu desde el panel de administración, se cierra la
+// sesión y la página se recarga SOLA en el momento, con la última versión (antes salía un cartel y hasta que alguien
+// apretaba "Aceptar" la app quedaba frenada, con la versión vieja). El aviso se muestra después, en la pantalla de la
+// contraseña, sin frenar nada. Antes de recargar se sube lo que haya quedado pendiente (como mucho 30 s); si no se
+// puede (sin internet), el navegador pregunta antes de salir, como siempre: nunca se pierde un cobro.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+async function _dispCerrarYRecargar(aviso){
+  try{ sessionStorage.setItem('fj_aviso_entrada', aviso); }catch(e){}
+  try{ doLogout(); }catch(e){}
+  const hasta=Date.now()+30000;
+  while(Object.keys(window._syncQueue||{}).length && Date.now()<hasta){
+    try{ await window._syncFlush(); }catch(e){}
+    if(Object.keys(window._syncQueue||{}).length) await new Promise(r=>setTimeout(r,2000));
+  }
+  // con una dirección nueva para que el navegador no use una copia vieja guardada (al cargar, la app la limpia)
+  location.replace(location.pathname+'?v='+Date.now());
+}
+// El aviso guardado (ej. "Tu sesión fue cerrada…"), arriba de la pantalla de la contraseña: chiquito y sin frenar nada.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _mostrarAvisoEntrada(){
+  let txt=''; try{ txt=sessionStorage.getItem('fj_aviso_entrada')||''; sessionStorage.removeItem('fj_aviso_entrada'); }catch(e){}
+  if(!txt) return;
+  const b=document.createElement('div');
+  b.id='aviso-entrada';
+  b.setAttribute('role','status');
+  b.style.cssText='position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2147483000;max-width:calc(100% - 28px);background:#292524;color:#fff;border:1px solid #57534e;border-radius:10px;padding:9px 12px;font:600 13px Arial,sans-serif;display:flex;gap:10px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.35)';
+  const t=document.createElement('span'); t.textContent=txt;
+  const x=document.createElement('button'); x.textContent='✕'; x.setAttribute('aria-label','Cerrar aviso');
+  x.style.cssText='background:none;border:none;color:#d6d3d1;font-size:14px;cursor:pointer;padding:0 2px';
+  x.onclick=()=>b.remove();
+  b.append(t,x); document.body.appendChild(b);
+  setTimeout(()=>{ try{ b.remove(); }catch(e){} }, 30000);
 }
 // ¿Este dispositivo está habilitado para entrar?
 async function dispPuedeIngresar(){
@@ -1442,17 +1471,13 @@ function _dispEscucharPropio(){
       const rol=_dispRol();
       if(d.bloqueado && rol!=='sin sesión'){
         _dispCerrando=true;
-        alert('🚫 Este dispositivo fue deshabilitado por el administrador.');
-        try{ doLogout(); }catch(e){}
-        setTimeout(()=>{_dispCerrando=false;},3000);
+        _dispCerrarYRecargar('🚫 Este dispositivo fue deshabilitado por el administrador.');   // v1.0717
         return;
       }
       if(d.expulsar && String(d.expulsar)>String(_dispSesionTs)){
         _dispCerrando=true;
         try{ fetch(_FB_DISP+'/'+id+'/expulsar.json',{method:'DELETE'}); }catch(e){}
-        alert('🔒 Tu sesión fue cerrada desde el panel de administración.');
-        try{ doLogout(); }catch(e){}
-        location.reload();
+        _dispCerrarYRecargar('🔒 Tu sesión fue cerrada desde el panel de administración.');   // v1.0717
       }
     });
     // El admin ve la lista actualizarse en vivo
@@ -19070,6 +19095,7 @@ async function init(){
   initPublic();
   // v1.0714: si esta pestaña ya estaba adentro (se recargó por una actualización o F5), sigue adentro sin contraseña
   try{ await _reanudarSesion(); }catch(e){ console.warn('No se pudo seguir adentro:', e); }
+  try{ _mostrarAvisoEntrada(); }catch(e){}   // v1.0717: "tu sesión fue cerrada…", sin frenar nada
   // Refrescar vista activa si el usuario ya estaba logueado
   try{
     const pageAdmin=document.getElementById('page-admin');
