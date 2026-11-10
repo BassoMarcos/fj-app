@@ -1001,7 +1001,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0718';
+const APP_VERSION='v1.0719';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -11194,10 +11194,10 @@ function caContinuar(){
       +'<button type="button" id="ca-f-total" onclick="caSetForma(\'total\')" style="flex:1;padding:7px 4px;font-size:12px;font-weight:700;border-radius:6px;cursor:pointer">🏦 Transf. total</button>'
       +'<button type="button" id="ca-f-parcial" onclick="caSetForma(\'parcial\')" style="flex:1;padding:7px 4px;font-size:12px;font-weight:700;border-radius:6px;cursor:pointer">🏦 Transf. parcial</button>'
       +'</div>'
-      +'<div id="ca-transf-box" style="display:none;margin-bottom:8px"><label style="font-size:11px;color:var(--text2)">Parte de las cuotas que transfiere (sin el impuesto)</label><input id="ca-transf" type="text" inputmode="numeric" value="" placeholder="$0" oninput="caFmtInput(this);caCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #a78bfa;border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
+      +'<div id="ca-transf-box" style="display:none;margin-bottom:8px"><label style="font-size:11px;color:var(--text2)">Parte de las cuotas que transfiere (sin el impuesto)</label><input id="ca-transf" type="text" inputmode="numeric" value="" placeholder="$0" oninput="caFmtInput(this);caAutoCompletar(\'transf\');caCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #a78bfa;border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
       +'<div id="ca-transf-info" style="display:none;font-size:12px;padding:6px 10px;border-radius:6px;background:rgba(167,139,250,.12);color:#a78bfa;margin-bottom:8px"></div>'
       +'<div id="ca-efectivo-box" style="display:flex;gap:8px;margin-bottom:8px">'
-      +'<div style="flex:1"><label style="font-size:11px;color:var(--text2)">Entregó</label><input id="ca-entrego" type="text" inputmode="numeric" value="'+fmtMiles(Math.round(totARS))+'" oninput="caFmtInput(this);caCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
+      +'<div style="flex:1"><label style="font-size:11px;color:var(--text2)">Entregó</label><input id="ca-entrego" type="text" inputmode="numeric" value="'+fmtMiles(Math.round(totARS))+'" oninput="caFmtInput(this);caAutoCompletar(\'entrego\');caCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
       +'<div style="flex:1"><label style="font-size:11px;color:var(--text2)">Vuelto</label><input id="ca-vuelto" type="text" inputmode="numeric" value="$0" oninput="caFmtInput(this);caCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
       +'</div>'
       +'<div id="ca-vuelto-live" style="font-size:12px;padding:6px 10px;border-radius:6px;background:var(--green-bg);color:var(--green);text-align:center">✓ Justo</div>'
@@ -11252,6 +11252,24 @@ function caSetForma(f){
   if(f==='efectivo'){ if(eEl) eEl.value=fmtMiles(tot); if(vEl) vEl.value='$0'; if(tEl) tEl.value=''; }
   if(f==='parcial'){ if(tEl) tEl.value=''; if(eEl) eEl.value=''; if(vEl) vEl.value='$0'; setTimeout(()=>{ try{ tEl.focus(); }catch(e){} },30); }
   caCalcVuelto();
+}
+// v1.0719 (Marcos: "no me autocompleta el monto a transferir"): en transferencia PARCIAL, igual que en el cobro de
+// una cuota: si escribís lo que entregó en efectivo, se completa lo que transfiere (total − efectivo), y si escribís lo
+// que transfiere, se completa el efectivo (total − transferencia). El vuelto, si está vacío, queda en $0.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function caAutoCompletar(origen){
+  if((window._caForma||'efectivo')!=='parcial') return;
+  const tot=(window._caTotals&&window._caTotals.totARS)||0;
+  const tEl=document.getElementById('ca-transf'), eEl=document.getElementById('ca-entrego'), vEl=document.getElementById('ca-vuelto');
+  if(!tEl||!eEl) return;
+  if(origen==='transf'){
+    if(String(tEl.value||'').trim()===''){ eEl.value=''; }
+    else eEl.value=fmtMiles(Math.max(0, tot-Math.min(tot, caNum(tEl.value))));
+  } else {
+    if(String(eEl.value||'').trim()===''){ tEl.value=''; }
+    else tEl.value=fmtMiles(Math.max(0, tot-caNum(eEl.value)));
+  }
+  if(vEl&&String(vEl.value||'').trim()==='') vEl.value='$0';
 }
 // Cuánto se transfiere (sin impuesto) según la forma elegida
 function caTransfMonto(){
