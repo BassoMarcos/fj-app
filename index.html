@@ -11261,10 +11261,17 @@ function caTransfMonto(){
   if(f==='parcial'){ const el=document.getElementById('ca-transf'); return el?caNum(el.value):0; }
   return 0;
 }
-// Reparte la transferencia por los lotes en orden: [{id, t, total}] (cada lote hasta su total)
+// Reparte la transferencia ENTRE TODOS los lotes, según lo que vale cada uno (pedido de Marcos):
+// lotes iguales = partes iguales ($10 en 2 lotes = $5 y $5); si uno vale más, le toca un poco más. Devuelve [{id, t, total}]
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function caRepartirTransf(t, lotes, totalFn){
-  let resta=Math.max(0,Math.round(t||0));
-  return lotes.map(c=>{ const tot=totalFn(c); const tl=Math.min(resta, tot); resta-=tl; return {id:c.id, t:tl, total:tot}; });
+  const tots=lotes.map(c=>totalFn(c)), suma=tots.reduce((a,b)=>a+b,0);
+  const tt=Math.min(Math.max(0,Math.round(t||0)), suma);
+  const res=lotes.map((c,i)=>({id:c.id, t:(suma>0?Math.min(tots[i], Math.floor(tt*tots[i]/suma)):0), total:tots[i]}));
+  // los pesos que sobran por el redondeo van al primer lote que tenga lugar
+  let sobra=tt-res.reduce((a,r)=>a+r.t,0);
+  for(const r of res){ if(sobra<=0) break; const d=Math.min(r.total-r.t, sobra); r.t+=d; sobra-=d; }
+  return res;
 }
 function caRepartoChange(){
   const tipo=document.querySelector('input[name="ca-reparto"]:checked')?.value||'equitativo';
@@ -11304,12 +11311,7 @@ function caCalcVuelto(){
   const info=document.getElementById('ca-transf-info');
   if(info){
     if(t>0){
-      // mismo cálculo que al cobrar: el impuesto (21%) se calcula lote por lote
-      const _ids=(window._caCtx?[...window._caCtx.seleccion]:[]);
-      const _d=loadData(), _x=window._caCtx||{adelantosPorLote:{}};
-      const _lotes=_ids.map(id=>_d.find(c=>c.id===id)).filter(c=>c&&!c.pago&&c.moneda!=='USD');
-      const _tf=(c)=>montoCobrable(c).total+((_x.adelantosPorLote[c.id]||[]).reduce((s,q)=>s+(q.monto||0),0));
-      const debe=caRepartirTransf(t,_lotes,_tf).reduce((s,r)=>s+(r.t>0?Math.round(r.t*1.21):0),0);
+      const debe=Math.round(t*1.21);   // al cobrar, el impuesto se reparte entre los lotes y suma exactamente esto
       info.style.display='block';
       info.innerHTML='Debe transferir: <strong>'+fmtPeso(debe)+'</strong> ('+fmtPeso(t)+' cuotas + '+fmtPeso(debe-t)+' impuestos 21%)';
     } else info.style.display='none';
@@ -11359,6 +11361,9 @@ function caEjecutarCobro(){
     // Diferencia por moneda
     const difGlobal=(entregoTotal!==null?(_tTotal+_entregoEf-_vueltoEf):totPesos)-totPesos;   // v1.0718: + transferencia
     const _repT={}; caRepartirTransf(_tTotal,pesosLotes,totalLoteFn).forEach(r=>{ _repT[r.id]=r; });
+    { // el 21% total (redondeado una sola vez) repartido igual que la transferencia, para que la suma cierre justo
+      const _impTot=Math.round(_tTotal*1.21)-_tTotal, _con=Object.values(_repT).filter(r=>r.t>0);
+      let _resto=_impTot; _con.forEach((r,i)=>{ r.imp=(i===_con.length-1)?_resto:Math.round(_impTot*r.t/_tTotal); _resto-=r.imp; }); }
     const difGlobalUSD=(entregoTotalUSD!==null?(entregoTotalUSD-vueltoTotalUSD):totUSDesp)-totUSDesp;
     { const _saf=pesosLotes.reduce((s,c)=>s+Math.max(0,Number(c.saldo)||0),0); const _fr=difGlobal<0?_frenoCobro(-difGlobal,_saf,'ARS'):''; if(_fr){ alert(_fr); return; } if(difGlobal<0&&!_confirmarFaltanteAdmin(-difGlobal,_saf,'ARS')) return; }   // v1.0692
     const primerPesoId=pesosLotes.length?pesosLotes[0].id:null;
@@ -11435,11 +11440,11 @@ function caEjecutarCobro(){
         (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:mc,adelanto:totalAdel,transferido:_tl,transfTotal:_tlFull,entrego:totalLote-_tl+difLote,vuelto:0,efectivo:mc-_tCuota+difLote,dif:difLote,ts,fecha,...(_tl>0?{agrupado:true}:{})});
         // y a 🏦 Cierres de Transferencias, como en el cobro de una cuota (para el 💧 relleno)
         if(_tl>0){
-          const imp=Math.round(_tl*1.21)-_tl;
+          const imp=_repT[id].imp||0;
           (bal.transferencias=bal.transferencias||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:'ARS',cuotaParte:_tl,impuesto:imp,totalTransferido:_tl+imp,parcial:!_tlFull,rellenado:0,ts,fecha,agrupado:true});
         }
         saveBalances(bal);
-        if(_tl>0) addHist('pago','🏦 Transferencia '+(_tlFull?'TOTAL':'PARCIAL')+' (cobro agrupado) — '+c.mz+' Lote '+c.lote+' — cuota '+fmtPeso(_tl)+' + imp. 21% '+fmtPeso(Math.round(_tl*1.21)-_tl),id);
+        if(_tl>0) addHist('pago','🏦 Transferencia '+(_tlFull?'TOTAL':'PARCIAL')+' (cobro agrupado) — '+c.mz+' Lote '+c.lote+' — cuota '+fmtPeso(_tl)+' + imp. 21% '+fmtPeso(_repT[id].imp||0),id);
       }
       // 5. Cargar SAF/SEC al saldo del lote (si le tocó diferencia)
       if(difLote!==0){
