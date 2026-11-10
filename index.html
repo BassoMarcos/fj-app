@@ -11261,16 +11261,19 @@ function caTransfMonto(){
   if(f==='parcial'){ const el=document.getElementById('ca-transf'); return el?caNum(el.value):0; }
   return 0;
 }
-// Reparte la transferencia ENTRE TODOS los lotes, según lo que vale cada uno (pedido de Marcos):
-// lotes iguales = partes iguales ($10 en 2 lotes = $5 y $5); si uno vale más, le toca un poco más. Devuelve [{id, t, total}]
+// Reparte la transferencia ENTRE TODOS los lotes en PARTES IGUALES, valga lo que valga cada uno (pedido de Marcos):
+// $10 en 2 lotes = $5 y $5. Si a un lote le toca más de lo que vale, se paga entero y lo que sobra se reparte igual
+// entre los demás. Los pesos sueltos del redondeo van a los primeros lotes. Devuelve [{id, t, total}]
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
 function caRepartirTransf(t, lotes, totalFn){
-  const tots=lotes.map(c=>totalFn(c)), suma=tots.reduce((a,b)=>a+b,0);
-  const tt=Math.min(Math.max(0,Math.round(t||0)), suma);
-  const res=lotes.map((c,i)=>({id:c.id, t:(suma>0?Math.min(tots[i], Math.floor(tt*tots[i]/suma)):0), total:tots[i]}));
-  // los pesos que sobran por el redondeo van al primer lote que tenga lugar
-  let sobra=tt-res.reduce((a,r)=>a+r.t,0);
-  for(const r of res){ if(sobra<=0) break; const d=Math.min(r.total-r.t, sobra); r.t+=d; sobra-=d; }
+  const res=lotes.map(c=>({id:c.id, t:0, total:totalFn(c)}));
+  let resta=Math.min(Math.max(0,Math.round(t||0)), res.reduce((a,r)=>a+r.total,0));
+  while(resta>0){
+    const abiertos=res.filter(r=>r.t<r.total); if(!abiertos.length) break;
+    const parte=Math.floor(resta/abiertos.length);
+    if(parte<=0){ for(const r of abiertos){ if(resta<=0) break; r.t+=1; resta-=1; } break; }
+    for(const r of abiertos){ const d=Math.min(parte, r.total-r.t); r.t+=d; resta-=d; }
+  }
   return res;
 }
 function caRepartoChange(){
