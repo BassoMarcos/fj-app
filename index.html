@@ -1001,7 +1001,7 @@ tr:hover td{background:var(--bg)}
 <script>
 
 // ============== VERSIÓN Y AVISO DE ACTUALIZACIÓN (v1.0656) ==============
-const APP_VERSION='v1.0717';
+const APP_VERSION='v1.0718';
 const _UPD_GRACIA_MIN=5;           // minutos de aviso antes de bloquear la pantalla
 let _updNuevaVersion=null;
 let _updDesde=null;                // cuándo apareció el aviso
@@ -11187,8 +11187,16 @@ function caContinuar(){
     +(hayARS&&hayUSD?'<div style="font-size:11px;color:var(--acc3);margin-bottom:10px">⚠️ Hay lotes en $ y USD. Cargá el efectivo de cada moneda por separado.</div>':'')
     // Tarjeta de efectivo PESOS
     +(hayARS?'<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px">'
-      +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">💵 Efectivo (pesos)</div>'
-      +'<div style="display:flex;gap:8px;margin-bottom:8px">'
+      +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">💵 Pago en pesos</div>'
+      // v1.0718: forma de pago (efectivo / transferencia total / transferencia parcial), como en el cobro de una cuota
+      +'<div style="display:flex;gap:6px;margin-bottom:8px">'
+      +'<button type="button" id="ca-f-efectivo" onclick="caSetForma(\'efectivo\')" style="flex:1;padding:7px 4px;font-size:12px;font-weight:700;border-radius:6px;cursor:pointer">💵 Efectivo</button>'
+      +'<button type="button" id="ca-f-total" onclick="caSetForma(\'total\')" style="flex:1;padding:7px 4px;font-size:12px;font-weight:700;border-radius:6px;cursor:pointer">🏦 Transf. total</button>'
+      +'<button type="button" id="ca-f-parcial" onclick="caSetForma(\'parcial\')" style="flex:1;padding:7px 4px;font-size:12px;font-weight:700;border-radius:6px;cursor:pointer">🏦 Transf. parcial</button>'
+      +'</div>'
+      +'<div id="ca-transf-box" style="display:none;margin-bottom:8px"><label style="font-size:11px;color:var(--text2)">Parte de las cuotas que transfiere (sin el impuesto)</label><input id="ca-transf" type="text" inputmode="numeric" value="" placeholder="$0" oninput="caFmtInput(this);caCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #a78bfa;border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
+      +'<div id="ca-transf-info" style="display:none;font-size:12px;padding:6px 10px;border-radius:6px;background:rgba(167,139,250,.12);color:#a78bfa;margin-bottom:8px"></div>'
+      +'<div id="ca-efectivo-box" style="display:flex;gap:8px;margin-bottom:8px">'
       +'<div style="flex:1"><label style="font-size:11px;color:var(--text2)">Entregó</label><input id="ca-entrego" type="text" inputmode="numeric" value="'+fmtMiles(Math.round(totARS))+'" oninput="caFmtInput(this);caCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
       +'<div style="flex:1"><label style="font-size:11px;color:var(--text2)">Vuelto</label><input id="ca-vuelto" type="text" inputmode="numeric" value="$0" oninput="caFmtInput(this);caCalcVuelto()" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:14px"></div>'
       +'</div>'
@@ -11222,8 +11230,41 @@ function caContinuar(){
     +'<button onclick="caEjecutarCobro()" style="flex:2;padding:10px;border:none;background:#16a34a;color:#fff;border-radius:8px;font-weight:800;cursor:pointer">✓ Confirmar y cobrar</button>'
     +'</div></div>';
   window._caTotals={totARS,totUSD};
+  window._caForma='efectivo';
+  if(hayARS) caSetForma('efectivo');
   caCalcVuelto();
   caCalcVueltoUSD();
+}
+// v1.0718 (pedido de Marcos): en el cobro agrupado también se puede transferir TODO o UNA PARTE (solo lo de pesos).
+// La transferencia se reparte por los lotes en orden (cada lote hasta su total); el resto va en efectivo.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function caSetForma(f){
+  window._caForma=f;
+  const on='background:#7c3aed;color:#fff;border:1px solid #7c3aed', off='background:none;color:#a78bfa;border:1px solid #a78bfa';
+  const onE='background:#16a34a;color:#fff;border:1px solid #16a34a', offE='background:none;color:var(--text2);border:1px solid var(--border2)';
+  const st=(id,css)=>{ const b=document.getElementById(id); if(b) b.style.cssText+= ';'+css; };
+  st('ca-f-efectivo', f==='efectivo'?onE:offE); st('ca-f-total', f==='total'?on:off); st('ca-f-parcial', f==='parcial'?on:off);
+  const tb=document.getElementById('ca-transf-box'), eb=document.getElementById('ca-efectivo-box');
+  if(tb) tb.style.display=f==='parcial'?'block':'none';
+  if(eb) eb.style.display=f==='total'?'none':'flex';
+  const tot=(window._caTotals&&window._caTotals.totARS)||0;
+  const eEl=document.getElementById('ca-entrego'), vEl=document.getElementById('ca-vuelto'), tEl=document.getElementById('ca-transf');
+  if(f==='efectivo'){ if(eEl) eEl.value=fmtMiles(tot); if(vEl) vEl.value='$0'; if(tEl) tEl.value=''; }
+  if(f==='parcial'){ if(tEl) tEl.value=''; if(eEl) eEl.value=''; if(vEl) vEl.value='$0'; setTimeout(()=>{ try{ tEl.focus(); }catch(e){} },30); }
+  caCalcVuelto();
+}
+// Cuánto se transfiere (sin impuesto) según la forma elegida
+function caTransfMonto(){
+  const f=window._caForma||'efectivo';
+  const tot=(window._caTotals&&window._caTotals.totARS)||0;
+  if(f==='total') return tot;
+  if(f==='parcial'){ const el=document.getElementById('ca-transf'); return el?caNum(el.value):0; }
+  return 0;
+}
+// Reparte la transferencia por los lotes en orden: [{id, t, total}] (cada lote hasta su total)
+function caRepartirTransf(t, lotes, totalFn){
+  let resta=Math.max(0,Math.round(t||0));
+  return lotes.map(c=>{ const tot=totalFn(c); const tl=Math.min(resta, tot); resta-=tl; return {id:c.id, t:tl, total:tot}; });
 }
 function caRepartoChange(){
   const tipo=document.querySelector('input[name="ca-reparto"]:checked')?.value||'equitativo';
@@ -11257,8 +11298,25 @@ function caCalcVuelto(){
   const eEl=document.getElementById('ca-entrego'), vEl=document.getElementById('ca-vuelto'), live=document.getElementById('ca-vuelto-live');
   if(!eEl||!live) return;
   const tot=(window._caTotals&&window._caTotals.totARS)||0;
-  const e=caNum(eEl.value), v=caNum(vEl.value);
-  const neto=e-v, dif=neto-tot;
+  const f=window._caForma||'efectivo';
+  const t=caTransfMonto();   // v1.0718
+  const e=f==='total'?0:caNum(eEl.value), v=f==='total'?0:caNum(vEl.value);
+  const info=document.getElementById('ca-transf-info');
+  if(info){
+    if(t>0){
+      // mismo cálculo que al cobrar: el impuesto (21%) se calcula lote por lote
+      const _ids=(window._caCtx?[...window._caCtx.seleccion]:[]);
+      const _d=loadData(), _x=window._caCtx||{adelantosPorLote:{}};
+      const _lotes=_ids.map(id=>_d.find(c=>c.id===id)).filter(c=>c&&!c.pago&&c.moneda!=='USD');
+      const _tf=(c)=>montoCobrable(c).total+((_x.adelantosPorLote[c.id]||[]).reduce((s,q)=>s+(q.monto||0),0));
+      const debe=caRepartirTransf(t,_lotes,_tf).reduce((s,r)=>s+(r.t>0?Math.round(r.t*1.21):0),0);
+      info.style.display='block';
+      info.innerHTML='Debe transferir: <strong>'+fmtPeso(debe)+'</strong> ('+fmtPeso(t)+' cuotas + '+fmtPeso(debe-t)+' impuestos 21%)';
+    } else info.style.display='none';
+  }
+  if(f==='parcial'&&t>tot){ live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent='La transferencia no puede superar el total ('+fmtPeso(tot)+')'; return; }
+  if(f==='parcial'&&t<=0){ live.style.background='var(--surface)';live.style.color='var(--text2)';live.textContent='Poné cuánto transfiere'; return; }
+  const neto=t+e-v, dif=neto-tot;
   if(dif===0){ live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='✓ Justo — pagó '+fmtPeso(neto); }
   else if(dif>0){ live.style.background='var(--green-bg)';live.style.color='var(--green)';live.textContent='SAF (a favor): '+fmtPeso(dif); }
   else { live.style.background='var(--red-bg)';live.style.color='var(--red)';live.textContent='SEC (en contra): '+fmtPeso(-dif); }
@@ -11273,6 +11331,20 @@ function caEjecutarCobro(){
   const eElU=document.getElementById('ca-entrego-usd'), vElU=document.getElementById('ca-vuelto-usd');
   const entregoTotalUSD=eElU?caNum(eElU.value):null;
   const vueltoTotalUSD=vElU?caNum(vElU.value):0;
+  // v1.0718: transferencia (solo pesos)
+  const _forma=(eEl&&window._caForma)||'efectivo';
+  const _tTotal=eEl?caTransfMonto():0;
+  const _totARSpre=(window._caTotals&&window._caTotals.totARS)||0;
+  if(_forma==='parcial'&&_tTotal<=0){ alert('Poné cuánto transfiere.'); return; }
+  if(_forma!=='efectivo'&&_tTotal>_totARSpre){ alert('La transferencia no puede superar el total ('+fmtPeso(_totARSpre)+').'); return; }
+  if(_forma==='parcial'&&(String(eEl.value||'').trim()===''||String((vEl&&vEl.value)||'').trim()==='')){ alert('Entregó y vuelto son obligatorios (poné 0 si no hubo).'); return; }
+  // Colaborador: la transferencia TOTAL pide la contraseña de admin (igual que en el cobro de una cuota)
+  if(_forma==='total'&&_dispRol()==='colaborador'&&!window._caClaveOk){
+    confirmarConClave(()=>{ window._caClaveOk=true; try{ caEjecutarCobro(); } finally { window._caClaveOk=false; } });
+    return;
+  }
+  const _entregoEf=(_forma==='total')?0:entregoTotal;
+  const _vueltoEf=(_forma==='total')?0:vueltoTotal;
   const ids=[...x.seleccion];
   const adelantosPorLote={...x.adelantosPorLote};
   (()=>{
@@ -11285,7 +11357,8 @@ function caEjecutarCobro(){
     const totPesos=pesosLotes.reduce((s,c)=>s+totalLoteFn(c),0);
     const totUSDesp=usdLotes.reduce((s,c)=>s+totalLoteFn(c),0);
     // Diferencia por moneda
-    const difGlobal=(entregoTotal!==null?(entregoTotal-vueltoTotal):totPesos)-totPesos;
+    const difGlobal=(entregoTotal!==null?(_tTotal+_entregoEf-_vueltoEf):totPesos)-totPesos;   // v1.0718: + transferencia
+    const _repT={}; caRepartirTransf(_tTotal,pesosLotes,totalLoteFn).forEach(r=>{ _repT[r.id]=r; });
     const difGlobalUSD=(entregoTotalUSD!==null?(entregoTotalUSD-vueltoTotalUSD):totUSDesp)-totUSDesp;
     { const _saf=pesosLotes.reduce((s,c)=>s+Math.max(0,Number(c.saldo)||0),0); const _fr=difGlobal<0?_frenoCobro(-difGlobal,_saf,'ARS'):''; if(_fr){ alert(_fr); return; } if(difGlobal<0&&!_confirmarFaltanteAdmin(-difGlobal,_saf,'ARS')) return; }   // v1.0692
     const primerPesoId=pesosLotes.length?pesosLotes[0].id:null;
@@ -11344,7 +11417,11 @@ function caEjecutarCobro(){
       // 1. Cobro real (motor) — rutea agrimensor a su caja automáticamente
       window._cobroDifSaldo=difLote;   // v1.0697: con qué saldo queda la cuenta
       window._cobroSaldoAntes=Number((loadData().find(y=>y.id===id)||{}).saldo)||0;   // v1.0698: y con cuál llegó
-      try{ marcarPago(id, 0); } finally { window._cobroDifSaldo=null; window._cobroSaldoAntes=null; }
+      // v1.0718: la parte transferida de este lote (y si cubre todo el lote = transferencia total)
+      const _tl=(!esUSD&&_repT[id])?_repT[id].t:0;
+      const _tlFull=_tl>0&&_tl>=_repT[id].total;
+      window._cobroTransferencia=_tlFull;
+      try{ marcarPago(id, 0); } finally { window._cobroDifSaldo=null; window._cobroSaldoAntes=null; window._cobroTransferencia=false; }
       // 2. Adelantos
       const adel=adelantosPorLote[id]||[];
       let totalAdel=0;
@@ -11353,8 +11430,16 @@ function caEjecutarCobro(){
       // 4. Caja física — todos entran (el agrimensor se muestra en su sección aparte)
       {
         const bal=loadBalances();
-        (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:mc,adelanto:totalAdel,transferido:0,entrego:totalLote+difLote,vuelto:0,efectivo:mc+difLote,dif:difLote,ts,fecha});
+        // v1.0718: la transferencia cubre primero la cuota; el efectivo es lo que queda (+ SAF/SEC)
+        const _tCuota=Math.min(_tl,mc);
+        (bal.cajaFisica=bal.cajaFisica||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:c.moneda||'ARS',cuotaLista:mc,adelanto:totalAdel,transferido:_tl,transfTotal:_tlFull,entrego:totalLote-_tl+difLote,vuelto:0,efectivo:mc-_tCuota+difLote,dif:difLote,ts,fecha,...(_tl>0?{agrupado:true}:{})});
+        // y a 🏦 Cierres de Transferencias, como en el cobro de una cuota (para el 💧 relleno)
+        if(_tl>0){
+          const imp=Math.round(_tl*1.21)-_tl;
+          (bal.transferencias=bal.transferencias||[]).push({id,mz:c.mz,lote:c.lote,titular:c.titular,moneda:'ARS',cuotaParte:_tl,impuesto:imp,totalTransferido:_tl+imp,parcial:!_tlFull,rellenado:0,ts,fecha,agrupado:true});
+        }
         saveBalances(bal);
+        if(_tl>0) addHist('pago','🏦 Transferencia '+(_tlFull?'TOTAL':'PARCIAL')+' (cobro agrupado) — '+c.mz+' Lote '+c.lote+' — cuota '+fmtPeso(_tl)+' + imp. 21% '+fmtPeso(Math.round(_tl*1.21)-_tl),id);
       }
       // 5. Cargar SAF/SEC al saldo del lote (si le tocó diferencia)
       if(difLote!==0){
@@ -11364,7 +11449,7 @@ function caEjecutarCobro(){
         registrarSafSec(c,difLote,ts,fecha);
       }
       if(esUSD) totUSD+=totalLote; else totARS+=totalLote;
-      recibo.push({lote:formatLoteTag(c.mz,c.lote),cuota:caAntes,cur,cuotaMonto:mc,nAdel:adel.length,totalAdel,total:totalLote,dif:difLote,agr:esAgr});
+      recibo.push({lote:formatLoteTag(c.mz,c.lote),cuota:caAntes,cur,cuotaMonto:mc,nAdel:adel.length,totalAdel,total:totalLote,dif:difLote,agr:esAgr,transf:_tl,transfFull:_tlFull});
     });
     caMostrarComprobante(recibo, totARS, totUSD, difGlobal, difGlobalUSD);
   })();
@@ -11376,7 +11461,8 @@ function caMostrarComprobante(recibo, totARS, totUSD, difGlobal, difGlobalUSD){
     '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border);font-size:12px">'
     +'<div><b>'+r.lote+'</b> <span style="color:var(--text2)">Cuota '+r.cuota+'</span>'
     +(r.nAdel?' <span style="color:var(--blue);font-size:10px">+'+r.nAdel+' adel. '+r.cur+fmtPeso(r.totalAdel)+'</span>':'')
-    +(r.dif?' <span style="color:'+(r.dif>0?'var(--green)':'var(--red)')+';font-size:10px">'+(r.dif>0?'SAF ':'SEC ')+r.cur+fmtPeso(Math.abs(r.dif))+'</span>':'')+'</div>'
+    +(r.dif?' <span style="color:'+(r.dif>0?'var(--green)':'var(--red)')+';font-size:10px">'+(r.dif>0?'SAF ':'SEC ')+r.cur+fmtPeso(Math.abs(r.dif))+'</span>':'')
+    +(r.transf?' <span style="color:#a78bfa;font-size:10px">🏦 '+(r.transfFull?'transf. total':'transf. '+fmtPeso(r.transf))+'</span>':'')+'</div>'   // v1.0718
     +'<div style="font-weight:700">'+r.cur+fmtPeso(r.total)+'</div></div>'
   ).join('');
   const totalStr=[totARS?fmtPeso(totARS):'',totUSD?('USD '+fmtPeso(totUSD)):''].filter(Boolean).join(' + ');
@@ -11391,7 +11477,7 @@ function caMostrarComprobante(recibo, totARS, totUSD, difGlobal, difGlobalUSD){
     +'<button onclick="caCopiarComprobante()" style="width:100%;padding:9px;margin-bottom:8px;border:1px solid var(--border2);background:var(--surface);border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">📋 Copiar detalle</button>'
     +'<button onclick="cerrarCobroAgrupado();try{if(typeof adminDetId!==\'undefined\'&&adminDetId)renderAdminDet(adminDetId);}catch(e){}try{if(typeof renderAdminTable===\'function\')renderAdminTable();}catch(e){}try{if(typeof renderColab===\'function\')renderColab();}catch(e){}" style="width:100%;padding:10px;border:none;background:#16a34a;color:#fff;border-radius:8px;font-weight:800;cursor:pointer">Listo</button>'
     +'</div>';
-  window._caRecibo=recibo.map(r=>r.lote+'\tCuota '+r.cuota+'\t'+r.cur+fmtPeso(r.total)+(r.nAdel?'\t(+'+r.nAdel+' adel)':'')).join('\n')
+  window._caRecibo=recibo.map(r=>r.lote+'\tCuota '+r.cuota+'\t'+r.cur+fmtPeso(r.total)+(r.nAdel?'\t(+'+r.nAdel+' adel)':'')+(r.transf?'\t(🏦 transf. '+fmtPeso(r.transf)+')':'')).join('\n')
     +'\nTOTAL\t'+totalStr;
 }
 // 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
