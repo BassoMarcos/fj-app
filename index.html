@@ -10192,14 +10192,27 @@ function renderStats(){
   const _notaFinHtml=()=>_finCiclo.lotes.length?('<div style="margin-top:10px;font-size:11px;color:var(--text2);background:var(--blue-bg,rgba(59,130,246,.08));border:1px solid var(--border);border-radius:8px;padding:6px 10px;text-align:center">'
     +'🏁 Incluye '+_finCiclo.lotes.length+' lote'+(_finCiclo.lotes.length>1?'s':'')+' que terminaron este mes (ya cobrados): '
     +_finCiclo.lotes.map(x=>'<b>'+x.id+'</b> '+(x.moneda==='USD'?'USD ':'')+fmtPeso(x.monto)).join(' · ')+'</div>'):'';
+  // Resumen: un renglón por lote y el total, separado en pagado y falta (pedido de Marcos)
   const _notaMoraHtml=()=>{
     const ids=Object.keys(_moraUlt);
     if(!ids.length&&!_moraFin.length) return '';
-    const it=ids.map(id=>{ const c=data.find(d=>d.id===id)||{}; return '<b>'+id+'</b> '+(c.moneda==='USD'?'USD ':'')+fmtPeso(montoCobrable(c).total)+' <span style="color:var(--text3)">(cuota '+_moraUlt[id].cuota+' de '+_moraUlt[id].mes+', sin pagar)</span>'; })
-      .concat(_moraFin.map(x=>'<b>'+x.c.id+'</b> '+(x.c.moneda==='USD'?'USD ':'')+fmtPeso(x.monto)+' <span style="color:var(--text3)">(cuota '+x.cuota+' de '+x.mes+', pagada: terminó)</span>'));
-    return '<div style="margin-top:6px;font-size:11px;color:var(--text2);background:rgba(217,119,6,.08);border:1px solid rgba(217,119,6,.35);border-radius:8px;padding:6px 10px;text-align:center">'
-      +'📌 <b>Aparte, no suman en el mes:</b> '+(it.length>1?'lotes que tendrían':'lote que tendría')+' que haber terminado antes (la última cuota quedó en mora): '
-      +it.join(' · ')+'. Eso se cobra en ⚠️ Mora y va a la Caja de Mora.</div>';
+    const filas=ids.map(id=>{ const c=data.find(d=>d.id===id)||{};
+        return {id, titular:c.titular||'', usd:c.moneda==='USD', monto:montoCobrable(c).total, cuota:_moraUlt[id].cuota, mes:_moraUlt[id].mes, pagada:false}; })
+      .concat(_moraFin.map(x=>({id:x.c.id, titular:x.c.titular||'', usd:x.c.moneda==='USD', monto:x.monto, cuota:x.cuota, mes:x.mes, pagada:true})));
+    const tot=(f)=>{ const a=filas.filter(f); return {n:a.length, ars:a.filter(x=>!x.usd).reduce((s,x)=>s+x.monto,0), usd:a.filter(x=>x.usd).reduce((s,x)=>s+x.monto,0)}; };
+    const plata=(t)=>[t.ars?fmtPeso(t.ars):'', t.usd?'USD '+fmtPeso(t.usd):''].filter(Boolean).join(' + ')||fmtPeso(0);
+    const T=tot(()=>true), P=tot(x=>x.pagada), F=tot(x=>!x.pagada);
+    return '<div style="margin-top:6px;font-size:11px;color:var(--text2);background:rgba(217,119,6,.08);border:1px solid rgba(217,119,6,.35);border-radius:8px;padding:8px 10px">'
+      +'<div style="font-weight:800;color:#d97706;margin-bottom:4px">📌 Aparte, no suman en el mes: lote'+(filas.length>1?'s que tendrían':' que tendría')+' que haber terminado antes (la última cuota quedó en mora)</div>'
+      +filas.map(x=>'<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:3px 0;border-top:1px dashed rgba(217,119,6,.3)">'
+          +'<span><b>'+x.id+'</b> '+x.titular+' <span style="color:var(--text3)">· cuota '+x.cuota+' de '+x.mes+'</span></span>'
+          +'<span style="white-space:nowrap"><b>'+(x.usd?'USD ':'')+fmtPeso(x.monto)+'</b> '
+          +(x.pagada?'<span style="color:var(--green)">✓ pagada (terminó)</span>':'<span style="color:#d97706">⚠️ sin pagar</span>')+'</span></div>').join('')
+      +'<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:5px;margin-top:3px;border-top:2px solid rgba(217,119,6,.45);font-weight:800">'
+      +'<span>Total: '+T.n+' lote'+(T.n>1?'s':'')+' · '+plata(T)+'</span>'
+      +'<span><span style="color:var(--green)">Pagado '+plata(P)+'</span> · <span style="color:#d97706">Falta '+plata(F)+'</span></span></div>'
+      +'<div style="color:var(--text3);margin-top:3px">Eso se cobra en ⚠️ Mora y va a la Caja de Mora.</div>'
+      +'</div>';
   };
   const cobradoARStot=cobradoARS+_finCiclo.ars;
   const cobradoUSDtot=cobradoUSD+_finCiclo.usd;
