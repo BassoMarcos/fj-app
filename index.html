@@ -6938,6 +6938,34 @@ function _auditarPagosVsCaja(){
   return {pagados:pagados.length, sumaPagados:sumaP, sumaCaja:sumaC,
           sinRegistro, sinMarcar, enCaja};
 }
+// v1.0720 (Marcos: "que siga contando sus cuotas pero que avise que es una cuota de mora"): lotes que TERMINARON en este
+// ciclo pagando su ÚLTIMA cuota en mora (ej. M1-15A/B, la cuota 48 de Octubre). A principio de mes Estadísticas les contaba
+// una cuota del mes; siguen contando como terminados hasta cerrar el mes, avisando que fue una cuota de mora: esa plata
+// está en la Caja de Mora, no en la caja de cuotas (CP). Devuelve [{c, monto, mes, cuota}].
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _terminadosEnMoraCiclo(data){
+  const desde=((typeof loadCierreFinal==='function'&&loadCierreFinal())||{}).ts||'';
+  if(!desde) return [];
+  const cm=loadCuotasMora(), out=[];
+  (data||loadData()).forEach(c=>{
+    if(c.est!=='finalizado'||c.autopago||esAgrimensor(c.id)||c.pago) return;
+    const u=cm.filter(m=>m.clienteId===c.id&&m.pagada&&Number(m.numeroCuota)>=Number(c.ct)&&String(m.pagoTs||'')>=desde).pop();
+    if(u&&Number(u.monto)>0) out.push({c,monto:Number(u.monto),mes:u.mesNombre||'',cuota:u.numeroCuota});
+  });
+  return out;
+}
+// v1.0720: lotes ACTIVOS que deben su ÚLTIMA cuota en mora (ej. M1-11A): Estadísticas les cuenta una cuota del mes, que en
+// realidad es esa cuota de mora. Devuelve {id:{mes, cuota}}.
+// 6202 led ozram edsed aírutua atelpmoc us ed se ,socram ossab rop odaerc euf aedi/ogidoc/amargorp etse
+function _ultimaCuotaEnMoraMapa(lotes){
+  const cm=loadCuotasMora(), r={};
+  (lotes||[]).forEach(c=>{
+    if(c.est!=='activo'||Number(c.ca)<Number(c.ct)) return;
+    const u=cm.find(m=>m.clienteId===c.id&&!m.pagada&&Number(m.numeroCuota)>=Number(c.ct));
+    if(u) r[c.id]={mes:u.mesNombre||'',cuota:u.numeroCuota};
+  });
+  return r;
+}
 function _bloqueAuditoriaCaja(){
   let a; try{ a=_auditarPagosVsCaja(); }catch(e){ return ''; }
   const data=loadData(), bal=loadBalances();
@@ -6969,6 +6997,9 @@ function _bloqueAuditoriaCaja(){
   (bal.cierres||[]).forEach(ci=>(ci.pagos||[]).forEach(addA));
   (bal.agrimensores||[]).forEach(p=>{ if(p.esMora||p.moneda==='USD') return; agrIds.add(p.id); agrTotal+=(p.monto||0); });
 
+  // v1.0720: los que terminaron pagando su última cuota en mora: Estadísticas los cuenta como cobrados, pero su plata está
+  // en la Caja de Mora (no en estas cajas). Se muestran aparte para que se entienda la diferencia con "Cobrado".
+  const _tMora=_terminadosEnMoraCiclo(data).filter(x=>x.c.moneda!=='USD'), _tMoraM=_tMora.reduce((s,x)=>s+x.monto,0);
   const dL=cobLotes-cajLotes, dM=cobTotal-cajTotal;
   const ok=(dL===0&&Math.abs(dM)<2);
   const col=ok?'#4ade80':'#f59e0b';
@@ -6986,6 +7017,7 @@ function _bloqueAuditoriaCaja(){
     +'<span style="color:var(--text2)">Cajas <b style="color:var(--text)">'+cajLotes+'</b> lotes · <b style="color:var(--text)">'+fmtPeso(cajTotal)+'</b></span>'
     +'<span style="font-weight:800;color:'+col+'">Dif '+(dL>0?'+':'')+dL+' · '+fmtPeso(dM)+'</span>'
     +'<span style="color:var(--text3)">📐 Agrim. '+agrIds.size+' · '+fmtPeso(agrTotal)+'</span>'
+    +(_tMora.length?'<span style="color:#d97706">🔶 Terminados en mora '+_tMora.length+' · '+fmtPeso(_tMoraM)+' (en la Caja de Mora)</span>':'')
     +'</div>';
   const filaL=(c,color)=>'<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">'
     +'<span><b>'+formatLoteTag(c.mz,c.lote)+'</b> <span style="color:var(--text2)">'+((c.titular||'').slice(0,24))+'</span></span>'
@@ -10136,8 +10168,8 @@ function renderStats(){
     // figura PAGADO este mes. Al cerrar el mes se borran los pagos de todos, así que ahí deja de contar solo (antes
     // dependía de que su cobro siguiera en la caja: si se limpiaba Cierres antes de cerrar el mes, desaparecía, y si no
     // se limpiaba, seguía contando el mes siguiente). Los que terminaron cobrando una cuota vieja en mora no figuran
-    // pagados, así que no cuentan. Lo que pagó sale de la caja del día / cierres, o de la Caja Física, o de la cuota que
-    // tenía antes de terminar.
+    // pagados: se suman aparte, abajo, con la cuota de mora que pagaron. Lo que pagó sale de la caja del día / cierres, o
+    // de la Caja Física, o de la cuota que tenía antes de terminar.
     const cfLista={};
     (b.cajaFisica||[]).forEach(p=>{ if(p&&p.id!=null&&(p.cuotaLista||0)>0) cfLista[p.id]=p.cuotaLista; });
     let ars=0, usd=0, n=0; const lotes=[];
@@ -10149,10 +10181,28 @@ function renderStats(){
       n++; if(c.moneda==='USD') usd+=m; else ars+=m;
       lotes.push({id:c.id,mz:c.mz,moneda:c.moneda,monto:m});   // v1.0694
     });
+    // v1.0720: + los que terminaron este mes pagando su ÚLTIMA cuota en mora (cuentan con esa cuota, avisando que es de mora)
+    _terminadosEnMoraCiclo(data).forEach(x=>{
+      const c=x.c; n++; if(c.moneda==='USD') usd+=x.monto; else ars+=x.monto;
+      lotes.push({id:c.id,mz:c.mz,moneda:c.moneda,monto:x.monto,enMora:true,moraMes:x.mes,moraCuota:x.cuota});
+    });
     return {ars,usd,n,lotes};
   })();
   // v1.0705: los terminados este mes con su ficha: cuentan como pagados (con lo que pagaron) en la barra y por etapa
   const _finObjs=_finCiclo.lotes.map(x=>({c:data.find(d=>d.id===x.id),monto:x.monto})).filter(x=>x.c);
+  // v1.0720 (Marcos): los que deben su ÚLTIMA cuota en mora (ej. M1-11A) siguen contando con su cuota, avisando que es de mora
+  const _moraUlt=_ultimaCuotaEnMoraMapa(cobrables);
+  const _finMoraN=_finCiclo.lotes.filter(x=>x.enMora).length;
+  const _notaFinHtml=()=>_finCiclo.lotes.length?('<div style="margin-top:10px;font-size:11px;color:var(--text2);background:var(--blue-bg,rgba(59,130,246,.08));border:1px solid var(--border);border-radius:8px;padding:6px 10px;text-align:center">'
+    +'🏁 Incluye '+_finCiclo.lotes.length+' lote'+(_finCiclo.lotes.length>1?'s':'')+' que terminaron este mes (ya cobrados): '
+    +_finCiclo.lotes.map(x=>'<b>'+x.id+'</b> '+(x.moneda==='USD'?'USD ':'')+fmtPeso(x.monto)+(x.enMora?' <span style="color:#d97706">(cuota de mora de '+x.moraMes+', está en la Caja de Mora)</span>':'')).join(' · ')+'</div>'):'';
+  const _notaMoraHtml=()=>{
+    const ids=Object.keys(_moraUlt); if(!ids.length) return '';
+    return '<div style="margin-top:6px;font-size:11px;color:var(--text2);background:rgba(217,119,6,.08);border:1px solid rgba(217,119,6,.35);border-radius:8px;padding:6px 10px;text-align:center">'
+      +'⚠️ '+(ids.length>1?'Estas cuotas son de mora':'Esta cuota es de mora')+' (es la última del lote y todavía no la pagó): '
+      +ids.map(id=>{ const c=data.find(d=>d.id===id)||{}; return '<b>'+id+'</b> '+(c.moneda==='USD'?'USD ':'')+fmtPeso(montoCobrable(c).total)+' <span style="color:var(--text3)">(cuota '+_moraUlt[id].cuota+' de '+_moraUlt[id].mes+')</span>'; }).join(' · ')
+      +'. Cuando la pague, la plata va a la Caja de Mora y el lote figura como terminado.</div>';
+  };
   const cobradoARStot=cobradoARS+_finCiclo.ars;
   const cobradoUSDtot=cobradoUSD+_finCiclo.usd;
   const agrPag=agrim.filter(c=>c.pago).length;
@@ -10193,7 +10243,7 @@ function renderStats(){
 
   // ── Columnas: plata cobrada / pendiente / agrimensores ──
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:1.25rem">';
-  html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">💰 COBRADO (PESOS)</div><div style="font-size:22px;font-weight:800;color:var(--green)">'+fmtPeso(cobradoARStot)+'</div>'+(cobradoUSDtot?'<div style="font-size:13px;font-weight:700;color:var(--green)">+ USD '+fmtPeso(cobradoUSDtot).replace('$','')+'</div>':'')+(_finCiclo.n?'<div style="font-size:10px;color:var(--text3);margin-top:2px">incluye '+_finCiclo.n+' finalizado'+(_finCiclo.n>1?'s':'')+' este mes</div>':''),'text-align:center');
+  html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">💰 COBRADO (PESOS)</div><div style="font-size:22px;font-weight:800;color:var(--green)">'+fmtPeso(cobradoARStot)+'</div>'+(cobradoUSDtot?'<div style="font-size:13px;font-weight:700;color:var(--green)">+ USD '+fmtPeso(cobradoUSDtot).replace('$','')+'</div>':'')+(_finCiclo.n?'<div style="font-size:10px;color:var(--text3);margin-top:2px">incluye '+_finCiclo.n+' finalizado'+(_finCiclo.n>1?'s':'')+' este mes'+(_finMoraN?' ('+_finMoraN+' en mora, en la Caja de Mora)':'')+'</div>':''),'text-align:center');
   html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">⏳ FALTA COBRAR</div><div style="font-size:22px;font-weight:800;color:#d97706">'+fmtPeso(pendARS)+'</div>'+(pendUSD?'<div style="font-size:13px;font-weight:700;color:#d97706">+ USD '+fmtPeso(pendUSD).replace('$','')+'</div>':''),'text-align:center');
   html+=card('<div style="font-size:11px;font-weight:700;color:var(--text2)">📐 AGRIMENSORES</div><div style="font-size:22px;font-weight:800">'+agrPag+'<span style="font-size:14px;color:var(--text2)">/'+agrim.length+'</span></div><div style="font-size:11px;color:var(--text2)">pagados este mes</div>','text-align:center');
   html+='</div>';
@@ -10215,35 +10265,33 @@ function renderStats(){
     html+='<div style="text-align:center"><div style="font-size:11px;color:var(--text2)">💰 Pesos</div><div style="font-size:24px;font-weight:800;color:var(--green)">'+fmtPeso(_totARS)+'</div><div style="font-size:10px;color:var(--text3)">'+_nTxt(_cobrARS.length,_finA.length)+'</div></div>';
     html+='<div style="text-align:center"><div style="font-size:11px;color:var(--text2)">💵 Dólares</div><div style="font-size:24px;font-weight:800;color:var(--green)">USD '+fmtPeso(_totUSD)+'</div><div style="font-size:10px;color:var(--text3)">'+_nTxt(_cobrUSD.length,_finU.length)+'</div></div>';
     html+='</div>';
-    if(_finCiclo.lotes.length){
-      html+='<div style="margin-top:10px;font-size:11px;color:var(--text2);background:var(--blue-bg,rgba(59,130,246,.08));border:1px solid var(--border);border-radius:8px;padding:6px 10px;text-align:center">'
-        +'🏁 Incluye '+_finCiclo.lotes.length+' lote'+(_finCiclo.lotes.length>1?'s':'')+' que terminaron este mes (ya cobrados): '
-        +_finCiclo.lotes.map(x=>'<b>'+x.id+'</b> '+(x.moneda==='USD'?'USD ':'')+fmtPeso(x.monto)).join(' · ')+'</div>';
-    }
+    html+=_notaFinHtml()+_notaMoraHtml();   // v1.0720
     html+='<button onclick="const d=document.getElementById(\'stats-etapas\');d.style.display=d.style.display===\'none\'?\'block\':\'none\';this.textContent=d.style.display===\'none\'?\'▼ Ver por etapa y manzana\':\'▲ Ocultar detalle\'" style="width:100%;margin-top:10px;padding:7px;background:none;border:1px dashed var(--border2);color:var(--text2);border-radius:8px;font-size:12px;cursor:pointer">▼ Ver por etapa y manzana</button>';
     html+='<div id="stats-etapas" style="display:none;margin-top:8px">';
     const grupos={};
-    const _sumar=(c,m,fin)=>{   // v1.0694: fin = terminó este mes (ya cobrado)
+    const _sumar=(c,m,fin,fm,mp)=>{   // v1.0694: fin = terminó este mes (ya cobrado) · v1.0720: fm = terminó pagando en mora, mp = su cuota es de mora
       const et=getEtapa(c.mz), mz=String(c.mz).toUpperCase();
-      if(!grupos[et]) grupos[et]={mzs:{},totARS:0,totUSD:0,n:0,fin:0};
-      if(!grupos[et].mzs[mz]) grupos[et].mzs[mz]={ars:0,usd:0,n:0,fin:0};
+      if(!grupos[et]) grupos[et]={mzs:{},totARS:0,totUSD:0,n:0,fin:0,fm:0,mp:0};
+      if(!grupos[et].mzs[mz]) grupos[et].mzs[mz]={ars:0,usd:0,n:0,fin:0,fm:0,mp:0};
       if(c.moneda==='USD'){grupos[et].mzs[mz].usd+=m;grupos[et].totUSD+=m;}
       else {grupos[et].mzs[mz].ars+=m;grupos[et].totARS+=m;}
       grupos[et].mzs[mz].n++;grupos[et].n++;
       if(fin){grupos[et].mzs[mz].fin++;grupos[et].fin++;}
+      if(fm){grupos[et].mzs[mz].fm++;grupos[et].fm++;}
+      if(mp){grupos[et].mzs[mz].mp++;grupos[et].mp++;}
     };
-    cobrables.forEach(c=>_sumar(c,montoCobrable(c).total,false));
-    _finCiclo.lotes.forEach(x=>_sumar(x,x.monto,true));
-    const _finTxt=(nf)=>nf?' <span style="color:var(--blue)">🏁 '+nf+' terminado'+(nf>1?'s':'')+'</span>':'';
+    cobrables.forEach(c=>_sumar(c,montoCobrable(c).total,false,false,!!_moraUlt[c.id]));
+    _finCiclo.lotes.forEach(x=>_sumar(x,x.monto,true,!!x.enMora,false));
+    const _finTxt=(nf,nfm,nmp)=>(nf?' <span style="color:var(--blue)">🏁 '+nf+' terminado'+(nf>1?'s':'')+(nfm?' ('+nfm+' en mora)':'')+'</span>':'')+(nmp?' <span style="color:#d97706">⚠️ '+nmp+' de mora</span>':'');
     const ordenEt=['Etapa 1','Etapa 2','Etapa 3','Etapa 4','Otra'].filter(e=>grupos[e]);
     html+=ordenEt.map(et=>{
       const g=grupos[et]; const mzKeys=Object.keys(g.mzs).sort();
       return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden">'
         +'<div style="display:flex;justify-content:space-between;padding:8px 12px;background:var(--hov);font-weight:800;font-size:13px">'
-        +'<span>'+et+' <span style="font-weight:400;color:var(--text2);font-size:11px">('+g.n+' lotes'+_finTxt(g.fin)+')</span></span>'
+        +'<span>'+et+' <span style="font-weight:400;color:var(--text2);font-size:11px">('+g.n+' lotes'+_finTxt(g.fin,g.fm,g.mp)+')</span></span>'
         +'<span style="color:var(--green)">'+(g.totARS?fmtPeso(g.totARS):'')+(g.totARS&&g.totUSD?' · ':'')+(g.totUSD?'USD '+fmtPeso(g.totUSD):'')+'</span></div>'
         +mzKeys.map(mz=>'<div style="display:flex;justify-content:space-between;padding:5px 12px 5px 24px;border-top:1px solid var(--border);font-size:12px">'
-          +'<span style="color:var(--text2)">'+mz+' <span style="font-size:10px">('+g.mzs[mz].n+_finTxt(g.mzs[mz].fin)+')</span></span>'
+          +'<span style="color:var(--text2)">'+mz+' <span style="font-size:10px">('+g.mzs[mz].n+_finTxt(g.mzs[mz].fin,g.mzs[mz].fm,g.mzs[mz].mp)+')</span></span>'
           +'<span style="font-weight:600">'+(g.mzs[mz].ars?fmtPeso(g.mzs[mz].ars):'')+(g.mzs[mz].ars&&g.mzs[mz].usd?' · ':'')+(g.mzs[mz].usd?'USD '+fmtPeso(g.mzs[mz].usd):'')+'</span></div>').join('')
         +'</div>';
     }).join('')||'<div style="font-size:12px;color:var(--text2)">Sin lotes cobrables</div>';
@@ -10424,35 +10472,33 @@ function renderStats(){
     html+='<div style="text-align:center"><div style="font-size:11px;color:var(--text2)">💰 Pesos</div><div style="font-size:24px;font-weight:800;color:var(--green)">'+fmtPeso(_dtA)+'</div><div style="font-size:10px;color:var(--text3)">'+_nTxtD(_dARS.length,_finDA)+'</div></div>';
     html+='<div style="text-align:center"><div style="font-size:11px;color:var(--text2)">💵 Dólares</div><div style="font-size:24px;font-weight:800;color:var(--green)">USD '+fmtPeso(_dtU)+'</div><div style="font-size:10px;color:var(--text3)">'+_nTxtD(_dUSD.length,_finDU)+'</div></div>';
     html+='</div>';
-    if(_finCiclo.lotes.length){   // v1.0720
-      html+='<div style="margin-top:10px;font-size:11px;color:var(--text2);background:var(--blue-bg,rgba(59,130,246,.08));border:1px solid var(--border);border-radius:8px;padding:6px 10px;text-align:center">'
-        +'🏁 Incluye '+_finCiclo.lotes.length+' lote'+(_finCiclo.lotes.length>1?'s':'')+' que terminaron este mes (ya cobrados): '
-        +_finCiclo.lotes.map(x=>'<b>'+x.id+'</b> '+(x.moneda==='USD'?'USD ':'')+fmtPeso(x.monto)).join(' · ')+'</div>';
-    }
+    html+=_notaFinHtml()+_notaMoraHtml();   // v1.0720
     html+='<button onclick="const d=document.getElementById(\'duenos-etotales\');d.style.display=d.style.display===\'none\'?\'block\':\'none\';this.textContent=d.style.display===\'none\'?\'▼ Ver por etapa y manzana\':\'▲ Ocultar detalle\'" style="width:100%;margin-top:10px;padding:7px;background:none;border:1px dashed var(--border2);color:var(--text2);border-radius:8px;font-size:12px;cursor:pointer">▼ Ver por etapa y manzana</button>';
     html+='<div id="duenos-etotales" style="display:none;margin-top:8px">';
     const gruposD={};
-    const _sumarD=(c,mm,fin)=>{   // v1.0720: fin = terminó este mes (ya cobrado), cuenta con lo que pagó
+    const _sumarD=(c,mm,fin,fm,mp)=>{   // v1.0720: fin = terminó este mes (ya cobrado), cuenta con lo que pagó · fm = en mora · mp = su cuota es de mora
       const et=getEtapa(c.mz), mz=String(c.mz).toUpperCase();
-      if(!gruposD[et]) gruposD[et]={mzs:{},totARS:0,totUSD:0,n:0,fin:0};
-      if(!gruposD[et].mzs[mz]) gruposD[et].mzs[mz]={ars:0,usd:0,n:0,fin:0};
+      if(!gruposD[et]) gruposD[et]={mzs:{},totARS:0,totUSD:0,n:0,fin:0,fm:0,mp:0};
+      if(!gruposD[et].mzs[mz]) gruposD[et].mzs[mz]={ars:0,usd:0,n:0,fin:0,fm:0,mp:0};
       if(c.moneda==='USD'){gruposD[et].mzs[mz].usd+=mm;gruposD[et].totUSD+=mm;}
       else {gruposD[et].mzs[mz].ars+=mm;gruposD[et].totARS+=mm;}
       gruposD[et].mzs[mz].n++;gruposD[et].n++;
       if(fin){gruposD[et].mzs[mz].fin++;gruposD[et].fin++;}
+      if(fm){gruposD[et].mzs[mz].fm++;gruposD[et].fm++;}
+      if(mp){gruposD[et].mzs[mz].mp++;gruposD[et].mp++;}
     };
-    cobrablesD.forEach(c=>_sumarD(c,montoCobrable(c).total,false));
-    _finCiclo.lotes.forEach(x=>_sumarD(x,x.monto,true));
-    const _finTxtD=(nf)=>nf?' <span style="color:var(--blue)">🏁 '+nf+' terminado'+(nf>1?'s':'')+'</span>':'';
+    cobrablesD.forEach(c=>_sumarD(c,montoCobrable(c).total,false,false,!!_moraUlt[c.id]));
+    _finCiclo.lotes.forEach(x=>_sumarD(x,x.monto,true,!!x.enMora,false));
+    const _finTxtD=(nf,nfm,nmp)=>(nf?' <span style="color:var(--blue)">🏁 '+nf+' terminado'+(nf>1?'s':'')+(nfm?' ('+nfm+' en mora)':'')+'</span>':'')+(nmp?' <span style="color:#d97706">⚠️ '+nmp+' de mora</span>':'');
     const ordenEtD=['Etapa 1','Etapa 2','Etapa 3','Etapa 4','Otra'].filter(e=>gruposD[e]);
     html+=ordenEtD.map(et=>{
       const g=gruposD[et]; const mzKeys=Object.keys(g.mzs).sort();
       return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden">'
         +'<div style="display:flex;justify-content:space-between;padding:8px 12px;background:var(--hov);font-weight:800;font-size:13px">'
-        +'<span>'+et+' <span style="font-weight:400;color:var(--text2);font-size:11px">('+g.n+' lotes'+_finTxtD(g.fin)+')</span></span>'
+        +'<span>'+et+' <span style="font-weight:400;color:var(--text2);font-size:11px">('+g.n+' lotes'+_finTxtD(g.fin,g.fm,g.mp)+')</span></span>'
         +'<span style="color:var(--green)">'+(g.totARS?fmtPeso(g.totARS):'')+(g.totARS&&g.totUSD?' · ':'')+(g.totUSD?'USD '+fmtPeso(g.totUSD):'')+'</span></div>'
         +mzKeys.map(mz=>'<div style="display:flex;justify-content:space-between;padding:5px 12px 5px 24px;border-top:1px solid var(--border);font-size:12px">'
-          +'<span style="color:var(--text2)">'+mz+' <span style="font-size:10px">('+g.mzs[mz].n+_finTxtD(g.mzs[mz].fin)+')</span></span>'
+          +'<span style="color:var(--text2)">'+mz+' <span style="font-size:10px">('+g.mzs[mz].n+_finTxtD(g.mzs[mz].fin,g.mzs[mz].fm,g.mzs[mz].mp)+')</span></span>'
           +'<span style="font-weight:600">'+(g.mzs[mz].ars?fmtPeso(g.mzs[mz].ars):'')+(g.mzs[mz].ars&&g.mzs[mz].usd?' · ':'')+(g.mzs[mz].usd?'USD '+fmtPeso(g.mzs[mz].usd):'')+'</span></div>').join('')
         +'</div>';
     }).join('')||'<div style="font-size:12px;color:var(--text2)">Sin lotes cobrables</div>';
